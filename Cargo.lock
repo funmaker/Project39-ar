@@ -437,6 +437,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "project39-ar"
+version = "0.1.0"
+dependencies = [
+ "arc-swap 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "err-derive 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "getopts 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "image 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "obj-rs 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openvr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vulkano 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vulkano-shaders 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -723,21 +738,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "vk-sys"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "vkeyes-demo-rs"
-version = "0.1.0"
-dependencies = [
- "arc-swap 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "cgmath 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "err-derive 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "getopts 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "image 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "obj-rs 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openvr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "vulkano 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "vulkano-shaders 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "vulkano"
