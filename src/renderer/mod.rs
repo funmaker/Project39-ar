@@ -12,10 +12,11 @@ use vulkano::framebuffer::{Subpass, RenderPassCreationError, RenderPassAbstract}
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError};
 use vulkano::format::ClearValue;
 use openvr::{System, Compositor};
-use cgmath::{Matrix4, Transform, Matrix, Vector2, Euler, Rad};
+use cgmath::{Matrix4, Transform, Matrix};
 use openvr::compositor::CompositorError;
 
 pub mod model;
+pub mod vertex;
 mod eye;
 
 use crate::shaders;
@@ -240,20 +241,11 @@ impl Renderer {
 		})
 	}
 	
-	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], eye_rotation: (Vector2<f32>, Vector2<f32>), scene: &mut [(Model, Matrix4<f32>)]) -> Result<(), RenderError> {
+	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [(Model, Matrix4<f32>)]) -> Result<(), RenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
-		let left_pv = self.eyes.0.projection
-		            * Matrix4::from(Euler { x: Rad(eye_rotation.0.x),
-		                                    y: Rad(eye_rotation.0.y),
-		                                    z: Rad(0.0) })
-		            * mat4(hmd_pose).inverse_transform().unwrap();
-		
-		let right_pv = self.eyes.1.projection
-		             * Matrix4::from(Euler { x: Rad(eye_rotation.1.x),
-		                                     y: Rad(eye_rotation.1.y),
-		                                     z: Rad(0.0) })
-		             * mat4(hmd_pose).inverse_transform().unwrap();
+		let left_pv  = self.eyes.0.projection * mat4(hmd_pose).inverse_transform().unwrap();
+		let right_pv = self.eyes.1.projection * mat4(hmd_pose).inverse_transform().unwrap();
 		
 		let mut command_buffer = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?
 		                                                  .begin_render_pass(self.eyes.0.frame_buffer.clone(),

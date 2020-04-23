@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
+
 use err_derive::Error;
 use image::{DynamicImage, GenericImageView};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
@@ -13,12 +14,8 @@ use vulkano::descriptor::PipelineLayoutAbstract;
 use arc_swap::ArcSwap;
 
 use crate::renderer::Renderer;
-use obj::TexturedVertex;
-use openvr::render_models;
+pub use crate::renderer::vertex::Vertex;
 
-
-pub const SCENE_OBJ: &[u8] = include_bytes!("../../assets/scene.obj");
-pub const SCENE_PNG: &[u8] = include_bytes!("../../assets/scene.png");
 
 #[derive(Clone)]
 pub struct Model {
@@ -110,46 +107,4 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] PersistentDescriptorSetBuildError),
-}
-
-
-#[derive(Default, Copy, Clone)]
-pub struct Vertex {
-	pos: [f32; 3],
-	uv: [f32; 2],
-}
-
-vulkano::impl_vertex!(Vertex, pos, uv);
-
-impl Vertex {
-	pub const fn new(x: f32, y: f32, z: f32, u: f32, v: f32) -> Self {
-		Vertex {
-			pos: [x, y, z],
-			uv: [u, v],
-		}
-	}
-}
-
-impl From<&TexturedVertex> for Vertex {
-	fn from(vertex: &TexturedVertex) -> Self {
-		Vertex::new(
-			vertex.position[0],
-			vertex.position[1],
-			vertex.position[2],
-			vertex.texture[0],
-			1.0 - vertex.texture[1],
-		)
-	}
-}
-
-impl From<&render_models::Vertex> for Vertex {
-	fn from(vertex: &render_models::Vertex) -> Self {
-		Vertex::new(
-			vertex.position[0],
-			vertex.position[1],
-			vertex.position[2],
-			vertex.texture_coord[0],
-			vertex.texture_coord[1],
-		)
-	}
 }

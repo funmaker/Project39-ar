@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use err_derive::Error;
-use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models, TrackedControllerRole};
+use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models};
 use openvr::compositor::CompositorError;
 use openvr::system::TrackedPropertyError;
 use image::{ImageError, DynamicImage, ImageBuffer};
-use obj::{load_obj, ObjError, TexturedVertex, Obj};
-use cgmath::{Matrix4, Vector2};
+use obj::ObjError;
+use cgmath::Matrix4;
 
 use crate::renderer::{Renderer, RendererCreationError, RenderError, model};
-use crate::renderer::model::{Model, ModelError, Vertex};
+use crate::renderer::model::{Model, ModelError};
 use crate::openvr_vulkan::mat4;
 
 pub struct Application {
@@ -38,21 +38,8 @@ impl Application {
 	}
 	
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
-		let mut scene = Vec::new();
-		
-		{
-			let obj: Obj<TexturedVertex, u16> = load_obj(model::SCENE_OBJ)?;
-			
-			let vertices: Vec<Vertex> = obj.vertices.iter().map(Into::into).collect();
-			let image = image::load_from_memory(model::SCENE_PNG)?;
-			
-			let model = Model::new(&vertices, &obj.indices, image, &self.renderer)?;
-			
-			scene.push((model, Matrix4::from_scale(0.035)));
-		}
-		
+		let mut scene: Vec<(Model, Matrix4<f32>)> = Vec::new();
 		let mut devices: HashMap<u32, usize> = HashMap::new();
-		let mut eye_rotation = (Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0));
 		
 		loop {
 			let poses = self.compositor.wait_get_poses()?;
@@ -64,7 +51,7 @@ impl Application {
 						scene[*devices.get(&i).unwrap()].1 = mat4(poses.render[i as usize].device_to_absolute_tracking());
 					} else if let Some(model) = self.render_models.load_render_model(&self.system.string_tracked_device_property(i, 1003)?)? {
 						if let Some(texture) = self.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
-							let vertices: Vec<Vertex> = model.vertices().iter().map(Into::into).collect();
+							let vertices: Vec<model::Vertex> = model.vertices().iter().map(Into::into).collect();
 							let indices = model.indices();
 							let size = texture.dimensions();
 							let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
@@ -79,21 +66,9 @@ impl Application {
 				}
 			}
 			
-			if let Some(i) = self.system.tracked_device_index_for_controller_role(TrackedControllerRole::LeftHand) {
-				if let Some(state) = self.system.controller_state(i) {
-					eye_rotation.0 += Vector2::new(-state.axis[0].y, state.axis[0].x) / 100.0;
-				}
-			}
-
-			if let Some(i) = self.system.tracked_device_index_for_controller_role(TrackedControllerRole::RightHand) {
-				if let Some(state) = self.system.controller_state(i) {
-					eye_rotation.1 += Vector2::new(-state.axis[0].y, state.axis[0].x) / 100.0;
-				}
-			}
-			
 			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();
 			
-			self.renderer.render(pose, eye_rotation, &mut scene)?;
+			self.renderer.render(pose, &mut scene)?;
 		}
 		
 		// Ok(())
