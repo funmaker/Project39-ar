@@ -2,12 +2,14 @@ use std::error::Error;
 use std::env;
 use getopts::Options;
 
+#[macro_use] mod debug;
 mod shaders;
 mod renderer;
 mod application;
 mod openvr_vulkan;
 
 use application::Application;
+use crate::debug::set_debug;
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let args: Vec<String> = env::args().collect();
@@ -25,10 +27,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 		return Ok(());
 	}
 	
-	let device = matches.opt_get("d")?;
-	let debug = matches.opt_present("debug");
+	set_debug(matches.opt_present("debug"));
 	
-	let application = Application::new(device, debug)?;
+	let device = matches.opt_get("d")?;
+	
+	let application = Application::new(device)?;
 	
 	application.run()?;
 	

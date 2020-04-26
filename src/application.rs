@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use err_derive::Error;
 use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models};
 use openvr::compositor::CompositorError;
@@ -19,14 +20,15 @@ pub struct Application {
 	renderer: Renderer,
 }
 
+
 impl Application {
-	pub fn new(device: Option<usize>, debug: bool) -> Result<Application, ApplicationCreationError> {
+	pub fn new(device: Option<usize>) -> Result<Application, ApplicationCreationError> {
 		let context = unsafe { openvr::init(openvr::ApplicationType::Scene) }?;
 		let system = context.system()?;
 		let compositor = context.compositor()?;
 		let render_models = context.render_models()?;
 		
-		let renderer = Renderer::new(&system, context.compositor()?, device, debug)?;
+		let renderer = Renderer::new(&system, context.compositor()?, device)?;
 		
 		Ok(Application {
 			context,
@@ -98,3 +100,4 @@ pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] RenderModelError(#[error(source)] render_models::Error),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] ObjError),
 }
+
