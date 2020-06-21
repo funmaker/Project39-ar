@@ -8,7 +8,7 @@ use image::{ImageError, DynamicImage, ImageBuffer};
 use obj::ObjError;
 use cgmath::Matrix4;
 
-use crate::renderer::{Renderer, RendererCreationError, RenderError, model};
+use crate::renderer::{Renderer, RendererCreationError, RenderError, model, camera};
 use crate::renderer::model::{Model, ModelError};
 use crate::openvr_vulkan::mat4;
 
@@ -22,13 +22,17 @@ pub struct Application {
 
 
 impl Application {
-	pub fn new(device: Option<usize>) -> Result<Application, ApplicationCreationError> {
+	pub fn new(device: Option<usize>, camera_api: CameraAPI) -> Result<Application, ApplicationCreationError> {
 		let context = unsafe { openvr::init(openvr::ApplicationType::Scene) }?;
 		let system = context.system()?;
 		let compositor = context.compositor()?;
 		let render_models = context.render_models()?;
 		
-		let renderer = Renderer::new(&system, context.compositor()?, device)?;
+		let renderer = match camera_api {
+			CameraAPI::OpenCV => Renderer::new(&system, context.compositor()?, device, camera::OpenCV::new()?)?,
+			CameraAPI::OpenVR => Renderer::new(&system, context.compositor()?, device, camera::OpenVR::new(&context)?)?,
+			CameraAPI::Escapi => Renderer::new(&system, context.compositor()?, device, camera::Escapi::new()?)?,
+		};
 		
 		Ok(Application {
 			context,
@@ -84,10 +88,19 @@ impl Drop for Application {
 	}
 }
 
+pub enum CameraAPI {
+	Escapi,
+	OpenCV,
+	OpenVR,
+}
+
 #[derive(Debug, Error)]
 pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] InitError),
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererCreationError),
+	#[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
+	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] camera::OpenCVCameraError),
+	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 }
 
 #[derive(Debug, Error)]

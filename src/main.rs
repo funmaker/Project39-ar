@@ -1,3 +1,5 @@
+#![feature(try_trait)]
+
 use std::error::Error;
 use std::env;
 use getopts::Options;
@@ -9,7 +11,8 @@ mod application;
 mod openvr_vulkan;
 
 use application::Application;
-use crate::debug::set_debug;
+use application::CameraAPI;
+use debug::set_debug;
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let args: Vec<String> = env::args().collect();
@@ -17,6 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut opts = Options::new();
 	
 	opts.optopt("d", "device", "Select fallback device to use", "NUMBER");
+	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
 	
@@ -30,8 +34,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 	set_debug(matches.opt_present("debug"));
 	
 	let device = matches.opt_get("d")?;
+	let camera = matches.opt_get("c")?
+	                    .unwrap_or("openvr".to_string())
+	                    .to_lowercase();
 	
-	let application = Application::new(device)?;
+	let camera = match &*camera {
+		"opencv" => CameraAPI::OpenCV,
+		"openvr" => CameraAPI::OpenVR,
+		"escapi" => CameraAPI::Escapi,
+		_ => panic!("Unknown camera api: {}", camera),
+	};
+	
+	let application = Application::new(device, camera)?;
 	
 	application.run()?;
 	

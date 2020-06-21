@@ -19,16 +19,15 @@ use openvr::compositor::CompositorError;
 
 pub mod model;
 pub mod vertex;
+pub mod camera;
 mod eye;
-mod camera;
 
 use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
+use crate::renderer::camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
-use camera::Camera;
-use crate::renderer::camera::{CameraError, CameraStartError};
 
 // workaround https://github.com/vulkano-rs/vulkano/issues/709
 type PipelineType = GraphicsPipeline<
@@ -60,7 +59,9 @@ const CLIP: Matrix4<f32> = Matrix4::new(
 );
 
 impl Renderer {
-	pub fn new(system: &System, compositor: Compositor, device: Option<usize>) -> Result<Renderer, RendererCreationError> {
+	pub fn new<C>(system: &System, compositor: Compositor, device: Option<usize>, camera: C)
+	             -> Result<Renderer, RendererCreationError>
+	             where C: Camera {
 		let recommended_size = system.recommended_render_target_size();
 		
 		dprintln!("List of Vulkan debugging layers available to use:");
@@ -230,7 +231,6 @@ impl Renderer {
 		
 		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
 		
-		let camera = Camera::new(&device)?;
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		
 		Ok(Renderer {
@@ -358,7 +358,6 @@ pub enum RendererCreationError {
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] GraphicsPipelineCreationError),
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
-	#[error(display = "{}", _0)] CameraError(#[error(source)] CameraError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 }
 
