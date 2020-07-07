@@ -7,7 +7,7 @@ use openvr::Context;
 use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
 
 mod tracked_camera;
-use tracked_camera::TrackedCamera;
+use tracked_camera::{TrackedCamera, FrameType};
 
 pub const CAPTURE_INDEX: u32 = 0;
 
@@ -22,7 +22,11 @@ impl OpenVR {
 		
 		let tracked_camera = TrackedCamera::new(context)?;
 		
-		panic!("has {}", tracked_camera.has_camera(index));
+		println!("Has Camera {}", tracked_camera.has_camera(index));
+		println!("Distorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::Distorted)?);
+		println!("Undistorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::Undistorted)?);
+		println!("MaximumUndistorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted)?);
+		panic!();
 		
 		Ok(OpenVR {
 			index,
@@ -41,6 +45,7 @@ impl Camera for OpenVR {
 pub enum OpenVRCameraError {
 	#[error(display = "{}", _0)] APIError(#[error(source)] escapi::Error),
 	#[error(display = "{}", _0)] InitError(#[error(source)] tracked_camera::InitError),
+	#[error(display = "{}", _0)] TrackedCameraError(#[error(source)] tracked_camera::TrackedCameraError),
 }
 
 
