@@ -52,6 +52,10 @@ impl OpenVR {
 		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.0, 1.0));
 		panic!();
 		
+		{
+			let _service = tracked_camera.get_camera_service(index)?;
+		}
+		
 		Ok(OpenVR {
 			index,
 			tracked_camera,
