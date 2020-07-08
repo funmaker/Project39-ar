@@ -1,5 +1,3 @@
-use std::ffi::CStr;
-
 use openvr::Context;
 use openvr_sys as sys;
 

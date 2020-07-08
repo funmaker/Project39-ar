@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 vulkano = "0.18.0"
-vulkano-shaders = "0.18.0"
+vulkano-shaders = "0.19.0"
 image = "0.23"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"
@@ -15,5 +15,7 @@ err-derive = "0.2.3"
 getopts = "0.2.21"
 arc-swap = "0.4.5"
 obj-rs = "0.6.0"
-escapi = "4.0.0"
 opencv = {version = "0.38", features = ["buildtime-bindgen"]}
+
+[target.'cfg(windows)'.dependencies]
+escapi = "4.0.0"

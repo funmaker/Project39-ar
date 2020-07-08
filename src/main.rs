@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let camera = match &*camera {
 		"opencv" => CameraAPI::OpenCV,
 		"openvr" => CameraAPI::OpenVR,
-		"escapi" => CameraAPI::Escapi,
+		#[cfg(windows)] "escapi" => CameraAPI::Escapi,
 		_ => panic!("Unknown camera api: {}", camera),
 	};
 	

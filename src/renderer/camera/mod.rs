@@ -13,11 +13,11 @@ use vulkano::{format, OomError};
 use vulkano::buffer::view::BufferViewCreationError;
 use vulkano::memory::DeviceMemoryAllocError;
 
-mod escapi;
+#[cfg(windows)] mod escapi;
 mod opencv;
 mod openvr;
 
-pub use self::escapi::{Escapi, EscapiCameraError};
+#[cfg(windows)] pub use self::escapi::{Escapi, EscapiCameraError};
 pub use self::opencv::{OpenCV, OpenCVCameraError};
 pub use self::openvr::{OpenVR, OpenVRCameraError};
 

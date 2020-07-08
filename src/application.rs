@@ -31,7 +31,7 @@ impl Application {
 		let renderer = match camera_api {
 			CameraAPI::OpenCV => Renderer::new(&system, context.compositor()?, device, camera::OpenCV::new()?)?,
 			CameraAPI::OpenVR => Renderer::new(&system, context.compositor()?, device, camera::OpenVR::new(&context)?)?,
-			CameraAPI::Escapi => Renderer::new(&system, context.compositor()?, device, camera::Escapi::new()?)?,
+			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(&system, context.compositor()?, device, camera::Escapi::new()?)?,
 		};
 		
 		Ok(Application {
@@ -89,7 +89,7 @@ impl Drop for Application {
 }
 
 pub enum CameraAPI {
-	Escapi,
+	#[cfg(windows)] Escapi,
 	OpenCV,
 	OpenVR,
 }
@@ -98,7 +98,7 @@ pub enum CameraAPI {
 pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] InitError),
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererCreationError),
-	#[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
+	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] camera::OpenCVCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 }

@@ -1,6 +1,6 @@
 use openvr_sys as sys;
 
-use super::{check_err, TrackedCameraError, FnTable, TrackedCamera};
+use super::{check_err, TrackedCameraError, TrackedCamera};
 
 pub struct CameraService<'a> {
 	camera: &'a TrackedCamera,
@@ -8,7 +8,7 @@ pub struct CameraService<'a> {
 }
 
 impl<'a> CameraService<'a> {
-	pub fn new(camera: &'a TrackedCamera, index: sys::TrackedDeviceIndex_t) -> Result<CameraService<'a>, TrackedCameraError> {
+	pub fn new(camera: &'a TrackedCamera, index: sys::TrackedDeviceIndex_t) -> Result<Self, TrackedCameraError> {
 		let mut handle = 0;
 		
 		check_err(camera.0, unsafe {

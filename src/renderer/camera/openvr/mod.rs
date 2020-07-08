@@ -4,7 +4,7 @@ use err_derive::Error;
 use openvr_sys as sys;
 use openvr::Context;
 
-use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
+use super::{ Camera, CaptureError };
 
 mod tracked_camera;
 use tracked_camera::{TrackedCamera, FrameType};
@@ -71,7 +71,6 @@ impl Camera for OpenVR {
 
 #[derive(Debug, Error)]
 pub enum OpenVRCameraError {
-	#[error(display = "{}", _0)] APIError(#[error(source)] escapi::Error),
 	#[error(display = "{}", _0)] InitError(#[error(source)] tracked_camera::InitError),
 	#[error(display = "{}", _0)] TrackedCameraError(#[error(source)] tracked_camera::TrackedCameraError),
 }
