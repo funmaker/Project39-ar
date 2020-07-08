@@ -40,11 +40,53 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
-	fn wrap_err(&self, error: sys::EVRTrackedCameraError) -> Option<TrackedCameraError> {
-		if error == sys::EVRTrackedCameraError_VRTrackedCameraError_None {
+	pub fn get_camera_intrinsics(&self, index: sys::TrackedDeviceIndex_t, camera_index: u32, frame_type: FrameType) -> Result<Intrinsics, TrackedCameraError> {
+		let mut out = Intrinsics::default();
+		
+		if let Some(error) = self.wrap_err(unsafe {
+			self.0.GetCameraIntrinsics.unwrap()(index,
+			                                    camera_index,
+			                                    frame_type.into(),
+			                                    &mut out.focal_length as *mut _ as *mut sys::HmdVector2_t,
+			                                    &mut out.center as *mut _ as *mut sys::HmdVector2_t)
+		}) {
+			return Err(error);
+		}
+		
+		Ok(out)
+	}
+	
+	pub fn get_camera_projection(&self, index: sys::TrackedDeviceIndex_t, camera_index: u32, frame_type: FrameType, z_near: f32, z_far: f32) -> Result<[[f32; 4]; 4], TrackedCameraError> {
+		let mut out = [[0.0; 4]; 4];
+		
+		if let Some(error) = self.wrap_err(unsafe {
+			self.0.GetCameraProjection.unwrap()(index,
+			                                    camera_index,
+			                                    frame_type.into(),
+			                                    z_near,
+			                                    z_far,
+			                                    &mut out as *mut _ as *mut sys::HmdMatrix44_t)
+		}) {
+			return Err(error);
+		}
+		
+		Ok(out)
+	}
+	
+	fn wrap_err(&self, code: sys::EVRTrackedCameraError) -> Option<TrackedCameraError> {
+		if code == sys::EVRTrackedCameraError_VRTrackedCameraError_None {
 			None
 		} else {
-			Some(TrackedCameraError(error, self.0))
+			let name = self.0.GetCameraErrorNameFromEnum
+			               .map(|f| unsafe { f(code) })
+			               .map(|msg| unsafe { CStr::from_ptr(msg) })
+			               .map(CStr::to_str)
+			               .map(Result::ok)
+			               .flatten()
+			               .unwrap_or("VRTrackedCameraError_UnknownError")
+			               .into();
+			
+			Some(TrackedCameraError{ code, name })
 		}
 	}
 }
@@ -62,13 +104,27 @@ fn load<T>(suffix: &[u8]) -> Result<*const T, InitError> {
 	Ok(result as *const T)
 }
 
-// Frame Size
+// Info Structs
 
 #[derive(Default, Debug)]
 pub struct FrameSize {
 	pub width: u32,
 	pub height: u32,
 	pub frame_buffer_size: u32,
+}
+
+#[derive(Default, Debug)]
+pub struct Intrinsics {
+	pub width: u32,
+	pub focal_length: [f32; 2],
+	pub center: [f32; 2],
+}
+
+#[derive(Default, Debug)]
+pub struct Projection {
+	pub z_near: f32,
+	pub z_far: f32,
+	pub projection: [[f32; 4]; 4],
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -80,7 +136,7 @@ pub enum FrameType {
 
 impl Into<sys::EVRTrackedCameraError> for FrameType { fn into(self) -> sys::EVRTrackedCameraError { self as sys::EVRTrackedCameraError } }
 
-// ERRORS
+// Errors
 
 pub struct InitError(sys::EVRInitError);
 
@@ -106,23 +162,21 @@ impl fmt::Display for InitError {
 	}
 }
 
-pub struct TrackedCameraError(sys::EVRTrackedCameraError, &'static sys::VR_IVRTrackedCamera_FnTable);
+pub struct TrackedCameraError {
+	code: sys::EVRTrackedCameraError,
+	name: String,
+}
 
 impl Error for TrackedCameraError {}
 
 impl fmt::Debug for TrackedCameraError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unsafe {
-		f.pad(self.1.GetCameraErrorNameFromEnum.map(|f| f(self.0))
-		                                       .map(|msg| CStr::from_ptr(msg))
-		                                       .map(CStr::to_str)
-		                                       .map(Result::ok)
-		                                       .flatten()
-		                                       .unwrap_or("Unknown Tracked Camera Error"))
-	}}
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		f.pad(&format!("{}({})", self.name, self.code))
+	}
 }
 
 impl fmt::Display for TrackedCameraError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		fmt::Debug::fmt(&self, f)
+		f.pad(&self.name)
 	}
 }

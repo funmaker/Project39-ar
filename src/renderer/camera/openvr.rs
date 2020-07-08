@@ -23,9 +23,33 @@ impl OpenVR {
 		let tracked_camera = TrackedCamera::new(context)?;
 		
 		println!("Has Camera {}", tracked_camera.has_camera(index));
-		println!("Distorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::Distorted)?);
-		println!("Undistorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::Undistorted)?);
-		println!("MaximumUndistorted {:?}", tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted)?);
+		println!();
+		println!("Distorted");
+		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Distorted));
+		println!("\t\tCamera 0:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Distorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Distorted, 0.0, 1.0));
+		println!("\t\tCamera 1:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Distorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Distorted, 0.0, 1.0));
+		println!();
+		println!("Undistorted");
+		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Undistorted));
+		println!("\t\tCamera 0:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Undistorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Undistorted, 0.0, 1.0));
+		println!("\t\tCamera 1:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Undistorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Undistorted, 0.0, 1.0));
+		println!();
+		println!("MaximumUndistorted");
+		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted));
+		println!("\t\tCamera 0:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::MaximumUndistorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::MaximumUndistorted, 0.0, 1.0));
+		println!("\t\tCamera 1:");
+		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::MaximumUndistorted));
+		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.0, 1.0));
 		panic!();
 		
 		Ok(OpenVR {
