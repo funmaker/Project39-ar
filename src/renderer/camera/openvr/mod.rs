@@ -1,19 +1,22 @@
-#![allow(dead_code)]
+use std::time::{Instant, Duration};
 
 use err_derive::Error;
 use openvr_sys as sys;
 use openvr::Context;
 
+use crate::debug::debug;
 use super::{ Camera, CaptureError };
 
 mod tracked_camera;
-use tracked_camera::{TrackedCamera, FrameType};
+use tracked_camera::{TrackedCamera, FrameType, CameraService};
 
 pub const CAPTURE_INDEX: u32 = 0;
 
 pub struct OpenVR {
 	index: sys::TrackedDeviceIndex_t,
 	tracked_camera: TrackedCamera,
+	service: CameraService,
+	last_capture: Instant,
 }
 
 impl OpenVR {
@@ -22,50 +25,67 @@ impl OpenVR {
 		
 		let tracked_camera = TrackedCamera::new(context)?;
 		
-		println!("Has Camera {}", tracked_camera.has_camera(index));
-		println!();
-		println!("Distorted");
-		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Distorted));
-		println!("\t\tCamera 0:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Distorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Distorted, 0.0, 1.0));
-		println!("\t\tCamera 1:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Distorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Distorted, 0.0, 1.0));
-		println!();
-		println!("Undistorted");
-		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Undistorted));
-		println!("\t\tCamera 0:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Undistorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Undistorted, 0.0, 1.0));
-		println!("\t\tCamera 1:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Undistorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Undistorted, 0.0, 1.0));
-		println!();
-		println!("MaximumUndistorted");
-		println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted));
-		println!("\t\tCamera 0:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::MaximumUndistorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::MaximumUndistorted, 0.0, 1.0));
-		println!("\t\tCamera 1:");
-		println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::MaximumUndistorted));
-		println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.0, 1.0));
-		panic!();
-		
-		{
-			let _service = tracked_camera.get_camera_service(index)?;
+		if debug() {
+			println!("Has Camera {}", tracked_camera.has_camera(index));
+			println!();
+			println!("Distorted");
+			println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Distorted));
+			println!("\t\tCamera 0:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Distorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Distorted, 0.0, 1.0));
+			println!("\t\tCamera 1:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Distorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Distorted, 0.0, 1.0));
+			println!();
+			println!("Undistorted");
+			println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::Undistorted));
+			println!("\t\tCamera 0:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::Undistorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::Undistorted, 0.0, 1.0));
+			println!("\t\tCamera 1:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::Undistorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::Undistorted, 0.0, 1.0));
+			println!();
+			println!("MaximumUndistorted");
+			println!("\t{:?}", tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted));
+			println!("\t\tCamera 0:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 0, FrameType::MaximumUndistorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 0, FrameType::MaximumUndistorted, 0.0, 1.0));
+			println!("\t\tCamera 1:");
+			println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::MaximumUndistorted));
+			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.0, 1.0));
 		}
+		
+		let service = tracked_camera.get_camera_service(index)?;
 		
 		Ok(OpenVR {
 			index,
 			tracked_camera,
+			service,
+			last_capture: Instant::now(),
 		})
 	}
 }
 
 impl Camera for OpenVR {
 	fn capture(&mut self) -> Result<&[u8], CaptureError> {
-		unimplemented!()
+		println!("CAPTURE");
+		
+		if let Some(cooldown) = Duration::from_millis(16).checked_sub(self.last_capture.elapsed()) {
+			println!("SLEEP {:?}", cooldown);
+			std::thread::sleep(cooldown);
+		}
+		
+		let ret = self.service.get_frame_buffer(FrameType::Distorted)
+		                      .map(|fb| fb.buffer.as_slice())
+		                      .map_err(|err| match err.code {
+			                      sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CaptureError::Timeout,
+			                      _ => CaptureError::Other(err.into()),
+		                      });
+		
+		self.last_capture = Instant::now();
+		
+		ret
 	}
 }
 

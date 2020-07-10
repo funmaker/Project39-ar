@@ -23,11 +23,19 @@ pub struct Projection {
 	pub projection: [[f32; 4]; 4],
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameType {
-	Distorted = 0,
-	Undistorted = 1,
-	MaximumUndistorted = 2,
+	Distorted = sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_Distorted as isize,
+	Undistorted = sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_Undistorted as isize,
+	MaximumUndistorted = sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_MaximumUndistorted as isize,
 }
 
-impl Into<sys::EVRTrackedCameraError> for FrameType { fn into(self) -> sys::EVRTrackedCameraError { self as sys::EVRTrackedCameraError } }
+impl Into<sys::EVRTrackedCameraFrameType> for FrameType { fn into(self) -> sys::EVRTrackedCameraFrameType { self as sys::EVRTrackedCameraFrameType } }
+impl Into<FrameType> for sys::EVRTrackedCameraFrameType { fn into(self) -> FrameType {
+	match self {
+		sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_Distorted => FrameType::Distorted,
+		sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_Undistorted => FrameType::Undistorted,
+		sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_MaximumUndistorted => FrameType::MaximumUndistorted,
+		_ => panic!("Unknown TrackedCameraFrameType = {}", self),
+	}
+} }

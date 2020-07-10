@@ -30,8 +30,8 @@ impl fmt::Display for InitError {
 }
 
 pub struct TrackedCameraError {
-	code: sys::EVRTrackedCameraError,
-	name: String,
+	pub code: sys::EVRTrackedCameraError,
+	pub name: String,
 }
 
 impl error::Error for TrackedCameraError {}

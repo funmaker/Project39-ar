@@ -1,4 +1,4 @@
-use openvr::Context;
+use openvr::{Context, TrackedDeviceIndex};
 use openvr_sys as sys;
 
 mod error;
@@ -8,6 +8,7 @@ pub use utils::*;
 mod service;
 pub use service::*;
 
+#[derive(Copy, Clone)]
 pub struct TrackedCamera(FnTable);
 
 impl TrackedCamera {
@@ -17,7 +18,7 @@ impl TrackedCamera {
 		Ok(TrackedCamera(fn_tab))
 	}
 	
-	pub fn has_camera(&self, index: sys::TrackedDeviceIndex_t) -> bool {
+	pub fn has_camera(&self, index: TrackedDeviceIndex) -> bool {
 		let mut out = false;
 		
 		unsafe { self.0.HasCamera.unwrap()(index, &mut out); }
@@ -25,7 +26,7 @@ impl TrackedCamera {
 		out
 	}
 	
-	pub fn get_camera_frame_size(&self, index: sys::TrackedDeviceIndex_t, frame_type: FrameType) -> Result<FrameSize, TrackedCameraError> {
+	pub fn get_camera_frame_size(&self, index: TrackedDeviceIndex, frame_type: FrameType) -> Result<FrameSize, TrackedCameraError> {
 		let mut out = FrameSize::default();
 		
 		check_err(self.0, unsafe {
@@ -39,7 +40,7 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
-	pub fn get_camera_intrinsics(&self, index: sys::TrackedDeviceIndex_t, camera_index: u32, frame_type: FrameType) -> Result<Intrinsics, TrackedCameraError> {
+	pub fn get_camera_intrinsics(&self, index: TrackedDeviceIndex, camera_index: u32, frame_type: FrameType) -> Result<Intrinsics, TrackedCameraError> {
 		let mut out = Intrinsics::default();
 		
 		check_err(self.0, unsafe {
@@ -53,7 +54,7 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
-	pub fn get_camera_projection(&self, index: sys::TrackedDeviceIndex_t, camera_index: u32, frame_type: FrameType, z_near: f32, z_far: f32) -> Result<[[f32; 4]; 4], TrackedCameraError> {
+	pub fn get_camera_projection(&self, index: TrackedDeviceIndex, camera_index: u32, frame_type: FrameType, z_near: f32, z_far: f32) -> Result<[[f32; 4]; 4], TrackedCameraError> {
 		let mut out = [[0.0; 4]; 4];
 		
 		check_err(self.0, unsafe {
@@ -68,8 +69,8 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
-	pub fn get_camera_service(&self, index: sys::TrackedDeviceIndex_t) -> Result<CameraService, TrackedCameraError> {
-		CameraService::new(&self, index)
+	pub fn get_camera_service(&self, index: TrackedDeviceIndex) -> Result<CameraService, TrackedCameraError> {
+		CameraService::new(self.clone(), index)
 	}
 }
 
