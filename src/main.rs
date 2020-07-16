@@ -1,4 +1,4 @@
-#![feature(try_trait)]
+#[macro_use] extern crate lazy_static;
 
 use std::error::Error;
 use std::env;

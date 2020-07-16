@@ -256,70 +256,80 @@ impl Renderer {
 		let [camera_width, camera_height] = self.camera_image.dimensions();
 		let [eye_width, eye_height] = self.eyes.0.image.dimensions();
 		
-		let mut command_buffer = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?
-		                                                  .blit_image(self.camera_image.clone(),
-		                                                              [0, 0, 0],
-		                                                              [camera_width as i32 / 2, camera_height as i32, 1],
-		                                                              0,
-		                                                              0,
-		                                                              self.eyes.0.image.clone(),
-		                                                              [0, 0, 0],
-		                                                              [eye_width as i32, eye_height as i32, 1],
-		                                                              0,
-		                                                              0,
-		                                                              1,
-		                                                              Filter::Linear)?
-		                                                  .blit_image(self.camera_image.clone(),
-		                                                              [camera_width as i32 / 2, 0, 0],
-		                                                              [camera_width as i32, camera_height as i32, 1],
-		                                                              0,
-		                                                              0,
-		                                                              self.eyes.1.image.clone(),
-		                                                              [0, 0, 0],
-		                                                              [eye_width as i32, eye_height as i32, 1],
-		                                                              0,
-		                                                              0,
-		                                                              1,
-		                                                              Filter::Linear)?
-		                                                  .begin_render_pass(self.eyes.0.frame_buffer.clone(),
-		                                                                     false,
-		                                                                     vec![ ClearValue::None,
-		                                                                           ClearValue::Depth(1.0) ])?;
+		let mut builder = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?;
+		builder.blit_image(self.camera_image.clone(),
+		                   [0, 0, 0],
+		                   [camera_width as i32 / 2, camera_height as i32, 1],
+		                   0,
+		                   0,
+		                   self.eyes.0.image.clone(),
+		                   [0, 0, 0],
+		                   [eye_width as i32, eye_height as i32, 1],
+		                   0,
+		                   0,
+		                   1,
+		                   Filter::Linear)?
+		       .blit_image(self.camera_image.clone(),
+		                   [camera_width as i32 / 2, 0, 0],
+		                   [camera_width as i32, camera_height as i32, 1],
+		                   0,
+		                   0,
+		                   self.eyes.1.image.clone(),
+		                   [0, 0, 0],
+		                   [eye_width as i32, eye_height as i32, 1],
+		                   0,
+		                   0,
+		                   1,
+		                   Filter::Linear)?
+		       .begin_render_pass(self.eyes.0.frame_buffer.clone(),
+		                          false,
+		                          vec![ ClearValue::None,
+		                                ClearValue::Depth(1.0) ])?;
 		
 		for (model, matrix) in scene.iter_mut() {
 			if !model.loaded() { continue };
-			command_buffer = command_buffer.draw_indexed(self.pipeline.clone(),
-			                                             &DynamicState::none(),
-			                                             model.vertices.clone(),
-			                                             model.indices.clone(),
-			                                             model.set.clone(),
-			                                             left_pv * *matrix)?;
+			builder.draw_indexed(self.pipeline.clone(),
+			                     &DynamicState::none(),
+			                     model.vertices.clone(),
+			                     model.indices.clone(),
+			                     model.set.clone(),
+			                     left_pv * *matrix)?;
 		}
 		
-		command_buffer = command_buffer.end_render_pass()?
-		                               .begin_render_pass(self.eyes.1.frame_buffer.clone(),
-		                                                  false,
-		                                                  vec![ ClearValue::None,
-		                                                        ClearValue::Depth(1.0) ])?;
+		builder.end_render_pass()?
+		       .begin_render_pass(self.eyes.1.frame_buffer.clone(),
+		                          false,
+		                          vec![ ClearValue::None,
+		                                ClearValue::Depth(1.0) ])?;
 		
 		for (model, matrix) in scene.iter_mut() {
 			if !model.loaded() { continue };
-			command_buffer = command_buffer.draw_indexed(self.pipeline.clone(),
-			                                             &DynamicState::none(),
-			                                             model.vertices.clone(),
-			                                             model.indices.clone(),
-			                                             model.set.clone(),
-			                                             right_pv * *matrix)?;
+			builder.draw_indexed(self.pipeline.clone(),
+			                     &DynamicState::none(),
+			                     model.vertices.clone(),
+			                     model.indices.clone(),
+			                     model.set.clone(),
+			                     right_pv * *matrix)?;
 		}
 		
-		let command_buffer = command_buffer.end_render_pass()?
-		                                   .build()?;
+		builder.end_render_pass()?;
+		
+		let command_buffer = builder.build()?;
 		
 		let mut future = self.previous_frame_end.take().unwrap();
 		
+		// TODO: Optimize Boxes
 		while let Ok(command) = self.load_commands.try_recv() {
-			future = Box::new(future.then_execute(self.load_queue.clone(), command)?
-			                        .then_signal_semaphore());
+			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
+				future = Box::new(future.then_signal_semaphore()
+				                           .then_execute(self.load_queue.clone(), command)?);
+			} else {
+				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
+			}
+		}
+		
+		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
+			future = Box::new(future.then_signal_semaphore());
 		}
 		
 		let future = future.then_execute(self.queue.clone(), command_buffer)?;

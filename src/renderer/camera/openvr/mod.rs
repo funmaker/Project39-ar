@@ -4,7 +4,7 @@ use err_derive::Error;
 use openvr_sys as sys;
 use openvr::Context;
 
-use crate::debug::debug;
+use crate::debug::{debug, get_debug_flag};
 use super::{ Camera, CaptureError };
 
 mod tracked_camera;
@@ -24,6 +24,8 @@ impl OpenVR {
 		let index = CAPTURE_INDEX;
 		
 		let tracked_camera = TrackedCamera::new(context)?;
+		
+		println!("{}", debug());
 		
 		if debug() {
 			println!("Has Camera {}", tracked_camera.has_camera(index));
@@ -69,14 +71,21 @@ impl OpenVR {
 
 impl Camera for OpenVR {
 	fn capture(&mut self) -> Result<&[u8], CaptureError> {
-		println!("CAPTURE");
 		
 		if let Some(cooldown) = Duration::from_millis(16).checked_sub(self.last_capture.elapsed()) {
-			println!("SLEEP {:?}", cooldown);
 			std::thread::sleep(cooldown);
 		}
 		
-		let ret = self.service.get_frame_buffer(FrameType::Distorted)
+		let mode: u8 = get_debug_flag("mode").unwrap_or_default();
+		
+		let mode = match mode {
+			0 => FrameType::Distorted,
+			1 => FrameType::Undistorted,
+			2 => FrameType::MaximumUndistorted,
+			_ => unreachable!(),
+		};
+		
+		let ret = self.service.get_frame_buffer(mode)
 		                      .map(|fb| fb.buffer.as_slice())
 		                      .map_err(|err| match err.code {
 			                      sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CaptureError::Timeout,

@@ -71,9 +71,9 @@ pub trait Camera: Send + Sized + 'static {
 			)?;
 			let sub_slice: BufferSlice<[u8], _> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
 			
-			let command_buffer = AutoCommandBufferBuilder::new(queue.device().clone(), queue.family())?
-				.copy_buffer_to_image(sub_slice, target.clone())?
-				.build()?;
+			let mut builder  = AutoCommandBufferBuilder::new(queue.device().clone(), queue.family())?;
+			builder.copy_buffer_to_image(sub_slice, target.clone())?;
+			let command_buffer = builder.build()?;
 			
 			sender.send(command_buffer)?;
 		}

@@ -1,13 +1,37 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::any::Any;
 
-const DEBUG: AtomicBool = AtomicBool::new(false);
+static DEBUG: AtomicBool = AtomicBool::new(false);
+lazy_static! {
+    static ref FLAGS: RwLock<HashMap<String, Box<dyn Any + Send + Sync>>> = RwLock::new(HashMap::new());
+}
 
 pub fn debug() -> bool {
-	DEBUG.load(Ordering::Relaxed)
+	let read = DEBUG.load(Ordering::Relaxed);
+	read
 }
 
 pub fn set_debug(value: bool) {
 	DEBUG.store(value, Ordering::Relaxed);
+}
+
+pub fn get_debug_flag<T>(key: &str)
+	                    -> Option<T>
+	                    where T: Clone + Send + Sync + 'static {
+	FLAGS.read()
+	     .unwrap()
+	     .get(key)
+	     .and_then(|val| val.downcast_ref::<T>())
+	     .map(|val| val.clone())
+}
+
+pub fn set_debug_flag<T>(key: &str, value: T)
+	                    where T: Clone + Send + Sync + 'static {
+	FLAGS.write()
+	     .unwrap()
+	     .insert(key.to_string(), Box::new(value));
 }
 
 #[allow(unused_macros)]
