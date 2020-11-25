@@ -17,7 +17,6 @@ use crate::renderer::Renderer;
 pub use crate::renderer::vertex::Vertex;
 
 
-#[derive(Clone)]
 pub struct Model {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	pub indices: Arc<ImmutableBuffer<[u16]>>,
@@ -40,7 +39,7 @@ impl Model {
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
 		                                                            queue.clone())?;
 		
-		let (image, image_promise) = ImmutableImage::from_iter(source_image.to_rgba().into_vec().into_iter(),
+		let (image, image_promise) = ImmutableImage::from_iter(source_image.to_rgba8().into_vec().into_iter(),
 		                                                       Dimensions::Dim2d{ width, height },
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;
