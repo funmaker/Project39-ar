@@ -25,7 +25,8 @@ mod eye;
 use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
-use crate::renderer::camera::{CameraStartError, Camera};
+use crate::window::Window;
+use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
 
@@ -73,11 +74,13 @@ impl Renderer {
 		let instance = {
 			let app_infos = app_info_from_cargo_toml!();
 			let extensions = RawInstanceExtensions::new(compositor.vulkan_instance_extensions_required())
+			                                       .union(&(&vulkano_win::required_extensions()).into())
 			                                       .union(&(&InstanceExtensions { ext_debug_utils: debug(),
 			                                                                      ..InstanceExtensions::none() }).into());
 			
 			let layers = if debug() {
-				             vec!["VK_LAYER_LUNARG_standard_validation"]
+				             // TODO: Get better GPU
+				             vec![/*"VK_LAYER_LUNARG_standard_validation"*/]
 			             } else {
 				             vec![]
 			             };
@@ -94,34 +97,34 @@ impl Renderer {
 			let ty = MessageType::all();
 			
 			let _debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-				                                         let severity = if msg.severity.error {
-					                                         "error"
-				                                         } else if msg.severity.warning {
-					                                         "warning"
-				                                         } else if msg.severity.information {
-					                                         "information"
-				                                         } else if msg.severity.verbose {
-					                                         "verbose"
-				                                         } else {
-					                                         panic!("no-impl");
-				                                         };
-				                                         
-				                                         let ty = if msg.ty.general {
-					                                         "general"
-				                                         } else if msg.ty.validation {
-					                                         "validation"
-				                                         } else if msg.ty.performance {
-					                                         "performance"
-				                                         } else {
-					                                         panic!("no-impl");
-				                                         };
-				                                         
-				                                         println!("{} {} {}: {}",
-				                                                  msg.layer_prefix,
-				                                                  ty,
-				                                                  severity,
-				                                                  msg.description);
-			                                         });
+				let severity = if msg.severity.error {
+					"error"
+				} else if msg.severity.warning {
+					"warning"
+				} else if msg.severity.information {
+					"information"
+				} else if msg.severity.verbose {
+					"verbose"
+				} else {
+					panic!("no-impl");
+				};
+				
+				let ty = if msg.ty.general {
+					"general"
+				} else if msg.ty.validation {
+					"validation"
+				} else if msg.ty.performance {
+					"performance"
+				} else {
+					panic!("no-impl");
+				};
+				
+				println!("{} {} {}: {}",
+				         msg.layer_prefix,
+				         ty,
+				         severity,
+				         msg.description);
+			});
 		}
 		
 		dprintln!("Devices:");
@@ -146,9 +149,14 @@ impl Renderer {
 		         physical.name(),
 		         physical.api_version(),
 		         physical.driver_version());
-		
+
 		for family in physical.queue_families() {
-			dprintln!("Found a queue family with {:?} queue(s)", family.queues_count());
+			dprintln!("Found a queue family with {:?} queue(s){}{}{}{}",
+			          family.queues_count(),
+			          family.supports_graphics().then_some(", Graphics").unwrap_or_default(),
+			          family.supports_compute().then_some(", Compute").unwrap_or_default(),
+			          family.supports_sparse_binding().then_some(", Sparse").unwrap_or_default(),
+			          family.explicitly_supports_transfers().then_some(", Transfers").unwrap_or_default());
 		}
 		
 		let (device, mut queues) = {
@@ -157,9 +165,9 @@ impl Renderer {
 			                           .ok_or(RendererCreationError::NoQueue)?;
 			
 			let load_queue_family = physical.queue_families()
-			                                .find(|&q| q.explicitly_supports_transfers())
+			                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
 			                                .unwrap_or(queue_family);
-			
+
 			let families = vec![
 				(queue_family, 0.5),
 				(load_queue_family, 0.2),
@@ -175,7 +183,7 @@ impl Renderer {
 		
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
-		
+
 		let vs = shaders::vert::Shader::load(device.clone()).unwrap();
 		let fs = shaders::frag::Shader::load(device.clone()).unwrap();
 		
@@ -247,7 +255,7 @@ impl Renderer {
 		})
 	}
 	
-	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [(Model, Matrix4<f32>)]) -> Result<(), RenderError> {
+	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [(Model, Matrix4<f32>)], window: &mut Window) -> Result<(), RenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		let left_pv  = self.eyes.0.projection * mat4(hmd_pose).inverse_transform().unwrap();

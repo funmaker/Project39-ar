@@ -19,6 +19,8 @@ opencv = { version = "0.46.3", features = ["buildtime-bindgen"] }
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 lazy_static = "1.4.0"
+winit = "0.22.0"
+vulkano-win = "0.19.0"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"

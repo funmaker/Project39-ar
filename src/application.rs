@@ -12,6 +12,7 @@ use crate::renderer::{Renderer, RendererCreationError, RenderError, model, camer
 use crate::renderer::model::{Model, ModelError};
 use crate::openvr_vulkan::mat4;
 use crate::debug::{get_debug_flag, set_debug_flag};
+use crate::window::{Window, WindowCreationError};
 
 pub struct Application {
 	context: Context,
@@ -19,12 +20,15 @@ pub struct Application {
 	compositor: Compositor,
 	render_models: RenderModels,
 	renderer: Renderer,
+	window: Window,
 }
 
 
 impl Application {
 	pub fn new(device: Option<usize>, camera_api: CameraAPI) -> Result<Application, ApplicationCreationError> {
+		
 		let context = unsafe { openvr::init(openvr::ApplicationType::Scene) }?;
+		
 		let system = context.system()?;
 		let compositor = context.compositor()?;
 		let render_models = context.render_models()?;
@@ -33,7 +37,10 @@ impl Application {
 			CameraAPI::OpenCV => Renderer::new(&system, context.compositor()?, device, camera::OpenCV::new()?)?,
 			CameraAPI::OpenVR => Renderer::new(&system, context.compositor()?, device, camera::OpenVR::new(&context)?)?,
 			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(&system, context.compositor()?, device, camera::Escapi::new()?)?,
+			CameraAPI::Dummy => Renderer::new(&system, context.compositor()?, device, camera::Dummy::new())?,
 		};
+		
+		let window = Window::new(renderer.instance.clone())?;
 		
 		Ok(Application {
 			context,
@@ -41,6 +48,7 @@ impl Application {
 			compositor,
 			render_models,
 			renderer,
+			window,
 		})
 	}
 	
@@ -50,7 +58,9 @@ impl Application {
 		
 		let mut last_buttons = 0;
 		
-		loop {
+		while !self.window.quit_required {
+			self.window.pull_events();
+			
 			let poses = self.compositor.wait_get_poses()?;
 			
 			for i in 0..poses.render.len() as u32 {
@@ -64,9 +74,9 @@ impl Application {
 							let indices = model.indices();
 							let size = texture.dimensions();
 							let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
-
+							
 							let model = Model::new(&vertices, indices, image, &self.renderer)?;
-
+							
 							devices.insert(i, scene.len());
 							scene.push((model, mat4(poses.render[i as usize].device_to_absolute_tracking())));
 							println!("Loaded {:?}", self.system.tracked_device_class(i));
@@ -97,10 +107,10 @@ impl Application {
 			
 			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();
 			
-			self.renderer.render(pose, &mut scene)?;
+			self.renderer.render(pose, &mut scene, &mut self.window)?;
 		}
 		
-		// Ok(())
+		Ok(())
 	}
 }
 
@@ -115,6 +125,7 @@ pub enum CameraAPI {
 	#[cfg(windows)] Escapi,
 	OpenCV,
 	OpenVR,
+	Dummy,
 }
 
 #[derive(Debug, Error)]
@@ -124,6 +135,7 @@ pub enum ApplicationCreationError {
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] camera::OpenCVCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
+	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 }
 
 #[derive(Debug, Error)]

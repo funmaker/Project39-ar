@@ -2,7 +2,6 @@ use std::thread;
 use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc;
-use std::sync::mpsc::SendError;
 
 use err_derive::Error;
 use vulkano::buffer::{CpuBufferPool, BufferSlice, BufferAccess};
@@ -16,10 +15,12 @@ use vulkano::memory::DeviceMemoryAllocError;
 #[cfg(windows)] mod escapi;
 mod opencv;
 mod openvr;
+mod dummy;
 
 #[cfg(windows)] pub use self::escapi::{Escapi, EscapiCameraError};
 pub use self::opencv::{OpenCV, OpenCVCameraError};
 pub use self::openvr::{OpenVR, OpenVRCameraError};
+pub use self::dummy::Dummy;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
@@ -44,6 +45,7 @@ pub trait Camera: Send + Sized + 'static {
 		thread::spawn(move || {
 			match self.capture_loop(queue, target, sender) {
 				Ok(()) => {},
+				Err(CaptureLoopError::Quitting) => return,
 				Err(err) => panic!("Error while capturing camera: {:?}", err),
 			}
 		});
@@ -75,7 +77,7 @@ pub trait Camera: Send + Sized + 'static {
 			builder.copy_buffer_to_image(sub_slice, target.clone())?;
 			let command_buffer = builder.build()?;
 			
-			sender.send(command_buffer)?;
+			sender.send(command_buffer).or(Err(CaptureLoopError::Quitting))?;
 		}
 	}
 }
@@ -93,12 +95,12 @@ pub enum CameraStartError {
 
 #[derive(Debug, Error)]
 pub enum CaptureLoopError {
+	#[error(display = "Quitting")] Quitting,
 	#[error(display = "{}", _0)] CaptureError(#[error(source)] CaptureError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] CopyBufferImageError(#[error(source)] CopyBufferImageError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
-	#[error(display = "{}", _0)] SendError(#[error(source)] SendError<AutoCommandBuffer>),
 	#[error(display = "{}", _0)] BufferViewCreationError(#[error(source)] BufferViewCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
 }

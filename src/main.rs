@@ -1,3 +1,5 @@
+#![feature(bool_to_option)]
+#![feature(never_type)]
 #[macro_use] extern crate lazy_static;
 
 use std::error::Error;
@@ -9,6 +11,7 @@ mod shaders;
 mod renderer;
 mod application;
 mod openvr_vulkan;
+mod window;
 
 use application::Application;
 use application::CameraAPI;
@@ -20,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut opts = Options::new();
 	
 	opts.optopt("d", "device", "Select fallback device to use", "NUMBER");
-	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr");
+	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr|dummy");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
 	
@@ -42,6 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		"opencv" => CameraAPI::OpenCV,
 		"openvr" => CameraAPI::OpenVR,
 		#[cfg(windows)] "escapi" => CameraAPI::Escapi,
+		"dummy" => CameraAPI::Dummy,
 		_ => panic!("Unknown camera api: {}", camera),
 	};
 	
