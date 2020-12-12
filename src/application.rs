@@ -40,7 +40,7 @@ impl Application {
 			CameraAPI::Dummy => Renderer::new(&system, context.compositor()?, device, camera::Dummy::new())?,
 		};
 		
-		let window = Window::new(renderer.instance.clone())?;
+		let window = Window::new(&renderer)?;
 		
 		Ok(Application {
 			context,

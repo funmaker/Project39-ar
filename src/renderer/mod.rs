@@ -10,8 +10,10 @@ use vulkano::sync;
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::framebuffer::{Subpass, RenderPassCreationError, RenderPassAbstract};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
-use vulkano::format::ClearValue;
-use vulkano::image::AttachmentImage;
+use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError};
+use vulkano::memory::DeviceMemoryAllocError;
+use vulkano::format::{ClearValue, Format};
+use vulkano::image::{AttachmentImage, SwapchainImage};
 use vulkano::sampler::Filter;
 use openvr::{System, Compositor};
 use cgmath::{Matrix4, Transform, Matrix};
@@ -25,7 +27,7 @@ mod eye;
 use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
-use crate::window::Window;
+use crate::window::{Window, SwapchainRegenError};
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
@@ -167,7 +169,7 @@ impl Renderer {
 			let load_queue_family = physical.queue_families()
 			                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
 			                                .unwrap_or(queue_family);
-
+			
 			let families = vec![
 				(queue_family, 0.5),
 				(load_queue_family, 0.2),
@@ -183,7 +185,7 @@ impl Renderer {
 		
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
-
+		
 		let vs = shaders::vert::Shader::load(device.clone()).unwrap();
 		let fs = shaders::frag::Shader::load(device.clone()).unwrap();
 		
@@ -255,8 +257,37 @@ impl Renderer {
 		})
 	}
 	
+	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
+		let caps = surface.capabilities(self.device.physical_device())?;
+		let dimensions = caps.current_extent.unwrap_or(caps.min_image_extent);
+		let alpha = caps.supported_composite_alpha.iter().next().unwrap();
+		let format = caps.supported_formats
+		                 .iter()
+		                 .find(|format| format.0 == Format::B8G8R8A8Unorm || format.0 == Format::R8G8B8A8Unorm)
+		                 .expect("UNorm format not supported on the surface");
+		
+		Ok(Swapchain::new(self.device.clone(),
+		                  surface,
+		                  caps.min_image_count,
+		                  format.0,
+		                  dimensions,
+		                  1,
+		                  caps.supported_usage_flags,
+		                  &self.queue,
+		                  SurfaceTransform::Identity,
+		                  alpha,
+		                  PresentMode::Fifo,
+		                  FullscreenExclusive::Allowed,
+		                  false,
+		                  format.1)?)
+	}
+	
 	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [(Model, Matrix4<f32>)], window: &mut Window) -> Result<(), RenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
+		
+		if window.swapchain_regen_required {
+			window.regen_swapchain()?;
+		}
 		
 		let left_pv  = self.eyes.0.projection * mat4(hmd_pose).inverse_transform().unwrap();
 		let right_pv = self.eyes.1.projection * mat4(hmd_pose).inverse_transform().unwrap();
@@ -380,7 +411,15 @@ pub enum RendererCreationError {
 }
 
 #[derive(Debug, Error)]
+pub enum RendererSwapchainError {
+	#[error(display = "{}", _0)] CapabilitiesError(#[error(source)] CapabilitiesError),
+	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
+}
+
+#[derive(Debug, Error)]
 pub enum RenderError {
+	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] SwapchainRegenError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] DrawIndexedError),
