@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use std::time::Duration;
-
 use err_derive::Error;
 use image::{DynamicImage, GenericImageView};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
@@ -13,20 +12,25 @@ use vulkano::descriptor::descriptor_set::{DescriptorSet, PersistentDescriptorSet
 use vulkano::descriptor::PipelineLayoutAbstract;
 use arc_swap::ArcSwap;
 
-use crate::renderer::Renderer;
-pub use crate::renderer::vertex::Vertex;
+pub mod vertex;
+pub mod import;
 
+pub use vertex::Vertex;
+pub use import::{LoadError, from_obj, from_openvr, from_pmx};
+use super::Renderer;
+
+pub type VertexIndex = u16;
 
 pub struct Model {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	pub indices: Arc<ImmutableBuffer<[u16]>>,
+	pub indices: Arc<ImmutableBuffer<[VertexIndex]>>,
 	pub image: Arc<ImmutableImage<Format>>,
 	pub set: Arc<dyn DescriptorSet + Send + Sync>,
 	fence: ArcSwap<FenceCheck>,
 }
 
 impl Model {
-	pub fn new(vertices: &[Vertex], indices: &[u16], source_image: DynamicImage, renderer: &Renderer) -> Result<Model, ModelError> {
+	pub fn new(vertices: &[Vertex], indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<Model, ModelError> {
 		let width = source_image.width();
 		let height = source_image.height();
 		let queue = &renderer.load_queue;
@@ -74,7 +78,7 @@ impl Model {
 						true
 					}
 					Err(err) => {
-						eprintln!("Error while loading model: {:?}", err);
+						eprintln!("Error while loading renderer.model: {:?}", err);
 						self.fence.swap(Arc::new(FenceCheck::Done(false)));
 						false
 					}

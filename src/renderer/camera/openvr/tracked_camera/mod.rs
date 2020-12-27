@@ -2,10 +2,11 @@ use openvr::{Context, TrackedDeviceIndex};
 use openvr_sys as sys;
 
 mod error;
-pub use error::*;
 mod utils;
-pub use utils::*;
 mod service;
+
+pub use error::*;
+pub use utils::*;
 pub use service::*;
 
 #[derive(Copy, Clone)]

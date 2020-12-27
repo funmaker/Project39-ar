@@ -1,6 +1,5 @@
 use std::{error, fmt};
 use std::ffi::CStr;
-
 use openvr_sys as sys;
 
 use super::FnTable;

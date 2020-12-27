@@ -1,13 +1,14 @@
-use std::time::{Instant, Duration};
+#![allow(dead_code)]
 
+use std::time::{Instant, Duration};
 use err_derive::Error;
 use openvr_sys as sys;
 use openvr::Context;
 
-use crate::debug::{debug, get_debug_flag};
-use super::{ Camera, CaptureError };
-
 mod tracked_camera;
+
+use super::{ Camera, CaptureError };
+use crate::debug::{debug, get_debug_flag};
 use tracked_camera::{TrackedCamera, FrameType, CameraService};
 
 pub const CAPTURE_INDEX: u32 = 0;

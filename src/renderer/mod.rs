@@ -20,18 +20,17 @@ use cgmath::{Matrix4, Transform, Matrix};
 use openvr::compositor::CompositorError;
 
 pub mod model;
-pub mod vertex;
 pub mod camera;
 pub mod eye;
-pub mod model_utils;
+pub mod window;
 
 use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
-use crate::window::{self, Window, SwapchainRegenError};
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
+use window::Window;
 
 // workaround https://github.com/vulkano-rs/vulkano/issues/709
 type PipelineType = GraphicsPipeline<
@@ -425,7 +424,6 @@ pub enum RendererSwapchainError {
 
 #[derive(Debug, Error)]
 pub enum RenderError {
-	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] SwapchainRegenError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] DrawIndexedError),
@@ -435,5 +433,6 @@ pub enum RenderError {
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] CompositorError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
+	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] window::SwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] window::RenderError),
 }

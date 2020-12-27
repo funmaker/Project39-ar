@@ -1,18 +1,16 @@
 use std::collections::HashMap;
-
 use err_derive::Error;
 use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models, TrackedControllerRole};
 use openvr::compositor::CompositorError;
 use openvr::system::TrackedPropertyError;
-use image::{ImageError, DynamicImage, ImageBuffer};
 use obj::ObjError;
 use cgmath::{Matrix4, Vector3};
 
-use crate::renderer::{Renderer, RendererCreationError, RenderError, model, camera, model_utils};
-use crate::renderer::model::{Model, ModelError};
+use crate::renderer::{Renderer, RendererCreationError, RenderError, camera};
+use crate::renderer::model::{self, Model};
+use crate::renderer::window::{Window, WindowCreationError};
 use crate::openvr_vulkan::mat4;
 use crate::debug::{get_debug_flag, set_debug_flag};
-use crate::window::{Window, WindowCreationError};
 
 pub struct Application {
 	context: Context,
@@ -58,10 +56,18 @@ impl Application {
 		
 		let mut last_buttons = 0;
 		
-		let kek_box = model_utils::load_obj("models/cube", &self.renderer)?;
+		scene.push((
+			model::from_obj("models/cube/cube", &self.renderer)?,
+			Matrix4::from_translation(Vector3::new(0.0, -1.5, -2.0)),
+		));
+		
+		scene.push((
+			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &self.renderer)?,
+			Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0)),
+		));
+		
 		let mut rot = 0.0;
 		
-		scene.push((kek_box, Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0))));
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -75,12 +81,7 @@ impl Application {
 						scene[*devices.get(&i).unwrap()].1 = mat4(poses.render[i as usize].device_to_absolute_tracking());
 					} else if let Some(model) = self.render_models.load_render_model(&self.system.string_tracked_device_property(i, 1003)?)? {
 						if let Some(texture) = self.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
-							let vertices: Vec<model::Vertex> = model.vertices().iter().map(Into::into).collect();
-							let indices = model.indices();
-							let size = texture.dimensions();
-							let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
-							
-							let model = Model::new(&vertices, indices, image, &self.renderer)?;
+							let model = model::from_openvr(model, texture, &self.renderer)?;
 							
 							devices.insert(i, scene.len());
 							scene.push((model, mat4(poses.render[i as usize].device_to_absolute_tracking())));
@@ -112,8 +113,8 @@ impl Application {
 			
 			rot += 0.01;
 			
-			for (_, orig) in scene.iter_mut() {
-				*orig = Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0)) * Matrix4::from_angle_y(cgmath::Rad(rot));
+			if let Some((_, ref mut orig)) = scene.last_mut() {
+				*orig = Matrix4::from_translation(Vector3::new(0.0, -1.0, -2.0)) * Matrix4::from_angle_y(cgmath::Rad(rot));
 			}
 			
 			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();
@@ -151,9 +152,9 @@ pub enum ApplicationCreationError {
 
 #[derive(Debug, Error)]
 pub enum ApplicationRunError {
-	#[error(display = "{}", _0)] ImageError(#[error(source)] ImageError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] model_utils::LoadError),
+	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
+	#[error(display = "{}", _0)] ModelError(#[error(source)] model::ModelError),
+	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] model::LoadError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] CompositorError),
 	#[error(display = "{}", _0)] RenderError(#[error(source)] RenderError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] TrackedPropertyError),

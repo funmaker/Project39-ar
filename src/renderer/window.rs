@@ -1,24 +1,20 @@
 use std::sync::Arc;
-
 use err_derive::Error;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::desktop::EventLoopExtDesktop;
-use vulkano::instance::Instance;
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
-use vulkano::format::Format;
-use vulkano::command_buffer::{CommandBuffer, AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
 use vulkano::device::{Queue, Device};
-use vulkano::framebuffer::FramebufferAbstract;
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
 use vulkano::{format, OomError};
 use vulkano_win::{VkSurfaceBuild, CreationError};
 
-use crate::renderer::{Renderer, RendererSwapchainError, eye};
+use super::{Renderer, RendererSwapchainError};
 
 type WinitWindow = winit::window::Window;
 

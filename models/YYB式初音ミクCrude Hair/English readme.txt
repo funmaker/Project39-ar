@@ -1,13 +1,13 @@
 ﻿===================================================================================================
-== model：YYB style Hatsune miku
+== renderer.model：YYB style Hatsune miku
 == modeler：YYB
 ===================================================================================================
 ■About this Model
 
 HI！
 Thanks for downloading !
-This model is Hatsune Miku MMD model creatived and produced by YYB
-Please use this model within the limit of following matters
+This renderer.model is Hatsune Miku MMD renderer.model creatived and produced by YYB
+Please use this renderer.model within the limit of following matters
 
 ■Forbidden matters
 
@@ -16,18 +16,18 @@ Please use this model within the limit of following matters
 •Can't be used to contempt the other countries and  Other people
 •Some behaviors to confuse the original author and to other stakeholders are forbidden ( such as be used for Television、Animation production company、Magazinee . etc）
 •Can't be used to belittle the original author、original Motion 
-•Don't deceive the creator of this data（Contains claiming to be the creator of the model）
+•Don't deceive the creator of this data（Contains claiming to be the creator of the renderer.model）
 
 ■About the distribution and remodeling
 
-Some parts of this model can not be transplanted to other models
+Some parts of this renderer.model can not be transplanted to other models
 （e.g.：The twin tail and the waist machinery . etc）
 
-You have to add this readme（japanese and English） and your own readme to the folder if you edit this model and distribute ( required !)
+You have to add this readme（japanese and English） and your own readme to the folder if you edit this renderer.model and distribute ( required !)
 
 ■Disclaimer
 
-The producer of this model ( YYB )  shall not be responsible for any damage and loss caused or alleged to be caused by or in connection with using this model.
+The producer of this renderer.model ( YYB )  shall not be responsible for any damage and loss caused or alleged to be caused by or in connection with using this renderer.model.
 
 ■Acknowledgments
 

@@ -11,7 +11,6 @@ mod shaders;
 mod renderer;
 mod application;
 mod openvr_vulkan;
-mod window;
 
 use application::Application;
 use application::CameraAPI;

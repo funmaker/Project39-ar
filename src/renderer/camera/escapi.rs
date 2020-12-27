@@ -3,6 +3,7 @@
 use err_derive::Error;
 
 use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
+
 pub const CAPTURE_INDEX: usize = 0;
 
 pub struct Escapi {

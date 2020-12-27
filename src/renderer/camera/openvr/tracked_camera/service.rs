@@ -1,5 +1,4 @@
 use std::{ptr, mem};
-
 use openvr_sys as sys;
 use openvr::{TrackedDeviceIndex, TrackedDevicePose};
 
