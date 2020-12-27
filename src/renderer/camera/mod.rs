@@ -40,7 +40,7 @@ pub trait Camera: Send + Sized + 'static {
 			                                         ..ImageUsage::none() })?;
 		let ret = target.clone();
 		
-		let (sender, receiver) = mpsc::channel();
+		let (sender, receiver) = mpsc::sync_channel(1);
 		
 		thread::spawn(move || {
 			match self.capture_loop(queue, target, sender) {
@@ -53,7 +53,7 @@ pub trait Camera: Send + Sized + 'static {
 		Ok((ret, receiver))
 	}
 	
-	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage<format::B8G8R8A8Unorm>>, sender: mpsc::Sender<AutoCommandBuffer>) -> Result<(), CaptureLoopError> {
+	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage<format::B8G8R8A8Unorm>>, sender: mpsc::SyncSender<AutoCommandBuffer>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
 		let mut last_capture = Instant::now();
 		

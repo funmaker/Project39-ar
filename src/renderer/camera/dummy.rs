@@ -5,7 +5,13 @@ use std::thread;
 
 use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
 
-static FRAME: &'static [u8] = &[127_u8; (CAPTURE_WIDTH * CAPTURE_HEIGHT * 4) as usize];
+lazy_static!(
+	static ref FRAME: Vec<u8> = [127, 127, 127, 255].iter()
+	                                                .copied()
+	                                                .cycle()
+	                                                .take((CAPTURE_WIDTH * CAPTURE_HEIGHT * 4) as usize)
+	                                                .collect();
+);
 
 pub struct Dummy {
 	last_frame: Instant,
@@ -29,6 +35,6 @@ impl Camera for Dummy {
 		
 		self.last_frame = Instant::now();
 		
-		Ok(FRAME)
+		Ok(FRAME.as_slice())
 	}
 }

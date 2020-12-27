@@ -7,12 +7,18 @@ use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::desktop::EventLoopExtDesktop;
 use vulkano::instance::Instance;
-use vulkano::swapchain::{Surface, Swapchain, SwapchainCreationError};
-use vulkano::image::SwapchainImage;
+use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
+use vulkano::image::{SwapchainImage, AttachmentImage};
 use vulkano::format::Format;
+use vulkano::command_buffer::{CommandBuffer, AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
+use vulkano::device::{Queue, Device};
+use vulkano::framebuffer::FramebufferAbstract;
+use vulkano::sampler::Filter;
+use vulkano::sync::GpuFuture;
+use vulkano::{format, OomError};
 use vulkano_win::{VkSurfaceBuild, CreationError};
 
-use crate::renderer::{Renderer, RendererSwapchainError};
+use crate::renderer::{Renderer, RendererSwapchainError, eye};
 
 type WinitWindow = winit::window::Window;
 
@@ -53,15 +59,82 @@ impl Window {
 	}
 	
 	pub fn regen_swapchain(&mut self) -> Result<(), SwapchainRegenError> {
-		// let dimensions = self.surface.window().inner_size().into();
-		//
-		// self.swapchain = self.swapchain.0.recreate_with_dimensions(dimensions)
-		//                      .map_err(|err| match err {
-		// 	                     SwapchainCreationError::UnsupportedDimensions => SwapchainRegenError::NeedRetry,
-		// 	                     err => err?,
-		//                      })?;
+		let dimensions = self.surface.window().inner_size().into();
+		
+		self.swapchain = self.swapchain.0.recreate_with_dimensions(dimensions)
+		                     .map_err(|err| match err {
+			                     SwapchainCreationError::UnsupportedDimensions => SwapchainRegenError::NeedRetry,
+			                     err => err.into(),
+		                     })?;
 		
 		Ok(())
+	}
+	
+	pub fn render(&mut self,
+	              device: &Arc<Device>,
+	              queue: &Arc<Queue>,
+	              future: Box<dyn GpuFuture>,
+	              left: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
+	              right: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>)
+	              -> Result<Box<dyn GpuFuture>, RenderError> {
+		let (ref mut swapchain, ref mut images) = self.swapchain;
+		
+		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), None) {
+			Err(AcquireError::OutOfDate) => {
+				self.swapchain_regen_required = true;
+				Err(RenderError::NeedRetry)
+			},
+			Err(err) => Err(err.into()),
+			Ok(res) => Ok(res),
+		}?;
+		
+		if suboptimal {
+			eprintln!("Suboptimal");
+			self.swapchain_regen_required = true;
+		}
+		
+		if image_num > 2 {
+			eprintln!("Acquire_next_image returned {}! Skipping render.", image_num);
+			self.swapchain_regen_required = true;
+			return Err(RenderError::NeedRetry);
+		}
+		
+		let out_dims = swapchain.dimensions();
+		let left_dims = left.dimensions();
+		let right_dims = right.dimensions();
+		
+		let mut builder = AutoCommandBufferBuilder::new(device.clone(), queue.family().clone())?;
+		
+		builder.blit_image(left.clone(),
+		                   [0, 0, 0],
+		                   [left_dims[0] as i32, left_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   images[image_num].clone(),
+		                   [0, 0, 0],
+		                   [out_dims[0] as i32 / 2, out_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   1,
+		                   Filter::Linear)?
+		       .blit_image(right.clone(),
+		                   [0, 0, 0],
+		                   [right_dims[0] as i32, right_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   images[image_num].clone(),
+		                   [out_dims[0] as i32 / 2, 0, 0],
+		                   [out_dims[0] as i32, out_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   1,
+		                   Filter::Linear)?;
+		
+		let command_buffer = builder.build()?;
+		
+		Ok(Box::new(future.join(acquire_future)
+		                  .then_execute(queue.clone(), command_buffer)?
+		                  .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)))
 	}
 	
 	pub fn pull_events(&mut self) {
@@ -132,4 +205,14 @@ pub enum WindowCreationError {
 pub enum SwapchainRegenError {
 	#[error(display = "Need Retry")] NeedRetry,
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
+}
+
+#[derive(Debug, Error)]
+pub enum RenderError {
+	#[error(display = "Need Retry")] NeedRetry,
+	#[error(display = "{}", _0)] AcquireError(#[error(source)] AcquireError),
+	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
+	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
 }

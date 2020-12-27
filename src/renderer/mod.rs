@@ -22,12 +22,13 @@ use openvr::compositor::CompositorError;
 pub mod model;
 pub mod vertex;
 pub mod camera;
-mod eye;
+pub mod eye;
+pub mod model_utils;
 
 use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
-use crate::window::{Window, SwapchainRegenError};
+use crate::window::{self, Window, SwapchainRegenError};
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
@@ -221,6 +222,7 @@ impl Renderer {
 			                                            depth_range: 0.0 .. 1.0 }))
 			                 .fragment_shader(fs.main_entry_point(), ())
 			                 .depth_stencil_simple_depth()
+			                 .cull_mode_back()
 			                 .render_pass(Subpass::from(render_pass.clone() as Arc<dyn RenderPassAbstract + Send + Sync>, 0).unwrap())
 			                 .build(device.clone())?
 		);
@@ -371,11 +373,15 @@ impl Renderer {
 			future = Box::new(future.then_signal_semaphore());
 		}
 		
-		let future = future.then_execute(self.queue.clone(), command_buffer)?;
-		
 		unsafe {
 			self.compositor.submit(openvr::Eye::Left,  &self.eyes.0.texture, None, Some(hmd_pose.clone()))?;
 			self.compositor.submit(openvr::Eye::Right, &self.eyes.1.texture, None, Some(hmd_pose.clone()))?;
+		}
+		
+		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
+		
+		if window.render_required {
+			future = window.render(&self.device, &self.queue, future, &mut self.eyes.0.image, &mut self.eyes.1.image)?;
 		}
 		
 		let future = future.then_signal_fence_and_flush();
@@ -429,4 +435,5 @@ pub enum RenderError {
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] CompositorError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
+	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] window::RenderError),
 }
