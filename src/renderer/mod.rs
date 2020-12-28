@@ -9,7 +9,7 @@ use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::framebuffer::{Subpass, RenderPassCreationError, RenderPassAbstract};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError};
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::format::{ClearValue, Format};
@@ -326,14 +326,8 @@ impl Renderer {
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for (model, matrix) in scene.iter_mut() {
-			if !model.loaded() { continue };
-			builder.draw_indexed(self.pipeline.clone(),
-			                     &DynamicState::none(),
-			                     model.vertices.clone(),
-			                     model.indices.clone(),
-			                     model.set.clone(),
-			                     left_pv * *matrix)?;
+		for (model, matrix) in scene.iter() {
+			model.render(&mut builder, &self.pipeline, left_pv * *matrix)?;
 		}
 		
 		builder.end_render_pass()?
@@ -342,14 +336,8 @@ impl Renderer {
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for (model, matrix) in scene.iter_mut() {
-			if !model.loaded() { continue };
-			builder.draw_indexed(self.pipeline.clone(),
-			                     &DynamicState::none(),
-			                     model.vertices.clone(),
-			                     model.indices.clone(),
-			                     model.set.clone(),
-			                     right_pv * *matrix)?;
+		for (model, matrix) in scene.iter() {
+			model.render(&mut builder, &self.pipeline, right_pv * *matrix)?;
 		}
 		
 		builder.end_render_pass()?;

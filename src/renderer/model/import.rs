@@ -17,7 +17,7 @@ pub fn from_obj(path: &str, renderer: &Renderer) -> Result<Model, LoadError> {
 	let texture_reader = BufReader::new(File::open(format!("{}.png", path))?);
 	let texture = image::load(texture_reader, ImageFormat::Png)?;
 	
-	Ok(Model::new(
+	Ok(Model::simple(
 		&model.vertices.iter().map(Into::into).collect::<Vec<_>>(),
 		&model.indices,
 		texture,
@@ -44,7 +44,7 @@ pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, rendere
 	let size = texture.dimensions();
 	let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
 	
-	Ok(Model::new(&vertices, &indices, image, renderer)?)
+	Ok(Model::simple(&vertices, &indices, image, renderer)?)
 }
 
 impl From<&openvr_rm::Vertex> for Vertex {
@@ -80,26 +80,33 @@ pub fn from_pmx(path: &str, renderer: &Renderer) -> Result<Model, LoadError> {
 	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
 	
-	let texture_path = textures_reader.next()?.unwrap();
-	let texture_reader = BufReader::new(File::open(root.join(texture_path))?);
-	let texture = image::load(texture_reader, ImageFormat::Png)?;
-	
+	let textures = textures_reader.iter()
+	                              .map_err(LoadError::PmxError)
+	                              .map(|texture_path| {
+		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
+		                              
+		                              Ok(image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?)
+	                              })
+	                              .collect::<Vec<_>>()?;
 	
 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
-	println!("Materials:");
+	let mut last_index = 0_usize;
 	
-	materials_reader.iter::<i32>().enumerate().for_each(|(i, m)| {
-		println!("{}) {}", i, m);
-		
-		Ok(())
-	})?;
+	let mut model = Model::new(&vertices, renderer)?;
 	
-	Ok(Model::new(
-		&vertices,
-		&indices,
-		texture,
-		renderer,
-	)?)
+	materials_reader.iter::<i32>()
+	                .map_err(LoadError::PmxError)
+	                .for_each(|m| {
+		                model.add_sub_mesh(&indices[last_index .. last_index + m.surface_count as usize],
+		                                   textures[m.texture_index as usize].clone(),
+		                                   renderer)?;
+		                
+		                last_index += m.surface_count as usize;
+		                
+		                Ok(())
+	                })?;
+	
+	Ok(model)
 }
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002

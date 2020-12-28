@@ -58,12 +58,14 @@ impl Application {
 		
 		scene.push((
 			model::from_obj("models/cube/cube", &self.renderer)?,
-			Matrix4::from_translation(Vector3::new(0.0, -1.5, -2.0)),
+			Matrix4::from_translation(Vector3::new(0.0, -1.5, -1.5)),
 		));
+		
+		let rotating = scene.len();
 		
 		scene.push((
 			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &self.renderer)?,
-			Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0)),
+			Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Deg(180.0)),
 		));
 		
 		let mut rot = 0.0;
@@ -107,14 +109,15 @@ impl Application {
 						let mode: u8 = get_debug_flag("mode").unwrap_or_default();
 						set_debug_flag("mode", (mode + 1) % 3);
 					}
-					
 				}
 			}
 			
 			rot += 0.01;
 			
-			if let Some((_, ref mut orig)) = scene.last_mut() {
-				*orig = Matrix4::from_translation(Vector3::new(0.0, -1.0, -2.0)) * Matrix4::from_angle_y(cgmath::Rad(rot));
+			for (n, (_, orig)) in scene.iter_mut().enumerate() {
+				if n == rotating {
+					*orig = Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Rad(rot));
+				}
 			}
 			
 			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();

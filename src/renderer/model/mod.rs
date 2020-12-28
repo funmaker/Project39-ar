@@ -1,90 +1,103 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock, PoisonError};
 use std::time::Duration;
+use std::ops::Deref;
 use err_derive::Error;
-use image::{DynamicImage, GenericImageView};
+use cgmath::Matrix4;
+use image::DynamicImage;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
-use vulkano::image::{ImmutableImage, Dimensions, ImageCreationError};
+use vulkano::image::ImageCreationError;
 use vulkano::sync::{GpuFuture, FlushError, FenceSignalFuture};
-use vulkano::format::Format;
 use vulkano::memory::DeviceMemoryAllocError;
-use vulkano::sampler::Sampler;
-use vulkano::descriptor::descriptor_set::{DescriptorSet, PersistentDescriptorSet, PersistentDescriptorSetError, PersistentDescriptorSetBuildError};
-use vulkano::descriptor::PipelineLayoutAbstract;
-use arc_swap::ArcSwap;
+use vulkano::descriptor::descriptor_set::{PersistentDescriptorSetError, PersistentDescriptorSetBuildError};
+use vulkano::command_buffer::AutoCommandBufferBuilder;
 
 pub mod vertex;
 pub mod import;
+pub mod sub_mesh;
 
 pub use vertex::Vertex;
 pub use import::{LoadError, from_obj, from_openvr, from_pmx};
-use super::Renderer;
+pub use sub_mesh::SubMesh;
+use super::{Renderer, PipelineType, RenderError};
 
 pub type VertexIndex = u16;
 
 pub struct Model {
-	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	pub indices: Arc<ImmutableBuffer<[VertexIndex]>>,
-	pub image: Arc<ImmutableImage<Format>>,
-	pub set: Arc<dyn DescriptorSet + Send + Sync>,
-	fence: ArcSwap<FenceCheck>,
+	vertices: Arc<ImmutableBuffer<[Vertex]>>,
+	sub_meshes: Vec<SubMesh>,
+	fence: Arc<RwLock<FenceCheck>>,
 }
 
 impl Model {
-	pub fn new(vertices: &[Vertex], indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<Model, ModelError> {
-		let width = source_image.width();
-		let height = source_image.height();
+	pub fn new(vertices: &[Vertex], renderer: &Renderer) -> Result<Model, ModelError> {
 		let queue = &renderer.load_queue;
 		
 		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(vertices.iter().cloned(),
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
 		                                                              queue.clone())?;
 		
-		let (indices, indices_promise) = ImmutableBuffer::from_iter(indices.iter().cloned(),
-		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
-		                                                            queue.clone())?;
-		
-		let (image, image_promise) = ImmutableImage::from_iter(source_image.to_rgba8().into_vec().into_iter(),
-		                                                       Dimensions::Dim2d{ width, height },
-		                                                       Format::R8G8B8A8Unorm,
-		                                                       queue.clone())?;
-		
-		let sampler = Sampler::simple_repeat_linear_no_mipmap(queue.device().clone());
-		
-		let set = Arc::new(
-			PersistentDescriptorSet::start(renderer.pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
-			                        .add_sampled_image(image.clone(), sampler.clone())?
-			                        .build()?
-		);
-		
-		let fence = ArcSwap::new(Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?));
+		let fence = Arc::new(RwLock::new(FenceCheck::new(vertices_promise)?));
 		
 		Ok(Model {
 			vertices,
-			indices,
-			image,
-			set,
+			sub_meshes: Vec::new(),
 			fence,
 		})
 	}
 	
+	pub fn simple(vertices: &[Vertex], indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<Model, ModelError> {
+		let mut model = Model::new(vertices, renderer)?;
+		
+		model.add_sub_mesh(indices, source_image, renderer)?;
+		
+		Ok(model)
+	}
+	
+	pub fn add_sub_mesh(&mut self, indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<(), ModelError> {
+		let (mesh, mesh_promise) = SubMesh::new(indices, source_image, renderer)?;
+		
+		self.sub_meshes.push(mesh);
+		
+		self.fence.write()?
+		          .append(mesh_promise)?;
+		
+		Ok(())
+	}
+	
 	pub fn loaded(&self) -> bool {
-		match &**self.fence.load() {
-			FenceCheck::Done(result) => *result,
-			FenceCheck::Pending(fence) => {
+		let result;
+		
+		match self.fence.read().as_ref().map(Deref::deref) {
+			// TODO: propagate Errors
+			Err(_) => return false,
+			Ok(&FenceCheck::Done(ref result)) => return *result,
+			Ok(&FenceCheck::Pending(ref fence)) => {
 				match fence.wait(Some(Duration::new(0, 0))) {
-					Err(FlushError::Timeout) => false,
-					Ok(()) => {
-						self.fence.swap(Arc::new(FenceCheck::Done(true)));
-						true
-					}
+					Err(FlushError::Timeout) => return false,
+					Ok(()) => result = true,
 					Err(err) => {
 						eprintln!("Error while loading renderer.model: {:?}", err);
-						self.fence.swap(Arc::new(FenceCheck::Done(false)));
-						false
+						result = false;
 					}
 				}
 			}
 		}
+		
+		if let Ok(mut fence) = self.fence.write() {
+			*fence = FenceCheck::Done(result);
+		}
+		
+		result
+	}
+	
+	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, pipeline: &Arc<PipelineType>, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError> {
+		if self.loaded() {
+			for sub_mesh in self.sub_meshes.iter() {
+				sub_mesh.render(self, builder, pipeline, pvm_matrix)?;
+			}
+		}
+		
+		Ok(())
 	}
 }
 
@@ -99,6 +112,20 @@ impl FenceCheck {
 	          where GF: GpuFuture + 'static {
 		Ok(FenceCheck::Pending((Box::new(future) as Box<dyn GpuFuture>).then_signal_fence_and_flush()?))
 	}
+	
+	fn append<GF>(&mut self, other: GF)
+	             -> Result<(), FlushError>
+	             where GF: GpuFuture + 'static {
+		let this = std::mem::replace(self, FenceCheck::Done(false));
+		
+		*self = match this {
+			FenceCheck::Done(false) => FenceCheck::Done(false),
+			FenceCheck::Done(true) => FenceCheck::Pending((Box::new(other) as Box<dyn GpuFuture>).then_signal_fence_and_flush()?),
+			FenceCheck::Pending(gpu_future) => FenceCheck::Pending((Box::new(gpu_future.join(other)) as Box<dyn GpuFuture>).then_signal_fence_and_flush()?),
+		};
+		
+		Ok(())
+	}
 }
 
 
@@ -110,4 +137,11 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] PoisonError(String),
+}
+
+impl<S> From<PoisonError<S>> for ModelError {
+	fn from(poison: PoisonError<S>) -> Self {
+		ModelError::PoisonError(poison.to_string())
+	}
 }
