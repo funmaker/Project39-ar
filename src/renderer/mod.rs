@@ -4,11 +4,10 @@ use vulkano::{app_info_from_cargo_toml, OomError, format};
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue, DeviceCreationError};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice, LayersListError, InstanceCreationError};
-use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineCreationError};
+use vulkano::pipeline::GraphicsPipelineCreationError;
 use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
-use vulkano::pipeline::viewport::Viewport;
-use vulkano::framebuffer::{Subpass, RenderPassCreationError, RenderPassAbstract};
+use vulkano::framebuffer::{RenderPassCreationError, RenderPassAbstract};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError};
 use vulkano::memory::DeviceMemoryAllocError;
@@ -23,21 +22,17 @@ pub mod model;
 pub mod camera;
 pub mod eye;
 pub mod window;
+pub mod pipelines;
 
-use crate::shaders;
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use model::Model;
 use window::Window;
+use pipelines::Pipelines;
 
-// workaround https://github.com/vulkano-rs/vulkano/issues/709
-type PipelineType = GraphicsPipeline<
-	vulkano::pipeline::vertex::SingleBufferDefinition<model::Vertex>,
-	std::boxed::Box<dyn vulkano::descriptor::pipeline_layout::PipelineLayoutAbstract + Send + Sync>,
-	std::sync::Arc<dyn RenderPassAbstract + Send + Sync>
->;
+type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
 pub struct Renderer {
 	pub instance: Arc<Instance>,
@@ -45,7 +40,7 @@ pub struct Renderer {
 	device: Arc<Device>,
 	queue: Arc<Queue>,
 	load_queue: Arc<Queue>,
-	pipeline: Arc<PipelineType>,
+	pipelines: Pipelines,
 	eyes: (Eye, Eye),
 	compositor: Compositor,
 	previous_frame_end: Option<Box<dyn GpuFuture>>,
@@ -65,8 +60,6 @@ impl Renderer {
 	pub fn new<C>(system: &System, compositor: Compositor, device: Option<usize>, camera: C)
 	             -> Result<Renderer, RendererCreationError>
 	             where C: Camera {
-		let recommended_size = system.recommended_render_target_size();
-		
 		dprintln!("List of Vulkan debugging layers available to use:");
 		let layers = vulkano::instance::layers_list()?;
 		for layer in layers {
@@ -186,9 +179,6 @@ impl Renderer {
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		
-		let vs = shaders::vert::Shader::load(device.clone()).unwrap();
-		let fs = shaders::frag::Shader::load(device.clone()).unwrap();
-		
 		let render_pass = Arc::new(
 			vulkano::single_pass_renderpass!(device.clone(),
 				attachments: {
@@ -212,19 +202,7 @@ impl Renderer {
 			)?
 		);
 		
-		let pipeline = Arc::new(
-			GraphicsPipeline::start()
-			                 .vertex_input_single_buffer::<model::Vertex>()
-			                 .vertex_shader(vs.main_entry_point(), ())
-			                 .viewports(Some(Viewport { origin: [0.0, 0.0],
-			                                            dimensions: [recommended_size.0 as f32, recommended_size.1 as f32],
-			                                            depth_range: 0.0 .. 1.0 }))
-			                 .fragment_shader(fs.main_entry_point(), ())
-			                 .depth_stencil_simple_depth()
-			                 .cull_mode_back()
-			                 .render_pass(Subpass::from(render_pass.clone() as Arc<dyn RenderPassAbstract + Send + Sync>, 0).unwrap())
-			                 .build(device.clone())?
-		);
+		let frame_buffer_size = system.recommended_render_target_size();
 		
 		let eyes = {
 			let proj_left : Matrix4<f32> = CLIP
@@ -235,8 +213,8 @@ impl Renderer {
 			                             * mat4(&system.eye_to_head_transform(openvr::Eye::Right)).inverse_transform().unwrap();
 			
 			(
-				Eye::new(recommended_size, proj_left,  &queue, &render_pass)?,
-				Eye::new(recommended_size, proj_right, &queue, &render_pass)?,
+				Eye::new(frame_buffer_size, proj_left,  &queue, &render_pass)?,
+				Eye::new(frame_buffer_size, proj_right, &queue, &render_pass)?,
 			)
 		};
 		
@@ -244,12 +222,14 @@ impl Renderer {
 		
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		
+		let pipelines = Pipelines::new(render_pass, frame_buffer_size);
+		
 		Ok(Renderer {
 			instance,
 			device,
 			queue,
 			load_queue,
-			pipeline,
+			pipelines,
 			eyes,
 			compositor,
 			previous_frame_end,
@@ -327,7 +307,7 @@ impl Renderer {
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for (model, matrix) in scene.iter() {
-			model.render(&mut builder, &self.pipeline, left_pv * *matrix)?;
+			model.render(&mut builder, left_pv * *matrix)?;
 		}
 		
 		builder.end_render_pass()?
@@ -337,7 +317,7 @@ impl Renderer {
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for (model, matrix) in scene.iter() {
-			model.render(&mut builder, &self.pipeline, right_pv * *matrix)?;
+			model.render(&mut builder, right_pv * *matrix)?;
 		}
 		
 		builder.end_render_pass()?;

@@ -18,7 +18,8 @@ pub mod sub_mesh;
 pub use vertex::Vertex;
 pub use import::{LoadError, from_obj, from_openvr, from_pmx};
 pub use sub_mesh::SubMesh;
-use super::{Renderer, PipelineType, RenderError};
+use super::{Renderer, RenderError};
+use crate::renderer::pipelines::PipelineError;
 
 pub type VertexIndex = u16;
 
@@ -45,7 +46,7 @@ impl Model {
 		})
 	}
 	
-	pub fn simple(vertices: &[Vertex], indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<Model, ModelError> {
+	pub fn simple(vertices: &[Vertex], indices: &[VertexIndex], source_image: DynamicImage, renderer: &mut Renderer) -> Result<Model, ModelError> {
 		let mut model = Model::new(vertices, renderer)?;
 		
 		model.add_sub_mesh(indices, source_image, renderer)?;
@@ -53,7 +54,7 @@ impl Model {
 		Ok(model)
 	}
 	
-	pub fn add_sub_mesh(&mut self, indices: &[VertexIndex], source_image: DynamicImage, renderer: &Renderer) -> Result<(), ModelError> {
+	pub fn add_sub_mesh(&mut self, indices: &[VertexIndex], source_image: DynamicImage, renderer: &mut Renderer) -> Result<(), ModelError> {
 		let (mesh, mesh_promise) = SubMesh::new(indices, source_image, renderer)?;
 		
 		self.sub_meshes.push(mesh);
@@ -67,6 +68,7 @@ impl Model {
 	pub fn loaded(&self) -> bool {
 		let result;
 		
+		// TODO: This is bad. This will cause problems
 		match self.fence.read().as_ref().map(Deref::deref) {
 			// TODO: propagate Errors
 			Err(_) => return false,
@@ -90,10 +92,10 @@ impl Model {
 		result
 	}
 	
-	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, pipeline: &Arc<PipelineType>, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError> {
+	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError> {
 		if self.loaded() {
 			for sub_mesh in self.sub_meshes.iter() {
-				sub_mesh.render(self, builder, pipeline, pvm_matrix)?;
+				sub_mesh.render(self, builder, pvm_matrix)?;
 			}
 		}
 		
@@ -137,6 +139,7 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] PoisonError(String),
 }
 

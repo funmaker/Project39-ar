@@ -57,14 +57,14 @@ impl Application {
 		let mut last_buttons = 0;
 		
 		scene.push((
-			model::from_obj("models/cube/cube", &self.renderer)?,
+			model::from_obj("models/cube/cube", &mut self.renderer)?,
 			Matrix4::from_translation(Vector3::new(0.0, -1.5, -1.5)),
 		));
 		
 		let rotating = scene.len();
 		
 		scene.push((
-			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &self.renderer)?,
+			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
 			Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Deg(180.0)),
 		));
 		
@@ -83,7 +83,7 @@ impl Application {
 						scene[*devices.get(&i).unwrap()].1 = mat4(poses.render[i as usize].device_to_absolute_tracking());
 					} else if let Some(model) = self.render_models.load_render_model(&self.system.string_tracked_device_property(i, 1003)?)? {
 						if let Some(texture) = self.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
-							let model = model::from_openvr(model, texture, &self.renderer)?;
+							let model = model::from_openvr(model, texture, &mut self.renderer)?;
 							
 							devices.insert(i, scene.len());
 							scene.push((model, mat4(poses.render[i as usize].device_to_absolute_tracking())));

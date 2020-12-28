@@ -7,7 +7,6 @@ use std::env;
 use getopts::Options;
 
 #[macro_use] mod debug;
-mod shaders;
 mod renderer;
 mod application;
 mod openvr_vulkan;

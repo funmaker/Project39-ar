@@ -23,10 +23,10 @@ pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
 pub const DEPTH_FORMAT: Format = Format::D16Unorm;
 
 impl Eye {
-	pub fn new<RPD>(recommended_size:(u32, u32), projection: Matrix4<f32>, queue: &Queue, render_pass: &Arc<RPD>)
-	               -> Result<Eye, EyeCreationError>
+	pub fn new<RPD>(frame_buffer_size:(u32, u32), projection: Matrix4<f32>, queue: &Queue, render_pass: &Arc<RPD>)
+	                -> Result<Eye, EyeCreationError>
 	               where RPD: RenderPassAbstract + Sync + Send + 'static {
-		let dimensions = [recommended_size.0, recommended_size.1];
+		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];
 		
 		let device = queue.device();
 		

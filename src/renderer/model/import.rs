@@ -10,7 +10,7 @@ use openvr::render_models as openvr_rm;
 use super::{Vertex, Model, ModelError, VertexIndex};
 use crate::renderer::Renderer;
 
-pub fn from_obj(path: &str, renderer: &Renderer) -> Result<Model, LoadError> {
+pub fn from_obj(path: &str, renderer: &mut Renderer) -> Result<Model, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
 	let model: Obj<obj::TexturedVertex, VertexIndex> = obj::load_obj(model_reader)?;
 	
@@ -38,7 +38,7 @@ impl From<&obj::TexturedVertex> for Vertex {
 }
 
 
-pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, renderer: &Renderer) -> Result<Model, LoadError> {
+pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, renderer: &mut Renderer) -> Result<Model, LoadError> {
 	let vertices: Vec<Vertex> = model.vertices().iter().map(Into::into).collect();
 	let indices: Vec<VertexIndex> = model.indices().iter().copied().map(Into::into).collect();
 	let size = texture.dimensions();
@@ -60,7 +60,7 @@ impl From<&openvr_rm::Vertex> for Vertex {
 }
 
 
-pub fn from_pmx(path: &str, renderer: &Renderer) -> Result<Model, LoadError> {
+pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Model, LoadError> {
 	let mut root = PathBuf::from(path);
 	root.pop();
 	
