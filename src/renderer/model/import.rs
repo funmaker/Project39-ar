@@ -1,4 +1,5 @@
 use std::io::BufReader;
+use std::path::PathBuf;
 use std::fs::File;
 use std::sync::Arc;
 use err_derive::Error;
@@ -7,8 +8,9 @@ use image::{ImageFormat, ImageError, DynamicImage, ImageBuffer};
 use cgmath::num_traits::FromPrimitive;
 use openvr::render_models as openvr_rm;
 
-use super::{Model, ModelError, VertexIndex, simple};
+use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
+use fallible_iterator::FallibleIterator;
 
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
@@ -28,11 +30,9 @@ pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Rend
 impl From<&obj::TexturedVertex> for simple::Vertex {
 	fn from(vertex: &obj::TexturedVertex) -> Self {
 		simple::Vertex::new(
-			vertex.position[0],
-			vertex.position[1],
-			vertex.position[2],
-			vertex.texture[0],
-			1.0 - vertex.texture[1],
+			vertex.position,
+			vertex.normal,
+			[vertex.texture[0], 1.0 - vertex.texture[1]]
 		)
 	}
 }
@@ -54,79 +54,69 @@ pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, rendere
 
 impl From<&openvr_rm::Vertex> for simple::Vertex {
 	fn from(vertex: &openvr_rm::Vertex) -> Self {
-		simple::Vertex::new(
-			vertex.position[0],
-			vertex.position[1],
-			vertex.position[2],
-			vertex.texture_coord[0],
-			vertex.texture_coord[1],
-		)
+		simple::Vertex::new(vertex.position, vertex.normal, vertex.texture_coord)
 	}
 }
 
-//
-// pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Model, LoadError> {
-// 	let mut root = PathBuf::from(path);
-// 	root.pop();
-//
-// 	let model_reader = BufReader::new(File::open(path)?);
-// 	let header = mmd::HeaderReader::new(model_reader)?;
-//
-// 	println!("{}", header);
-//
-// 	let mut vertices_reader = mmd::VertexReader::new(header)?;
-// 	let vertices: Vec<Vertex> = vertices_reader.iter()
-// 	                                           .map(|v: mmd::Vertex<i16>| Ok(v.into()))
-// 	                                           .collect()?;
-//
-// 	let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
-// 	let indices: Vec<VertexIndex> = surfaces_reader.iter()
-// 	                                               .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
-//
-// 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
-//
-// 	let textures = textures_reader.iter()
-// 	                              .map_err(LoadError::PmxError)
-// 	                              .map(|texture_path| {
-// 		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
-//
-// 		                              Ok(image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?)
-// 	                              })
-// 	                              .collect::<Vec<_>>()?;
-//
-// 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
-// 	let mut last_index = 0_usize;
-//
-// 	let mut model = Model::new(&vertices, renderer)?;
-//
-// 	materials_reader.iter::<i32>()
-// 	                .map_err(LoadError::PmxError)
-// 	                .for_each(|m| {
-// 		                model.add_sub_mesh(&indices[last_index .. last_index + m.surface_count as usize],
-// 		                                   textures[m.texture_index as usize].clone(),
-// 		                                   renderer)?;
-//
-// 		                last_index += m.surface_count as usize;
-//
-// 		                Ok(())
-// 	                })?;
-//
-// 	Ok(model)
-// }
-//
-// const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
-//
-// impl<I> From<mmd::Vertex<I>> for Vertex {
-// 	fn from(vertex: mmd::Vertex<I>) -> Self {
-// 		Vertex::new(
-// 			vertex.position[0] * MMD_UNIT_SIZE,
-// 			vertex.position[1] * MMD_UNIT_SIZE,
-// 			vertex.position[2] * MMD_UNIT_SIZE,
-// 			vertex.uv[0],
-// 			vertex.uv[1],
-// 		)
-// 	}
-// }
+
+pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
+	let mut root = PathBuf::from(path);
+	root.pop();
+
+	let model_reader = BufReader::new(File::open(path)?);
+	let header = mmd::HeaderReader::new(model_reader)?;
+
+	println!("{}", header);
+
+	let mut vertices_reader = mmd::VertexReader::new(header)?;
+	let vertices: Vec<mmd_model::Vertex> = vertices_reader.iter()
+	                                                      .map(|v: mmd::Vertex<i16>| Ok(v.into()))
+	                                                      .collect()?;
+	
+	let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
+	let indices: Vec<u16> = surfaces_reader.iter()
+	                                               .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
+	
+	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
+	
+	let textures = textures_reader.iter()
+	                              .map_err(LoadError::PmxError)
+	                              .map(|texture_path| {
+		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
+		                              
+		                              Ok(image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?)
+	                              })
+	                              .collect::<Vec<_>>()?;
+	
+	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
+	let mut last_index = 0_usize;
+	
+	let mut model = mmd_model::MMDModel::new(&vertices, &indices, renderer)?;
+	
+	materials_reader.iter::<i32>()
+	                .map_err(LoadError::PmxError)
+	                .for_each(|m| {
+		                model.add_sub_mesh(last_index .. last_index + m.surface_count as usize, textures[m.texture_index as usize].clone(), renderer)?;
+	
+		                last_index += m.surface_count as usize;
+	
+		                Ok(())
+	                })?;
+	
+	Ok(Arc::new(model))
+}
+
+const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
+
+impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
+	fn from(vertex: mmd::Vertex<I>) -> Self {
+		mmd_model::Vertex::new(
+			[vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
+			vertex.normal,
+			vertex.uv,
+		)
+	}
+}
 
 #[derive(Debug, Error)]
 pub enum LoadError {

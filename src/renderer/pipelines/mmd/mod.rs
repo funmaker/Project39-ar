@@ -30,23 +30,23 @@ pub mod frag {
 }
 
 #[derive(Debug, Deref)]
-pub struct DefaultPipeline(
+pub struct MMDPipeline(
 	GraphicsPipeline<
-		SingleBufferDefinition<model::simple::Vertex>,
+		SingleBufferDefinition<model::mmd::Vertex>,
 		Box<dyn PipelineLayoutAbstract + Send + Sync>,
 		Arc<dyn RenderPassAbstract + Send + Sync>
 	>
 );
 
-unsafe impl SafeDeref for DefaultPipeline {} // DefaultPipeline is immutable, this should be safe
+unsafe impl SafeDeref for MMDPipeline {} // MMDPipeline is immutable, this should be safe
 
-impl Pipeline for DefaultPipeline {
+impl Pipeline for MMDPipeline {
 	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(DefaultPipeline(
+		Ok(Arc::new(MMDPipeline(
 			GraphicsPipeline::start()
 				.vertex_input_single_buffer()
 				.vertex_shader(vs.main_entry_point(), ())

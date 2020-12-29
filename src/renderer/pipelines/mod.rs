@@ -8,8 +8,10 @@ use vulkano::framebuffer::RenderPassCreationError;
 use vulkano::pipeline::GraphicsPipelineCreationError;
 
 mod default;
+mod mmd;
 
 pub use default::DefaultPipeline;
+pub use self::mmd::MMDPipeline;
 use super::RenderPass;
 
 pub trait Pipeline: DowncastSync + Debug {

@@ -5,12 +5,11 @@ use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_devic
 use openvr::compositor::CompositorError;
 use openvr::system::TrackedPropertyError;
 use obj::ObjError;
-use cgmath::{Vector3, Quaternion, One};
+use cgmath::{Vector3, Quaternion, One, Zero};
 
 use crate::renderer::{Renderer, RendererCreationError, RenderError, camera, model};
 use crate::renderer::entity::Entity;
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::openvr_vulkan::{mat4, decompose};
 use crate::debug::{get_debug_flag, set_debug_flag};
 
 pub struct Application {
@@ -64,10 +63,11 @@ impl Application {
 			Quaternion::one(),
 		));
 		
-		// scene.push((
-		// 	model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
-		// 	Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Deg(180.0)),
-		// ));
+		scene.push(Entity::new(
+			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
+			Vector3::new(0.0, -1.0, -1.5),
+			Quaternion::one(),
+		));
 		
 		
 		while !self.window.quit_required {
@@ -76,21 +76,20 @@ impl Application {
 			let poses = self.compositor.wait_get_poses()?;
 			
 			for i in 0..poses.render.len() as u32 {
-				if self.system.tracked_device_class(i) != TrackedDeviceClass::Invalid
-				&& self.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
+				if self.system.tracked_device_class(i) != TrackedDeviceClass::Invalid && self.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
 					if devices.contains_key(&i) {
 						scene[*devices.get(&i).unwrap()].move_to_pose(poses.render[i as usize]);
 					} else if let Some(model) = self.render_models.load_render_model(&self.system.string_tracked_device_property(i, 1003)?)? {
 						if let Some(texture) = self.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
-							let model = model::from_openvr(model, texture, &mut self.renderer)?;
-							let orientation = decompose(mat4(poses.render[i as usize].device_to_absolute_tracking()));
+							let mut entity = Entity::new(
+								model::from_openvr(model, texture, &mut self.renderer)?,
+								Vector3::zero(),
+								Quaternion::one(),
+							);
 							
+							entity.move_to_pose(poses.render[i as usize]);
 							devices.insert(i, scene.len());
-							scene.push(Entity::new(
-								model,
-								orientation.disp,
-								orientation.rot,
-							));
+							scene.push(entity);
 							println!("Loaded {:?}", self.system.tracked_device_class(i));
 						} else { break }
 					} else { break }

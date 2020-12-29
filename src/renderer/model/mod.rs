@@ -8,10 +8,13 @@ use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::pipeline::input_assembly::Index;
 
 pub mod simple;
-pub mod import;
+pub mod mmd;
+mod import;
+mod fence_check;
 
 pub use simple::SimpleModel;
 pub use import::*;
+pub use fence_check::FenceCheck;
 use super::RenderError;
 use super::pipelines::PipelineError;
 
