@@ -23,14 +23,15 @@ pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
+pub mod entity;
 
 use crate::openvr_vulkan::*;
 use crate::debug::debug;
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
-use model::Model;
 use window::Window;
 use pipelines::Pipelines;
+use crate::renderer::entity::Entity;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -263,7 +264,7 @@ impl Renderer {
 		                  format.1)?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [(Model, Matrix4<f32>)], window: &mut Window) -> Result<(), RenderError> {
+	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [Entity], window: &mut Window) -> Result<(), RenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		if window.swapchain_regen_required {
@@ -306,8 +307,8 @@ impl Renderer {
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for (model, matrix) in scene.iter() {
-			model.render(&mut builder, left_pv * *matrix)?;
+		for entity in scene.iter() {
+			entity.render(&mut builder, left_pv)?;
 		}
 		
 		builder.end_render_pass()?
@@ -316,8 +317,8 @@ impl Renderer {
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for (model, matrix) in scene.iter() {
-			model.render(&mut builder, right_pv * *matrix)?;
+		for entity in scene.iter() {
+			entity.render(&mut builder, right_pv)?;
 		}
 		
 		builder.end_render_pass()?;

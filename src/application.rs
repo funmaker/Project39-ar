@@ -1,15 +1,16 @@
 use std::collections::HashMap;
+use std::time::Instant;
 use err_derive::Error;
 use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models, TrackedControllerRole};
 use openvr::compositor::CompositorError;
 use openvr::system::TrackedPropertyError;
 use obj::ObjError;
-use cgmath::{Matrix4, Vector3};
+use cgmath::{Vector3, Quaternion, One};
 
-use crate::renderer::{Renderer, RendererCreationError, RenderError, camera};
-use crate::renderer::model::{self, Model};
+use crate::renderer::{Renderer, RendererCreationError, RenderError, camera, model};
+use crate::renderer::entity::Entity;
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::openvr_vulkan::mat4;
+use crate::openvr_vulkan::{mat4, decompose};
 use crate::debug::{get_debug_flag, set_debug_flag};
 
 pub struct Application {
@@ -51,24 +52,22 @@ impl Application {
 	}
 	
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
-		let mut scene: Vec<(Model, Matrix4<f32>)> = Vec::new();
+		let mut scene: Vec<Entity> = Vec::new();
 		let mut devices: HashMap<u32, usize> = HashMap::new();
+		let mut instant = Instant::now();
 		
 		let mut last_buttons = 0;
 		
-		scene.push((
-			model::from_obj("models/cube/cube", &mut self.renderer)?,
-			Matrix4::from_translation(Vector3::new(0.0, -1.5, -1.5)),
+		scene.push(Entity::new(
+			model::from_obj::<u16>("models/cube/cube", &mut self.renderer)?,
+			Vector3::new(0.0, -1.5, -1.5),
+			Quaternion::one(),
 		));
 		
-		let rotating = scene.len();
-		
-		scene.push((
-			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
-			Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Deg(180.0)),
-		));
-		
-		let mut rot = 0.0;
+		// scene.push((
+		// 	model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
+		// 	Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Deg(180.0)),
+		// ));
 		
 		
 		while !self.window.quit_required {
@@ -80,13 +79,18 @@ impl Application {
 				if self.system.tracked_device_class(i) != TrackedDeviceClass::Invalid
 				&& self.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
 					if devices.contains_key(&i) {
-						scene[*devices.get(&i).unwrap()].1 = mat4(poses.render[i as usize].device_to_absolute_tracking());
+						scene[*devices.get(&i).unwrap()].move_to_pose(poses.render[i as usize]);
 					} else if let Some(model) = self.render_models.load_render_model(&self.system.string_tracked_device_property(i, 1003)?)? {
 						if let Some(texture) = self.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 							let model = model::from_openvr(model, texture, &mut self.renderer)?;
+							let orientation = decompose(mat4(poses.render[i as usize].device_to_absolute_tracking()));
 							
 							devices.insert(i, scene.len());
-							scene.push((model, mat4(poses.render[i as usize].device_to_absolute_tracking())));
+							scene.push(Entity::new(
+								model,
+								orientation.disp,
+								orientation.rot,
+							));
 							println!("Loaded {:?}", self.system.tracked_device_class(i));
 						} else { break }
 					} else { break }
@@ -112,12 +116,11 @@ impl Application {
 				}
 			}
 			
-			rot += 0.01;
+			let delta_time = instant.elapsed();
+			instant = Instant::now();
 			
-			for (n, (_, orig)) in scene.iter_mut().enumerate() {
-				if n == rotating {
-					*orig = Matrix4::from_translation(Vector3::new(0.0, -1.0, -1.5)) * Matrix4::from_angle_y(cgmath::Rad(rot));
-				}
+			for entity in scene.iter_mut() {
+				entity.tick(delta_time);
 			}
 			
 			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();

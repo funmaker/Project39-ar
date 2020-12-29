@@ -28,7 +28,7 @@ pub mod frag {
 #[derive(Debug, Deref)]
 pub struct DefaultPipeline(
 	GraphicsPipeline<
-		SingleBufferDefinition<model::Vertex>,
+		SingleBufferDefinition<model::simple::Vertex>,
 		Box<dyn PipelineLayoutAbstract + Send + Sync>,
 		Arc<dyn RenderPassAbstract + Send + Sync>
 	>
@@ -44,7 +44,7 @@ impl Pipeline for DefaultPipeline {
 		
 		Ok(Arc::new(DefaultPipeline(
 			GraphicsPipeline::start()
-				.vertex_input_single_buffer::<model::Vertex>()
+				.vertex_input_single_buffer()
 				.vertex_shader(vs.main_entry_point(), ())
 				.viewports(Some(Viewport {
 					origin: [0.0, 0.0],
