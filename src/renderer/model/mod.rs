@@ -1,5 +1,6 @@
 use cgmath::Matrix4;
 use err_derive::Error;
+use image::ImageError;
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::image::ImageCreationError;
 use vulkano::sync::FlushError;
@@ -34,4 +35,5 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] PersistentDescriptorSetBuildError),
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
+	#[error(display = "{}", _0)] ImageError(#[error(source)] ImageError),
 }

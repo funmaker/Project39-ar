@@ -11,6 +11,7 @@ use openvr::render_models as openvr_rm;
 use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
 use fallible_iterator::FallibleIterator;
+use mmd::pmx::material::Toon;
 
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
@@ -77,28 +78,40 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	let indices: Vec<u16> = surfaces_reader.iter()
 	                                               .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
 	
+	let mut model = mmd_model::MMDModel::new(&vertices, &indices, renderer)?;
+	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
 	
 	let textures = textures_reader.iter()
 	                              .map_err(LoadError::PmxError)
 	                              .map(|texture_path| {
 		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
-		                              
-		                              Ok(image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?)
+		                              let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
+		
+		                              Ok(model.add_texture(image, renderer)?)
 	                              })
 	                              .collect::<Vec<_>>()?;
 	
 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
 	let mut last_index = 0_usize;
 	
-	let mut model = mmd_model::MMDModel::new(&vertices, &indices, renderer)?;
-	
 	materials_reader.iter::<i32>()
 	                .map_err(LoadError::PmxError)
-	                .for_each(|m| {
-		                model.add_sub_mesh(last_index .. last_index + m.surface_count as usize, textures[m.texture_index as usize].clone(), renderer)?;
+	                .for_each(|material| {
+		                let toon_index = match material.toon {
+			                Toon::Texture(id) => id,
+			                Toon::Internal(_) => -1
+		                };
+		                
+		                model.add_sub_mesh(
+			                last_index .. last_index + material.surface_count as usize,
+			                textures.get(material.texture_index as usize).cloned(),
+			                textures.get(toon_index as usize).cloned(),
+			                textures.get(material.environment_index as usize).cloned(),
+			                renderer,
+		                )?;
 	
-		                last_index += m.surface_count as usize;
+		                last_index += material.surface_count as usize;
 	
 		                Ok(())
 	                })?;

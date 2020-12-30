@@ -16,16 +16,16 @@ pub mod vert {
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/default/vert.glsl"
+		path: "src/renderer/pipelines/mmd/vert.glsl"
 	}
 }
 
 pub mod frag {
 	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./frag.glsl");
+	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/default/frag.glsl"
+		path: "src/renderer/pipelines/mmd/frag.glsl"
 	}
 }
 

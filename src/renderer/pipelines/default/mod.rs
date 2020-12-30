@@ -22,7 +22,7 @@ pub mod vert {
 
 pub mod frag {
 	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./frag.glsl");
+	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/default/frag.glsl"
