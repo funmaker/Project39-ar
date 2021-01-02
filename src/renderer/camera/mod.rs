@@ -63,7 +63,7 @@ pub trait Camera: Send + Sized + 'static {
 				Err(err) => return Err(err.into()),
 			};
 			
-			println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
+			// println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
 			last_capture = Instant::now();
 			
 			let sub_buffer = buffer.chunk(

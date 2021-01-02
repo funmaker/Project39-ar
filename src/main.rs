@@ -1,5 +1,6 @@
 #![feature(bool_to_option)]
 #![feature(never_type)]
+#![feature(try_blocks)]
 #[macro_use] extern crate lazy_static;
 
 use std::error::Error;
@@ -9,11 +10,11 @@ use getopts::Options;
 #[macro_use] mod debug;
 mod renderer;
 mod application;
-mod openvr_vulkan;
+mod utils;
 
 use application::Application;
 use application::CameraAPI;
-use debug::set_debug;
+use debug::{set_debug, set_debug_flag};
 
 fn main() -> Result<(), Box<dyn Error>> {
 	let args: Vec<String> = env::args().collect();
@@ -24,6 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr|dummy");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
+	opts.optflag("n", "novr", "Use keyboard and mouse for controls");
 	
 	let matches = opts.parse(&args[1..])?;
 	
@@ -33,6 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	}
 	
 	set_debug(matches.opt_present("debug"));
+	set_debug_flag("novr", matches.opt_present("novr"));
 	
 	let device = matches.opt_get("d")?;
 	let camera = matches.opt_get("c")?

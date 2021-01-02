@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use cgmath::Matrix4;
+use smallvec::smallvec;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
 use vulkano::image::{ImmutableImage, Dimensions};
@@ -13,19 +14,21 @@ use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 
 mod vertex;
+mod pipeline;
 
 pub use vertex::Vertex;
-use crate::renderer::{Renderer, RenderError};
-use crate::renderer::pipelines::MMDPipeline;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
+use crate::utils::ImageEx;
+use crate::renderer::{Renderer, RenderError};
+use pipeline::Pipeline;
 
 struct SubMesh {
+	pipeline: Pipeline,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
 	range: Range<usize>,
 }
 
 pub struct MMDModel<VI: VertexIndex> {
-	pipeline: Arc<MMDPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
 	sub_mesh: Vec<SubMesh>,
@@ -36,8 +39,6 @@ pub struct MMDModel<VI: VertexIndex> {
 impl<VI: VertexIndex> MMDModel<VI> {
 	pub fn new(vertices: &[Vertex], indices: &[VI], renderer: &mut Renderer) -> Result<MMDModel<VI>, ModelError> {
 		let queue = &renderer.load_queue;
-		
-		let pipeline = renderer.pipelines.get::<MMDPipeline>()?;
 		
 		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(vertices.iter().cloned(),
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
@@ -50,7 +51,6 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		let fences = vec![FenceCheck::new(vertices_promise.join(indices_promise))?];
 		
 		Ok(MMDModel {
-			pipeline,
 			vertices,
 			indices,
 			sub_mesh: vec![],
@@ -64,7 +64,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		let width = source_image.width();
 		let height = source_image.height();
 		
-		let (image, image_promise) = ImmutableImage::from_iter(source_image.to_rgba8().into_vec().into_iter(),
+		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
 		                                                       Dimensions::Dim2d{ width, height },
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;
@@ -79,6 +79,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 	                    texture: Option<Arc<ImmutableImage<Format>>>,
 	                    toon: Option<Arc<ImmutableImage<Format>>>,
 	                    sphere_map: Option<Arc<ImmutableImage<Format>>>,
+	                    no_cull: bool,
 	                    renderer: &mut Renderer)
 	                    -> Result<(), ModelError> {
 		let queue = &renderer.load_queue;
@@ -89,15 +90,20 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		let toon = toon.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		let sphere_map = sphere_map.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		
+		let pipeline = Pipeline::get(renderer, no_cull)?;
+		
 		let set = Arc::new(
-			PersistentDescriptorSet::start(self.pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(pipeline.as_abstract()
+			                                       .descriptor_set_layout(0)
+			                                       .ok_or(ModelError::NoLayout)?
+			                                       .clone())
 				.add_sampled_image(texture, sampler.clone())?
 				.add_sampled_image(toon, sampler.clone())?
 				.add_sampled_image(sphere_map, sampler.clone())?
 				.build()?
 		);
 		
-		self.sub_mesh.push(SubMesh{ set, range });
+		self.sub_mesh.push(SubMesh{ pipeline, set, range });
 		
 		Ok(())
 	}
@@ -126,12 +132,24 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		if !self.loaded() { return Ok(()) }
 		
 		for sub_mesh in self.sub_mesh.iter() {
-			builder.draw_indexed(self.pipeline.clone(),
-			                     &DynamicState::none(),
-			                     self.vertices.clone(),
-			                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
-			                     sub_mesh.set.clone(),
-			                     pvm_matrix)?;
+			match sub_mesh.pipeline.clone() {
+				Pipeline::Cull(pipeline) => {
+					builder.draw_indexed(pipeline,
+					                     &DynamicState::none(),
+					                     self.vertices.clone(),
+					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
+					                     sub_mesh.set.clone(),
+					                     pvm_matrix)?;
+				}
+				Pipeline::NoCull(pipeline) => {
+					builder.draw_indexed(pipeline,
+					                     &DynamicState::none(),
+					                     self.vertices.clone(),
+					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
+					                     sub_mesh.set.clone(),
+					                     pvm_matrix)?;
+				}
+			}
 		}
 		
 		Ok(())

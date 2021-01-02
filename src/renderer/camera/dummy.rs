@@ -6,7 +6,7 @@ use std::thread;
 use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
 
 lazy_static!(
-	static ref FRAME: Vec<u8> = [127, 127, 127, 255].iter()
+	static ref FRAME: Vec<u8> = [  0,   0,   0,   0].iter()
 	                                                .copied()
 	                                                .cycle()
 	                                                .take((CAPTURE_WIDTH * CAPTURE_HEIGHT * 4) as usize)

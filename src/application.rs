@@ -5,12 +5,14 @@ use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_devic
 use openvr::compositor::CompositorError;
 use openvr::system::TrackedPropertyError;
 use obj::ObjError;
-use cgmath::{Vector3, Quaternion, One, Zero};
+use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rotation3};
 
 use crate::renderer::{Renderer, RendererCreationError, RenderError, camera, model};
 use crate::renderer::entity::Entity;
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::debug::{get_debug_flag, set_debug_flag};
+use crate::debug::{get_debug_flag, set_debug_flag, get_debug_flag_or_default};
+use cgmath::num_traits::clamp;
+use crate::utils::mat4;
 
 pub struct Application {
 	context: Context,
@@ -66,9 +68,10 @@ impl Application {
 		scene.push(Entity::new(
 			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut self.renderer)?,
 			Vector3::new(0.0, -1.0, -1.5),
-			Quaternion::one(),
+			Quaternion::from_angle_y(Rad::turn_div_2()),
 		));
 		
+		let mut fake_pose = get_debug_flag_or_default::<bool>("novr").then_some((Vector3::zero(), Euler{ x: Rad(0.0), y: Rad(0.0), z: Rad(0.0) }));
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -109,7 +112,7 @@ impl Application {
 			for index in 0..64 {
 				if pressed & (1 << index) != 0 {
 					if index == 2 {
-						let mode: u8 = get_debug_flag("mode").unwrap_or_default();
+						let mode: u8 = get_debug_flag_or_default("mode");
 						set_debug_flag("mode", (mode + 1) % 3);
 					}
 				}
@@ -118,11 +121,39 @@ impl Application {
 			let delta_time = instant.elapsed();
 			instant = Instant::now();
 			
+			let pose = if let Some((ref mut disp, ref mut rot)) = fake_pose {
+				fn get_key(key: &str) -> f32 {
+					get_debug_flag_or_default::<bool>(key) as i32 as f32
+				}
+				
+				let x = get_key("KeyD") - get_key("KeyA");
+				let y = get_key("KeySpace") - get_key("KeyCtrl");
+				let z = get_key("KeyS") - get_key("KeyW");
+				let dist = (1.0 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
+				let mouse_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
+				set_debug_flag("mouse_move", (0.0_f32, 0.0_f32));
+				
+				rot.y = rot.y + Rad(-mouse_move.0 * 1.0 * delta_time.as_secs_f32());
+				rot.x = clamp(rot.x + Rad(-mouse_move.1 * 1.0 * delta_time.as_secs_f32()), -Rad::turn_div_4(), Rad::turn_div_4());
+				
+				let quat = Quaternion::from_angle_y(rot.y) * Quaternion::from_angle_x(rot.x);
+				
+				disp.y += y * dist;
+				*disp += quat * Vector3::new(x, 0.0, z) * dist;
+				
+				// Y * X rotation
+				Decomposed {
+					scale: 1.0,
+					rot: quat,
+					disp: disp.clone(),
+				}.into()
+			} else {
+				mat4(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking())
+			};
+			
 			for entity in scene.iter_mut() {
 				entity.tick(delta_time);
 			}
-			
-			let pose = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking();
 			
 			self.renderer.render(pose, &mut scene, &mut self.window)?;
 		}

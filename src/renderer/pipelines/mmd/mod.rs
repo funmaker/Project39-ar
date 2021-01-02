@@ -8,10 +8,14 @@ use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::SafeDeref;
 use vulkano::descriptor::PipelineLayoutAbstract;
 
-use super::{Pipeline, PipelineError};
-use crate::renderer::{model, RenderPass};
+pub mod culling;
 
-pub mod vert {
+use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
+use crate::renderer::{model, RenderPass};
+use culling::{MMDCullMode, MMDCullModeEx};
+use downcast_rs::__std::marker::PhantomData;
+
+mod vert {
 	#[allow(dead_code)]
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
@@ -20,7 +24,7 @@ pub mod vert {
 	}
 }
 
-pub mod frag {
+mod frag {
 	#[allow(dead_code)]
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
@@ -30,23 +34,25 @@ pub mod frag {
 }
 
 #[derive(Debug, Deref)]
-pub struct MMDPipeline(
+pub struct MMDPipeline<Culling>(
 	GraphicsPipeline<
 		SingleBufferDefinition<model::mmd::Vertex>,
 		Box<dyn PipelineLayoutAbstract + Send + Sync>,
 		Arc<dyn RenderPassAbstract + Send + Sync>
-	>
+	>,
+	PhantomData<Culling>,
 );
 
-unsafe impl SafeDeref for MMDPipeline {} // MMDPipeline is immutable, this should be safe
+unsafe impl<Culling> SafeDeref for MMDPipeline<Culling> {} // MMDPipeline is immutable, this should be safe
 
-impl Pipeline for MMDPipeline {
+impl<Culling> Pipeline for MMDPipeline<Culling>
+	where Culling: MMDCullMode {
 	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(MMDPipeline(
+		Ok(Arc::new(MMDPipeline::<Culling>(
 			GraphicsPipeline::start()
 				.vertex_input_single_buffer()
 				.vertex_shader(vs.main_entry_point(), ())
@@ -57,9 +63,11 @@ impl Pipeline for MMDPipeline {
 				}))
 				.fragment_shader(fs.main_entry_point(), ())
 				.depth_stencil_simple_depth()
-				.cull_mode_back()
+				.cull_mode::<Culling>()
+				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-				.build(device.clone())?
+				.build(device.clone())?,
+			PhantomData
 		)))
 	}
 }

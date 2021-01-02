@@ -8,10 +8,10 @@ use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::SafeDeref;
 use vulkano::descriptor::PipelineLayoutAbstract;
 
-use super::{Pipeline, PipelineError};
+use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
 use crate::renderer::{model, RenderPass};
 
-pub mod vert {
+mod vert {
 	#[allow(dead_code)]
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
@@ -20,7 +20,7 @@ pub mod vert {
 	}
 }
 
-pub mod frag {
+mod frag {
 	#[allow(dead_code)]
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
@@ -58,6 +58,7 @@ impl Pipeline for DefaultPipeline {
 				.fragment_shader(fs.main_entry_point(), ())
 				.depth_stencil_simple_depth()
 				.cull_mode_back()
+				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.build(device.clone())?
 		)))

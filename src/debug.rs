@@ -18,13 +18,19 @@ pub fn set_debug(value: bool) {
 }
 
 pub fn get_debug_flag<T>(key: &str)
-	                    -> Option<T>
-	                    where T: Clone + Send + Sync + 'static {
+                         -> Option<T>
+                         where T: Clone + Send + Sync + 'static {
 	FLAGS.read()
 	     .unwrap()
 	     .get(key)
 	     .and_then(|val| val.downcast_ref::<T>())
 	     .map(|val| val.clone())
+}
+
+pub fn get_debug_flag_or_default<T>(key: &str)
+                                   -> T
+                                   where T: Clone + Send + Sync + Default + 'static {
+	get_debug_flag(key).unwrap_or_default()
 }
 
 pub fn set_debug_flag<T>(key: &str, value: T)

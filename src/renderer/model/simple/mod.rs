@@ -16,6 +16,7 @@ pub use vertex::Vertex;
 use crate::renderer::{Renderer, RenderError};
 use crate::renderer::pipelines::DefaultPipeline;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
+use crate::utils::ImageEx;
 
 pub struct SimpleModel<VI: VertexIndex> {
 	pipeline: Arc<DefaultPipeline>,
@@ -41,7 +42,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
 		                                                            queue.clone())?;
 		
-		let (image, image_promise) = ImmutableImage::from_iter(source_image.to_rgba8().into_vec().into_iter(),
+		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
 		                                                       Dimensions::Dim2d{ width, height },
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;

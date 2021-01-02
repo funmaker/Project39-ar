@@ -6,9 +6,10 @@ use err_derive::Error;
 use downcast_rs::{DowncastSync, impl_downcast};
 use vulkano::framebuffer::RenderPassCreationError;
 use vulkano::pipeline::GraphicsPipelineCreationError;
+use vulkano::pipeline::blend::{AttachmentBlend, BlendOp, BlendFactor};
 
-mod default;
-mod mmd;
+pub mod default;
+pub mod mmd;
 
 pub use default::DefaultPipeline;
 pub use self::mmd::MMDPipeline;
@@ -45,6 +46,23 @@ impl Pipelines {
 			
 			Ok(pipeline.downcast_arc().unwrap())
 		}
+	}
+}
+
+
+pub fn pre_mul_alpha_blending() -> AttachmentBlend {
+	AttachmentBlend {
+		enabled: true,
+		color_op: BlendOp::Add,
+		color_source: BlendFactor::One,
+		color_destination: BlendFactor::OneMinusSrcAlpha,
+		alpha_op: BlendOp::Add,
+		alpha_source: BlendFactor::One,
+		alpha_destination: BlendFactor::OneMinusSrcAlpha,
+		mask_red: true,
+		mask_green: true,
+		mask_blue: true,
+		mask_alpha: true,
 	}
 }
 

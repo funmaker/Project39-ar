@@ -7,11 +7,11 @@ use obj::{Obj, ObjError};
 use image::{ImageFormat, ImageError, DynamicImage, ImageBuffer};
 use cgmath::num_traits::FromPrimitive;
 use openvr::render_models as openvr_rm;
+use fallible_iterator::FallibleIterator;
+use mmd::pmx::material::{Toon, DrawingFlags};
 
 use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
-use fallible_iterator::FallibleIterator;
-use mmd::pmx::material::Toon;
 
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
@@ -108,6 +108,7 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 			                textures.get(material.texture_index as usize).cloned(),
 			                textures.get(toon_index as usize).cloned(),
 			                textures.get(material.environment_index as usize).cloned(),
+			                material.draw_flags.contains(DrawingFlags::NoCull),
 			                renderer,
 		                )?;
 	

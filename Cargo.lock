@@ -1270,6 +1270,7 @@ dependencies = [
  "opencv",
  "openvr",
  "openvr_sys",
+ "smallvec",
  "vulkano",
  "vulkano-shaders",
  "vulkano-win",

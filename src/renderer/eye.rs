@@ -9,7 +9,7 @@ use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
 use openvr::compositor::Texture;
 use cgmath::Matrix4;
 
-use crate::openvr_vulkan::OpenVRPtr;
+use crate::utils::OpenVRPtr;
 
 pub struct Eye {
 	pub image: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,

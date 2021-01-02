@@ -9,7 +9,7 @@ use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
 use vulkano::framebuffer::{RenderPassCreationError, RenderPassAbstract};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
-use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError};
+use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError, CompositeAlpha};
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::format::{ClearValue, Format};
 use vulkano::image::{AttachmentImage, SwapchainImage};
@@ -25,7 +25,7 @@ pub mod window;
 pub mod pipelines;
 pub mod entity;
 
-use crate::openvr_vulkan::*;
+use crate::utils::*;
 use crate::debug::debug;
 use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
@@ -242,11 +242,16 @@ impl Renderer {
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
 		let caps = surface.capabilities(self.device.physical_device())?;
 		let dimensions = caps.current_extent.unwrap_or(caps.min_image_extent);
-		let alpha = caps.supported_composite_alpha.iter().next().unwrap();
 		let format = caps.supported_formats
 		                 .iter()
 		                 .find(|format| format.0 == Format::B8G8R8A8Unorm || format.0 == Format::R8G8B8A8Unorm)
 		                 .expect("UNorm format not supported on the surface");
+		
+		let alpha_preference = [CompositeAlpha::PreMultiplied, CompositeAlpha::Opaque, CompositeAlpha::Inherit];
+		let alpha = alpha_preference.iter()
+		                            .cloned()
+		                            .find(|&composite| caps.supported_composite_alpha.supports(composite))
+		                            .expect("PreMultiplied and Opaque alpha composites not supported on the surface");
 		
 		Ok(Swapchain::new(self.device.clone(),
 		                  surface,
@@ -264,15 +269,15 @@ impl Renderer {
 		                  format.1)?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: &[[f32; 4]; 3], scene: &mut [Entity], window: &mut Window) -> Result<(), RenderError> {
+	pub fn render(&mut self, hmd_pose: Matrix4<f32>, scene: &mut [Entity], window: &mut Window) -> Result<(), RenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		if window.swapchain_regen_required {
 			window.regen_swapchain()?;
 		}
 		
-		let left_pv  = self.eyes.0.projection * mat4(hmd_pose).inverse_transform().unwrap();
-		let right_pv = self.eyes.1.projection * mat4(hmd_pose).inverse_transform().unwrap();
+		let left_pv  = self.eyes.0.projection * hmd_pose.inverse_transform().unwrap();
+		let right_pv = self.eyes.1.projection * hmd_pose.inverse_transform().unwrap();
 		
 		let [camera_width, camera_height] = self.camera_image.dimensions();
 		let [eye_width, eye_height] = self.eyes.0.image.dimensions();
@@ -342,8 +347,8 @@ impl Renderer {
 		}
 		
 		unsafe {
-			self.compositor.submit(openvr::Eye::Left,  &self.eyes.0.texture, None, Some(hmd_pose.clone()))?;
-			self.compositor.submit(openvr::Eye::Right, &self.eyes.1.texture, None, Some(hmd_pose.clone()))?;
+			self.compositor.submit(openvr::Eye::Left,  &self.eyes.0.texture, None, Some(mat34(hmd_pose)))?;
+			self.compositor.submit(openvr::Eye::Right, &self.eyes.1.texture, None, Some(mat34(hmd_pose)))?;
 		}
 		
 		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);

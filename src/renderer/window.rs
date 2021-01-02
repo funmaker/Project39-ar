@@ -1,6 +1,7 @@
 use std::sync::Arc;
+use std::error::Error;
 use err_derive::Error;
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -15,6 +16,7 @@ use vulkano::{format, OomError};
 use vulkano_win::{VkSurfaceBuild, CreationError};
 
 use super::{Renderer, RendererSwapchainError};
+use crate::debug::{set_debug_flag, get_debug_flag};
 
 type WinitWindow = winit::window::Window;
 
@@ -25,6 +27,7 @@ pub struct Window {
 	pub swapchain_regen_required: bool,
 	pub render_required: bool,
 	pub quit_required: bool,
+	pub cursor_trap: bool,
 }
 
 impl Window {
@@ -51,6 +54,7 @@ impl Window {
 			swapchain_regen_required: false,
 			render_required: true,
 			quit_required: false,
+			cursor_trap: false,
 		})
 	}
 	
@@ -138,54 +142,111 @@ impl Window {
 		let new_swapchain_required = &mut self.swapchain_regen_required;
 		let render_required = &mut self.render_required;
 		let quit_required = &mut self.quit_required;
+		let is_cursor_trapped = self.cursor_trap;
+		let cursor_trap = &mut self.cursor_trap;
+		
+		let mut grab_cursor = |grab: bool| {
+			let window = surface.window();
+			*cursor_trap = grab;
+			window.set_cursor_visible(!grab);
+			window.set_cursor_grab(grab)
+		};
 		
 		self.event_loop.run_return(|event, _, control_flow| {
-			*control_flow = ControlFlow::Poll;
-			
-			match event {
-				Event::WindowEvent { event: WindowEvent::CloseRequested, .. } |
-				Event::WindowEvent {
-					event: WindowEvent::KeyboardInput {
-						input: KeyboardInput {
-							virtual_keycode: Some(VirtualKeyCode::Q),
-							state: ElementState::Pressed, ..
-						}, ..
-					}, ..
-				} => {
-					*quit_required = true;
-					*control_flow = ControlFlow::Exit;
-				}
+			let result: Result<(), Box<dyn Error>> = try {
+				*control_flow = ControlFlow::Poll;
 				
-				Event::WindowEvent {
-					event: WindowEvent::KeyboardInput {
-						input: KeyboardInput {
-							virtual_keycode: Some(VirtualKeyCode::F),
-							state: ElementState::Pressed, ..
-						}, ..
-					}, ..
-				} => {
-					let window = surface.window();
+				match event {
+					Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+						*quit_required = true;
+						*control_flow = ControlFlow::Exit;
+					},
 					
-					if let None = window.fullscreen() {
-						window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
-						window.set_cursor_visible(false);
-					} else {
-						window.set_fullscreen(None);
-						window.set_cursor_visible(true);
+					Event::WindowEvent {
+						event: WindowEvent::KeyboardInput {
+							input: KeyboardInput {
+								virtual_keycode: Some(code),
+								state: ElementState::Pressed, ..
+							}, ..
+						}, ..
+					} if is_cursor_trapped => {
+						match code {
+							VirtualKeyCode::Q => {
+								*quit_required = true;
+								*control_flow = ControlFlow::Exit;
+							},
+							VirtualKeyCode::Escape => {
+								grab_cursor(false)?;
+							},
+							VirtualKeyCode::F => {
+								let window = surface.window();
+								
+								if let None = window.fullscreen() {
+									window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
+								} else {
+									window.set_fullscreen(None);
+								}
+							},
+							code => set_debug_flag(&format!("Key{:?}", code), true),
+						}
 					}
+					
+					Event::WindowEvent {
+						event: WindowEvent::KeyboardInput {
+							input: KeyboardInput {
+								virtual_keycode: Some(code),
+								state: ElementState::Released, ..
+							}, ..
+						}, ..
+					} if is_cursor_trapped => {
+						set_debug_flag(&format!("Key{:?}", code), false)
+					}
+					
+					Event::WindowEvent {
+						event: WindowEvent::MouseInput {
+							button: MouseButton::Left,
+							state: ElementState::Pressed, ..
+						}, ..
+					} => {
+						let window = surface.window();
+						let size = window.inner_size();
+						let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
+						
+						grab_cursor(true)?;
+						window.set_cursor_position(center)?;
+					}
+					
+					Event::WindowEvent {
+						event: WindowEvent::CursorMoved { position, .. }, ..
+					} if is_cursor_trapped => {
+						let window = surface.window();
+						let size = window.inner_size();
+						let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
+						
+						let cur_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
+						set_debug_flag("mouse_move", (cur_move.0 + position.x as f32 - center.x, cur_move.1 + position.y as f32 - center.y));
+						
+						window.set_cursor_position(center)?;
+					}
+					
+					Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
+						*new_swapchain_required = true;
+						*control_flow = ControlFlow::Exit;
+					}
+					
+					Event::RedrawRequested(_) | Event::RedrawEventsCleared => {
+						*render_required = true;
+						*control_flow = ControlFlow::Exit;
+					},
+					
+					_ => {}
 				}
-				
-				Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
-					*new_swapchain_required = true;
-					*control_flow = ControlFlow::Exit;
-				}
-				
-				Event::RedrawRequested(_) | Event::RedrawEventsCleared => {
-					*render_required = true;
-					*control_flow = ControlFlow::Exit;
-				},
-				
-				_ => {}
+			};
+			
+			if let Err(error) = result {
+				eprintln!("Error while processing events {}", error);
+				*quit_required = true;
+				*control_flow = ControlFlow::Exit;
 			}
 		});
 	}
