@@ -20,7 +20,7 @@ use super::RenderError;
 use super::pipelines::PipelineError;
 
 pub trait Model {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError>;
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError>;
 }
 
 pub trait VertexIndex: Index + Copy + Send + Sync + Sized + 'static {}

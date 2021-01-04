@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use cgmath::Matrix4;
-use smallvec::smallvec;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
 use vulkano::image::{ImmutableImage, Dimensions};
@@ -21,6 +20,14 @@ use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RenderError};
 use pipeline::Pipeline;
+
+pub struct MaterialInfo {
+	pub color: [f32; 4],
+	pub specular: [f32; 3],
+	pub specularity: f32,
+	pub ambient: [f32; 3],
+	pub sphere_mode: u32,
+}
 
 struct SubMesh {
 	pipeline: Pipeline,
@@ -76,6 +83,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 	
 	pub fn add_sub_mesh(&mut self,
 	                    range: Range<usize>,
+	                    material: MaterialInfo,
 	                    texture: Option<Arc<ImmutableImage<Format>>>,
 	                    toon: Option<Arc<ImmutableImage<Format>>>,
 	                    sphere_map: Option<Arc<ImmutableImage<Format>>>,
@@ -90,6 +98,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		let toon = toon.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		let sphere_map = sphere_map.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		
+		let (material_buffer, material_promise) = ImmutableBuffer::from_data(material,
+		                                                                     BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
+		                                                                     renderer.load_queue.clone())?;
+		
 		let pipeline = Pipeline::get(renderer, no_cull)?;
 		
 		let set = Arc::new(
@@ -97,6 +109,8 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			                                       .descriptor_set_layout(0)
 			                                       .ok_or(ModelError::NoLayout)?
 			                                       .clone())
+				.add_buffer(renderer.commons.clone())?
+				.add_buffer(material_buffer)?
 				.add_sampled_image(texture, sampler.clone())?
 				.add_sampled_image(toon, sampler.clone())?
 				.add_sampled_image(sphere_map, sampler.clone())?
@@ -104,6 +118,8 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		);
 		
 		self.sub_mesh.push(SubMesh{ pipeline, set, range });
+		
+		self.fences.push(FenceCheck::new(material_promise)?);
 		
 		Ok(())
 	}
@@ -128,7 +144,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		for sub_mesh in self.sub_mesh.iter() {
@@ -139,7 +155,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 					                     self.vertices.clone(),
 					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
 					                     sub_mesh.set.clone(),
-					                     pvm_matrix)?;
+					                     (model_matrix, eye))?;
 				}
 				Pipeline::NoCull(pipeline) => {
 					builder.draw_indexed(pipeline,
@@ -147,7 +163,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 					                     self.vertices.clone(),
 					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
 					                     sub_mesh.set.clone(),
-					                     pvm_matrix)?;
+					                     (model_matrix, eye))?;
 				}
 			}
 		}

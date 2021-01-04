@@ -24,7 +24,7 @@ pub fn decompose(mut mat: Matrix4<f32>) -> Decomposed<Vector3<f32>, Quaternion<f
 	mat.y /= scale.y;
 	mat.z /= scale.z;
 	
-	let rot: Quaternion<f32> = Matrix3::from_cols(mat.x.truncate(), mat.y.truncate(), mat.z.truncate()).into();
+	let rot: Quaternion<f32> = mat3(mat).into();
 	
 	Decomposed {
 		scale: scale.magnitude(),
@@ -33,10 +33,14 @@ pub fn decompose(mut mat: Matrix4<f32>) -> Decomposed<Vector3<f32>, Quaternion<f
 	}
 }
 
-pub fn mat34(val: Matrix4<f32>) -> [[f32; 4]; 3] {
-	[[val.x.x, val.y.x, val.z.x, val.w.x],
-	 [val.x.y, val.y.y, val.z.y, val.w.y],
-	 [val.x.z, val.y.z, val.z.z, val.w.z]]
+pub fn mat34(mat: Matrix4<f32>) -> [[f32; 4]; 3] {
+	[[mat.x.x, mat.y.x, mat.z.x, mat.w.x],
+	 [mat.x.y, mat.y.y, mat.z.y, mat.w.y],
+	 [mat.x.z, mat.y.z, mat.z.z, mat.w.z]]
+}
+
+pub fn mat3(mat: Matrix4<f32>) -> Matrix3<f32> {
+	Matrix3::from_cols(mat.x.truncate(), mat.y.truncate(), mat.z.truncate())
 }
 
 // Images

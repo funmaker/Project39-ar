@@ -51,8 +51,9 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 		
 		let set = Arc::new(
 			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
-				.add_sampled_image(image.clone(), sampler.clone())?
-				.build()?
+			                             .add_buffer(renderer.commons.clone())?
+			                             .add_sampled_image(image.clone(), sampler.clone())?
+			                             .build()?
 		);
 		
 		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?;
@@ -72,7 +73,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for SimpleModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, pvm_matrix: Matrix4<f32>) -> Result<(), RenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -80,7 +81,7 @@ impl<VI: VertexIndex> Model for SimpleModel<VI> {
 		                     self.vertices.clone(),
 		                     self.indices.clone(),
 		                     self.set.clone(),
-		                     pvm_matrix)?;
+		                     (model_matrix, eye))?;
 		
 		Ok(())
 	}

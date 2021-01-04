@@ -23,7 +23,7 @@ impl Entity {
 			position,
 			angle,
 			velocity: Vector3::zero(),
-			angular_velocity: Vector3::new(0.0, 0.0, 0.0),
+			angular_velocity: Vector3::new(0.0, 1.0, 0.0),
 		}
 	}
 	
@@ -36,12 +36,11 @@ impl Entity {
 		self.angle = self.angle * Quaternion::from(ang_disp);
 	}
 	
-	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, pv_matrix: Matrix4<f32>) -> Result<(), RenderError> {
-		let pvm_matrix = pv_matrix
-		               * Matrix4::from_translation(self.position)
-		               * Matrix4::from(self.angle);
+	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RenderError> {
+		let model_matrix = Matrix4::from_translation(self.position)
+		                 * Matrix4::from(self.angle);
 		
-		self.model.render(builder, pvm_matrix)
+		self.model.render(builder, model_matrix, eye)
 	}
 	
 	pub fn move_to_pose(&mut self, pose: TrackedDevicePose) {

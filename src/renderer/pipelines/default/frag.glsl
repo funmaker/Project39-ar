@@ -1,16 +1,29 @@
 #version 450
 
-layout(location = 0) in vec2 uv;
-layout(location = 1) in vec3 normal;
-layout(location = 0) out vec4 f_color;
+layout(location = 0) in vec2 f_uv;
+layout(location = 1) in vec3 f_normal;
 
-layout(set = 0, binding = 0) uniform sampler2D tex;
+layout(location = 0) out vec4 o_color;
 
-vec3 light = vec3(-0.57735, -0.57735, -0.57735);
-float ambient = 0.25;
+
+layout(set = 0, binding = 0) uniform Commons {
+	mat4 projection[2];
+	mat4 view[2];
+	vec4 light_direction[2];
+	float ambient;
+} commons;
+
+layout(set = 0, binding = 1) uniform sampler2D tex;
+
+layout(push_constant) uniform Pc {
+	mat4 model;
+	uint eye;
+} pc;
 
 void main() {
-	float exposure = max(dot(normal, light), 0.0) * (1.0 - ambient) + ambient;
+	vec3 light_direction = commons.light_direction[pc.eye].xyz;
+	float lambert = max(dot(-f_normal, light_direction), 0.0);
+	float light = lambert * (1.0 - commons.ambient) + commons.ambient;
 	
-	f_color = texture(tex, uv) * vec4(exposure, exposure, exposure, 1.0);
+	o_color = texture(tex, f_uv) * vec4(light, light, light, 1.0);
 }

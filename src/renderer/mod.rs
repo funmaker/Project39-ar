@@ -8,14 +8,15 @@ use vulkano::pipeline::GraphicsPipelineCreationError;
 use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
 use vulkano::framebuffer::{RenderPassCreationError, RenderPassAbstract};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer, UpdateBufferError};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError, CompositeAlpha};
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::format::{ClearValue, Format};
 use vulkano::image::{AttachmentImage, SwapchainImage};
 use vulkano::sampler::Filter;
+use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use openvr::{System, Compositor};
-use cgmath::{Matrix4, Transform, Matrix};
+use cgmath::{Matrix4, Transform, Matrix, Vector3, Vector4, InnerSpace};
 use openvr::compositor::CompositorError;
 
 pub mod model;
@@ -31,12 +32,21 @@ use camera::{CameraStartError, Camera};
 use eye::{Eye, EyeCreationError};
 use window::Window;
 use pipelines::Pipelines;
-use crate::renderer::entity::Entity;
+use entity::Entity;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
+#[allow(dead_code)]
+pub struct CommonsVBO {
+	projection: [Matrix4<f32>; 2],
+	view: [Matrix4<f32>; 2],
+	light_direction: [Vector4<f32>; 2],
+	ambient: f32,
+}
+
 pub struct Renderer {
 	pub instance: Arc<Instance>,
+	pub commons: Arc<DeviceLocalBuffer<CommonsVBO>>,
 	
 	device: Arc<Device>,
 	queue: Arc<Queue>,
@@ -221,12 +231,19 @@ impl Renderer {
 		
 		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
 		
+		let commons = DeviceLocalBuffer::new(device.clone(),
+		                                     BufferUsage{ transfer_destination: true,
+		                                                  uniform_buffer: true,
+		                                                  ..BufferUsage::none() },
+		                                     Some(queue.family()))?;
+		
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		
 		let pipelines = Pipelines::new(render_pass, frame_buffer_size);
 		
 		Ok(Renderer {
 			instance,
+			commons,
 			device,
 			queue,
 			load_queue,
@@ -276,8 +293,8 @@ impl Renderer {
 			window.regen_swapchain()?;
 		}
 		
-		let left_pv  = self.eyes.0.projection * hmd_pose.inverse_transform().unwrap();
-		let right_pv = self.eyes.1.projection * hmd_pose.inverse_transform().unwrap();
+		let view_matrix  = hmd_pose.inverse_transform().unwrap();
+		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
 		
 		let [camera_width, camera_height] = self.camera_image.dimensions();
 		let [eye_width, eye_height] = self.eyes.0.image.dimensions();
@@ -307,13 +324,23 @@ impl Renderer {
 		                   0,
 		                   1,
 		                   Filter::Linear)?
+		       .update_buffer(self.commons.clone(),
+		                      CommonsVBO{
+			                      projection: [self.eyes.0.projection, self.eyes.1.projection],
+			                      view: [view_matrix, view_matrix],
+			                      light_direction: [
+				                      (mat3(view_matrix) * light_source).extend(0.0),
+				                      (mat3(view_matrix) * light_source).extend(0.0),
+			                      ],
+			                      ambient: 0.25,
+		                      })?
 		       .begin_render_pass(self.eyes.0.frame_buffer.clone(),
 		                          false,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for entity in scene.iter() {
-			entity.render(&mut builder, left_pv)?;
+			entity.render(&mut builder, 0)?;
 		}
 		
 		builder.end_render_pass()?
@@ -323,7 +350,7 @@ impl Renderer {
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for entity in scene.iter() {
-			entity.render(&mut builder, right_pv)?;
+			entity.render(&mut builder, 1)?;
 		}
 		
 		builder.end_render_pass()?;
@@ -385,6 +412,7 @@ pub enum RendererCreationError {
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] GraphicsPipelineCreationError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 }
@@ -407,6 +435,7 @@ pub enum RenderError {
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] CompositorError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
+	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] UpdateBufferError),
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] window::SwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] window::RenderError),
 }

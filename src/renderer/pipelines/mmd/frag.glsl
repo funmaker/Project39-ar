@@ -1,18 +1,58 @@
 #version 450
 
-layout(location = 0) in vec2 uv;
-layout(location = 1) in vec3 normal;
-layout(location = 0) out vec4 f_color;
+layout(location = 0) in vec3 f_pos;
+layout(location = 1) in vec2 f_uv;
+layout(location = 2) in vec3 f_normal;
 
-layout(set = 0, binding = 0) uniform sampler2D tex;
-layout(set = 0, binding = 1) uniform sampler2D toon;
-layout(set = 0, binding = 2) uniform sampler2D sphere;
+layout(location = 0) out vec4 o_color;
 
-vec3 light = vec3(-0.57735, -0.57735, -0.57735);
-float ambient = 0.25;
+
+layout(set = 0, binding = 0) uniform Commons {
+	mat4 projection[2];
+	mat4 view[2];
+	vec4 light_direction[2];
+	float ambient;
+} commons;
+
+layout(set = 0, binding = 1) uniform Material {
+	vec4 color;
+	vec3 specular;
+	float specularity;
+	vec3 ambient;
+	uint sphere_mode;
+} material;
+
+layout(set = 0, binding = 2) uniform sampler2D tex;
+layout(set = 0, binding = 3) uniform sampler2D toon;
+layout(set = 0, binding = 4) uniform sampler2D sphere;
+
+layout(push_constant) uniform Pc {
+	mat4 model;
+	uint eye;
+} pc;
 
 void main() {
-	float exposure = max(dot(normal, light), 0.0) * (1.0 - ambient) + ambient;
+	vec3 light_direction = commons.light_direction[pc.eye].xyz;
+	float lambert = dot(-f_normal, light_direction);
 	
-	f_color = texture(tex, uv) * vec4(exposure, exposure, exposure, 1.0);
+	vec3 reflected = normalize(-reflect(light_direction,f_normal));
+	float spec_dot = max(0, dot(normalize(f_pos), reflected));
+	float spec_weight = spec_dot == 0 ? 0.0f : pow( spec_dot, material.specularity );
+	vec3 spec_light = material.specular * spec_weight;
+	
+	vec2 sphere_uv = f_normal.xy * 0.5 + 0.5;
+	
+	o_color = texture(tex, f_uv);
+	
+	if(material.sphere_mode == 1) {
+		o_color.rgb *= texture(sphere, sphere_uv).rgb;
+	} else if(material.sphere_mode == 2) {
+		o_color.rgb += texture(sphere, sphere_uv).rgb;
+	} else if(material.sphere_mode == 3) {
+		// TODO: Implement additional vectors
+	}
+	
+	o_color *= clamp(vec4(material.ambient, 0.0) + material.color, 0.0, 1.0);
+	o_color.rgb += spec_light;
+	o_color.rgb *= texture(toon, vec2(0.5, 0.5 - lambert * 0.5)).rgb;
 }

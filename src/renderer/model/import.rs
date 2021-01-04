@@ -8,10 +8,11 @@ use image::{ImageFormat, ImageError, DynamicImage, ImageBuffer};
 use cgmath::num_traits::FromPrimitive;
 use openvr::render_models as openvr_rm;
 use fallible_iterator::FallibleIterator;
-use mmd::pmx::material::{Toon, DrawingFlags};
+use mmd::pmx::material::{Toon, DrawingFlags, EnvironmentBlendMode};
 
 use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
+use crate::renderer::model::mmd::MaterialInfo;
 
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
@@ -103,8 +104,28 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 			                Toon::Internal(_) => -1
 		                };
 		                
+		                let sphere_mode = if material.environment_index < 0 {
+			                0
+		                } else {
+			                match material.environment_blend_mode {
+				                EnvironmentBlendMode::Disabled => 0,
+				                EnvironmentBlendMode::Multiply => 1,
+				                EnvironmentBlendMode::Additive => 2,
+				                EnvironmentBlendMode::AdditionalVec4 => 3,
+			                }
+		                };
+		                
+		                let material_info = MaterialInfo {
+			                color: material.diffuse_color,
+			                specular: material.specular_color,
+			                specularity: material.specular_strength,
+			                ambient: material.ambient_color,
+			                sphere_mode: sphere_mode,
+		                };
+		                
 		                model.add_sub_mesh(
 			                last_index .. last_index + material.surface_count as usize,
+			                material_info,
 			                textures.get(material.texture_index as usize).cloned(),
 			                textures.get(toon_index as usize).cloned(),
 			                textures.get(material.environment_index as usize).cloned(),

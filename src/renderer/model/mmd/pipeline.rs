@@ -1,12 +1,9 @@
 use std::sync::Arc;
-use vulkano::descriptor::PipelineLayoutAbstract;
-use vulkano::pipeline::{GraphicsPipelineAbstract, GraphicsPipeline};
+use vulkano::pipeline::GraphicsPipelineAbstract;
 
 use crate::renderer::pipelines::{MMDPipeline, PipelineError};
 use crate::renderer::pipelines::mmd::culling::{Cull, NoCull};
-use crate::renderer::{Renderer, model};
-use vulkano::framebuffer::RenderPassAbstract;
-use vulkano::pipeline::vertex::{VertexSource, SingleBufferDefinition};
+use crate::renderer::Renderer;
 
 #[derive(Clone)]
 pub enum Pipeline {
