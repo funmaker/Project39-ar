@@ -88,8 +88,9 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	                              .map(|texture_path| {
 		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
 		                              let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
+		                              let has_alpha = image.color().has_alpha();
 		
-		                              Ok(model.add_texture(image, renderer)?)
+		                              Ok((model.add_texture(image, renderer)?, has_alpha))
 	                              })
 	                              .collect::<Vec<_>>()?;
 	
@@ -123,13 +124,29 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 			                sphere_mode: sphere_mode,
 		                };
 		                
+		                let (texture, has_alpha) = textures.get(material.texture_index as usize)
+		                                                   .cloned()
+		                                                   .map_or((None, false), |(texture, has_alpha)| (Some(texture), has_alpha));
+		                
+		                let toon = textures.get(toon_index as usize)
+		                                   .cloned()
+		                                   .map(|(t, _)| t);
+		                
+		                let sphere_map = textures.get(material.environment_index as usize)
+		                                         .cloned()
+		                                         .map(|(t, _)| t);
+		                
+		                let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
+		                
 		                model.add_sub_mesh(
 			                last_index .. last_index + material.surface_count as usize,
 			                material_info,
-			                textures.get(material.texture_index as usize).cloned(),
-			                textures.get(toon_index as usize).cloned(),
-			                textures.get(material.environment_index as usize).cloned(),
+			                texture,
+			                toon,
+			                sphere_map,
 			                material.draw_flags.contains(DrawingFlags::NoCull),
+			                !has_alpha,
+			                edge,
 			                renderer,
 		                )?;
 	
@@ -146,9 +163,10 @@ const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mm
 impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
 	fn from(vertex: mmd::Vertex<I>) -> Self {
 		mmd_model::Vertex::new(
-			[vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
-			vertex.normal,
+			[-vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
+			[-vertex.normal[0], vertex.normal[1], vertex.normal[2]],
 			vertex.uv,
+			vertex.edge_scale,
 		)
 	}
 }

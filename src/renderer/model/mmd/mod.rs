@@ -6,34 +6,18 @@ use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
 use vulkano::image::{ImmutableImage, Dimensions};
 use vulkano::sync::GpuFuture;
-use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
-use vulkano::sampler::Sampler;
 
 mod vertex;
-mod pipeline;
+mod sub_mesh;
 
 pub use vertex::Vertex;
+pub use sub_mesh::MaterialInfo;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RenderError};
-use pipeline::Pipeline;
-
-pub struct MaterialInfo {
-	pub color: [f32; 4],
-	pub specular: [f32; 3],
-	pub specularity: f32,
-	pub ambient: [f32; 3],
-	pub sphere_mode: u32,
-}
-
-struct SubMesh {
-	pipeline: Pipeline,
-	set: Arc<dyn DescriptorSet + Send + Sync>,
-	range: Range<usize>,
-}
+use sub_mesh::SubMesh;
 
 pub struct MMDModel<VI: VertexIndex> {
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -88,12 +72,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 	                    toon: Option<Arc<ImmutableImage<Format>>>,
 	                    sphere_map: Option<Arc<ImmutableImage<Format>>>,
 	                    no_cull: bool,
+	                    opaque: bool,
+	                    edge: Option<(f32, [f32; 4])>,
 	                    renderer: &mut Renderer)
 	                    -> Result<(), ModelError> {
-		let queue = &renderer.load_queue;
-		
-		let sampler = Sampler::simple_repeat_linear_no_mipmap(queue.device().clone());
-		
 		let texture = texture.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		let toon = toon.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
 		let sphere_map = sphere_map.map(Ok).unwrap_or_else(|| self.get_default_tex(renderer))?;
@@ -102,22 +84,9 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                                                     BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
 		                                                                     renderer.load_queue.clone())?;
 		
-		let pipeline = Pipeline::get(renderer, no_cull)?;
+		let sub_mesh = SubMesh::new(range, material_buffer, texture, toon, sphere_map, opaque, no_cull, edge, renderer)?;
 		
-		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.as_abstract()
-			                                       .descriptor_set_layout(0)
-			                                       .ok_or(ModelError::NoLayout)?
-			                                       .clone())
-				.add_buffer(renderer.commons.clone())?
-				.add_buffer(material_buffer)?
-				.add_sampled_image(texture, sampler.clone())?
-				.add_sampled_image(toon, sampler.clone())?
-				.add_sampled_image(sphere_map, sampler.clone())?
-				.build()?
-		);
-		
-		self.sub_mesh.push(SubMesh{ pipeline, set, range });
+		self.sub_mesh.push(sub_mesh);
 		
 		self.fences.push(FenceCheck::new(material_promise)?);
 		
@@ -147,24 +116,50 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError> {
 		if !self.loaded() { return Ok(()) }
 		
+		// Outline
 		for sub_mesh in self.sub_mesh.iter() {
-			match sub_mesh.pipeline.clone() {
-				Pipeline::Cull(pipeline) => {
-					builder.draw_indexed(pipeline,
-					                     &DynamicState::none(),
-					                     self.vertices.clone(),
-					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
-					                     sub_mesh.set.clone(),
-					                     (model_matrix, eye))?;
-				}
-				Pipeline::NoCull(pipeline) => {
-					builder.draw_indexed(pipeline,
-					                     &DynamicState::none(),
-					                     self.vertices.clone(),
-					                     self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap(),
-					                     sub_mesh.set.clone(),
-					                     (model_matrix, eye))?;
-				}
+			if let Some((pipeline, set)) = sub_mesh.edge.clone() {
+				let index_buffer = self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap();
+				
+				// calculate size of one pixel at distance 1m from camera
+				// Assume index
+				// 1440×1600 110 FOV
+				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;
+				let scale: f32 = pixel * sub_mesh.edge_scale;
+				
+				builder.draw_indexed(pipeline,
+				                     &DynamicState::none(),
+				                     self.vertices.clone(),
+				                     index_buffer.clone(),
+				                     set,
+				                     (model_matrix, sub_mesh.edge_color, eye, scale))?;
+			}
+		}
+		
+		// Opaque
+		for sub_mesh in self.sub_mesh.iter() {
+			let index_buffer = self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap();
+			let (pipeline, set) = sub_mesh.main.clone();
+		
+			builder.draw_indexed(pipeline,
+			                     &DynamicState::none(),
+			                     self.vertices.clone(),
+			                     index_buffer.clone(),
+			                     set,
+			                     (model_matrix, eye))?;
+		}
+		
+		// Transparent
+		for sub_mesh in self.sub_mesh.iter() {
+			if let Some((pipeline, set)) = sub_mesh.transparent.clone() {
+				let index_buffer = self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap();
+		
+				builder.draw_indexed(pipeline,
+				                     &DynamicState::none(),
+				                     self.vertices.clone(),
+				                     index_buffer.clone(),
+				                     set,
+				                     (model_matrix, eye))?;
 			}
 		}
 		

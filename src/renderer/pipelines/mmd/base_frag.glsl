@@ -31,6 +31,8 @@ layout(push_constant) uniform Pc {
 	uint eye;
 } pc;
 
+layout(constant_id = 0) const bool transparent_pass = false;
+
 void main() {
 	vec3 light_direction = commons.light_direction[pc.eye].xyz;
 	float lambert = dot(-f_normal, light_direction);
@@ -55,4 +57,8 @@ void main() {
 	o_color *= clamp(vec4(material.ambient, 0.0) + material.color, 0.0, 1.0);
 	o_color.rgb += spec_light;
 	o_color.rgb *= texture(toon, vec2(0.5, 0.5 - lambert * 0.5)).rgb;
+	
+	if(o_color.a < 1 && !transparent_pass) {
+		discard;
+	}
 }

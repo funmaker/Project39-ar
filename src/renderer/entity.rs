@@ -23,7 +23,7 @@ impl Entity {
 			position,
 			angle,
 			velocity: Vector3::zero(),
-			angular_velocity: Vector3::new(0.0, 1.0, 0.0),
+			angular_velocity: Vector3::new(0.0, 0.0, 0.0),
 		}
 	}
 	

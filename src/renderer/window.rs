@@ -221,7 +221,7 @@ impl Window {
 					} if is_cursor_trapped => {
 						let window = surface.window();
 						let size = window.inner_size();
-						let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
+						let center = PhysicalPosition::new((size.width as f32 / 2.0).floor(), (size.height as f32 / 2.0).floor());
 						
 						let cur_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
 						set_debug_flag("mouse_move", (cur_move.0 + position.x as f32 - center.x, cur_move.1 + position.y as f32 - center.y));

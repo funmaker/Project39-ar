@@ -1,6 +1,7 @@
 #![feature(bool_to_option)]
 #![feature(never_type)]
 #![feature(try_blocks)]
+#![feature(trace_macros)]
 #[macro_use] extern crate lazy_static;
 
 use std::error::Error;

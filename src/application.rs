@@ -129,12 +129,12 @@ impl Application {
 				let x = get_key("KeyD") - get_key("KeyA");
 				let y = get_key("KeySpace") - get_key("KeyCtrl");
 				let z = get_key("KeyS") - get_key("KeyW");
-				let dist = (1.0 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
+				let dist = (0.5 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
 				let mouse_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
 				set_debug_flag("mouse_move", (0.0_f32, 0.0_f32));
 				
-				rot.y = rot.y + Rad(-mouse_move.0 * 1.0 * delta_time.as_secs_f32());
-				rot.x = clamp(rot.x + Rad(-mouse_move.1 * 1.0 * delta_time.as_secs_f32()), -Rad::turn_div_4(), Rad::turn_div_4());
+				rot.y = rot.y + Rad(-mouse_move.0 * 0.01);
+				rot.x = clamp(rot.x + Rad(-mouse_move.1 * 0.01), -Rad::turn_div_4(), Rad::turn_div_4());
 				
 				let quat = Quaternion::from_angle_y(rot.y) * Quaternion::from_angle_x(rot.x);
 				
