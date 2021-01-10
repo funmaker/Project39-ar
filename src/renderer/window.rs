@@ -35,7 +35,7 @@ impl Window {
 		let event_loop = EventLoop::new();
 		
 		let surface = WindowBuilder::new().with_transparent(true)
-		                                  .with_inner_size(PhysicalSize::new(1024, 768))
+		                                  .with_inner_size(PhysicalSize::new(1920, 1080))
 		                                  .with_title("Project 39")
 		                                  .build_vk_surface(&event_loop, renderer.instance.clone())?;
 		

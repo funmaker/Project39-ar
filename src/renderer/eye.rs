@@ -29,15 +29,13 @@ pub struct Eyes {
 
 impl Eyes {
 	pub fn new(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
-		let frame_buffer_size = (1920, 1080);
-		let proj_left = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.0 as f32 / frame_buffer_size.1 as f32, 0.1, 1000.0);
-		let proj_right = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.0 as f32 / frame_buffer_size.1 as f32, 0.1, 1000.0);
-		
+		let frame_buffer_size = (960, 1080);
+		let projection = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 0.1, 1000.0);
 		let view = Matrix4::identity();
 		
 		Ok(Eyes {
-			left: Eye::new(frame_buffer_size, view, proj_left, queue, render_pass)?,
-			right: Eye::new(frame_buffer_size, view, proj_right, queue, render_pass)?,
+			left: Eye::new(frame_buffer_size, view, projection, queue, render_pass)?,
+			right: Eye::new(frame_buffer_size, view, projection, queue, render_pass)?,
 			frame_buffer_size,
 		})
 	}

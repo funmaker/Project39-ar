@@ -326,6 +326,7 @@ impl Renderer {
 		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
 		
 		let mut builder = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?;
+		// TODO: do this during render pass? Bliting can't be used with multisampling
 		builder.blit_image(self.camera_image.clone(),
 		                   [0, 0, 0],
 		                   [camera_width as i32 / 2, camera_height as i32, 1],
