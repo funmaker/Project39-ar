@@ -12,11 +12,11 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, Au
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError, CompositeAlpha};
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::format::{ClearValue, Format};
-use vulkano::image::{AttachmentImage, SwapchainImage};
+use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
 use vulkano::sampler::Filter;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use openvr::{System, Compositor};
 use cgmath::{Matrix4, Transform, Matrix, Vector3, Vector4, InnerSpace, Rad, Deg, Matrix3};
+use openvr::{System, Compositor};
 use openvr::compositor::CompositorError;
 
 pub mod model;
@@ -34,6 +34,7 @@ use eye::{Eye, Eyes, EyeCreationError};
 use window::Window;
 use pipelines::Pipelines;
 use entity::Entity;
+use crate::renderer::window::SwapchainRegenError;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -182,7 +183,8 @@ impl Renderer {
 			          device.driver_version());
 		}
 		
-		let physical = vr.and_then(|vr| vr.system.vulkan_output_device(instance.as_ptr()))
+		let physical = vr.as_ref()
+		                 .and_then(|vr| vr.system.vulkan_output_device(instance.as_ptr()))
 		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
 		                 .or_else(|| {
 			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
@@ -280,13 +282,19 @@ impl Renderer {
 		                            .find(|&composite| caps.supported_composite_alpha.supports(composite))
 		                            .expect("PreMultiplied and Opaque alpha composites not supported on the surface");
 		
+		let usage = ImageUsage{
+			transfer_destination: true,
+			sampled: true,
+			..ImageUsage::none()
+		};
+		
 		Ok(Swapchain::new(self.device.clone(),
 		                  surface,
 		                  caps.min_image_count,
 		                  format.0,
 		                  dimensions,
 		                  1,
-		                  caps.supported_usage_flags,
+		                  usage,
 		                  &self.queue,
 		                  SurfaceTransform::Identity,
 		                  alpha,
@@ -300,7 +308,10 @@ impl Renderer {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		if window.swapchain_regen_required {
-			window.regen_swapchain()?;
+			match window.regen_swapchain() {
+				Err(SwapchainRegenError::NeedRetry) => return Ok(()),
+				otherwise => otherwise?,
+			}
 		}
 		
 		let view_matrix  = hmd_pose.inverse_transform().unwrap();

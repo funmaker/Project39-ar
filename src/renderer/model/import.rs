@@ -1,6 +1,6 @@
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::fs::File;
+use std::fs::{File, FileType};
 use std::sync::Arc;
 use err_derive::Error;
 use obj::{Obj, ObjError};
@@ -13,6 +13,7 @@ use mmd::pmx::material::{Toon, DrawingFlags, EnvironmentBlendMode};
 use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
 use crate::renderer::model::mmd::MaterialInfo;
+use std::ffi::{OsStr, OsString};
 
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
@@ -68,7 +69,7 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	let model_reader = BufReader::new(File::open(path)?);
 	let header = mmd::HeaderReader::new(model_reader)?;
 
-	println!("{}", header);
+	dprintln!("{}", header);
 
 	let mut vertices_reader = mmd::VertexReader::new(header)?;
 	let vertices: Vec<mmd_model::Vertex> = vertices_reader.iter()
@@ -86,7 +87,8 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	let textures = textures_reader.iter()
 	                              .map_err(LoadError::PmxError)
 	                              .map(|texture_path| {
-		                              let texture_reader = BufReader::new(File::open(root.join(&texture_path))?);
+		                              let path = lookup_windows_path(&root, &texture_path)?;
+		                              let texture_reader = BufReader::new(File::open(path)?);
 		                              let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
 		                              let has_alpha = image.color().has_alpha();
 		
@@ -158,6 +160,49 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	Ok(Arc::new(model))
 }
 
+// Windows why
+fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, LoadError> {
+	if cfg!(target_os = "windows") {
+		return Ok(root.join(orig_path));
+	}
+	
+	let mut path = PathBuf::from(orig_path.replace("\\", "/"));
+	let file_name = path.file_name().ok_or_else(|| LoadError::PathError(orig_path.to_string()))?.to_owned();
+	path.pop();
+	
+	let mut cur_dir = root.clone();
+	
+	for component in path.components() {
+		cur_dir.push(lookup_component(&cur_dir, component.as_os_str(), true)?);
+	}
+	
+	cur_dir.push(lookup_component(&cur_dir, &file_name, false)?);
+	
+	Ok(cur_dir)
+}
+
+fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, LoadError> {
+	let mut next_dir = None;
+	
+	for file in std::fs::read_dir(&cur_dir)? {
+		let file = file?;
+		
+		if (!dir && file.file_type()?.is_file()) || (dir && file.file_type()?.is_dir()) {
+			if file.file_name() == name {
+				next_dir = Some(name.to_owned());
+				break;
+			} else if file.file_name().to_ascii_lowercase() == name.to_ascii_lowercase() {
+				next_dir = Some(file.file_name());
+			}
+		}
+	}
+	
+	match next_dir {
+		Some(next_dir) => Ok(next_dir),
+		None => Err(LoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
+	}
+}
+
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
 impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
@@ -178,4 +223,6 @@ pub enum LoadError {
 	#[error(display = "{}", _0)] ObjError(#[error(source)] ObjError),
 	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] ImageError),
+	#[error(display = "Failed to parse path {}", _0)] PathError(String),
+	#[error(display = "File not found: {}", _0)] FileNotFound(String),
 }

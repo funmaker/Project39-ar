@@ -99,7 +99,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			return Ok(image);
 		}
 		
-		let texture_reader = Cursor::new(include_bytes!("./default_tex.png"));
+		let texture_reader = Cursor::new(&include_bytes!("./default_tex.png")[..]);
 		let image = image::load(texture_reader, ImageFormat::Png)?;
 		let texture = self.add_texture(image, renderer)?;
 		

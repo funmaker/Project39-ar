@@ -6,7 +6,6 @@ pub struct VR {
 	pub system: System,
 	pub compositor: Compositor,
 	pub render_models: RenderModels,
-	pub devices: HashMap<u32, usize>,
 }
 
 impl VR {
@@ -22,7 +21,6 @@ impl VR {
 			system,
 			compositor,
 			render_models,
-			devices: HashMap::new(),
 		})
 	}
 }

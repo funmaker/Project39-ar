@@ -22,6 +22,7 @@ pub struct Application {
 	renderer: Renderer,
 	window: Window,
 	scene: Vec<Entity>,
+	vr_devices: HashMap<u32, usize>,
 }
 
 type FakePose = (Vector3<f32>, Euler<Rad<f32>>);
@@ -64,6 +65,7 @@ impl Application {
 			renderer,
 			window,
 			scene,
+			vr_devices: HashMap::new(),
 		})
 	}
 	
@@ -80,7 +82,7 @@ impl Application {
 			instant = Instant::now();
 			
 			let pose = match self.vr {
-				Some(ref mut vr) => self.handle_vr_poses(vr, &mut vr_buttons)?,
+				Some(_) => self.handle_vr_poses(&mut vr_buttons)?,
 				None => self.handle_fake_pose(&mut fake_pose, delta_time),
 			};
 			
@@ -94,13 +96,15 @@ impl Application {
 		Ok(())
 	}
 	
-	fn handle_vr_poses(&mut self, vr: &mut VR, last_buttons: &mut u64) -> Result<Matrix4<f32>, ApplicationRunError> {
+	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<Matrix4<f32>, ApplicationRunError> {
+		let vr = self.vr.as_ref().expect("VR has not been initialized.");
+		
 		let poses = vr.compositor.wait_get_poses()?;
 		
 		for i in 0..poses.render.len() as u32 {
 			if vr.system.tracked_device_class(i) != TrackedDeviceClass::Invalid && vr.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
-				if vr.devices.contains_key(&i) {
-					self.scene[*vr.devices.get(&i).unwrap()].move_to_pose(poses.render[i as usize]);
+				if let Some(&id) = self.vr_devices.get(&i) {
+					self.scene[id].move_to_pose(poses.render[i as usize]);
 				} else if let Some(model) = vr.render_models.load_render_model(&vr.system.string_tracked_device_property(i, 1003)?)? {
 					if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 						let mut entity = Entity::new(
@@ -110,7 +114,7 @@ impl Application {
 						);
 						
 						entity.move_to_pose(poses.render[i as usize]);
-						vr.devices.insert(i, self.scene.len());
+						self.vr_devices.insert(i, self.scene.len());
 						self.scene.push(entity);
 						println!("Loaded {:?}", vr.system.tracked_device_class(i));
 					} else { break }
@@ -125,7 +129,7 @@ impl Application {
 			.map(|state| state.button_pressed)
 			.fold(0, |a, b| a | b);
 		
-		let pressed = buttons & !last_buttons;
+		let pressed = buttons & !*last_buttons;
 		*last_buttons = buttons;
 		
 		for index in 0..64 {
@@ -137,7 +141,7 @@ impl Application {
 			}
 		}
 		
-		mat4(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking())
+		Ok(mat4(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking()))
 	}
 	
 	fn handle_fake_pose(&self, fake_pose: &mut FakePose, delta_time: Duration) -> Matrix4<f32> {

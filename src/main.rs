@@ -4,12 +4,14 @@
 #![feature(trace_macros)]
 #![feature(type_name_of_val)]
 #![feature(backtrace)]
+#![feature(osstring_ascii)]
 #[macro_use] extern crate lazy_static;
 
 use std::env;
 use std::panic;
 use std::fmt::Debug;
 use std::panic::PanicInfo;
+use std::error::Error;
 use getopts::Options;
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
@@ -32,6 +34,12 @@ fn main() {
 	if let Err(err) = result {
 		let message = format!("{}\n\nError {:?}", err.to_string(), err);
 		
+		eprintln!("{}", message);
+		
+		if let Some(backtrace) = err.backtrace() {
+			eprintln!("{}", backtrace);
+		}
+		
 		MessageDialog::new()
 		              .set_type(MessageType::Error)
 		              .set_title(&err.to_string())
@@ -50,7 +58,7 @@ fn run_application() -> Result<(), RunError> {
 	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr|dummy");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
-	opts.optflag("n", "novr", "Use keyboard and mouse for controls");
+	opts.optflag("n", "novr", "Non VR mode. The program will not use OpenVR. Use Keyboard and mouse to move.");
 	
 	let matches = opts.parse(&args[1..])?;
 	

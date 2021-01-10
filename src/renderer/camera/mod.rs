@@ -56,6 +56,8 @@ pub trait Camera: Send + Sized + 'static {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
 		let mut last_capture = Instant::now();
 		
+		return Ok(());
+		
 		loop {
 			let frame = match self.capture() {
 				Ok(frame) => frame,
