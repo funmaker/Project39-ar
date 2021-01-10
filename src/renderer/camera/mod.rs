@@ -3,13 +3,11 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc;
 use err_derive::Error;
-use vulkano::buffer::{CpuBufferPool, BufferSlice, BufferAccess};
+use vulkano::{memory, format};
+use vulkano::command_buffer::{self, AutoCommandBufferBuilder, AutoCommandBuffer};
+use vulkano::buffer::{self, CpuBufferPool, BufferSlice, BufferAccess};
+use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::device::Queue;
-use vulkano::image::{AttachmentImage, ImageCreationError, ImageUsage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferImageError, BuildError, CommandBufferExecError, AutoCommandBuffer};
-use vulkano::{format, OomError};
-use vulkano::buffer::view::BufferViewCreationError;
-use vulkano::memory::DeviceMemoryAllocError;
 
 #[cfg(windows)] mod escapi;
 mod opencv;
@@ -27,7 +25,7 @@ pub const CAPTURE_FPS: u64 = 60;
 pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 
 pub trait Camera: Send + Sized + 'static {
-	fn capture(&mut self) -> Result<&[u8], CaptureError>;
+	fn capture(&mut self) -> Result<&[u8], CameraCaptureError>;
 	
 	fn start(mut self, queue: Arc<Queue>)
 		     -> Result<(Arc<AttachmentImage<format::B8G8R8A8Unorm>>, mpsc::Receiver<AutoCommandBuffer>), CameraStartError> {
@@ -56,12 +54,10 @@ pub trait Camera: Send + Sized + 'static {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
 		let mut last_capture = Instant::now();
 		
-		return Ok(());
-		
 		loop {
 			let frame = match self.capture() {
 				Ok(frame) => frame,
-				Err(CaptureError::Timeout) => continue,
+				Err(CameraCaptureError::Timeout) => continue,
 				Err(err) => return Err(err.into()),
 			};
 			
@@ -84,24 +80,24 @@ pub trait Camera: Send + Sized + 'static {
 }
 
 #[derive(Debug, Error)]
-pub enum CaptureError {
+pub enum CameraCaptureError {
 	#[error(display = "Timeout while waiting for a frame")] Timeout,
 	#[error(display = "{}", _0)] Other(Box<dyn std::error::Error>),
 }
 
 #[derive(Debug, Error)]
 pub enum CameraStartError {
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] ImageCreationError),
+	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum CaptureLoopError {
 	#[error(display = "Quitting")] Quitting,
-	#[error(display = "{}", _0)] CaptureError(#[error(source)] CaptureError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
-	#[error(display = "{}", _0)] CopyBufferImageError(#[error(source)] CopyBufferImageError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
-	#[error(display = "{}", _0)] BufferViewCreationError(#[error(source)] BufferViewCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] CaptureError(#[error(source)] CameraCaptureError),
+	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
+	#[error(display = "{}", _0)] CopyBufferImageError(#[error(source)] command_buffer::CopyBufferImageError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
+	#[error(display = "{}", _0)] BufferViewCreationError(#[error(source)] buffer::view::BufferViewCreationError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }

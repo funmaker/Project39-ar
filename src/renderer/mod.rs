@@ -1,40 +1,33 @@
 use std::sync::{Arc, mpsc};
 use err_derive::Error;
-use vulkano::{app_info_from_cargo_toml, OomError, format};
-use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue, DeviceCreationError};
+use cgmath::{Matrix4, Transform, Vector3, Vector4, InnerSpace};
+use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
+use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
+use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice, LayersListError, InstanceCreationError};
-use vulkano::pipeline::GraphicsPipelineCreationError;
-use vulkano::sync::{GpuFuture, FlushError};
-use vulkano::sync;
-use vulkano::framebuffer::{RenderPassCreationError, RenderPassAbstract};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer, UpdateBufferError, SubpassContents};
-use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError, CompositeAlpha};
-use vulkano::memory::DeviceMemoryAllocError;
-use vulkano::format::{ClearValue, Format};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, AutoCommandBuffer, SubpassContents};
+use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
 use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
-use vulkano::sampler::Filter;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use cgmath::{Matrix4, Transform, Matrix, Vector3, Vector4, InnerSpace, Rad, Deg, Matrix3};
-use openvr::{System, Compositor};
-use openvr::compositor::CompositorError;
+use vulkano::framebuffer::RenderPassAbstract;
+use vulkano::format::{ClearValue, Format};
+use vulkano::sync::GpuFuture;
+use vulkano::sampler::Filter;
 
 pub mod model;
 pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
-pub mod entity;
 
 use crate::utils::*;
 use crate::debug::debug;
 use crate::application::VR;
+use crate::application::Entity;
 use camera::{CameraStartError, Camera};
-use eye::{Eye, Eyes, EyeCreationError};
-use window::Window;
+use eye::{Eyes, EyeCreationError};
+use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
-use entity::Entity;
-use crate::renderer::window::SwapchainRegenError;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -115,7 +108,7 @@ impl Renderer {
 			dprintln!("\t{}", layer.name());
 		}
 		
-		let app_infos = app_info_from_cargo_toml!();
+		let app_infos = vulkano::app_info_from_cargo_toml!();
 		
 		let vr_extensions = vr.as_ref().map(|vr| vr.compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
@@ -215,13 +208,13 @@ impl Renderer {
 		                           .find(|&q| q.supports_graphics())
 		                           .ok_or(RendererCreationError::NoQueue)?;
 		
-		// let load_queue_family = physical.queue_families()
-		//                                 .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
-		//                                 .unwrap_or(queue_family);
+		let load_queue_family = physical.queue_families()
+		                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
+		                                .unwrap_or(queue_family);
 		
 		let families = vec![
 			(queue_family, 0.5),
-			// (load_queue_family, 0.2),
+			(load_queue_family, 0.2),
 		];
 		
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
@@ -235,9 +228,8 @@ impl Renderer {
 		
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		
-		// Mipmaps generation requires graphical queue.
-		// TODO: Generate mipmaps on CPU side?
-		// let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
+		let _load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
+		// TODO: Get better GPU
 		let load_queue = queue.clone();
 		
 		Ok((device, queue, load_queue))
@@ -309,13 +301,26 @@ impl Renderer {
 		
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
-				Err(SwapchainRegenError::NeedRetry) => return Ok(()),
-				otherwise => otherwise?,
+				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
+				Err(err) => return Err(err.into()),
+				Ok(_) => {}
 			}
 		}
 		
-		let view_matrix  = hmd_pose.inverse_transform().unwrap();
+		let view_base  = hmd_pose.inverse_transform().unwrap();
+		let view_left = self.eyes.left.view * view_base;
+		let view_right = self.eyes.right.view * view_base;
 		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
+		
+		let commons = CommonsVBO {
+			projection: [self.eyes.left.projection, self.eyes.right.projection],
+			view: [view_left, view_right],
+			light_direction: [
+				(mat3(view_left)  * light_source).extend(0.0),
+				(mat3(view_right) * light_source).extend(0.0),
+			],
+			ambient: 0.25,
+		};
 		
 		let [camera_width, camera_height] = self.camera_image.dimensions();
 		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
@@ -346,15 +351,7 @@ impl Renderer {
 		                   1,
 		                   Filter::Linear)?
 		       .update_buffer(self.commons.clone(),
-		                      CommonsVBO{
-			                      projection: [self.eyes.left.projection, self.eyes.right.projection],
-			                      view: [view_matrix, view_matrix],
-			                      light_direction: [
-				                      (mat3(view_matrix) * light_source).extend(0.0),
-				                      (mat3(view_matrix) * light_source).extend(0.0),
-			                      ],
-			                      ambient: 0.25,
-		                      })?
+		                      commons)?
 		       .begin_render_pass(self.eyes.left.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
@@ -413,7 +410,7 @@ impl Renderer {
 			Ok(future) => {
 				self.previous_frame_end = Some(Box::new(future) as Box<_>);
 			},
-			Err(FlushError::OutOfDate) => {
+			Err(sync::FlushError::OutOfDate) => {
 				eprintln!("Flush Error: Out of date, ignoring");
 				self.previous_frame_end = Some(Box::new(sync::now(self.device.clone())) as Box<_>);
 			},
@@ -429,37 +426,37 @@ impl Renderer {
 pub enum RendererCreationError {
 	#[error(display = "No devices available.")] NoDevices,
 	#[error(display = "No compute queue available.")] NoQueue,
-	#[error(display = "{}", _0)] LayersListError(#[error(source)] LayersListError),
-	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] InstanceCreationError),
-	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] DeviceCreationError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] RenderPassCreationError),
-	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] GraphicsPipelineCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
+	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
+	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
+	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
+	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
+	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] framebuffer::RenderPassCreationError),
+	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::GraphicsPipelineCreationError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }
 
 #[derive(Debug, Error)]
 pub enum RendererSwapchainError {
-	#[error(display = "{}", _0)] CapabilitiesError(#[error(source)] CapabilitiesError),
-	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] CapabilitiesError(#[error(source)] swapchain::CapabilitiesError),
+	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }
 
 #[derive(Debug, Error)]
 pub enum RenderError {
-	#[error(display = "Kek")] Kek,
-	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
-	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] BeginRenderPassError),
-	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] DrawIndexedError),
-	#[error(display = "{}", _0)] AutoCommandBufferBuilderContextError(#[error(source)] AutoCommandBufferBuilderContextError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
-	#[error(display = "{}", _0)] CompositorError(#[error(source)] CompositorError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] FlushError),
-	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
-	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] UpdateBufferError),
-	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] window::SwapchainRegenError),
-	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] window::RenderError),
+	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
+	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
+	
+	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
+	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
+	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
+	#[error(display = "{}", _0)] AutoCommandBufferBuilderContextError(#[error(source)] command_buffer::AutoCommandBufferBuilderContextError),
+	#[error(display = "{}", _0)] CommandBufferBuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
+	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
+	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
+	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }

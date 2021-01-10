@@ -41,7 +41,7 @@ impl SubMesh {
 	           edge: Option<(f32, [f32; 4])>,
 	           renderer: &mut Renderer)
 	           -> Result<SubMesh, ModelError> {
-		let sampler = Sampler::simple_repeat_linear_no_mipmap(renderer.device.clone());
+		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
 		
 		let main_pipeline: MMDPipelineAny = match no_cull {
 			false => renderer.pipelines.get::<MMDPipelineOpaque>()?.into(),

@@ -2,7 +2,7 @@
 
 use err_derive::Error;
 
-use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 
 pub const CAPTURE_INDEX: usize = 0;
 
@@ -23,11 +23,11 @@ impl Escapi {
 }
 
 impl Camera for Escapi {
-	fn capture(&mut self) -> Result<&[u8], CaptureError> {
+	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
 		match self.inner.capture() {
 			Ok(frame) => Ok(frame),
-			Err(escapi::Error::CaptureTimeout) => Err(CaptureError::Timeout),
-			Err(err) => Err(CaptureError::Other(err.into())),
+			Err(escapi::Error::CaptureTimeout) => Err(CameraCaptureError::Timeout),
+			Err(err) => Err(CameraCaptureError::Other(err.into())),
 		}
 	}
 }

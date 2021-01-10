@@ -8,8 +8,8 @@ use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::SafeDeref;
 use vulkano::descriptor::PipelineLayoutAbstract;
 
-use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
 use crate::renderer::{model, RenderPass};
+use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
 
 mod vert {
 	#[allow(dead_code)]

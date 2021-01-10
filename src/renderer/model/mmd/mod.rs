@@ -12,11 +12,11 @@ use vulkano::format::Format;
 mod vertex;
 mod sub_mesh;
 
-pub use vertex::Vertex;
-pub use sub_mesh::MaterialInfo;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RenderError};
+pub use vertex::Vertex;
+pub use sub_mesh::MaterialInfo;
 use sub_mesh::SubMesh;
 
 pub struct MMDModel<VI: VertexIndex> {

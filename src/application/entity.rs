@@ -3,8 +3,8 @@ use std::time::Duration;
 use cgmath::{Vector3, Quaternion, Zero, Matrix4, Euler, Rad};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 
-use super::model::Model;
-use super::RenderError;
+use crate::renderer::model::Model;
+use crate::renderer::RenderError;
 use crate::utils::{decompose, mat4};
 use openvr::TrackedDevicePose;
 

@@ -1,10 +1,11 @@
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::fs::{File, FileType};
+use std::fs::File;
 use std::sync::Arc;
+use std::ffi::{OsStr, OsString};
 use err_derive::Error;
-use obj::{Obj, ObjError};
-use image::{ImageFormat, ImageError, DynamicImage, ImageBuffer};
+use obj::Obj;
+use image::{ImageFormat, DynamicImage, ImageBuffer};
 use cgmath::num_traits::FromPrimitive;
 use openvr::render_models as openvr_rm;
 use fallible_iterator::FallibleIterator;
@@ -13,9 +14,8 @@ use mmd::pmx::material::{Toon, DrawingFlags, EnvironmentBlendMode};
 use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
 use crate::renderer::Renderer;
 use crate::renderer::model::mmd::MaterialInfo;
-use std::ffi::{OsStr, OsString};
 
-pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
+pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
 	let model: Obj<obj::TexturedVertex, VI> = obj::load_obj(model_reader)?;
 	
@@ -41,7 +41,7 @@ impl From<&obj::TexturedVertex> for simple::Vertex {
 }
 
 
-pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
+pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
 	let vertices: Vec<simple::Vertex> = model.vertices().iter().map(Into::into).collect();
 	let indices: Vec<u16> = model.indices().iter().copied().map(Into::into).collect();
 	let size = texture.dimensions();
@@ -62,7 +62,7 @@ impl From<&openvr_rm::Vertex> for simple::Vertex {
 }
 
 
-pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, LoadError> {
+pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
 	let mut root = PathBuf::from(path);
 	root.pop();
 
@@ -85,7 +85,7 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
 	
 	let textures = textures_reader.iter()
-	                              .map_err(LoadError::PmxError)
+	                              .map_err(ModelLoadError::PmxError)
 	                              .map(|texture_path| {
 		                              let path = lookup_windows_path(&root, &texture_path)?;
 		                              let texture_reader = BufReader::new(File::open(path)?);
@@ -100,7 +100,7 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 	let mut last_index = 0_usize;
 	
 	materials_reader.iter::<i32>()
-	                .map_err(LoadError::PmxError)
+	                .map_err(ModelLoadError::PmxError)
 	                .for_each(|material| {
 		                let toon_index = match material.toon {
 			                Toon::Texture(id) => id,
@@ -161,13 +161,13 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, L
 }
 
 // Windows why
-fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, LoadError> {
+fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, ModelLoadError> {
 	if cfg!(target_os = "windows") {
 		return Ok(root.join(orig_path));
 	}
 	
 	let mut path = PathBuf::from(orig_path.replace("\\", "/"));
-	let file_name = path.file_name().ok_or_else(|| LoadError::PathError(orig_path.to_string()))?.to_owned();
+	let file_name = path.file_name().ok_or_else(|| ModelLoadError::PathError(orig_path.to_string()))?.to_owned();
 	path.pop();
 	
 	let mut cur_dir = root.clone();
@@ -181,7 +181,7 @@ fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, LoadE
 	Ok(cur_dir)
 }
 
-fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, LoadError> {
+fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, ModelLoadError> {
 	let mut next_dir = None;
 	
 	for file in std::fs::read_dir(&cur_dir)? {
@@ -199,7 +199,7 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsStri
 	
 	match next_dir {
 		Some(next_dir) => Ok(next_dir),
-		None => Err(LoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
+		None => Err(ModelLoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
 	}
 }
 
@@ -217,12 +217,12 @@ impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
 }
 
 #[derive(Debug, Error)]
-pub enum LoadError {
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
-	#[error(display = "{}", _0)] ObjError(#[error(source)] ObjError),
-	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] ImageError),
+pub enum ModelLoadError {
 	#[error(display = "Failed to parse path {}", _0)] PathError(String),
 	#[error(display = "File not found: {}", _0)] FileNotFound(String),
+	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
+	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
+	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
+	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
+	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 }

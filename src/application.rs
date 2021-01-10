@@ -2,20 +2,21 @@ use std::collections::HashMap;
 use std::time::{Instant, Duration};
 use std::sync::Arc;
 use err_derive::Error;
-use openvr::{System, Compositor, RenderModels, Context, InitError, tracked_device_index, TrackedDeviceClass, render_models, TrackedControllerRole};
-use openvr::compositor::CompositorError;
-use openvr::system::TrackedPropertyError;
+use openvr::{tracked_device_index, TrackedDeviceClass, TrackedControllerRole};
 use cgmath::num_traits::clamp;
 use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rotation3, Matrix4};
 
 mod vr;
+mod entity;
 
-use crate::renderer::{self, Renderer, camera, model};
-use crate::renderer::entity::Entity;
-use crate::renderer::window::{self, Window};
+use crate::renderer::{Renderer, RendererCreationError, RenderError};
+use crate::renderer::window::{Window, WindowCreationError};
+use crate::renderer::camera::{self, EscapiCameraError, OpenCVCameraError, OpenVRCameraError};
+use crate::renderer::model::{self, ModelLoadError, ModelError};
 use crate::debug::{get_debug_flag, set_debug_flag, get_debug_flag_or_default};
 use crate::utils::mat4;
 pub use vr::VR;
+pub use entity::Entity;
 
 pub struct Application {
 	vr: Option<Arc<VR>>,
@@ -186,22 +187,22 @@ pub enum CameraAPI {
 #[derive(Debug, Error)]
 pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr camera with --novr flag.")] OpenVRCameraInNoVR,
+	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererCreationError),
+	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
+	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
+	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] EscapiCameraError),
+	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
+	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] openvr::InitError),
-	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] renderer::RendererCreationError),
-	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
-	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] model::LoadError),
-	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] camera::OpenCVCameraError),
-	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
-	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] window::WindowCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum ApplicationRunError {
+	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
+	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
+	#[error(display = "{}", _0)] RenderError(#[error(source)] RenderError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] model::ModelError),
-	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] model::LoadError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
-	#[error(display = "{}", _0)] RenderError(#[error(source)] renderer::RenderError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),
 	#[error(display = "{}", _0)] RenderModelError(#[error(source)] openvr::render_models::Error),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),

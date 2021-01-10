@@ -3,11 +3,10 @@
 use std::time::{Instant, Duration};
 use err_derive::Error;
 use openvr_sys as sys;
-use openvr::Context;
 
 mod tracked_camera;
 
-use super::{ Camera, CaptureError };
+use super::{Camera, CameraCaptureError};
 use crate::debug::{debug, get_debug_flag};
 use crate::application::VR;
 use tracked_camera::{TrackedCamera, FrameType, CameraService};
@@ -72,7 +71,7 @@ impl OpenVR {
 }
 
 impl Camera for OpenVR {
-	fn capture(&mut self) -> Result<&[u8], CaptureError> {
+	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
 		
 		if let Some(cooldown) = Duration::from_millis(16).checked_sub(self.last_capture.elapsed()) {
 			std::thread::sleep(cooldown);
@@ -90,8 +89,8 @@ impl Camera for OpenVR {
 		let ret = self.service.get_frame_buffer(mode)
 		                      .map(|fb| fb.buffer.as_slice())
 		                      .map_err(|err| match err.code {
-			                      sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CaptureError::Timeout,
-			                      _ => CaptureError::Other(err.into()),
+			                      sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
+			                      _ => CameraCaptureError::Other(err.into()),
 		                      });
 		
 		self.last_capture = Instant::now();

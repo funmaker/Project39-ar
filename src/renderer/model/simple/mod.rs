@@ -12,11 +12,11 @@ use vulkano::sampler::Sampler;
 
 mod vertex;
 
-pub use vertex::Vertex;
 use crate::renderer::{Renderer, RenderError};
-use crate::renderer::pipelines::DefaultPipeline;
-use super::{Model, ModelError, VertexIndex, FenceCheck};
+use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::utils::ImageEx;
+use super::{Model, ModelError, VertexIndex, FenceCheck};
+pub use vertex::Vertex;
 
 pub struct SimpleModel<VI: VertexIndex> {
 	pipeline: Arc<DefaultPipeline>,
@@ -48,7 +48,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;
 		
-		let sampler = Sampler::simple_repeat_linear_no_mipmap(queue.device().clone());
+		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
 		
 		let set = Arc::new(
 			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())

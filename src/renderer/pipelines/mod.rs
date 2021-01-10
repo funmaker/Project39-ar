@@ -4,14 +4,11 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use err_derive::Error;
 use downcast_rs::{DowncastSync, impl_downcast};
-use vulkano::framebuffer::RenderPassCreationError;
-use vulkano::pipeline::GraphicsPipelineCreationError;
 use vulkano::pipeline::blend::{AttachmentBlend, BlendOp, BlendFactor};
 
 pub mod default;
 pub mod mmd;
 
-pub use default::DefaultPipeline;
 use super::RenderPass;
 
 pub trait Pipeline: DowncastSync + Debug {
@@ -68,6 +65,6 @@ pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 
 #[derive(Debug, Error)]
 pub enum PipelineError {
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] RenderPassCreationError),
-	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] GraphicsPipelineCreationError),
+	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] vulkano::framebuffer::RenderPassCreationError),
+	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] vulkano::pipeline::GraphicsPipelineCreationError),
 }

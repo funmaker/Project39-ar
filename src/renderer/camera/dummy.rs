@@ -3,10 +3,10 @@
 use std::time::{Instant, Duration};
 use std::thread;
 
-use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 
 lazy_static!(
-	static ref FRAME: Vec<u8> = [  0,   0,   0, 255].iter()
+	static ref FRAME: Vec<u8> = [  0,   0,   0,  39].iter()
 	                                                .copied()
 	                                                .cycle()
 	                                                .take((CAPTURE_WIDTH * CAPTURE_HEIGHT * 4) as usize)
@@ -26,7 +26,7 @@ impl Dummy {
 }
 
 impl Camera for Dummy {
-	fn capture(&mut self) -> Result<&[u8], CaptureError> {
+	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
 		let next_frame = self.last_frame + Duration::from_millis(1000 / CAPTURE_FPS);
 		
 		if let Some(sleep_duration) = next_frame.checked_duration_since(Instant::now()) {

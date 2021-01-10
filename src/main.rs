@@ -21,9 +21,8 @@ mod renderer;
 mod application;
 mod utils;
 
-use application::Application;
-use application::CameraAPI;
-use debug::{set_debug, set_debug_flag};
+use application::{Application, CameraAPI, ApplicationCreationError, ApplicationRunError};
+use debug::set_debug;
 
 
 fn main() {
@@ -136,8 +135,8 @@ fn panic_hook() -> impl Fn(&PanicInfo) {
 #[derive(Debug, Error)]
 pub enum RunError {
 	#[error(display = "Unknown camera provider: {}", _0)] BadCamera(String),
-	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] application::ApplicationCreationError),
-	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] application::ApplicationRunError),
+	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
+	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
 	#[error(display = "{}", _0)] GetoptsError(#[error(source)] getopts::Fail),
 	#[error(display = "{}", _0)] ParseIntError(#[error(source)] std::num::ParseIntError),
 	#[error(display = "{}", _0)] Infallible(#[error(source)] std::convert::Infallible),

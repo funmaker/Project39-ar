@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use openvr::{InitError, Context, System, Compositor, RenderModels};
 
 pub struct VR {

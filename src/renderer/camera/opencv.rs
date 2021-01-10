@@ -2,7 +2,7 @@ use err_derive::Error;
 use opencv::prelude::*;
 use opencv::{ videoio, imgproc, core };
 
-use super::{ CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CaptureError };
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 
 pub const CAPTURE_INDEX: i32 = 0;
 
@@ -35,9 +35,9 @@ impl OpenCV {
 }
 
 impl Camera for OpenCV {
-	fn capture(&mut self) -> Result<&[u8], CaptureError> {
+	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
 		if !self.inner.read(&mut self.frame)? {
-			return Err(CaptureError::Timeout);
+			return Err(CameraCaptureError::Timeout);
 		}
 		
 		imgproc::cvt_color(&self.frame, &mut self.frame_rgba, imgproc::COLOR_RGB2RGBA, 4)?;
@@ -49,12 +49,12 @@ impl Camera for OpenCV {
 
 #[derive(Debug, Error)]
 pub enum OpenCVCameraError {
-	#[error(display = "{}", _0)] OpenCVError(#[error(source)] opencv::Error),
 	#[error(display = "Failed to open camera")] CameraOpenError,
+	#[error(display = "{}", _0)] OpenCVError(#[error(source)] opencv::Error),
 }
 
-impl From<opencv::Error> for CaptureError {
+impl From<opencv::Error> for CameraCaptureError {
 	fn from(err: opencv::Error) -> Self {
-		CaptureError::Other(err.into())
+		CameraCaptureError::Other(err.into())
 	}
 }

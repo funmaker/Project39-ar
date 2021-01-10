@@ -6,7 +6,6 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::monitor::MonitorHandle;
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
@@ -15,11 +14,11 @@ use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
 use vulkano::{format, OomError};
 use vulkano_win::{VkSurfaceBuild, CreationError};
+use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
 use crate::debug::{set_debug_flag, get_debug_flag};
 
-type WinitWindow = winit::window::Window;
 
 pub struct Window {
 	event_loop: EventLoop<()>,
@@ -59,12 +58,12 @@ impl Window {
 		})
 	}
 	
-	pub fn regen_swapchain(&mut self) -> Result<(), SwapchainRegenError> {
+	pub fn regen_swapchain(&mut self) -> Result<(), WindowSwapchainRegenError> {
 		let dimensions = self.surface.window().inner_size().into();
 		
 		self.swapchain = self.swapchain.0.recreate_with_dimensions(dimensions)
 		                     .map_err(|err| match err {
-			                     SwapchainCreationError::UnsupportedDimensions => SwapchainRegenError::NeedRetry,
+			                     SwapchainCreationError::UnsupportedDimensions => WindowSwapchainRegenError::NeedRetry, // No idea why this happens on linux
 			                     err => err.into(),
 		                     })?;
 		
@@ -77,13 +76,13 @@ impl Window {
 	              future: Box<dyn GpuFuture>,
 	              left: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
 	              right: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>)
-	              -> Result<Box<dyn GpuFuture>, RenderError> {
+	              -> Result<Box<dyn GpuFuture>, WindowRenderError> {
 		let (ref mut swapchain, ref mut images) = self.swapchain;
 		
 		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), None) {
 			Err(AcquireError::OutOfDate) => {
 				self.swapchain_regen_required = true;
-				Err(RenderError::NeedRetry)
+				Err(WindowRenderError::NeedRetry)
 			},
 			Err(err) => Err(err.into()),
 			Ok(res) => Ok(res),
@@ -97,7 +96,7 @@ impl Window {
 		if image_num > 2 {
 			eprintln!("Acquire_next_image returned {}! Skipping render.", image_num);
 			self.swapchain_regen_required = true;
-			return Err(RenderError::NeedRetry);
+			return Err(WindowRenderError::NeedRetry);
 		}
 		
 		let out_dims = swapchain.dimensions();
@@ -260,13 +259,13 @@ pub enum WindowCreationError {
 }
 
 #[derive(Debug, Error)]
-pub enum SwapchainRegenError {
+pub enum WindowSwapchainRegenError {
 	#[error(display = "Need Retry")] NeedRetry,
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
 }
 
 #[derive(Debug, Error)]
-pub enum RenderError {
+pub enum WindowRenderError {
 	#[error(display = "Need Retry")] NeedRetry,
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] AcquireError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
