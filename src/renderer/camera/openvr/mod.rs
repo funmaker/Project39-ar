@@ -9,6 +9,7 @@ mod tracked_camera;
 
 use super::{ Camera, CaptureError };
 use crate::debug::{debug, get_debug_flag};
+use crate::application::VR;
 use tracked_camera::{TrackedCamera, FrameType, CameraService};
 
 pub const CAPTURE_INDEX: u32 = 0;
@@ -21,10 +22,10 @@ pub struct OpenVR {
 }
 
 impl OpenVR {
-	pub fn new(context: &Context) -> Result<OpenVR, OpenVRCameraError> {
+	pub fn new(vr: &VR) -> Result<OpenVR, OpenVRCameraError> {
 		let index = CAPTURE_INDEX;
 		
-		let tracked_camera = TrackedCamera::new(context)?;
+		let tracked_camera = TrackedCamera::new(&vr.context)?;
 		
 		println!("{}", debug());
 		

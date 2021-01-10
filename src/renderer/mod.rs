@@ -8,7 +8,7 @@ use vulkano::pipeline::GraphicsPipelineCreationError;
 use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
 use vulkano::framebuffer::{RenderPassCreationError, RenderPassAbstract};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer, UpdateBufferError};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BeginRenderPassError, AutoCommandBufferBuilderContextError, BuildError, CommandBufferExecError, DrawIndexedError, BlitImageError, AutoCommandBuffer, UpdateBufferError, SubpassContents};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CapabilitiesError, SwapchainCreationError, CompositeAlpha};
 use vulkano::memory::DeviceMemoryAllocError;
 use vulkano::format::{ClearValue, Format};
@@ -16,7 +16,7 @@ use vulkano::image::{AttachmentImage, SwapchainImage};
 use vulkano::sampler::Filter;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use openvr::{System, Compositor};
-use cgmath::{Matrix4, Transform, Matrix, Vector3, Vector4, InnerSpace};
+use cgmath::{Matrix4, Transform, Matrix, Vector3, Vector4, InnerSpace, Rad, Deg, Matrix3};
 use openvr::compositor::CompositorError;
 
 pub mod model;
@@ -28,8 +28,9 @@ pub mod entity;
 
 use crate::utils::*;
 use crate::debug::debug;
+use crate::application::VR;
 use camera::{CameraStartError, Camera};
-use eye::{Eye, EyeCreationError};
+use eye::{Eye, Eyes, EyeCreationError};
 use window::Window;
 use pipelines::Pipelines;
 use entity::Entity;
@@ -48,91 +49,130 @@ pub struct Renderer {
 	pub instance: Arc<Instance>,
 	pub commons: Arc<DeviceLocalBuffer<CommonsVBO>>,
 	
+	vr: Option<Arc<VR>>,
 	device: Arc<Device>,
 	queue: Arc<Queue>,
 	load_queue: Arc<Queue>,
 	pipelines: Pipelines,
-	eyes: (Eye, Eye),
-	compositor: Compositor,
+	eyes: Eyes,
 	previous_frame_end: Option<Box<dyn GpuFuture>>,
 	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
     load_commands: mpsc::Receiver<AutoCommandBuffer>,
 }
 
-// Translates OpenGL projection matrix to Vulkan
-const CLIP: Matrix4<f32> = Matrix4::new(
-	1.0, 0.0, 0.0, 0.0,
-	0.0,-1.0, 0.0, 0.0,
-	0.0, 0.0, 0.5, 0.0,
-	0.0, 0.0, 0.5, 1.0,
-);
-
 impl Renderer {
-	pub fn new<C>(system: &System, compositor: Compositor, device: Option<usize>, camera: C)
+	pub fn new<C>(vr: Option<Arc<VR>>, device: Option<usize>, camera: C)
 	             -> Result<Renderer, RendererCreationError>
 	             where C: Camera {
+		let instance = Renderer::create_vulkan_instance(&vr)?;
+		
+		if debug() {
+			Renderer::install_debug_callbacks(&instance);
+		}
+		
+		let physical = Renderer::create_physical_device(device, &instance, &vr)?;
+		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
+		let render_pass = Renderer::create_render_pass(&device)?;
+		
+		let eyes = if let Some(ref vr) = vr {
+			Eyes::new_vr(vr, &queue, &render_pass)?
+		} else {
+			Eyes::new(&queue, &render_pass)?
+		};
+		
+		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
+		
+		let commons = DeviceLocalBuffer::new(device.clone(),
+		                                     BufferUsage{ transfer_destination: true,
+		                                                  uniform_buffer: true,
+		                                                  ..BufferUsage::none() },
+		                                     Some(queue.family()))?;
+		
+		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
+		
+		let pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
+		
+		Ok(Renderer {
+			vr,
+			instance,
+			commons,
+			device,
+			queue,
+			load_queue,
+			pipelines,
+			eyes,
+			previous_frame_end,
+			camera_image,
+			load_commands,
+		})
+	}
+	
+	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererCreationError> {
 		dprintln!("List of Vulkan debugging layers available to use:");
 		let layers = vulkano::instance::layers_list()?;
 		for layer in layers {
 			dprintln!("\t{}", layer.name());
 		}
 		
-		let instance = {
-			let app_infos = app_info_from_cargo_toml!();
-			let extensions = RawInstanceExtensions::new(compositor.vulkan_instance_extensions_required())
-			                                       .union(&(&vulkano_win::required_extensions()).into())
-			                                       .union(&(&InstanceExtensions { ext_debug_utils: debug(),
-			                                                                      ..InstanceExtensions::none() }).into());
-			
-			let layers = if debug() {
-				             // TODO: Get better GPU
-				             vec![/*"VK_LAYER_LUNARG_standard_validation"*/]
-			             } else {
-				             vec![]
-			             };
-			
-			Instance::new(Some(&app_infos), extensions, layers)?
+		let app_infos = app_info_from_cargo_toml!();
+		
+		let vr_extensions = vr.as_ref().map(|vr| vr.compositor.vulkan_instance_extensions_required()).unwrap_or_default();
+		
+		let extensions = RawInstanceExtensions::new(vr_extensions)
+		                                       .union(&(&vulkano_win::required_extensions()).into())
+		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug(),
+		                                                                      ..InstanceExtensions::none() }).into());
+		
+		let layers = if debug() {
+			// TODO: Get better GPU
+			vec![/*"VK_LAYER_LUNARG_standard_validation"*/]
+		} else {
+			vec![]
 		};
 		
-		if debug() {
-			let severity = MessageSeverity { error:       true,
-			                                 warning:     true,
-			                                 information: false,
-			                                 verbose:     true, };
-			
-			let ty = MessageType::all();
-			
-			let _debug_callback = DebugCallback::new(&instance, severity, ty, |msg| {
-				let severity = if msg.severity.error {
-					"error"
-				} else if msg.severity.warning {
-					"warning"
-				} else if msg.severity.information {
-					"information"
-				} else if msg.severity.verbose {
-					"verbose"
-				} else {
-					panic!("no-impl");
-				};
-				
-				let ty = if msg.ty.general {
-					"general"
-				} else if msg.ty.validation {
-					"validation"
-				} else if msg.ty.performance {
-					"performance"
-				} else {
-					panic!("no-impl");
-				};
-				
-				println!("{} {} {}: {}",
-				         msg.layer_prefix,
-				         ty,
-				         severity,
-				         msg.description);
-			});
-		}
+		Ok(Instance::new(Some(&app_infos), extensions, layers)?)
+	}
+	
+	fn install_debug_callbacks(instance: &Arc<Instance>) {
+		let severity = MessageSeverity { error:       true,
+			warning:     true,
+			information: false,
+			verbose:     true, };
 		
+		let ty = MessageType::all();
+		
+		let _debug_callback = DebugCallback::new(instance, severity, ty, |msg| {
+			let severity = if msg.severity.error {
+				"error"
+			} else if msg.severity.warning {
+				"warning"
+			} else if msg.severity.information {
+				"information"
+			} else if msg.severity.verbose {
+				"verbose"
+			} else {
+				panic!("no-impl");
+			};
+			
+			let ty = if msg.ty.general {
+				"general"
+			} else if msg.ty.validation {
+				"validation"
+			} else if msg.ty.performance {
+				"performance"
+			} else {
+				panic!("no-impl");
+			};
+			
+			println!("{} {} {}: {}",
+			         msg.layer_prefix,
+			         ty,
+			         severity,
+			         msg.description);
+		});
+	}
+	
+	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererCreationError> {
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
@@ -142,55 +182,67 @@ impl Renderer {
 			          device.driver_version());
 		}
 		
-		let physical = system.vulkan_output_device(instance.as_ptr())
-		                     .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
-		                     .or_else(|| {
-			                     println!("Failed to fetch device from openvr, using fallback");
-			                     PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
-		                     })
-		                     .ok_or(RendererCreationError::NoDevices)?;
+		let physical = vr.and_then(|vr| vr.system.vulkan_output_device(instance.as_ptr()))
+		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
+		                 .or_else(|| {
+			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
+			                 PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
+		                 })
+		                 .ok_or(RendererCreationError::NoDevices)?;
 		
-		println!("\nUsing {}: {} api: {} driver: {}",
-		         physical.index(),
-		         physical.name(),
-		         physical.api_version(),
-		         physical.driver_version());
-
+		dprintln!("\nUsing {}: {} api: {} driver: {}",
+		          physical.index(),
+		          physical.name(),
+		          physical.api_version(),
+		          physical.driver_version());
+		
+		Ok(physical)
+	}
+	
+	fn create_device(physical: PhysicalDevice, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererCreationError> {
 		for family in physical.queue_families() {
 			dprintln!("Found a queue family with {:?} queue(s){}{}{}{}",
-			          family.queues_count(),
-			          family.supports_graphics().then_some(", Graphics").unwrap_or_default(),
-			          family.supports_compute().then_some(", Compute").unwrap_or_default(),
-			          family.supports_sparse_binding().then_some(", Sparse").unwrap_or_default(),
-			          family.explicitly_supports_transfers().then_some(", Transfers").unwrap_or_default());
+		          family.queues_count(),
+		          family.supports_graphics().then_some(", Graphics").unwrap_or_default(),
+		          family.supports_compute().then_some(", Compute").unwrap_or_default(),
+		          family.supports_sparse_binding().then_some(", Sparse").unwrap_or_default(),
+		          family.explicitly_supports_transfers().then_some(", Transfers").unwrap_or_default());
 		}
 		
-		let (device, mut queues) = {
-			let queue_family = physical.queue_families()
-			                           .find(|&q| q.supports_graphics())
-			                           .ok_or(RendererCreationError::NoQueue)?;
-			
-			let load_queue_family = physical.queue_families()
-			                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
-			                                .unwrap_or(queue_family);
-			
-			let families = vec![
-				(queue_family, 0.5),
-				(load_queue_family, 0.2),
-			];
-			
-			Device::new(physical,
-			            &Features::none(),
-			            RawDeviceExtensions::new(vulkan_device_extensions_required(&compositor, &physical))
-			                                .union(&(&DeviceExtensions { khr_swapchain: true,
-			                                                             ..DeviceExtensions::none() }).into()),
-			            families.into_iter())?
-		};
+		let queue_family = physical.queue_families()
+		                           .find(|&q| q.supports_graphics())
+		                           .ok_or(RendererCreationError::NoQueue)?;
+		
+		// let load_queue_family = physical.queue_families()
+		//                                 .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
+		//                                 .unwrap_or(queue_family);
+		
+		let families = vec![
+			(queue_family, 0.5),
+			// (load_queue_family, 0.2),
+		];
+		
+		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
+		
+		let (device, mut queues) = Device::new(physical,
+		                                       &Features::none(),
+		                                       RawDeviceExtensions::new(vr_extensions)
+			                                       .union(&(&DeviceExtensions { khr_swapchain: true,
+				                                       ..DeviceExtensions::none() }).into()),
+		                                       families.into_iter())?;
 		
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
-		let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		
-		let render_pass = Arc::new(
+		// Mipmaps generation requires graphical queue.
+		// TODO: Generate mipmaps on CPU side?
+		// let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
+		let load_queue = queue.clone();
+		
+		Ok((device, queue, load_queue))
+	}
+	
+	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererCreationError> {
+		Ok(Arc::new(
 			vulkano::single_pass_renderpass!(device.clone(),
 				attachments: {
 					color: {
@@ -211,49 +263,7 @@ impl Renderer {
 					depth_stencil: {depth}
 				}
 			)?
-		);
-		
-		let frame_buffer_size = system.recommended_render_target_size();
-		
-		let eyes = {
-			let proj_left : Matrix4<f32> = CLIP
-			                             * Matrix4::from(system.projection_matrix(openvr::Eye::Left,  0.1, 1000.1)).transpose()
-			                             * mat4(&system.eye_to_head_transform(openvr::Eye::Left )).inverse_transform().unwrap();
-			let proj_right: Matrix4<f32> = CLIP
-			                             * Matrix4::from(system.projection_matrix(openvr::Eye::Right, 0.1, 1000.1)).transpose()
-			                             * mat4(&system.eye_to_head_transform(openvr::Eye::Right)).inverse_transform().unwrap();
-			
-			(
-				Eye::new(frame_buffer_size, proj_left,  &queue, &render_pass)?,
-				Eye::new(frame_buffer_size, proj_right, &queue, &render_pass)?,
-			)
-		};
-		
-		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
-		
-		let commons = DeviceLocalBuffer::new(device.clone(),
-		                                     BufferUsage{ transfer_destination: true,
-		                                                  uniform_buffer: true,
-		                                                  ..BufferUsage::none() },
-		                                     Some(queue.family()))?;
-		
-		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		
-		let pipelines = Pipelines::new(render_pass, frame_buffer_size);
-		
-		Ok(Renderer {
-			instance,
-			commons,
-			device,
-			queue,
-			load_queue,
-			pipelines,
-			eyes,
-			compositor,
-			previous_frame_end,
-			camera_image,
-			load_commands,
-		})
+		))
 	}
 	
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
@@ -297,7 +307,7 @@ impl Renderer {
 		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
 		
 		let [camera_width, camera_height] = self.camera_image.dimensions();
-		let [eye_width, eye_height] = self.eyes.0.image.dimensions();
+		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
 		
 		let mut builder = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?;
 		builder.blit_image(self.camera_image.clone(),
@@ -305,7 +315,7 @@ impl Renderer {
 		                   [camera_width as i32 / 2, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.0.image.clone(),
+		                   self.eyes.left.image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -317,7 +327,7 @@ impl Renderer {
 		                   [camera_width as i32, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.1.image.clone(),
+		                   self.eyes.right.image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -326,7 +336,7 @@ impl Renderer {
 		                   Filter::Linear)?
 		       .update_buffer(self.commons.clone(),
 		                      CommonsVBO{
-			                      projection: [self.eyes.0.projection, self.eyes.1.projection],
+			                      projection: [self.eyes.left.projection, self.eyes.right.projection],
 			                      view: [view_matrix, view_matrix],
 			                      light_direction: [
 				                      (mat3(view_matrix) * light_source).extend(0.0),
@@ -334,8 +344,8 @@ impl Renderer {
 			                      ],
 			                      ambient: 0.25,
 		                      })?
-		       .begin_render_pass(self.eyes.0.frame_buffer.clone(),
-		                          false,
+		       .begin_render_pass(self.eyes.left.frame_buffer.clone(),
+		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
@@ -344,8 +354,8 @@ impl Renderer {
 		}
 		
 		builder.end_render_pass()?
-		       .begin_render_pass(self.eyes.1.frame_buffer.clone(),
-		                          false,
+		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
+		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
@@ -373,15 +383,17 @@ impl Renderer {
 			future = Box::new(future.then_signal_semaphore());
 		}
 		
-		unsafe {
-			self.compositor.submit(openvr::Eye::Left,  &self.eyes.0.texture, None, Some(mat34(hmd_pose)))?;
-			self.compositor.submit(openvr::Eye::Right, &self.eyes.1.texture, None, Some(mat34(hmd_pose)))?;
+		if let Some(ref vr) = self.vr {
+			unsafe {
+				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(mat34(hmd_pose)))?;
+				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(mat34(hmd_pose)))?;
+			}
 		}
 		
 		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
 		
 		if window.render_required {
-			future = window.render(&self.device, &self.queue, future, &mut self.eyes.0.image, &mut self.eyes.1.image)?;
+			future = window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image)?;
 		}
 		
 		let future = future.then_signal_fence_and_flush();
@@ -426,6 +438,7 @@ pub enum RendererSwapchainError {
 
 #[derive(Debug, Error)]
 pub enum RenderError {
+	#[error(display = "Kek")] Kek,
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] DrawIndexedError),

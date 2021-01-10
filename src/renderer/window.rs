@@ -5,7 +5,8 @@ use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEve
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::platform::desktop::EventLoopExtDesktop;
+use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::monitor::MonitorHandle;
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
@@ -41,7 +42,7 @@ impl Window {
 		
 		let window = surface.window();
 		let size = window.outer_size();
-		let monitor_size = window.current_monitor().size();
+		let monitor_size = window.current_monitor().map(|mon| mon.size()).unwrap_or(size);
 		
 		window.set_outer_position(PhysicalPosition::new((monitor_size.width - size.width) / 2, (monitor_size.height - size.height) / 2));
 		

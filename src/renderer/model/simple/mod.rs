@@ -2,7 +2,7 @@ use std::sync::Arc;
 use cgmath::Matrix4;
 use image::{DynamicImage, GenericImageView};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
-use vulkano::image::{ImmutableImage, Dimensions};
+use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
@@ -44,6 +44,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 		
 		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
 		                                                       Dimensions::Dim2d{ width, height },
+		                                                       MipmapsCount::Log2,
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;
 		

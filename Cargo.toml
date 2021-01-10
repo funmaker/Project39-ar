@@ -5,27 +5,28 @@ authors = ["Fun Maker <funmaker95@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano = "0.19.0"
-vulkano-shaders = "0.19.0"
+vulkano = "0.20.0"
+vulkano-shaders = "0.20.0"
 image = "0.23.12"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"
-cgmath = "0.17.0"
+cgmath = "0.18.0"
 err-derive = "0.3.0"
 getopts = "0.2.21"
-arc-swap = "1.0.0"
+arc-swap = "1.2.0"
 obj-rs = "0.6.2"
-opencv = { version = "0.46.3", features = ["buildtime-bindgen"] }
+opencv = { version = "0.47.0", features = ["buildtime-bindgen"] }
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 lazy_static = "1.4.0"
-winit = "0.22.0"
-vulkano-win = "0.19.0"
+winit = "0.24.0"
+vulkano-win = "0.20.0"
 # mmd = { git = "https://github.com/funmaker/mmd-rs" }
 mmd = { path = "../mmd-rs" }
 fallible-iterator = "0.2.0"
 downcast-rs = "1.2.0"
 derive_deref = "1.1.1"
+native-dialog = "0.5.2"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"
