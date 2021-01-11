@@ -62,6 +62,7 @@ impl Eyes {
 
 pub struct Eye {
 	pub image: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
+	pub resolved: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
 	pub depth_image: Arc<AttachmentImage<format::D16Unorm>>,
 	pub texture: Texture,
 	pub view: Matrix4<f32>,
@@ -80,15 +81,24 @@ impl Eye {
 		
 		let device = queue.device();
 		
-		let image = AttachmentImage::with_usage(device.clone(),
-		                                        dimensions,
-		                                        format::R8G8B8A8Srgb,
-		                                        ImageUsage { transfer_source: true,
-		                                                     transfer_destination: true,
-		                                                     sampled: true,
-		                                                     ..ImageUsage::none() })?;
+		let image = AttachmentImage::multisampled_with_usage(device.clone(),
+		                                                     dimensions,
+		                                                     4,
+		                                                     format::R8G8B8A8Srgb,
+		                                                     ImageUsage { transfer_source: true,
+			                                                     transfer_destination: true,
+			                                                     sampled: true,
+			                                                     ..ImageUsage::none() })?;
 		
-		let depth_image = AttachmentImage::transient(device.clone(), dimensions, format::D16Unorm)?;
+		let resolved = AttachmentImage::with_usage(device.clone(),
+		                                           dimensions,
+		                                           format::R8G8B8A8Srgb,
+		                                           ImageUsage { transfer_source: true,
+			                                           transfer_destination: true,
+			                                           sampled: true,
+			                                           ..ImageUsage::none() })?;
+		
+		let depth_image = AttachmentImage::transient_multisampled(device.clone(), dimensions, 4, format::D16Unorm)?;
 		
 		let texture = Texture {
 			handle: Handle::Vulkan(vulkan::Texture {
@@ -110,10 +120,12 @@ impl Eye {
 		let frame_buffer = Arc::new(Framebuffer::start(render_pass.clone())
 		                       .add(image.clone())?
 		                       .add(depth_image.clone())?
+		                       .add(resolved.clone())?
 		                       .build()?);
 		
 		Ok(Eye {
 			image,
+			resolved,
 			depth_image,
 			texture,
 			view,

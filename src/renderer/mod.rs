@@ -240,21 +240,28 @@ impl Renderer {
 			vulkano::single_pass_renderpass!(device.clone(),
 				attachments: {
 					color: {
-						load: Load,
-						store: Store,
+						load: Clear,
+						store: DontCare,
 						format: eye::IMAGE_FORMAT,
-						samples: 1,
+						samples: 4,
 					},
 					depth: {
 						load: Clear,
 						store: DontCare,
 						format: eye::DEPTH_FORMAT,
+						samples: 4,
+					},
+					resolve: {
+						load: DontCare,
+						store: Store,
+						format: eye::IMAGE_FORMAT,
 						samples: 1,
 					}
 				},
 				pass: {
 					color: [color],
-					depth_stencil: {depth}
+					depth_stencil: {depth},
+					resolve: [resolve]
 				}
 			)?
 		))
@@ -332,7 +339,7 @@ impl Renderer {
 		                   [camera_width as i32 / 2, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.left.image.clone(),
+		                   self.eyes.left.resolved.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -344,7 +351,7 @@ impl Renderer {
 		                   [camera_width as i32, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.right.image.clone(),
+		                   self.eyes.right.resolved.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -355,8 +362,9 @@ impl Renderer {
 		                      commons)?
 		       .begin_render_pass(self.eyes.left.frame_buffer.clone(),
 		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
-		                                ClearValue::Depth(1.0) ])?;
+		                          vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.39]),
+		                                ClearValue::Depth(1.0),
+		                                ClearValue::None ])?;
 		
 		for entity in scene.iter() {
 			entity.render(&mut builder, 0)?;
@@ -365,8 +373,9 @@ impl Renderer {
 		builder.end_render_pass()?
 		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
-		                                ClearValue::Depth(1.0) ])?;
+		                          vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.39]),
+		                                ClearValue::Depth(1.0),
+		                                ClearValue::None ])?;
 		
 		for entity in scene.iter() {
 			entity.render(&mut builder, 1)?;
@@ -402,7 +411,7 @@ impl Renderer {
 		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
 		
 		if window.render_required {
-			future = window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image)?;
+			future = window.render(&self.device, &self.queue, future, &mut self.eyes.left.resolved, &mut self.eyes.right.resolved)?;
 		}
 		
 		let future = future.then_signal_fence_and_flush();
