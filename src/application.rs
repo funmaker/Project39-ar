@@ -13,7 +13,7 @@ use crate::renderer::{Renderer, RendererCreationError, RenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, EscapiCameraError, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{self, ModelLoadError, ModelError};
-use crate::debug::{get_debug_flag, set_debug_flag, get_debug_flag_or_default};
+use crate::debug::{get_flag, set_flag, get_flag_or_default};
 use crate::utils::mat4;
 pub use vr::VR;
 pub use entity::Entity;
@@ -136,8 +136,8 @@ impl Application {
 		for index in 0..64 {
 			if pressed & (1 << index) != 0 {
 				if index == 2 {
-					let mode: u8 = get_debug_flag_or_default("mode");
-					set_debug_flag("mode", (mode + 1) % 3);
+					let mode: u8 = get_flag_or_default("mode");
+					set_flag("mode", (mode + 1) % 3);
 				}
 			}
 		}
@@ -149,15 +149,15 @@ impl Application {
 		let (disp, rot) = fake_pose;
 		
 		fn get_key(key: &str) -> f32 {
-			get_debug_flag_or_default::<bool>(key) as i32 as f32
+			get_flag_or_default::<bool>(key) as i32 as f32
 		}
 		
 		let x = get_key("KeyD") - get_key("KeyA");
 		let y = get_key("KeySpace") - get_key("KeyCtrl");
 		let z = get_key("KeyS") - get_key("KeyW");
 		let dist = (0.5 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
-		let mouse_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-		set_debug_flag("mouse_move", (0.0_f32, 0.0_f32));
+		let mouse_move = get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
+		set_flag("mouse_move", (0.0_f32, 0.0_f32));
 		
 		rot.y = rot.y + Rad(-mouse_move.0 * 0.01);
 		rot.x = clamp(rot.x + Rad(-mouse_move.1 * 0.01), -Rad::turn_div_4(), Rad::turn_div_4());

@@ -17,7 +17,7 @@ use vulkano_win::{VkSurfaceBuild, CreationError};
 use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
-use crate::debug::{set_debug_flag, get_debug_flag};
+use crate::debug::{set_flag, get_flag};
 
 
 pub struct Window {
@@ -187,7 +187,7 @@ impl Window {
 									window.set_fullscreen(None);
 								}
 							},
-							code => set_debug_flag(&format!("Key{:?}", code), true),
+							code => set_flag(&format!("Key{:?}", code), true),
 						}
 					}
 					
@@ -199,7 +199,7 @@ impl Window {
 							}, ..
 						}, ..
 					} if is_cursor_trapped => {
-						set_debug_flag(&format!("Key{:?}", code), false)
+						set_flag(&format!("Key{:?}", code), false)
 					}
 					
 					Event::WindowEvent {
@@ -223,8 +223,8 @@ impl Window {
 						let size = window.inner_size();
 						let center = PhysicalPosition::new((size.width as f32 / 2.0).floor(), (size.height as f32 / 2.0).floor());
 						
-						let cur_move = get_debug_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-						set_debug_flag("mouse_move", (cur_move.0 + position.x as f32 - center.x, cur_move.1 + position.y as f32 - center.y));
+						let cur_move = get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
+						set_flag("mouse_move", (cur_move.0 + position.x as f32 - center.x, cur_move.1 + position.y as f32 - center.y));
 						
 						window.set_cursor_position(center)?;
 					}

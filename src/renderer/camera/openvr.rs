@@ -7,7 +7,7 @@ use openvr_sys as sys;
 mod tracked_camera;
 
 use super::{Camera, CameraCaptureError};
-use crate::debug::{debug, get_debug_flag};
+use crate::debug::{debug, get_flag};
 use crate::application::VR;
 use tracked_camera::{TrackedCamera, FrameType, CameraService};
 
@@ -77,7 +77,7 @@ impl Camera for OpenVR {
 			std::thread::sleep(cooldown);
 		}
 		
-		let mode: u8 = get_debug_flag("mode").unwrap_or_default();
+		let mode: u8 = get_flag("mode").unwrap_or_default();
 		
 		let mode = match mode {
 			0 => FrameType::Distorted,

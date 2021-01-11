@@ -1,7 +1,10 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::collections::HashMap;
 use std::sync::RwLock;
+use std::cell::RefCell;
 use std::any::Any;
+use std::vec::Drain;
+use cgmath::Vector3;
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
@@ -17,9 +20,9 @@ pub fn set_debug(value: bool) {
 	DEBUG.store(value, Ordering::Relaxed);
 }
 
-pub fn get_debug_flag<T>(key: &str)
-                         -> Option<T>
-                         where T: Clone + Send + Sync + 'static {
+pub fn get_flag<T>(key: &str)
+                   -> Option<T>
+                   where T: Clone + Send + Sync + 'static {
 	FLAGS.read()
 	     .unwrap()
 	     .get(key)
@@ -27,17 +30,47 @@ pub fn get_debug_flag<T>(key: &str)
 	     .map(|val| val.clone())
 }
 
-pub fn get_debug_flag_or_default<T>(key: &str)
-                                   -> T
-                                   where T: Clone + Send + Sync + Default + 'static {
-	get_debug_flag(key).unwrap_or_default()
+pub fn get_flag_or_default<T>(key: &str)
+                              -> T
+                              where T: Clone + Send + Sync + Default + 'static {
+	get_flag(key).unwrap_or_default()
 }
 
-pub fn set_debug_flag<T>(key: &str, value: T)
-	                    where T: Clone + Send + Sync + 'static {
+pub fn set_flag<T>(key: &str, value: T)
+	               where T: Clone + Send + Sync + 'static {
 	FLAGS.write()
 	     .unwrap()
 	     .insert(key.to_string(), Box::new(value));
+}
+
+pub struct DebugPoint {
+	position: Vector3<f32>,
+	width: f32,
+	color: Vector3<f32>
+}
+
+pub struct DebugLine {
+	from: Vector3<f32>,
+	to: Vector3<f32>,
+	width: f32,
+	color: Vector3<f32>
+}
+
+thread_local! {
+    pub static DEBUG_POINTS: RefCell<Vec<DebugPoint>> = RefCell::new(vec![]);
+    pub static DEBUG_LINES: RefCell<Vec<DebugLine>> = RefCell::new(vec![]);
+}
+
+pub fn draw_point(position: Vector3<f32>, width: f32, color: Vector3<f32>) {
+	DEBUG_POINTS.with(|points| {
+		points.borrow_mut().push(DebugPoint{ position, width, color });
+	})
+}
+
+pub fn draw_line(from: Vector3<f32>, to: Vector3<f32>, width: f32, color: Vector3<f32>) {
+	DEBUG_LINES.with(|lines| {
+		lines.borrow_mut().push(DebugLine{ from, to, width, color });
+	})
 }
 
 #[allow(unused_macros)]
