@@ -13,7 +13,7 @@ mod sub_mesh;
 
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
-use crate::renderer::{Renderer, RenderError};
+use crate::renderer::{Renderer, RendererRenderError};
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 use sub_mesh::SubMesh;
@@ -113,7 +113,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		// Outline

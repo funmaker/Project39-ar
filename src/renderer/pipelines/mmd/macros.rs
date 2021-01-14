@@ -32,7 +32,7 @@ macro_rules! mmd_pipelines {
 		use vulkano::descriptor::PipelineLayoutAbstract;
 		
 		use $crate::renderer::pipelines::{Pipeline, PipelineError, pre_mul_alpha_blending};
-		use $crate::renderer::{model, RenderPass};
+		use $crate::renderer::RenderPass;
 		
 		type MMDPipelineInner = GraphicsPipeline<
 			SingleBufferDefinition<Vertex>,

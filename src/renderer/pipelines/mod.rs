@@ -8,7 +8,7 @@ use vulkano::pipeline::blend::{AttachmentBlend, BlendOp, BlendFactor};
 
 pub mod default;
 pub mod mmd;
-mod debug;
+pub mod debug;
 
 use super::RenderPass;
 

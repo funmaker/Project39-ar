@@ -10,14 +10,14 @@ pub mod mmd;
 mod import;
 mod fence_check;
 
-use super::RenderError;
+use super::RendererRenderError;
 use super::pipelines::PipelineError;
 pub use simple::SimpleModel;
 pub use import::*;
 pub use fence_check::FenceCheck;
 
 pub trait Model {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError>;
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError>;
 }
 
 pub trait VertexIndex: Index + Copy + Send + Sync + Sized + 'static {}

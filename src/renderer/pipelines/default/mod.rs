@@ -10,7 +10,7 @@ use vulkano::descriptor::PipelineLayoutAbstract;
 
 mod vertex;
 
-use crate::renderer::{model, RenderPass};
+use crate::renderer::RenderPass;
 use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
 pub use vertex::Vertex;
 

@@ -1,6 +1,6 @@
 use std::sync::{Arc, mpsc};
 use err_derive::Error;
-use cgmath::{Matrix4, Transform, Vector3, Vector4, InnerSpace};
+use cgmath::{Matrix4, Transform, Vector3, Vector4, InnerSpace, Vector2};
 use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
@@ -22,18 +22,19 @@ pub mod pipelines;
 mod debug_renderer;
 
 use crate::utils::*;
-use crate::debug::debug;
+use crate::debug;
 use crate::application::VR;
 use crate::application::Entity;
 use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
-use debug_renderer::DebugRenderer;
+use debug_renderer::{DebugRendererError, DebugRenderer};
+use crate::renderer::debug_renderer::DebugRendererRederError;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct CommonsVBO {
 	projection: [Matrix4<f32>; 2],
 	view: [Matrix4<f32>; 2],
@@ -59,11 +60,11 @@ pub struct Renderer {
 
 impl Renderer {
 	pub fn new<C>(vr: Option<Arc<VR>>, device: Option<usize>, camera: C)
-	             -> Result<Renderer, RendererCreationError>
+	             -> Result<Renderer, RendererError>
 	             where C: Camera {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
 		
-		if debug() {
+		if debug::debug() {
 			Renderer::install_debug_callbacks(&instance);
 		}
 		
@@ -87,9 +88,9 @@ impl Renderer {
 		
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		
-		let pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
+		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		
-		let debug_renderer = DebugRenderer::new();
+		let debug_renderer = DebugRenderer::new(&device, &mut pipelines)?;
 		
 		Ok(Renderer {
 			vr,
@@ -107,7 +108,7 @@ impl Renderer {
 		})
 	}
 	
-	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererCreationError> {
+	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
 		dprintln!("List of Vulkan debugging layers available to use:");
 		let layers = vulkano::instance::layers_list()?;
 		for layer in layers {
@@ -120,10 +121,10 @@ impl Renderer {
 		
 		let extensions = RawInstanceExtensions::new(vr_extensions)
 		                                       .union(&(&vulkano_win::required_extensions()).into())
-		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug(),
+		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug::debug(),
 		                                                                      ..InstanceExtensions::none() }).into());
 		
-		let layers = if debug() {
+		let layers = if debug::debug() {
 			// TODO: Get better GPU
 			vec![/*"VK_LAYER_LUNARG_standard_validation"*/]
 		} else {
@@ -172,7 +173,7 @@ impl Renderer {
 		});
 	}
 	
-	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererCreationError> {
+	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
@@ -189,7 +190,7 @@ impl Renderer {
 			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
 			                 PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
 		                 })
-		                 .ok_or(RendererCreationError::NoDevices)?;
+		                 .ok_or(RendererError::NoDevices)?;
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
 		          physical.index(),
@@ -200,7 +201,7 @@ impl Renderer {
 		Ok(physical)
 	}
 	
-	fn create_device(physical: PhysicalDevice, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererCreationError> {
+	fn create_device(physical: PhysicalDevice, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
 		for family in physical.queue_families() {
 			dprintln!("Found a queue family with {:?} queue(s){}{}{}{}",
 		          family.queues_count(),
@@ -212,7 +213,7 @@ impl Renderer {
 		
 		let queue_family = physical.queue_families()
 		                           .find(|&q| q.supports_graphics())
-		                           .ok_or(RendererCreationError::NoQueue)?;
+		                           .ok_or(RendererError::NoQueue)?;
 		
 		// let load_queue_family = physical.queue_families()
 		//                                 .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
@@ -232,7 +233,7 @@ impl Renderer {
 				                                       ..DeviceExtensions::none() }).into()),
 		                                       families.into_iter())?;
 		
-		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
+		let queue = queues.next().ok_or(RendererError::NoQueue)?;
 		
 		// let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		// TODO: Get better GPU
@@ -241,7 +242,7 @@ impl Renderer {
 		Ok((device, queue, load_queue))
 	}
 	
-	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererCreationError> {
+	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
 		Ok(Arc::new(
 			vulkano::single_pass_renderpass!(device.clone(),
 				attachments: {
@@ -302,7 +303,7 @@ impl Renderer {
 		                  format.1)?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: Matrix4<f32>, scene: &mut [Entity], window: &mut Window) -> Result<(), RenderError> {
+	pub fn render(&mut self, hmd_pose: Matrix4<f32>, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		if window.swapchain_regen_required {
@@ -317,6 +318,7 @@ impl Renderer {
 		let view_left = self.eyes.left.view * view_base;
 		let view_right = self.eyes.right.view * view_base;
 		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
+		let pixel_scale = Vector2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
 		
 		let commons = CommonsVBO {
 			projection: [self.eyes.left.projection, self.eyes.right.projection],
@@ -358,17 +360,19 @@ impl Renderer {
 		                   1,
 		                   Filter::Linear)?
 		       .update_buffer(self.commons.clone(),
-		                      commons)?
+		                      commons.clone())?
 		       .begin_render_pass(self.eyes.left.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
+		debug::draw_point(Vector2::new(0.5, 0.5), 10.0, Vector4::new(0.5, 0.0, 0.0, 0.5));
+		
 		for entity in scene.iter() {
 			entity.render(&mut builder, 0)?;
 		}
 		
-		self.debug_renderer.render(&mut builder, 0)?;
+		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		
 		builder.end_render_pass()?
 		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
@@ -380,7 +384,7 @@ impl Renderer {
 			entity.render(&mut builder, 1)?;
 		}
 		
-		self.debug_renderer.render(&mut builder, 1)?;
+		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 1)?;
 		
 		builder.end_render_pass()?;
 		
@@ -434,11 +438,12 @@ impl Renderer {
 
 
 #[derive(Debug, Error)]
-pub enum RendererCreationError {
+pub enum RendererError {
 	#[error(display = "No devices available.")] NoDevices,
 	#[error(display = "No compute queue available.")] NoQueue,
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
+	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
@@ -456,10 +461,10 @@ pub enum RendererSwapchainError {
 }
 
 #[derive(Debug, Error)]
-pub enum RenderError {
+pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
-	
+	#[error(display = "{}", _0)] DebugRendererRederError(#[error(source)] DebugRendererRederError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),

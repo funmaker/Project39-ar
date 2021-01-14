@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::time::Duration;
-use cgmath::{Vector3, Quaternion, Zero, Matrix4, Euler, Rad};
+use cgmath::{Vector3, Quaternion, Zero, Matrix4, Euler, Rad, Vector4};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 
 use crate::renderer::model::Model;
-use crate::renderer::RenderError;
+use crate::renderer::RendererRenderError;
 use crate::utils::{decompose, mat4};
+use crate::debug;
 use openvr::TrackedDevicePose;
 
 pub struct Entity {
@@ -36,9 +37,11 @@ impl Entity {
 		self.angle = self.angle * Quaternion::from(ang_disp);
 	}
 	
-	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RenderError> {
+	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RendererRenderError> {
 		let model_matrix = Matrix4::from_translation(self.position)
 		                 * Matrix4::from(self.angle);
+		
+		debug::draw_point(self.position, 10.0, Vector4::new(0.5, 0.0, 0.5, 0.5));
 		
 		self.model.render(builder, model_matrix, eye)
 	}

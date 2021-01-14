@@ -9,7 +9,7 @@ use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rota
 mod vr;
 mod entity;
 
-use crate::renderer::{Renderer, RendererCreationError, RenderError};
+use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{self, ModelLoadError, ModelError};
@@ -187,10 +187,10 @@ pub enum CameraAPI {
 #[derive(Debug, Error)]
 pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr camera with --novr flag.")] OpenVRCameraInNoVR,
-	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererCreationError),
+	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
-	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] cemera::EscapiCameraError),
+	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] openvr::InitError),
@@ -200,7 +200,7 @@ pub enum ApplicationCreationError {
 pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
-	#[error(display = "{}", _0)] RenderError(#[error(source)] RenderError),
+	#[error(display = "{}", _0)] RenderError(#[error(source)] RendererRenderError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),

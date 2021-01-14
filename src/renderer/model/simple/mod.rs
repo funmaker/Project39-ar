@@ -10,7 +10,7 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 
-use crate::renderer::{Renderer, RenderError};
+use crate::renderer::{Renderer, RendererRenderError};
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::utils::ImageEx;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
@@ -72,7 +72,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for SimpleModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
