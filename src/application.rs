@@ -11,7 +11,7 @@ mod entity;
 
 use crate::renderer::{Renderer, RendererCreationError, RenderError};
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::renderer::camera::{self, EscapiCameraError, OpenCVCameraError, OpenVRCameraError};
+use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{self, ModelLoadError, ModelError};
 use crate::debug::{get_flag, set_flag, get_flag_or_default};
 use crate::utils::mat4;
@@ -190,7 +190,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererCreationError),
 	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
-	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] EscapiCameraError),
+	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] cemera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] openvr::InitError),

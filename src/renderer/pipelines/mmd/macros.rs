@@ -35,7 +35,7 @@ macro_rules! mmd_pipelines {
 		use $crate::renderer::{model, RenderPass};
 		
 		type MMDPipelineInner = GraphicsPipeline<
-			SingleBufferDefinition<model::mmd::Vertex>,
+			SingleBufferDefinition<Vertex>,
 			Box<dyn PipelineLayoutAbstract + Send + Sync>,
 			Arc<dyn RenderPassAbstract + Send + Sync>
 		>;

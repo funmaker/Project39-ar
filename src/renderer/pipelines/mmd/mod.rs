@@ -1,4 +1,7 @@
 #[macro_use] mod macros;
+mod vertex;
+
+pub use vertex::Vertex;
 
 mmd_shaders!(
 	"vertex" base_vert = "src/renderer/pipelines/mmd/base_vert.glsl";

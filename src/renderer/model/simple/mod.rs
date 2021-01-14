@@ -10,13 +10,11 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 
-mod vertex;
-
 use crate::renderer::{Renderer, RenderError};
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::utils::ImageEx;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
-pub use vertex::Vertex;
+pub use crate::renderer::pipelines::default::Vertex;
 
 pub struct SimpleModel<VI: VertexIndex> {
 	pipeline: Arc<DefaultPipeline>,

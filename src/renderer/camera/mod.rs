@@ -5,9 +5,10 @@ use std::sync::mpsc;
 use err_derive::Error;
 use vulkano::{memory, format};
 use vulkano::command_buffer::{self, AutoCommandBufferBuilder, AutoCommandBuffer};
+use vulkano::command_buffer::pool::CommandPool;
 use vulkano::buffer::{self, CpuBufferPool, BufferSlice, BufferAccess};
 use vulkano::image::{AttachmentImage, ImageUsage};
-use vulkano::device::Queue;
+use vulkano::device::{Queue, Device};
 
 #[cfg(windows)] mod escapi;
 mod opencv;
@@ -53,6 +54,8 @@ pub trait Camera: Send + Sized + 'static {
 	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage<format::B8G8R8A8Unorm>>, sender: mpsc::SyncSender<AutoCommandBuffer>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
 		let mut last_capture = Instant::now();
+		
+		let _lock = Device::standard_command_pool(queue.device(), queue.family()).alloc(false, 1); // https://github.com/vulkano-rs/vulkano/issues/1471
 		
 		loop {
 			let frame = match self.capture() {

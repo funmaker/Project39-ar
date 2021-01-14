@@ -9,13 +9,12 @@ use vulkano::sync::GpuFuture;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 
-mod vertex;
 mod sub_mesh;
 
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RenderError};
-pub use vertex::Vertex;
+pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 use sub_mesh::SubMesh;
 

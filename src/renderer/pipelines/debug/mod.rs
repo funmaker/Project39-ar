@@ -19,7 +19,7 @@ mod vert {
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/default/vert.glsl"
+		path: "src/renderer/pipelines/debug/vert.glsl"
 	}
 }
 
@@ -28,12 +28,12 @@ mod frag {
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/default/frag.glsl"
+		path: "src/renderer/pipelines/debug/frag.glsl"
 	}
 }
 
 #[derive(Debug, Deref)]
-pub struct DefaultPipeline(
+pub struct DebugPipeline(
 	GraphicsPipeline<
 		SingleBufferDefinition<Vertex>,
 		Box<dyn PipelineLayoutAbstract + Send + Sync>,
@@ -41,15 +41,15 @@ pub struct DefaultPipeline(
 	>
 );
 
-unsafe impl SafeDeref for DefaultPipeline {} // DefaultPipeline is immutable, this should be safe
+unsafe impl SafeDeref for DebugPipeline {} // DefaultPipeline is immutable, this should be safe
 
-impl Pipeline for DefaultPipeline {
+impl Pipeline for DebugPipeline {
 	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(DefaultPipeline(
+		Ok(Arc::new(DebugPipeline(
 			GraphicsPipeline::start()
 				.vertex_input_single_buffer()
 				.vertex_shader(vs.main_entry_point(), ())
@@ -59,8 +59,6 @@ impl Pipeline for DefaultPipeline {
 					depth_range: 0.0..1.0,
 				}))
 				.fragment_shader(fs.main_entry_point(), ())
-				.depth_stencil_simple_depth()
-				.cull_mode_back()
 				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.build(device.clone())?

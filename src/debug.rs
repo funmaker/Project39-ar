@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::cell::RefCell;
 use std::any::Any;
-use std::vec::Drain;
-use cgmath::Vector3;
+use cgmath::{Vector3, Vector2, Vector4};
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
@@ -43,17 +42,34 @@ pub fn set_flag<T>(key: &str, value: T)
 	     .insert(key.to_string(), Box::new(value));
 }
 
+pub enum DebugPosition {
+	Screen(Vector2<f32>),
+	World(Vector3<f32>),
+}
+
+impl From<Vector2<f32>> for DebugPosition {
+	fn from(vec: Vector2<f32>) -> Self {
+		DebugPosition::Screen(vec)
+	}
+}
+
+impl From<Vector3<f32>> for DebugPosition {
+	fn from(vec: Vector3<f32>) -> Self {
+		DebugPosition::World(vec)
+	}
+}
+
 pub struct DebugPoint {
-	position: Vector3<f32>,
+	position: DebugPosition,
 	width: f32,
-	color: Vector3<f32>
+	color: Vector4<f32>
 }
 
 pub struct DebugLine {
-	from: Vector3<f32>,
-	to: Vector3<f32>,
+	from: DebugPosition,
+	to: DebugPosition,
 	width: f32,
-	color: Vector3<f32>
+	color: Vector4<f32>
 }
 
 thread_local! {
@@ -61,15 +77,15 @@ thread_local! {
     pub static DEBUG_LINES: RefCell<Vec<DebugLine>> = RefCell::new(vec![]);
 }
 
-pub fn draw_point(position: Vector3<f32>, width: f32, color: Vector3<f32>) {
+pub fn draw_point(position: impl Into<DebugPosition>, width: f32, color: Vector4<f32>) {
 	DEBUG_POINTS.with(|points| {
-		points.borrow_mut().push(DebugPoint{ position, width, color });
+		points.borrow_mut().push(DebugPoint{ position: position.into(), width, color });
 	})
 }
 
-pub fn draw_line(from: Vector3<f32>, to: Vector3<f32>, width: f32, color: Vector3<f32>) {
+pub fn draw_line(from: impl Into<DebugPosition>, to: impl Into<DebugPosition>, width: f32, color: Vector4<f32>) {
 	DEBUG_LINES.with(|lines| {
-		lines.borrow_mut().push(DebugLine{ from, to, width, color });
+		lines.borrow_mut().push(DebugLine{ from: from.into(), to: to.into(), width, color });
 	})
 }
 

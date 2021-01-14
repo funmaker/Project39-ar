@@ -19,6 +19,7 @@ pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
+mod debug_renderer;
 
 use crate::utils::*;
 use crate::debug::debug;
@@ -28,6 +29,7 @@ use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
+use debug_renderer::DebugRenderer;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -52,6 +54,7 @@ pub struct Renderer {
 	previous_frame_end: Option<Box<dyn GpuFuture>>,
 	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
     load_commands: mpsc::Receiver<AutoCommandBuffer>,
+	debug_renderer: DebugRenderer,
 }
 
 impl Renderer {
@@ -86,6 +89,8 @@ impl Renderer {
 		
 		let pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		
+		let debug_renderer = DebugRenderer::new();
+		
 		Ok(Renderer {
 			vr,
 			instance,
@@ -98,6 +103,7 @@ impl Renderer {
 			previous_frame_end,
 			camera_image,
 			load_commands,
+			debug_renderer,
 		})
 	}
 	
@@ -208,13 +214,13 @@ impl Renderer {
 		                           .find(|&q| q.supports_graphics())
 		                           .ok_or(RendererCreationError::NoQueue)?;
 		
-		let load_queue_family = physical.queue_families()
-		                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
-		                                .unwrap_or(queue_family);
+		// let load_queue_family = physical.queue_families()
+		//                                 .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
+		//                                 .unwrap_or(queue_family);
 		
 		let families = vec![
 			(queue_family, 0.5),
-			(load_queue_family, 0.2),
+			// (load_queue_family, 0.2),
 		];
 		
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
@@ -228,7 +234,7 @@ impl Renderer {
 		
 		let queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		
-		let _load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
+		// let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
 		// TODO: Get better GPU
 		let load_queue = queue.clone();
 		
@@ -362,6 +368,8 @@ impl Renderer {
 			entity.render(&mut builder, 0)?;
 		}
 		
+		self.debug_renderer.render(&mut builder, 0)?;
+		
 		builder.end_render_pass()?
 		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
@@ -371,6 +379,8 @@ impl Renderer {
 		for entity in scene.iter() {
 			entity.render(&mut builder, 1)?;
 		}
+		
+		self.debug_renderer.render(&mut builder, 1)?;
 		
 		builder.end_render_pass()?;
 		
