@@ -41,7 +41,7 @@ impl Entity {
 		let model_matrix = Matrix4::from_translation(self.position)
 		                 * Matrix4::from(self.angle);
 		
-		debug::draw_point(self.position, 10.0, Vector4::new(0.5, 0.0, 0.5, 0.5));
+		debug::draw_point(self.position, 10.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
 		
 		self.model.render(builder, model_matrix, eye)
 	}

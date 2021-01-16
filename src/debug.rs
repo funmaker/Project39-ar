@@ -51,8 +51,11 @@ pub enum DebugPosition {
 impl DebugPosition {
 	pub fn project(self, viewproj: Matrix4<f32>) -> Vector3<f32> {
 		match self {
-			DebugPosition::Screen(screen) => screen.extend(0.5),
-			DebugPosition::World(world) => (viewproj * world.extend(1.0)).truncate(),
+			DebugPosition::Screen(screen) => screen.extend(0.0),
+			DebugPosition::World(world) => {
+				let screen = viewproj * world.extend(1.0);
+				return screen.truncate() / screen.w;
+			},
 		}
 	}
 }

@@ -61,6 +61,7 @@ impl Pipeline for DebugPipeline {
 				.fragment_shader(fs.main_entry_point(), ())
 				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+				.cull_mode_back()
 				.build(device.clone())?
 		)))
 	}

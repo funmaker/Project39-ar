@@ -366,8 +366,6 @@ impl Renderer {
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		debug::draw_point(Vector2::new(0.5, 0.5), 10.0, Vector4::new(0.5, 0.0, 0.0, 0.5));
-		
 		for entity in scene.iter() {
 			entity.render(&mut builder, 0)?;
 		}
