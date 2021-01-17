@@ -53,7 +53,7 @@ pub trait Camera: Send + Sized + 'static {
 	
 	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage<format::B8G8R8A8Unorm>>, sender: mpsc::SyncSender<AutoCommandBuffer>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
-		let mut last_capture = Instant::now();
+		let mut _last_capture = Instant::now();
 		
 		let _lock = Device::standard_command_pool(queue.device(), queue.family()).alloc(false, 1); // https://github.com/vulkano-rs/vulkano/issues/1471
 		
@@ -65,7 +65,7 @@ pub trait Camera: Send + Sized + 'static {
 			};
 			
 			// println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
-			last_capture = Instant::now();
+			_last_capture = Instant::now();
 			
 			let sub_buffer = buffer.chunk(
 				frame.chunks_exact(CHUNK_SIZE)

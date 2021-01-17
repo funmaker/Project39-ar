@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
+use std::convert::TryFrom;
 use cgmath::Matrix4;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
@@ -10,12 +11,14 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 
 mod sub_mesh;
+mod import;
 
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RendererRenderError};
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
+pub use import::MMDModelLoadError;
 use sub_mesh::SubMesh;
 
 pub struct MMDModel<VI: VertexIndex> {
@@ -47,6 +50,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			fences,
 			default_tex: None,
 		})
+	}
+	
+	pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
+		import::from_pmx(path, renderer)
 	}
 	
 	pub fn add_texture(&mut self, source_image: DynamicImage, renderer: &mut Renderer) -> Result<Arc<ImmutableImage<Format>>, ModelError> {

@@ -4,24 +4,24 @@ use vulkano::{memory, sync};
 use vulkano::descriptor::descriptor_set;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::pipeline::input_assembly::Index;
+use cgmath::num_traits::FromPrimitive;
 
 pub mod simple;
 pub mod mmd;
-mod import;
 mod fence_check;
 
 use super::RendererRenderError;
 use super::pipelines::PipelineError;
+pub use self::mmd::MMDModel;
 pub use simple::SimpleModel;
-pub use import::*;
 pub use fence_check::FenceCheck;
 
 pub trait Model {
 	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError>;
 }
 
-pub trait VertexIndex: Index + Copy + Send + Sync + Sized + 'static {}
-impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + 'static {}
+pub trait VertexIndex: Index + Copy + Send + Sync + Sized + FromPrimitive + 'static {}
+impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + FromPrimitive + 'static {}
 
 #[derive(Debug, Error)]
 pub enum ModelError {

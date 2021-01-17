@@ -19,9 +19,9 @@ pub struct Entity {
 }
 
 impl Entity {
-	pub fn new(name: impl Into<String>, model: Arc<dyn Model>, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
+	pub fn new(name: impl Into<String>, model: impl Model + 'static, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
 		Entity {
-			model,
+			model: Arc::new(model),
 			name: name.into(),
 			position,
 			angle,

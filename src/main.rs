@@ -22,7 +22,6 @@ mod application;
 mod utils;
 
 use application::{Application, CameraAPI, ApplicationCreationError, ApplicationRunError};
-use debug::set_debug;
 
 
 fn main() {
@@ -66,7 +65,7 @@ fn run_application() -> Result<(), RunError> {
 		return Ok(());
 	}
 	
-	set_debug(matches.opt_present("debug"));
+	debug::set_debug(matches.opt_present("debug"));
 	
 	let device = matches.opt_get("d")?;
 	let camera = matches.opt_get("c")?

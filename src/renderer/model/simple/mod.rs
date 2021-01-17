@@ -9,12 +9,16 @@ use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
+use openvr::render_models;
 
-use crate::renderer::{Renderer, RendererRenderError};
+mod import;
+
+pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
+use crate::renderer::{Renderer, RendererRenderError};
 use crate::utils::ImageEx;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
-pub use crate::renderer::pipelines::default::Vertex;
+pub use import::SimpleModelLoadError;
 
 pub struct SimpleModel<VI: VertexIndex> {
 	pipeline: Arc<DefaultPipeline>,
@@ -64,6 +68,14 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 			set,
 			fence,
 		})
+	}
+	
+	pub fn from_obj(path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
+		import::from_obj(path, renderer)
+	}
+	
+	pub fn from_openvr(model: render_models::Model, texture: render_models::Texture, renderer: &mut Renderer) -> Result<SimpleModel<u16>, SimpleModelLoadError> {
+		import::from_openvr(model, texture, renderer)
 	}
 	
 	pub fn loaded(&self) -> bool {

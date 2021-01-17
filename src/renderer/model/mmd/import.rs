@@ -1,91 +1,41 @@
 use std::io::BufReader;
-use std::path::PathBuf;
 use std::fs::File;
-use std::sync::Arc;
+use std::path::PathBuf;
 use std::ffi::{OsStr, OsString};
+use std::convert::TryFrom;
 use err_derive::Error;
-use obj::Obj;
-use image::{ImageFormat, DynamicImage, ImageBuffer};
-use cgmath::num_traits::FromPrimitive;
-use openvr::render_models as openvr_rm;
+use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use fallible_iterator::FallibleIterator;
-use mmd::pmx::material::{Toon, DrawingFlags, EnvironmentBlendMode};
+use image::ImageFormat;
 
-use super::{Model, ModelError, VertexIndex, simple, mmd as mmd_model};
+use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
-use crate::renderer::model::mmd::MaterialInfo;
+use super::{MMDModel, Vertex, MaterialInfo};
 
-pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
-	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
-	let model: Obj<obj::TexturedVertex, VI> = obj::load_obj(model_reader)?;
-	
-	let texture_reader = BufReader::new(File::open(format!("{}.png", path))?);
-	let texture = image::load(texture_reader, ImageFormat::Png)?;
-	
-	Ok(Arc::new(simple::SimpleModel::new(
-		&model.vertices.iter().map(Into::into).collect::<Vec<_>>(),
-		&model.indices,
-		texture,
-		renderer,
-	)?))
-}
-
-impl From<&obj::TexturedVertex> for simple::Vertex {
-	fn from(vertex: &obj::TexturedVertex) -> Self {
-		simple::Vertex::new(
-			vertex.position,
-			vertex.normal,
-			[vertex.texture[0], 1.0 - vertex.texture[1]]
-		)
-	}
-}
-
-
-pub fn from_openvr(model: openvr_rm::Model, texture: openvr_rm::Texture, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
-	let vertices: Vec<simple::Vertex> = model.vertices().iter().map(Into::into).collect();
-	let indices: Vec<u16> = model.indices().iter().copied().map(Into::into).collect();
-	let size = texture.dimensions();
-	let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
-	
-	Ok(Arc::new(simple::SimpleModel::new(
-		&vertices,
-		&indices,
-		image,
-		renderer
-	)?))
-}
-
-impl From<&openvr_rm::Vertex> for simple::Vertex {
-	fn from(vertex: &openvr_rm::Vertex) -> Self {
-		simple::Vertex::new(vertex.position, vertex.normal, vertex.texture_coord)
-	}
-}
-
-
-pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, ModelLoadError> {
+pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
 	let mut root = PathBuf::from(path);
 	root.pop();
-
+	
 	let model_reader = BufReader::new(File::open(path)?);
 	let header = mmd::HeaderReader::new(model_reader)?;
-
+	
 	dprintln!("{}", header);
-
+	
 	let mut vertices_reader = mmd::VertexReader::new(header)?;
-	let vertices: Vec<mmd_model::Vertex> = vertices_reader.iter()
-	                                                      .map(|v: mmd::Vertex<i16>| Ok(v.into()))
-	                                                      .collect()?;
+	let vertices: Vec<Vertex> = vertices_reader.iter()
+	                                           .map(|v: mmd::Vertex<i16>| Ok(v.into()))
+	                                           .collect()?;
 	
 	let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
-	let indices: Vec<u16> = surfaces_reader.iter()
-	                                               .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
+	let indices: Vec<VI> = surfaces_reader.iter()
+	                                      .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
 	
-	let mut model = mmd_model::MMDModel::new(&vertices, &indices, renderer)?;
+	let mut model = MMDModel::new(&vertices, &indices, renderer)?;
 	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
 	
 	let textures = textures_reader.iter()
-	                              .map_err(ModelLoadError::PmxError)
+	                              .map_err(MMDModelLoadError::PmxError)
 	                              .map(|texture_path| {
 		                              let path = lookup_windows_path(&root, &texture_path)?;
 		                              let texture_reader = BufReader::new(File::open(path)?);
@@ -100,13 +50,13 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, M
 	let mut last_index = 0_usize;
 	
 	materials_reader.iter::<i32>()
-	                .map_err(ModelLoadError::PmxError)
+	                .map_err(MMDModelLoadError::PmxError)
 	                .for_each(|material| {
 		                let toon_index = match material.toon {
 			                Toon::Texture(id) => id,
 			                Toon::Internal(_) => -1
 		                };
-		                
+		
 		                let sphere_mode = if material.environment_index < 0 {
 			                0
 		                } else {
@@ -117,7 +67,7 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, M
 				                EnvironmentBlendMode::AdditionalVec4 => 3,
 			                }
 		                };
-		                
+		
 		                let material_info = MaterialInfo {
 			                color: material.diffuse_color,
 			                specular: material.specular_color,
@@ -125,21 +75,21 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, M
 			                ambient: material.ambient_color,
 			                sphere_mode: sphere_mode,
 		                };
-		                
+		
 		                let (texture, has_alpha) = textures.get(material.texture_index as usize)
 		                                                   .cloned()
 		                                                   .map_or((None, false), |(texture, has_alpha)| (Some(texture), has_alpha));
-		                
+		
 		                let toon = textures.get(toon_index as usize)
 		                                   .cloned()
 		                                   .map(|(t, _)| t);
-		                
+		
 		                let sphere_map = textures.get(material.environment_index as usize)
 		                                         .cloned()
 		                                         .map(|(t, _)| t);
-		                
+		
 		                let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
-		                
+		
 		                model.add_sub_mesh(
 			                last_index .. last_index + material.surface_count as usize,
 			                material_info,
@@ -151,23 +101,23 @@ pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<Arc<dyn Model>, M
 			                edge,
 			                renderer,
 		                )?;
-	
+		
 		                last_index += material.surface_count as usize;
-	
+		
 		                Ok(())
 	                })?;
 	
-	Ok(Arc::new(model))
+	Ok(model)
 }
 
 // Windows why
-fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, ModelLoadError> {
+fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, MMDModelLoadError> {
 	if cfg!(target_os = "windows") {
 		return Ok(root.join(orig_path));
 	}
 	
 	let mut path = PathBuf::from(orig_path.replace("\\", "/"));
-	let file_name = path.file_name().ok_or_else(|| ModelLoadError::PathError(orig_path.to_string()))?.to_owned();
+	let file_name = path.file_name().ok_or_else(|| MMDModelLoadError::PathError(orig_path.to_string()))?.to_owned();
 	path.pop();
 	
 	let mut cur_dir = root.clone();
@@ -181,7 +131,7 @@ fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, Model
 	Ok(cur_dir)
 }
 
-fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, ModelLoadError> {
+fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, MMDModelLoadError> {
 	let mut next_dir = None;
 	
 	for file in std::fs::read_dir(&cur_dir)? {
@@ -199,15 +149,15 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsStri
 	
 	match next_dir {
 		Some(next_dir) => Ok(next_dir),
-		None => Err(ModelLoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
+		None => Err(MMDModelLoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
 	}
 }
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
-impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
+impl<I> From<mmd::Vertex<I>> for Vertex {
 	fn from(vertex: mmd::Vertex<I>) -> Self {
-		mmd_model::Vertex::new(
+		Vertex::new(
 			[-vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
 			[-vertex.normal[0], vertex.normal[1], vertex.normal[2]],
 			vertex.uv,
@@ -217,12 +167,11 @@ impl<I> From<mmd::Vertex<I>> for mmd_model::Vertex {
 }
 
 #[derive(Debug, Error)]
-pub enum ModelLoadError {
+pub enum MMDModelLoadError {
 	#[error(display = "Failed to parse path {}", _0)] PathError(String),
 	#[error(display = "File not found: {}", _0)] FileNotFound(String),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
-	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
 	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 }

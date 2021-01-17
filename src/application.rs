@@ -13,9 +13,9 @@ mod entity;
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
-use crate::renderer::model::{self, ModelLoadError, ModelError};
-use crate::debug::{get_flag, set_flag, get_flag_or_default};
+use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
 use crate::utils::mat4;
+use crate::debug;
 pub use vr::VR;
 pub use entity::Entity;
 
@@ -52,14 +52,14 @@ impl Application {
 		
 		scene.push(Entity::new(
 			"Cube",
-			model::from_obj::<u16>("models/cube/cube", &mut renderer)?,
+			SimpleModel::<u16>::from_obj("models/cube/cube", &mut renderer)?,
 			Vector3::new(0.0, -1.5, -1.5),
 			Quaternion::one(),
 		));
 		
 		scene.push(Entity::new(
 			"初音ミク",
-			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
+			MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
 			Vector3::new(0.0, -1.0, -1.5),
 			Quaternion::from_angle_y(Rad::turn_div_2()),
 		));
@@ -113,7 +113,7 @@ impl Application {
 					if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 						let mut entity = Entity::new(
 							vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_TrackingSystemName_String)?.to_string_lossy(),
-							model::from_openvr(model, texture, &mut self.renderer)?,
+							SimpleModel::<u16>::from_openvr(model, texture, &mut self.renderer)?,
 							Vector3::zero(),
 							Quaternion::one(),
 						);
@@ -140,8 +140,8 @@ impl Application {
 		for index in 0..64 {
 			if pressed & (1 << index) != 0 {
 				if index == 2 {
-					let mode: u8 = get_flag_or_default("mode");
-					set_flag("mode", (mode + 1) % 3);
+					let mode: u8 = debug::get_flag_or_default("mode");
+					debug::set_flag("mode", (mode + 1) % 3);
 				}
 			}
 		}
@@ -153,15 +153,15 @@ impl Application {
 		let (disp, rot) = fake_pose;
 		
 		fn get_key(key: &str) -> f32 {
-			get_flag_or_default::<bool>(key) as i32 as f32
+			debug::get_flag_or_default::<bool>(key) as i32 as f32
 		}
 		
 		let x = get_key("KeyD") - get_key("KeyA");
 		let y = get_key("KeySpace") - get_key("KeyCtrl");
 		let z = get_key("KeyS") - get_key("KeyW");
 		let dist = (0.5 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
-		let mouse_move = get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-		set_flag("mouse_move", (0.0_f32, 0.0_f32));
+		let mouse_move = debug::get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
+		debug::set_flag("mouse_move", (0.0_f32, 0.0_f32));
 		
 		rot.y = rot.y + Rad(-mouse_move.0 * 0.01);
 		rot.x = clamp(rot.x + Rad(-mouse_move.1 * 0.01), -Rad::turn_div_4(), Rad::turn_div_4());
@@ -192,7 +192,8 @@ pub enum CameraAPI {
 pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr camera with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
-	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
+	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
+	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
@@ -203,7 +204,7 @@ pub enum ApplicationCreationError {
 #[derive(Debug, Error)]
 pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] ModelLoadError(#[error(source)] ModelLoadError),
+	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] RenderError(#[error(source)] RendererRenderError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
