@@ -19,6 +19,7 @@ pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
+pub mod text_cache;
 mod debug_renderer;
 
 use crate::utils::*;
@@ -29,8 +30,7 @@ use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
-use debug_renderer::{DebugRendererError, DebugRenderer};
-use crate::renderer::debug_renderer::DebugRendererRederError;
+use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -90,7 +90,7 @@ impl Renderer {
 		
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		
-		let debug_renderer = DebugRenderer::new(&device, &mut pipelines)?;
+		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		
 		Ok(Renderer {
 			vr,
@@ -369,6 +369,16 @@ impl Renderer {
 		for entity in scene.iter() {
 			entity.render(&mut builder, 0)?;
 		}
+		
+		debug::draw_text("TopLeft",     Vector2::new(0.0, 0.0),     debug::DebugOffset::top_left(-150.0, -50.0), 64.0, Vector4::new(0.0, 0.0, 1.0, 1.0));
+		debug::draw_text("Top",         Vector2::new(0.0, 0.0),          debug::DebugOffset::top(   0.0, -50.0), 64.0, Vector4::new(0.5, 0.0, 1.0, 1.0));
+		debug::draw_text("TopRight",    Vector2::new(0.0, 0.0),    debug::DebugOffset::top_right( 150.0, -50.0), 64.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
+		debug::draw_text("Left",        Vector2::new(0.0, 0.0),         debug::DebugOffset::left(-150.0,   0.0), 64.0, Vector4::new(0.0, 0.5, 1.0, 1.0));
+		debug::draw_text("Center",      Vector2::new(0.0, 0.0),       debug::DebugOffset::center(   0.0,   0.0), 64.0, Vector4::new(0.5, 0.5, 1.0, 1.0));
+		debug::draw_text("Right",       Vector2::new(0.0, 0.0),        debug::DebugOffset::right( 150.0,   0.0), 64.0, Vector4::new(1.0, 0.5, 1.0, 1.0));
+		debug::draw_text("BottomLeft",  Vector2::new(0.0, 0.0),  debug::DebugOffset::bottom_left(-150.0,  50.0), 64.0, Vector4::new(0.0, 1.0, 1.0, 1.0));
+		debug::draw_text("Bottom",      Vector2::new(0.0, 0.0),       debug::DebugOffset::bottom(   0.0,  50.0), 64.0, Vector4::new(0.5, 1.0, 1.0, 1.0));
+		debug::draw_text("BottomRight", Vector2::new(0.0, 0.0), debug::DebugOffset::bottom_right( 150.0,  50.0), 64.0, Vector4::new(1.0, 1.0, 1.0, 1.0));
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		

@@ -11,6 +11,7 @@ use openvr::TrackedDevicePose;
 
 pub struct Entity {
 	model: Arc<dyn Model>,
+	pub name: String,
 	pub position: Vector3<f32>,
 	pub angle: Quaternion<f32>,
 	pub velocity: Vector3<f32>,
@@ -18,9 +19,10 @@ pub struct Entity {
 }
 
 impl Entity {
-	pub fn new(model: Arc<dyn Model>, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
+	pub fn new(name: impl Into<String>, model: Arc<dyn Model>, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
 		Entity {
 			model,
+			name: name.into(),
 			position,
 			angle,
 			velocity: Vector3::zero(),
@@ -41,7 +43,11 @@ impl Entity {
 		let model_matrix = Matrix4::from_translation(self.position)
 		                 * Matrix4::from(self.angle);
 		
-		debug::draw_point(self.position, 10.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
+		debug::draw_point(self.position, 32.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
+		debug::draw_line(self.position, self.position + self.angle * Vector3::unit_x() * 0.3, 4.0, Vector4::new(1.0, 0.0, 0.0, 1.0));
+		debug::draw_line(self.position, self.position + self.angle * Vector3::unit_y() * 0.3, 4.0, Vector4::new(0.0, 1.0, 0.0, 1.0));
+		debug::draw_line(self.position, self.position + self.angle * Vector3::unit_z() * 0.3, 4.0, Vector4::new(0.0, 0.0, 1.0, 1.0));
+		debug::draw_text(&self.name, self.position, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
 		
 		self.model.render(builder, model_matrix, eye)
 	}

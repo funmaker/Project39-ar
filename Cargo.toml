@@ -21,12 +21,14 @@ num-derive = "0.3.3"
 lazy_static = "1.4.0"
 winit = "0.24.0"
 vulkano-win = "0.20.0"
-# mmd = { git = "https://github.com/funmaker/mmd-rs" }
-mmd = { path = "../mmd-rs" }
+mmd = { git = "https://github.com/funmaker/mmd-rs" }
+#mmd = { path = "../mmd-rs" }
 fallible-iterator = "0.2.0"
 downcast-rs = "1.2.0"
 derive_deref = "1.1.1"
 native-dialog = "0.5.2"
+glyph_brush = "0.7.1"
+unifont = "0.1.0"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"

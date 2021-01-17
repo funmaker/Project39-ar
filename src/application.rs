@@ -3,6 +3,7 @@ use std::time::{Instant, Duration};
 use std::sync::Arc;
 use err_derive::Error;
 use openvr::{tracked_device_index, TrackedDeviceClass, TrackedControllerRole};
+use openvr_sys::{ETrackedDeviceProperty_Prop_RenderModelName_String, ETrackedDeviceProperty_Prop_TrackingSystemName_String};
 use cgmath::num_traits::clamp;
 use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rotation3, Matrix4};
 
@@ -50,12 +51,14 @@ impl Application {
 		let mut scene: Vec<Entity> = Vec::new();
 		
 		scene.push(Entity::new(
+			"Cube",
 			model::from_obj::<u16>("models/cube/cube", &mut renderer)?,
 			Vector3::new(0.0, -1.5, -1.5),
 			Quaternion::one(),
 		));
 		
 		scene.push(Entity::new(
+			"初音ミク",
 			model::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
 			Vector3::new(0.0, -1.0, -1.5),
 			Quaternion::from_angle_y(Rad::turn_div_2()),
@@ -106,9 +109,10 @@ impl Application {
 			if vr.system.tracked_device_class(i) != TrackedDeviceClass::Invalid && vr.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
 				if let Some(&id) = self.vr_devices.get(&i) {
 					self.scene[id].move_to_pose(poses.render[i as usize]);
-				} else if let Some(model) = vr.render_models.load_render_model(&vr.system.string_tracked_device_property(i, 1003)?)? {
+				} else if let Some(model) = vr.render_models.load_render_model(&vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_RenderModelName_String)?)? {
 					if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 						let mut entity = Entity::new(
+							vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_TrackingSystemName_String)?.to_string_lossy(),
 							model::from_openvr(model, texture, &mut self.renderer)?,
 							Vector3::zero(),
 							Quaternion::one(),
