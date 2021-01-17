@@ -93,7 +93,7 @@ impl DebugRenderer {
 		
 		DEBUG_TEXTS.with(|texts| {
 			for text in texts.borrow_mut().drain(..) {
-				if text.size <= 0.0 {
+				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
 				} else if let Some(set) = self.draw_text(text, viewproj, pixel_scale)? {
 					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;

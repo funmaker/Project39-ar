@@ -107,6 +107,16 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		                Ok(())
 	                })?;
 	
+	let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
+	
+	model.bones = bones_reader.iter().collect()?;
+	
+	for bone in model.bones.iter_mut() {
+		bone.position[0] *= MMD_UNIT_SIZE;
+		bone.position[1] *= MMD_UNIT_SIZE;
+		bone.position[2] *= MMD_UNIT_SIZE;
+	}
+	
 	Ok(model)
 }
 

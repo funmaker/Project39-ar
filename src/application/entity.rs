@@ -19,9 +19,9 @@ pub struct Entity {
 }
 
 impl Entity {
-	pub fn new(name: impl Into<String>, model: impl Model + 'static, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
+	pub fn new(name: impl Into<String>, model: impl IntoArcModel, position: Vector3<f32>, angle: Quaternion<f32>) -> Self {
 		Entity {
-			model: Arc::new(model),
+			model: model.into(),
 			name: name.into(),
 			position,
 			angle,
@@ -59,5 +59,27 @@ impl Entity {
 		self.angle = orientation.rot;
 		self.velocity = pose.velocity().clone().into();
 		self.angular_velocity = pose.angular_velocity().clone().into();
+	}
+}
+
+pub trait IntoArcModel {
+	fn into(self) -> Arc<dyn Model>;
+}
+
+impl IntoArcModel for Arc<dyn Model> {
+	fn into(self) -> Arc<dyn Model> {
+		self
+	}
+}
+
+impl<M: Model + 'static> IntoArcModel for Arc<M> {
+	fn into(self) -> Arc<dyn Model> {
+		self
+	}
+}
+
+impl<M: Model + 'static> IntoArcModel for M {
+	fn into(self) -> Arc<dyn Model> {
+		Arc::new(self)
 	}
 }

@@ -16,7 +16,7 @@ use getopts::Options;
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
 
-#[macro_use] mod debug;
+#[macro_use] #[allow(dead_code)] mod debug;
 mod renderer;
 mod application;
 mod utils;

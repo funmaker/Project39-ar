@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use std::convert::TryFrom;
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Vector4, Vector3};
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
@@ -16,10 +16,14 @@ mod import;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
 use crate::renderer::{Renderer, RendererRenderError};
+use crate::debug;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
 use sub_mesh::SubMesh;
+use std::hash::{Hasher, Hash};
+
+pub type Bone = mmd::Bone<i16>;
 
 pub struct MMDModel<VI: VertexIndex> {
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -27,6 +31,7 @@ pub struct MMDModel<VI: VertexIndex> {
 	sub_mesh: Vec<SubMesh>,
 	fences: Vec<FenceCheck>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
+	pub bones: Vec<Bone>,
 }
 
 impl<VI: VertexIndex> MMDModel<VI> {
@@ -49,6 +54,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			sub_mesh: vec![],
 			fences,
 			default_tex: None,
+			bones: vec![],
 		})
 	}
 	
@@ -122,6 +128,27 @@ impl<VI: VertexIndex> MMDModel<VI> {
 impl<VI: VertexIndex> Model for MMDModel<VI> {
 	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
+		
+		for bone in self.bones.iter() {
+			use std::collections::hash_map::DefaultHasher;
+			
+			let mut hasher = DefaultHasher::new();
+			bone.local_name.hash(&mut hasher);
+			let col = hasher.finish();
+			let col: Vector4<f32> = Vector4::new(col % 256, col / 256 % 256, col / 256 / 256 % 256, 255).cast().unwrap() / 255.0;
+			
+			let pos = (model_matrix * Vector3::from(bone.position).extend(1.0)).truncate();
+			debug::draw_point(pos, 10.0, col);
+			debug::draw_text(&bone.local_name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
+			debug::draw_text(&bone.universal_name, pos, debug::DebugOffset::bottom_right(8.0, 32.0), 32.0, col);
+			
+			if bone.parent >= 0 {
+				let parent = &self.bones[bone.parent as usize];
+				
+				let ppos = (model_matrix * Vector3::from(parent.position).extend(1.0)).truncate();
+				debug::draw_line(pos, ppos, 4.0, col);
+			}
+		}
 		
 		// Outline
 		for sub_mesh in self.sub_mesh.iter() {

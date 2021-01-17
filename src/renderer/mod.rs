@@ -370,16 +370,6 @@ impl Renderer {
 			entity.render(&mut builder, 0)?;
 		}
 		
-		debug::draw_text("TopLeft",     Vector2::new(0.0, 0.0),     debug::DebugOffset::top_left(-150.0, -50.0), 64.0, Vector4::new(0.0, 0.0, 1.0, 1.0));
-		debug::draw_text("Top",         Vector2::new(0.0, 0.0),          debug::DebugOffset::top(   0.0, -50.0), 64.0, Vector4::new(0.5, 0.0, 1.0, 1.0));
-		debug::draw_text("TopRight",    Vector2::new(0.0, 0.0),    debug::DebugOffset::top_right( 150.0, -50.0), 64.0, Vector4::new(1.0, 0.0, 1.0, 1.0));
-		debug::draw_text("Left",        Vector2::new(0.0, 0.0),         debug::DebugOffset::left(-150.0,   0.0), 64.0, Vector4::new(0.0, 0.5, 1.0, 1.0));
-		debug::draw_text("Center",      Vector2::new(0.0, 0.0),       debug::DebugOffset::center(   0.0,   0.0), 64.0, Vector4::new(0.5, 0.5, 1.0, 1.0));
-		debug::draw_text("Right",       Vector2::new(0.0, 0.0),        debug::DebugOffset::right( 150.0,   0.0), 64.0, Vector4::new(1.0, 0.5, 1.0, 1.0));
-		debug::draw_text("BottomLeft",  Vector2::new(0.0, 0.0),  debug::DebugOffset::bottom_left(-150.0,  50.0), 64.0, Vector4::new(0.0, 1.0, 1.0, 1.0));
-		debug::draw_text("Bottom",      Vector2::new(0.0, 0.0),       debug::DebugOffset::bottom(   0.0,  50.0), 64.0, Vector4::new(0.5, 1.0, 1.0, 1.0));
-		debug::draw_text("BottomRight", Vector2::new(0.0, 0.0), debug::DebugOffset::bottom_right( 150.0,  50.0), 64.0, Vector4::new(1.0, 1.0, 1.0, 1.0));
-		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		
 		builder.end_render_pass()?
