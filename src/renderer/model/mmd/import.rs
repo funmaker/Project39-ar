@@ -19,7 +19,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 	let model_reader = BufReader::new(File::open(path)?);
 	let header = mmd::HeaderReader::new(model_reader)?;
 	
-	dprintln!("{}", header);
+	// dprintln!("{}", header);
 	
 	let mut vertices_reader = mmd::VertexReader::new(header)?;
 	let vertices: Vec<Vertex> = vertices_reader.iter()
@@ -115,6 +115,11 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		bone.position[0] *= MMD_UNIT_SIZE;
 		bone.position[1] *= MMD_UNIT_SIZE;
 		bone.position[2] *= MMD_UNIT_SIZE;
+		if let mmd::pmx::bone::Connection::Position(mut pos) = bone.connection {
+			pos[0] *= MMD_UNIT_SIZE;
+			pos[1] *= MMD_UNIT_SIZE;
+			pos[2] *= MMD_UNIT_SIZE;
+		}
 	}
 	
 	Ok(model)

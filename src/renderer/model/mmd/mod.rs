@@ -22,6 +22,7 @@ pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
 use sub_mesh::SubMesh;
 use std::hash::{Hasher, Hash};
+use mmd::pmx::bone::Connection;
 
 pub type Bone = mmd::Bone<i16>;
 
@@ -139,14 +140,36 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			
 			let pos = (model_matrix * Vector3::from(bone.position).extend(1.0)).truncate();
 			debug::draw_point(pos, 10.0, col);
-			debug::draw_text(&bone.local_name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
-			debug::draw_text(&bone.universal_name, pos, debug::DebugOffset::bottom_right(8.0, 32.0), 32.0, col);
+			
+			let text;
+			if !bone.universal_name.is_empty() {
+				text = &*bone.universal_name;
+			} else if let Some(translation) = debug::translate(&bone.local_name) {
+				text = translation;
+			} else {
+				text = &*bone.local_name;
+			}
+			debug::draw_text(text, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
 			
 			if bone.parent >= 0 {
 				let parent = &self.bones[bone.parent as usize];
-				
+			
 				let ppos = (model_matrix * Vector3::from(parent.position).extend(1.0)).truncate();
 				debug::draw_line(pos, ppos, 4.0, col);
+			}
+			
+			match bone.connection {
+				Connection::Index(id) if id >= 0 => {
+					let con = &self.bones[id as usize];
+			
+					let ppos = (model_matrix * Vector3::from(con.position).extend(1.0)).truncate();
+					debug::draw_line(pos, ppos, 2.0, Vector4::new(1.0, 0.0, 0.0, 1.0));
+				},
+				// Connection::Position(vec) => {
+				// 	let ppos = (model_matrix * Vector3::from(vec).extend(1.0)).truncate();
+				// 	debug::draw_line(pos, ppos, 2.0, Vector4::new(1.0, 0.0, 0.0, 1.0));
+				// },
+				_ => {}
 			}
 		}
 		

@@ -1,0 +1,1700 @@
+version: 2, encoding: utf16 le, additional vec4s: 0, vertex index: 16-bit, texture index: 8-bit,
+material index: 8-bit, bone index: 16-bit, morph index: 16-bit, rigidbody index: 8-bit
+local name: YYB式初音ミクCrude Hair, universal name: 
+Local comments
+YYB式初音ミクCrude Hair
+
+□モデル製作
+モデリング・セットアップ：YYB
+物理演算・セットアップ：YYB
+Universal comments
+
+
+
+Vertex count: 35960
+
+Surface count: 161730
+
+Textures:
+0) tex/face.png
+1) toon/toon-0.bmp
+2) spa\spa-eye.bmp
+3) spa\spa-eye2.bmp
+4) tex/eye.png
+5) spa\spa-pi.bmp
+6) spa\A2.bmp
+7) toon\toon-2.bmp
+8) tex\body01.png
+9) toon/toon-2.bmp
+10) tex\body03.png
+11) spa/spa-pi.bmp
+12) tex\Glasses.png
+13) toon\toon-0.bmp
+14) tex\body02.png
+15) spa\A1.bmp
+16) toon\toon-1.bmp
+17) spa\A5.bmp
+18) toon\toon-3.bmp
+19) spa/a3.bmp
+20) spa/a4.bmp
+21) spa/a5.bmp
+22) tex\hair01.png
+23) spa\spa-fa2.bmp
+24) spa\spa-fa3.bmp
+25) tex/hair03.png
+26) spa/spa-fa.bmp
+27) tex\hair02.png
+28) spa\spa-fa.bmp
+
+Materials:
+
+0) local name: face0, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: -1/disabled,
+toon: texture(-1), metadata: , surfaces: 96
+
+1) local name: face1, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.49803922, 0.49803922, 0.49803922], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: -1/disabled,
+toon: texture(1), metadata: , surfaces: 9096
+
+2) local name: eye1, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: 2/+,
+toon: texture(-1), metadata: , surfaces: 1056
+
+3) local name: eye2, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: 3/+,
+toon: texture(-1), metadata: , surfaces: 1056
+
+4) local name: eye1+, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 4, environment: -1/+,
+toon: texture(-1), metadata: , surfaces: 1056
+
+5) local name: eye2+, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 4, environment: -1/+,
+toon: texture(-1), metadata: , surfaces: 1056
+
+6) local name: face2, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5882353, 0.1803922, 0.5568628, 0.5]/0.7, texture: 0, environment: 5/+,
+toon: texture(1), metadata: , surfaces: 10650
+
+7) local name: eyehi, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: GroundShadow|DrawShadow|ReceiveShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: 6/+,
+toon: texture(-1), metadata: , surfaces: 384
+
+8) local name: Body00, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.011764706, 0.011764706, 0.011764706]/34, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5882353, 0.18039216, 0.5568628, 1.0]/0.7, texture: 0, environment: 5/+,
+toon: texture(7), metadata: , surfaces: 306
+
+9) local name: Body01, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.01176471, 0.01176471, 0.01176471]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5882353, 0.18039216, 0.5568628, 0.5]/0.7, texture: 8, environment: 5/+,
+toon: texture(9), metadata: , surfaces: 26760
+
+10) local name: Body02, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.01176471, 0.01176471, 0.01176471]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5882353, 0.1803922, 0.5568628, 0.5]/0.7, texture: 10, environment: 11/+,
+toon: texture(7), metadata: , surfaces: 4644
+
+11) local name: Glasses00, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.06, 0.06, 0.06]/5, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.7372549, 0.3098039, 0.2627451, 0.7]/0.7, texture: 12, environment: -1/+,
+toon: texture(13), metadata: , surfaces: 4173
+
+12) local name: Glasses01, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.06, 0.06, 0.06]/5, ambient: [1.0, 1.0, 1.0], flags: NoCull|GroundShadow|HasEdge
+edge: [1.0, 1.0, 1.0, 1.0]/0.7, texture: 12, environment: 6/+,
+toon: texture(13), metadata: , surfaces: 672
+
+13) local name: Skirt, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.18, 0.18, 0.18]/61, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.4352941, 0.2431373, 0.1764706, 0.7]/0.7, texture: 14, environment: 15/+,
+toon: texture(16), metadata: , surfaces: 3576
+
+14) local name: Black01, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.18, 0.18, 0.18]/61, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 14, environment: 17/+,
+toon: texture(18), metadata: , surfaces: 6336
+
+15) local name: Black02, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.23921569, 0.11372549, 0.11764706]/26, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.31764707, 0.25490198, 0.13333334, 1.0]/1, texture: 10, environment: 17/+,
+toon: texture(16), metadata: , surfaces: 19050
+
+16) local name: luminous01, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.18, 0.18, 0.18]/150, ambient: [1.0, 1.0, 1.0], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 14, environment: 17/+,
+toon: texture(1), metadata: , surfaces: 582
+
+17) local name: luminous02, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/150, ambient: [1.0, 1.0, 1.0], flags: NoCull
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 8, environment: -1/+,
+toon: texture(1), metadata: , surfaces: 288
+
+18) local name: luminous03, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.17, 0.17, 0.17]/24, ambient: [1.0, 1.0, 1.0], flags: NoCull
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 10, environment: -1/+,
+toon: texture(1), metadata: , surfaces: 1200
+
+19) local name: luminous04, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.17, 0.17, 0.17]/100, ambient: [1.0, 1.0, 1.0], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5019608, 1.0, 1.0, 1.0]/1, texture: 10, environment: 19/+,
+toon: texture(1), metadata: , surfaces: 3552
+
+20) local name: Clothes01, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.078431375, 0.11764706, 0.12156863]/15, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.3686275, 0.3960784, 0.254902, 0.7]/0.7, texture: 14, environment: 20/+,
+toon: texture(18), metadata: , surfaces: 8919
+
+21) local name: Black03, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.1, 0.1, 0.1]/15, ambient: [0.5, 0.5, 0.5], flags: NoCull
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 14, environment: -1/+,
+toon: texture(-1), metadata: , surfaces: 360
+
+22) local name: Shoes, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.2, 0.2, 0.2]/61, ambient: [0.4980392, 0.4980392, 0.4980392], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.3176471, 0.254902, 0.1333333, 0.7]/0.7, texture: 14, environment: 21/+,
+toon: texture(16), metadata: , surfaces: 2256
+
+23) local name: Clothes02, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.17, 0.17, 0.17]/24, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 10, environment: -1/+,
+toon: texture(-1), metadata: , surfaces: 630
+
+24) local name: Hair02, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.31764707, 0.2, 0.23529412]/38, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5058824, 0.34509805, 0.2784314, 0.7]/0.7, texture: 22, environment: 23/+,
+toon: texture(16), metadata: , surfaces: 2190
+
+25) local name: Hair03, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.31764707, 0.2, 0.23529412]/38, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5058824, 0.34509805, 0.2784314, 0.7]/0.7, texture: 22, environment: 24/+,
+toon: texture(16), metadata: , surfaces: 2196
+
+26) local name: Hair04, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.31764707, 0.2, 0.23529412]/38, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5058824, 0.34509805, 0.2784314, 0.7]/0.7, texture: 25, environment: 26/+,
+toon: texture(16), metadata: , surfaces: 21276
+
+27) local name: hair03, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.3176471, 0.2, 0.2352941]/38, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow|DrawShadow|ReceiveShadow|HasEdge
+edge: [0.5058824, 0.345098, 0.2784314, 0.7]/0.7, texture: 27, environment: 28/+,
+toon: texture(16), metadata: , surfaces: 25626
+
+28) local name: face*, universal name: 
+diffuse: [1.0, 1.0, 1.0, 0.0001], specular: [0.0, 0.0, 0.0]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1.035, texture: 0, environment: -1/disabled,
+toon: texture(-1), metadata: , surfaces: 516
+
+29) local name: Body04, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.04, 0.04, 0.04]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/0.7, texture: 0, environment: -1/+,
+toon: texture(1), metadata: , surfaces: 816
+
+30) local name: Body03, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.04, 0.04, 0.04]/2, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/0.7, texture: 0, environment: -1/+,
+toon: texture(1), metadata: , surfaces: 1092
+
+31) local name: Hair shadow, universal name: 
+diffuse: [1.0, 1.0, 1.0, 1.0], specular: [0.0, 0.0, 0.0]/5, ambient: [0.5, 0.5, 0.5], flags: NoCull|GroundShadow
+edge: [0.0, 0.0, 0.0, 1.0]/1, texture: 8, environment: -1/+,
+toon: texture(-1), metadata: , surfaces: 264
+
+
+Bones:
+
+0) local name: 操作中心, universal name: view cnt,
+position: [0.0, 0.0, 0.0], parent: -1, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+1) local name: 全ての親, universal name: ,
+position: [0.0, 0.0, 0.0], parent: -1, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(2), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+2) local name: センター, universal name: center,
+position: [0.0, 8.2, 0.0], parent: 1, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(135), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+3) local name: グルーブ, universal name: groove,
+position: [0.0, 8.4, 0.0], parent: 2, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, 1.4, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+4) local name: 腰, universal name: waist,
+position: [0.0, 11.587364, 0.24503049], parent: 3, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.0000006377697, 0.5313286, -0.37712613]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+5) local name: 上半身, universal name: ,
+position: [0.0, 12.2814455, -0.22637829], parent: 4, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(6), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+6) local name: 上半身2, universal name: ,
+position: [0.0, 13.756534, -0.33089995], parent: 5, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(7), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+7) local name: 首, universal name: ,
+position: [0.0, 16.667124, 0.3646003], parent: 6, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(8), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+8) local name: 頭, universal name: ,
+position: [0.0, 17.198069, 0.34982404], parent: 7, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(114), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+9) local name: 左目, universal name: ,
+position: [0.38079995, 18.104855, -0.101956755], parent: 8, transform level: 2,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(116), additional: 11 at rate 0.7, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+10) local name: 右目, universal name: ,
+position: [-0.38079995, 18.104855, -0.0694426], parent: 8, transform level: 2,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(115), additional: 11 at rate 0.7, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+11) local name: 両目, universal name: ,
+position: [0.0, 20.062347, -0.31694737], parent: 8, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(117), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+12) local name: 眼鏡, universal name: center,
+position: [0.00000003226544, 17.9058, 0.32740062], parent: 8, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, 0.0, -1.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+13) local name: あご, universal name: ,
+position: [0.0, 16.95804, -0.45823553], parent: 8, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.19, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+14) local name: 左眉, universal name: ,
+position: [0.447401, 18.463186, -0.7131046], parent: 8, transform level: 2,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.095, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+15) local name: 右眉, universal name: ,
+position: [-0.447401, 18.463186, -0.7131046], parent: 8, transform level: 2,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.095, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+16) local name: 左眉頭, universal name: ,
+position: [0.15257412, 18.381102, -0.7131046], parent: 8, transform level: 2,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.095, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+17) local name: 右眉頭, universal name: ,
+position: [-0.15257412, 18.381102, -0.7131046], parent: 8, transform level: 2,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.095, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+18) local name: 前髪1, universal name: ,
+position: [-0.08674347, 18.7006, -0.9045216], parent: 8, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.2, -1.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+19) local name: 右前髪, universal name: ,
+position: [-0.98360896, 18.43973, -0.4141316], parent: 8, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.05, -1.5, 0.3]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+20) local name: 右前髪1, universal name: ,
+position: [-0.8545808, 17.82548, 0.06030202], parent: 8, transform level: 0,
+flags: Rotatable|Display|CanOperate|AddRotation|AddMovement,
+connection: offset([0.2, -1.0, 0.0]), additional: 19 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+21) local name: 左前髪, universal name: ,
+position: [0.9176504, 18.43973, -0.5114955], parent: 8, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([-0.05, -2.0, 0.3]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+22) local name: 左前髪1, universal name: ,
+position: [0.8545808, 17.82548, 0.06030202], parent: 8, transform level: 0,
+flags: Rotatable|Display|CanOperate|AddRotation|AddMovement,
+connection: offset([-0.2, -1.0, 0.0]), additional: 21 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+23) local name: ﾈｸﾀｲ1, universal name: ,
+position: [0.0, 15.29372, -1.005369], parent: 6, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(24), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+24) local name: ﾈｸﾀｲ2, universal name: ,
+position: [0.0, 14.5474, -1.193777], parent: 23, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(25), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+25) local name: ﾈｸﾀｲ3, universal name: ,
+position: [0.0, 13.74198, -1.33284], parent: 24, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(26), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+26) local name: ﾈｸﾀｲ4, universal name: ,
+position: [0.0, 12.88111, -1.506515], parent: 25, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.0, -1.0, -0.3]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+27) local name: 左r, universal name: ,
+position: [0.5528857, 15.07088, -0.5820142], parent: 6, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(28), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+28) local name: 左r先, universal name: ,
+position: [0.7723171, 15.12321, -0.9305685], parent: 27, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+29) local name: 右r, universal name: ,
+position: [-0.5528857, 15.07088, -0.5820142], parent: 6, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(30), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+30) local name: 右r先, universal name: ,
+position: [-0.7723171, 15.12321, -0.9305685], parent: 29, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+31) local name: 下半身, universal name: ,
+position: [0.0000007972121, 12.251525, -0.22637716], parent: 4, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(130), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+32) local name: 左肩P, universal name: shoulderP_L,
+position: [0.3388936, 16.19104, 0.40445757], parent: 6, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+33) local name: 左肩, universal name: ,
+position: [0.3388936, 16.19104, 0.40445757], parent: 32, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(38), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+34) local name: 左肩C, universal name: ,
+position: [1.160396, 15.8991, 0.3763505], parent: 33, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 32 at rate -1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+35) local name: 右肩P, universal name: shoulderP_R,
+position: [-0.3388936, 16.19104, 0.40445757], parent: 6, transform level: 0,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+36) local name: 右肩, universal name: ,
+position: [-0.3388936, 16.19104, 0.40445757], parent: 35, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(43), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+37) local name: 右肩C, universal name: ,
+position: [-1.160396, 15.8991, 0.37635046], parent: 36, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 35 at rate -1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+38) local name: 左腕, universal name: ,
+position: [1.160396, 15.8991, 0.3763505], parent: 34, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(48), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+39) local name: 左腕捩, universal name: arm twist_L,
+position: [2.3459558, 14.902189, 0.38255286], parent: 38, transform level: 0,
+flags: Rotatable|Display|CanOperate|FixedAxis,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: Some([0.76536757, -0.643581, 0.0040040864]), local axis None, parent transform: None,
+inverse kinematics: None
+
+40) local name: 左腕捩1, universal name: ,
+position: [1.7926947, 15.367414, 0.37965843], parent: 38, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 39 at rate 0.25, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+41) local name: 左腕捩2, universal name: ,
+position: [2.1878812, 15.03511, 0.38172588], parent: 38, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 39 at rate 0.5, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+42) local name: 左腕捩3, universal name: ,
+position: [2.583068, 14.702806, 0.38379332], parent: 38, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 39 at rate 0.75, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+43) local name: 右腕, universal name: ,
+position: [-1.160396, 15.8991, 0.37635046], parent: 37, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(53), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+44) local name: 右腕捩, universal name: arm twist_R,
+position: [-2.3459558, 14.902189, 0.38294086], parent: 43, transform level: 0,
+flags: Rotatable|Display|CanOperate|FixedAxis,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: Some([-0.7653668, -0.6435803, 0.0042545935]), local axis None, parent transform: None,
+inverse kinematics: None
+
+45) local name: 右腕捩1, universal name: ,
+position: [-1.7926947, 15.367414, 0.37986535], parent: 43, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 44 at rate 0.25, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+46) local name: 右腕捩2, universal name: ,
+position: [-2.1878812, 15.03511, 0.38206214], parent: 43, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 44 at rate 0.5, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+47) local name: 右腕捩3, universal name: ,
+position: [-2.583068, 14.702806, 0.38425893], parent: 43, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 44 at rate 0.75, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+48) local name: 左ひじ, universal name: ,
+position: [3.136329, 14.237581, 0.36429274], parent: 39, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(58), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+49) local name: 左手捩, universal name: wrist twist_L,
+position: [4.2010946, 13.397152, 0.3424723], parent: 48, transform level: 0,
+flags: Rotatable|Display|CanOperate|FixedAxis,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: Some([0.7848442, -0.6194843, -0.016083935]), local axis None, parent transform: None,
+inverse kinematics: None
+
+50) local name: 左手捩1, universal name: ,
+position: [3.7042038, 13.789352, 0.35265517], parent: 48, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 49 at rate 0.25, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+51) local name: 左手捩2, universal name: ,
+position: [4.059126, 13.50921, 0.3453817], parent: 48, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 49 at rate 0.5, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+52) local name: 左手捩3, universal name: ,
+position: [4.4140477, 13.229066, 0.33810824], parent: 48, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 49 at rate 0.75, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+53) local name: 右ひじ, universal name: ,
+position: [-3.136329, 14.237581, 0.36429274], parent: 44, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(60), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+54) local name: 右手捩, universal name: wrist twist_R,
+position: [-4.201095, 13.39715, 0.3424723], parent: 53, transform level: 0,
+flags: Rotatable|Display|CanOperate|FixedAxis,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: Some([-0.7848442, -0.6194843, -0.01608394]), local axis None, parent transform: None,
+inverse kinematics: None
+
+55) local name: 右手捩1, universal name: ,
+position: [-3.7042038, 13.789352, 0.35265517], parent: 53, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 54 at rate 0.25, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+56) local name: 右手捩2, universal name: ,
+position: [-4.059126, 13.50921, 0.3453817], parent: 53, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 54 at rate 0.5, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+57) local name: 右手捩3, universal name: ,
+position: [-4.4140477, 13.229066, 0.33810824], parent: 53, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 54 at rate 0.75, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+58) local name: 左手首, universal name: ,
+position: [4.9109387, 12.836866, 0.32792538], parent: 49, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(118), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+59) local name: 左ダミー, universal name: dummy_L,
+position: [5.127193, 12.344587, 0.32792538], parent: 58, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([-0.748281, -0.93812346, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+60) local name: 右手首, universal name: ,
+position: [-4.910939, 12.83687, 0.3279254], parent: 54, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(119), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+61) local name: 右ダミー, universal name: dummy_R,
+position: [-5.127193, 12.344587, 0.32792538], parent: 60, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.748281, -0.93812346, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+62) local name: 左親指０, universal name: ,
+position: [5.039637, 12.54373, 0.09445013], parent: 58, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate|LocalAxis,
+connection: index(63), additional: None, fixed axis: None, local axis x: [0.4759671, -0.69568956, -0.5380254] z: [-0.47559848, -0.045384984, -0.3620561], parent transform: None,
+inverse kinematics: None
+
+63) local name: 左親指１, universal name: ,
+position: [5.221858, 12.27739, -0.111529425], parent: 62, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(64), additional: None, fixed axis: None, local axis x: [0.4752421, -0.7570326, -0.44838217] z: [-0.24605612, -0.12828815, -0.04419873], parent transform: None,
+inverse kinematics: None
+
+64) local name: 左親指２, universal name: ,
+position: [5.368925, 12.04312, -0.2502845], parent: 63, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(120), additional: None, fixed axis: None, local axis x: [0.4401193, -0.7106774, -0.54884666] z: [-0.24825336, -0.124486215, -0.03788227], parent transform: None,
+inverse kinematics: None
+
+65) local name: 左中指１, universal name: ,
+position: [5.6552315, 12.243192, 0.22648874], parent: 58, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(66), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+66) local name: 左中指２, universal name: ,
+position: [5.8851676, 11.975023, 0.21636789], parent: 65, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(67), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+67) local name: 左中指３, universal name: ,
+position: [6.035996, 11.74939, 0.21385598], parent: 66, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(121), additional: None, fixed axis: None, local axis x: [0.5205013, -0.8535322, -0.023690505] z: [0.0123411855, -0.020225037, 0.99982345], parent transform: None,
+inverse kinematics: None
+
+68) local name: 左小指１, universal name: ,
+position: [5.536742, 12.2325, 0.60259175], parent: 58, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(69), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+69) local name: 左小指２, universal name: ,
+position: [5.763514, 12.012908, 0.5819648], parent: 68, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(70), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+70) local name: 左小指３, universal name: ,
+position: [5.8703527, 11.863556, 0.5635589], parent: 69, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(122), additional: None, fixed axis: None, local axis x: [0.5024128, -0.8602926, -0.0864755] z: [0.043611504, -0.074672945, 0.99625397], parent transform: None,
+inverse kinematics: None
+
+71) local name: 左人指１, universal name: ,
+position: [5.615787, 12.199713, 0.048317105], parent: 58, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(72), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+72) local name: 左人指２, universal name: ,
+position: [5.8348475, 11.961288, 0.044514183], parent: 71, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(73), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+73) local name: 左人指３, universal name: ,
+position: [5.949007, 11.805028, 0.04318806], parent: 72, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(123), additional: None, fixed axis: None, local axis x: [0.5965938, -0.8024775, -0.010280544] z: [0.006142898, -0.008243451, 0.99994695], parent transform: None,
+inverse kinematics: None
+
+74) local name: 左薬指１, universal name: ,
+position: [5.632626, 12.232999, 0.40889525], parent: 58, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(75), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+75) local name: 左薬指２, universal name: ,
+position: [5.85461, 11.99713, 0.39936912], parent: 74, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(76), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+76) local name: 左薬指３, universal name: ,
+position: [6.0090513, 11.789546, 0.39043877], parent: 75, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(124), additional: None, fixed axis: None, local axis x: [0.51988727, -0.8532263, -0.04149918] z: [0.02159788, -0.035444036, 0.99930286], parent transform: None,
+inverse kinematics: None
+
+77) local name: 右親指０, universal name: ,
+position: [-5.039637, 12.54373, 0.09445013], parent: 60, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate|LocalAxis,
+connection: index(78), additional: None, fixed axis: None, local axis x: [-0.4759671, -0.69568956, -0.5380254] z: [0.47559848, -0.045384984, -0.3620561], parent transform: None,
+inverse kinematics: None
+
+78) local name: 右親指１, universal name: ,
+position: [-5.221858, 12.27739, -0.111529425], parent: 77, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(79), additional: None, fixed axis: None, local axis x: [-0.4752421, -0.7570326, -0.44838217] z: [0.24605612, -0.12828815, -0.04419873], parent transform: None,
+inverse kinematics: None
+
+79) local name: 右親指２, universal name: ,
+position: [-5.368925, 12.04312, -0.2502845], parent: 78, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(125), additional: None, fixed axis: None, local axis x: [-0.4401193, -0.7106774, -0.54884666] z: [0.24825336, -0.124486215, -0.03788227], parent transform: None,
+inverse kinematics: None
+
+80) local name: 右中指１, universal name: ,
+position: [-5.6552315, 12.243192, 0.22648874], parent: 60, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(81), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+81) local name: 右中指２, universal name: ,
+position: [-5.8851676, 11.975023, 0.21636789], parent: 80, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(82), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+82) local name: 右中指３, universal name: ,
+position: [-6.035996, 11.74939, 0.21385598], parent: 81, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(126), additional: None, fixed axis: None, local axis x: [-0.5205012, -0.8535322, -0.023690507] z: [-0.012332253, -0.020227592, 0.9997192], parent transform: None,
+inverse kinematics: None
+
+83) local name: 右小指１, universal name: ,
+position: [-5.536742, 12.2325, 0.60259175], parent: 60, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(84), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+84) local name: 右小指２, universal name: ,
+position: [-5.763514, 12.012908, 0.5819648], parent: 83, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(85), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+85) local name: 右小指３, universal name: ,
+position: [-5.8703527, 11.863556, 0.5635589], parent: 84, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(127), additional: None, fixed axis: None, local axis x: [-0.50241274, -0.86029273, -0.08647549] z: [-0.043624707, -0.07469926, 0.99659264], parent transform: None,
+inverse kinematics: None
+
+86) local name: 右人指１, universal name: ,
+position: [-5.615787, 12.199713, 0.048317105], parent: 60, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(87), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+87) local name: 右人指２, universal name: ,
+position: [-5.8348475, 11.961288, 0.044514183], parent: 86, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(88), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+88) local name: 右人指３, universal name: ,
+position: [-5.949007, 11.805028, 0.04318806], parent: 87, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(128), additional: None, fixed axis: None, local axis x: [-0.5965937, -0.8024776, -0.010280544] z: [-0.00613109, -0.008252231, 0.99994713], parent transform: None,
+inverse kinematics: None
+
+89) local name: 右薬指１, universal name: ,
+position: [-5.632626, 12.232999, 0.40889525], parent: 60, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(90), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+90) local name: 右薬指２, universal name: ,
+position: [-5.85461, 11.99713, 0.39936912], parent: 89, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(91), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+91) local name: 右薬指３, universal name: ,
+position: [-6.0090513, 11.789546, 0.39043877], parent: 90, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate|LocalAxis,
+connection: index(129), additional: None, fixed axis: None, local axis x: [-0.51988757, -0.8532263, -0.041499186] z: [-0.021612413, -0.0354695, 1.0000083], parent transform: None,
+inverse kinematics: None
+
+92) local name: 右袖, universal name: center,
+position: [-3.945414, 13.53884, 0.3650396], parent: 53, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate|AddRotation|AddMovement,
+connection: offset([-1.2, -0.95, 0.0]), additional: 60 at rate 0.2, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+93) local name: 左袖, universal name: center,
+position: [3.945414, 13.53884, 0.3650396], parent: 48, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate|AddRotation,
+connection: offset([1.2, -0.95, 0.0]), additional: 58 at rate 0.2, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+94) local name: 腰キャンセル左, universal name: ,
+position: [1.005733, 11.14459, 0.17496231], parent: 31, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 4 at rate -1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+95) local name: 左足, universal name: ,
+position: [1.005733, 11.14459, 0.17496231], parent: 94, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(98), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+96) local name: 腰キャンセル右, universal name: ,
+position: [-1.005733, 11.14459, 0.17496231], parent: 31, transform level: 0,
+flags: Rotatable|CanOperate|AddRotation,
+connection: offset([0.0, 0.0, 0.0]), additional: 4 at rate -1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+97) local name: 右足, universal name: ,
+position: [-1.005733, 11.14459, 0.17496231], parent: 96, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(99), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+98) local name: 左ひざ, universal name: ,
+position: [0.87862086, 5.9109087, 0.13920057], parent: 95, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(100), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+99) local name: 右ひざ, universal name: ,
+position: [-0.87862086, 5.9109087, 0.13920057], parent: 97, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(101), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+100) local name: 左足首, universal name: ,
+position: [0.99815637, 0.9799259, 0.8158762], parent: 98, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(102), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+101) local name: 右足首, universal name: ,
+position: [-0.99815637, 0.9799259, 0.8158762], parent: 99, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(103), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+102) local name: 左つま先, universal name: ,
+position: [0.9981432, 0.014833513, -1.3706429], parent: 100, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+103) local name: 右つま先, universal name: ,
+position: [-0.9981432, 0.014833513, -1.3706429], parent: 101, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+104) local name: 左足IK親, universal name: leg IKP_L,
+position: [0.998143, 0.0, 0.8180784], parent: 1, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(105), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+105) local name: 左足ＩＫ, universal name: ,
+position: [0.998143, 0.96219003, 0.8180784], parent: 104, transform level: 1,
+flags: Connection|Rotatable|Movable|Display|CanOperate|InverseKinematics,
+connection: index(133), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: index: 100 iterations: 40 limit angle: 2.0000007
+link: 98 limits: Some(([-3.1415927, 0.0, 0.0], [-0.008726646, 0.0, 0.0]))
+link: 95 limits: None
+
+106) local name: 右足IK親, universal name: leg IKP_R,
+position: [-0.998143, 0.0, 0.8180784], parent: 1, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(107), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+107) local name: 右足ＩＫ, universal name: ,
+position: [-0.998143, 0.96219003, 0.8180784], parent: 106, transform level: 1,
+flags: Connection|Rotatable|Movable|Display|CanOperate|InverseKinematics,
+connection: index(134), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: index: 101 iterations: 40 limit angle: 2.0000007
+link: 99 limits: Some(([-3.1415927, 0.0, 0.0], [-0.008726646, 0.0, 0.0]))
+link: 97 limits: None
+
+108) local name: 左つま先ＩＫ, universal name: ,
+position: [0.998143, 0.0, -1.4042097], parent: 105, transform level: 1,
+flags: Connection|Rotatable|Movable|Display|CanOperate|InverseKinematics,
+connection: index(131), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: index: 102 iterations: 3 limit angle: 4
+link: 100 limits: None
+
+109) local name: 右つま先ＩＫ, universal name: ,
+position: [-0.998143, 0.0, -1.4042097], parent: 107, transform level: 1,
+flags: Connection|Rotatable|Movable|Display|CanOperate|InverseKinematics,
+connection: index(132), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: index: 103 iterations: 3 limit angle: 4
+link: 101 limits: None
+
+110) local name: 舌0, universal name: ,
+position: [0.0, 17.30424, -0.05254838], parent: 8, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(111), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+111) local name: 舌1, universal name: ,
+position: [0.0, 17.313917, -0.28828192], parent: 110, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(112), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+112) local name: 舌2, universal name: ,
+position: [0.0, 17.31308, -0.4188667], parent: 111, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.0475, -0.095]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+113) local name: 上歯, universal name: ,
+position: [0.0, 17.40641, -0.11124417], parent: 8, transform level: 0,
+flags: Rotatable|Movable|Display|CanOperate,
+connection: offset([0.0, -0.05, -0.5]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+114) local name: 頭先, universal name: ,
+position: [0.0, 19.155628, 0.3008863], parent: 8, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+115) local name: 右目先, universal name: ,
+position: [-0.52973837, 17.987345, -0.496976], parent: 10, transform level: 2,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+116) local name: 左目先, universal name: ,
+position: [0.52973837, 17.987345, -0.496976], parent: 9, transform level: 2,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+117) local name: 両目先, universal name: ,
+position: [0.0, 20.050837, -1.2659094], parent: 11, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+118) local name: 左手先, universal name: ,
+position: [5.508192, 12.319505, 0.31456837], parent: 58, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+119) local name: 右手先, universal name: ,
+position: [-5.508192, 12.319505, 0.31456837], parent: 60, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+120) local name: 左親指２先, universal name: ,
+position: [5.469572, 11.880602, -0.37579536], parent: 64, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+121) local name: 左中指３先, universal name: ,
+position: [6.1744747, 11.522308, 0.20755315], parent: 67, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+122) local name: 左小指３先, universal name: ,
+position: [5.9819384, 11.672485, 0.5443527], parent: 70, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+123) local name: 左人指３先, universal name: ,
+position: [6.0949893, 11.608667, 0.040672485], parent: 73, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+124) local name: 左薬指３先, universal name: ,
+position: [6.145568, 11.565498, 0.37954155], parent: 76, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+125) local name: 右親指２先, universal name: ,
+position: [-5.469572, 11.880602, -0.37579536], parent: 79, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+126) local name: 右中指３先, universal name: ,
+position: [-6.1744747, 11.522308, 0.20755315], parent: 82, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+127) local name: 右小指３先, universal name: ,
+position: [-5.9819384, 11.672485, 0.5443527], parent: 85, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+128) local name: 右人指３先, universal name: ,
+position: [-6.0949893, 11.608667, 0.040672485], parent: 88, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+129) local name: 右薬指３先, universal name: ,
+position: [-6.145568, 11.565498, 0.37954155], parent: 91, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+130) local name: 下半身先, universal name: ,
+position: [0.0, 11.184709, 0.10087296], parent: 31, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+131) local name: 左つま先ＩＫ先, universal name: ,
+position: [0.998143, -0.7947415, -1.4042097], parent: 108, transform level: 1,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+132) local name: 右つま先ＩＫ先, universal name: ,
+position: [-0.998143, -0.7947415, -1.4042097], parent: 109, transform level: 1,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+133) local name: 左足ＩＫ先, universal name: ,
+position: [0.998143, 1.0410377, 1.7759159], parent: 105, transform level: 1,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+134) local name: 右足ＩＫ先, universal name: ,
+position: [-0.998143, 1.0410377, 1.7759159], parent: 107, transform level: 1,
+flags: Connection|Rotatable|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+135) local name: センター先, universal name: ,
+position: [0.0, 0.0, 0.0], parent: 1, transform level: 0,
+flags: Connection|Rotatable|CanOperate,
+connection: index(2), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+136) local name: スカート_0_0, universal name: Skirt_0_0,
+position: [-0.38811567, 11.744199, -1.223967], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(152), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+137) local name: スカート_0_1, universal name: Skirt_0_1,
+position: [0.28179878, 11.7441435, -1.2988832], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(153), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+138) local name: スカート_0_2, universal name: Skirt_0_2,
+position: [0.7745512, 11.744304, -1.1993287], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(154), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+139) local name: スカート_0_3, universal name: Skirt_0_3,
+position: [1.3503069, 11.744496, -0.7074102], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(155), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+140) local name: スカート_0_4, universal name: Skirt_0_4,
+position: [1.5585623, 11.744534, -0.26861584], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(156), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+141) local name: スカート_0_5, universal name: Skirt_0_5,
+position: [1.614667, 11.744344, 0.33582655], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(157), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+142) local name: スカート_0_6, universal name: Skirt_0_6,
+position: [1.4225575, 11.74402, 0.9311271], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(158), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+143) local name: スカート_0_7, universal name: Skirt_0_7,
+position: [0.9230591, 11.743773, 1.3289857], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(159), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+144) local name: スカート_0_8, universal name: Skirt_0_8,
+position: [0.44889468, 11.743798, 1.5001087], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(160), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+145) local name: スカート_0_9, universal name: Skirt_0_9,
+position: [-0.3668471, 11.744152, 1.5684903], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(161), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+146) local name: スカート_0_10, universal name: Skirt_0_10,
+position: [-0.9046013, 11.744726, 1.3767899], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(162), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+147) local name: スカート_0_11, universal name: Skirt_0_11,
+position: [-1.3186394, 11.74179, 0.8807838], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(163), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+148) local name: スカート_0_12, universal name: Skirt_0_12,
+position: [-1.5905789, 11.745556, 0.36452296], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(164), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+149) local name: スカート_0_13, universal name: Skirt_0_13,
+position: [-1.6173439, 11.745428, -0.24478233], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(165), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+150) local name: スカート_0_14, universal name: Skirt_0_14,
+position: [-1.4142411, 11.745009, -0.69552076], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(166), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+151) local name: スカート_0_15, universal name: Skirt_0_15,
+position: [-0.92168504, 11.744522, -1.0587523], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(167), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+152) local name: スカート_1_0, universal name: Skirt_1_0,
+position: [-0.5580877, 9.9065695, -1.6420197], parent: 136, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+153) local name: スカート_1_1, universal name: Skirt_1_1,
+position: [0.4174817, 9.92752, -1.7498307], parent: 137, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+154) local name: スカート_1_2, universal name: Skirt_1_2,
+position: [1.3352, 10.012114, -1.5274223], parent: 138, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+155) local name: スカート_1_3, universal name: Skirt_1_3,
+position: [2.0549152, 10.109715, -1.007295], parent: 139, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+156) local name: スカート_1_4, universal name: Skirt_1_4,
+position: [2.4666207, 10.167711, -0.26727453], parent: 140, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+157) local name: スカート_1_5, universal name: Skirt_1_5,
+position: [2.493624, 10.160043, 0.6989541], parent: 141, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+158) local name: スカート_1_6, universal name: Skirt_1_6,
+position: [2.1458282, 10.105106, 1.5210785], parent: 142, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+159) local name: スカート_1_7, universal name: Skirt_1_7,
+position: [1.3869302, 10.049021, 2.1010532], parent: 143, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+160) local name: スカート_1_8, universal name: Skirt_1_8,
+position: [0.58831406, 10.038081, 2.380368], parent: 144, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+161) local name: スカート_1_9, universal name: Skirt_1_9,
+position: [-0.5223273, 10.086782, 2.4362085], parent: 145, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+162) local name: スカート_1_10, universal name: Skirt_1_10,
+position: [-1.20429, 10.172329, 2.1069412], parent: 146, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+163) local name: スカート_1_11, universal name: Skirt_1_11,
+position: [-1.9177957, 10.243942, 1.4440529], parent: 147, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+164) local name: スカート_1_12, universal name: Skirt_1_12,
+position: [-2.3567443, 10.252962, 0.54982114], parent: 148, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+165) local name: スカート_1_13, universal name: Skirt_1_13,
+position: [-2.3565047, 10.193615, -0.09524822], parent: 149, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+166) local name: スカート_1_14, universal name: Skirt_1_14,
+position: [-2.0149186, 10.079336, -0.73731637], parent: 150, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+167) local name: スカート_1_15, universal name: Skirt_1_15,
+position: [-1.383552, 9.9652815, -1.2799929], parent: 151, transform level: 0,
+flags: Rotatable|CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+168) local name: 右Y, universal name: ,
+position: [-0.4809645, 12.40468, -1.128461], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(169), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+169) local name: 右Y先, universal name: ,
+position: [-1.042193, 10.99305, -2.043349], parent: 168, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+170) local name: 左Y, universal name: ,
+position: [0.4809645, 12.40468, -1.128461], parent: 31, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(171), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+171) local name: 左Y先, universal name: ,
+position: [1.042193, 10.99305, -2.043349], parent: 170, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+172) local name: 右足D, universal name: D,
+position: [-1.005733, 11.14459, 0.17496231], parent: 96, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 97 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+173) local name: 右ひざD, universal name: D,
+position: [-0.87862086, 5.9109087, 0.13920057], parent: 172, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 99 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+174) local name: 右足首D, universal name: D,
+position: [-0.99815637, 0.9799259, 0.8158762], parent: 173, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 101 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+175) local name: 右足先EX, universal name: toe2_R,
+position: [-0.9981485, 0.47051448, -0.40952206], parent: 174, transform level: 1,
+flags: Rotatable|Display|CanOperate,
+connection: offset([0.000001657161, -0.004388492, -0.9999904]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+176) local name: 左足D, universal name: D,
+position: [1.005733, 11.14459, 0.17496231], parent: 94, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 95 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+177) local name: 左ひざD, universal name: D,
+position: [0.87862086, 5.9109087, 0.13920057], parent: 176, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 98 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+178) local name: 左足首D, universal name: D,
+position: [0.99815637, 0.9799259, 0.8158762], parent: 177, transform level: 1,
+flags: Connection|Rotatable|Display|CanOperate|AddRotation,
+connection: index(-1), additional: 100 at rate 1, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+179) local name: 左足先EX, universal name: toe2_L,
+position: [0.9981485, 0.47051448, -0.40952206], parent: 178, transform level: 1,
+flags: Rotatable|Display|CanOperate,
+connection: offset([-0.000001657161, -0.004388492, -0.9999904]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+180) local name: 右H1, universal name: ,
+position: [-0.9224839, 19.17788, 1.127217], parent: 8, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(181), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+181) local name: 右H2, universal name: ,
+position: [-1.3178408, 18.888248, 1.2552166], parent: 180, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(182), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+182) local name: 右H3, universal name: ,
+position: [-1.388471, 18.299889, 1.3997166], parent: 181, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(183), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+183) local name: 右H4, universal name: ,
+position: [-1.4684842, 17.559, 1.6737167], parent: 182, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(184), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+184) local name: 右H5, universal name: ,
+position: [-1.5699904, 16.810095, 1.9797167], parent: 183, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(185), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+185) local name: 右H6, universal name: ,
+position: [-1.6678793, 16.145649, 2.2417166], parent: 184, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(186), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+186) local name: 右H7, universal name: ,
+position: [-1.7689562, 15.541125, 2.4932165], parent: 185, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(187), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+187) local name: 右H8, universal name: ,
+position: [-1.9248749, 14.853574, 2.7857165], parent: 186, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(188), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+188) local name: 右H9, universal name: ,
+position: [-2.126633, 14.076107, 3.1102164], parent: 187, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(189), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+189) local name: 右H10, universal name: ,
+position: [-2.3437805, 13.203333, 3.4487164], parent: 188, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(190), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+190) local name: 右H11, universal name: ,
+position: [-2.5787306, 12.2411, 3.8407166], parent: 189, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(191), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+191) local name: 右H12, universal name: ,
+position: [-2.7998338, 11.224199, 4.2237167], parent: 190, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(192), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+192) local name: 右H13, universal name: ,
+position: [-2.9719899, 10.231271, 4.4912167], parent: 191, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(193), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+193) local name: 右H14, universal name: ,
+position: [-3.0664685, 9.3460245, 4.6787167], parent: 192, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(194), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+194) local name: 右H15, universal name: ,
+position: [-3.0560348, 8.580387, 4.7632165], parent: 193, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(195), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+195) local name: 右H16, universal name: ,
+position: [-2.9227538, 7.921579, 4.754717], parent: 194, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(196), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+196) local name: 右H17, universal name: ,
+position: [-2.762643, 7.3378243, 4.6102166], parent: 195, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(197), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+197) local name: 右H18, universal name: ,
+position: [-2.1644146, 6.194272, 4.338216], parent: 196, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(198), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+198) local name: 右H19, universal name: ,
+position: [-1.4257079, 5.4429693, 4.349217], parent: 197, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(199), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+199) local name: 右H20, universal name: ,
+position: [-0.8291591, 5.0115314, 4.5757165], parent: 198, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(200), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+200) local name: 右H先, universal name: ,
+position: [-0.18987489, 4.7860765, 4.9712167], parent: 199, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+201) local name: 右H2 1, universal name: ,
+position: [-3.3247485, 7.599252, 5.271217], parent: 194, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(202), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+202) local name: 右H2 2, universal name: ,
+position: [-3.1478403, 6.861295, 5.4047165], parent: 201, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(203), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+203) local name: 右H2 3, universal name: ,
+position: [-2.9042451, 6.1946635, 5.4382167], parent: 202, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(204), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+204) local name: 右H2 4, universal name: ,
+position: [-2.5326965, 5.6191797, 5.3717165], parent: 203, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(205), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+205) local name: 右H2 5, universal name: ,
+position: [-2.109096, 5.1666265, 5.253717], parent: 204, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(206), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+206) local name: 右H2先, universal name: ,
+position: [-1.3680788, 4.6260004, 4.8192167], parent: 205, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+207) local name: 右H3 1, universal name: ,
+position: [-2.884829, 5.6948, 3.6487167], parent: 196, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(208), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+208) local name: 右H3 2, universal name: ,
+position: [-2.6774979, 5.123872, 3.6922166], parent: 207, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(209), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+209) local name: 右H3先, universal name: ,
+position: [-2.438684, 4.6188006, 3.8892167], parent: 208, transform level: 0,
+flags: Connection|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+210) local name: 右H4 1, universal name: ,
+position: [-3.5609522, 6.3467236, 3.3907168], parent: 196, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(211), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+211) local name: 右H4先, universal name: ,
+position: [-3.883885, 5.8900847, 2.8552167], parent: 210, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+212) local name: 右H5 1, universal name: ,
+position: [-1.5813795, 6.7086935, 4.588217], parent: 196, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(213), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+213) local name: 右H5 2, universal name: ,
+position: [-1.3619757, 6.445357, 4.4157166], parent: 212, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(214), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+214) local name: 右H5 3, universal name: ,
+position: [-1.1511033, 6.218013, 4.242217], parent: 213, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(215), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+215) local name: 右H5先, universal name: ,
+position: [-0.8254868, 5.9194994, 3.969217], parent: 214, transform level: 0,
+flags: CanOperate,
+connection: offset([0.0, 0.0, 0.0]), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+216) local name: 左H1, universal name: ,
+position: [0.9224839, 19.17788, 1.127217], parent: 8, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(217), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+217) local name: 左H2, universal name: ,
+position: [1.3178408, 18.888248, 1.2552166], parent: 216, transform level: 0,
+flags: Connection|Rotatable|Movable|Display|CanOperate,
+connection: index(218), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+218) local name: 左H3, universal name: ,
+position: [1.388471, 18.299889, 1.3997166], parent: 217, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(219), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+219) local name: 左H4, universal name: ,
+position: [1.4684842, 17.559, 1.6737167], parent: 218, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(220), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+220) local name: 左H5, universal name: ,
+position: [1.5699904, 16.810095, 1.9797167], parent: 219, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(221), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+221) local name: 左H6, universal name: ,
+position: [1.6678793, 16.145649, 2.2417166], parent: 220, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(222), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+222) local name: 左H7, universal name: ,
+position: [1.7689562, 15.541125, 2.4932165], parent: 221, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(223), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+223) local name: 左H8, universal name: ,
+position: [1.9248749, 14.853574, 2.7857165], parent: 222, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(224), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+224) local name: 左H9, universal name: ,
+position: [2.126633, 14.076107, 3.1102164], parent: 223, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(225), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+225) local name: 左H10, universal name: ,
+position: [2.3437805, 13.203333, 3.4487164], parent: 224, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(226), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+226) local name: 左H11, universal name: ,
+position: [2.5787308, 12.2411, 3.8407166], parent: 225, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(227), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+227) local name: 左H12, universal name: ,
+position: [2.799834, 11.224199, 4.2237167], parent: 226, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(228), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+228) local name: 左H13, universal name: ,
+position: [2.97199, 10.231271, 4.4912167], parent: 227, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(229), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+229) local name: 左H14, universal name: ,
+position: [3.0664687, 9.3460245, 4.6787167], parent: 228, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(230), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+230) local name: 左H15, universal name: ,
+position: [3.056035, 8.580387, 4.7632165], parent: 229, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(231), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+231) local name: 左H16, universal name: ,
+position: [2.922754, 7.921579, 4.754717], parent: 230, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(232), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+232) local name: 左H17, universal name: ,
+position: [2.7626433, 7.3378243, 4.6102166], parent: 231, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(233), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+233) local name: 左H18, universal name: ,
+position: [2.164415, 6.194272, 4.338216], parent: 232, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(234), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+234) local name: 左H19, universal name: ,
+position: [1.4257082, 5.4429693, 4.349217], parent: 233, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(235), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+235) local name: 左H20, universal name: ,
+position: [0.8291593, 5.0115314, 4.5757165], parent: 234, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+236) local name: 左H2 1, universal name: ,
+position: [3.3247488, 7.599252, 5.271217], parent: 230, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(237), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+237) local name: 左H2 2, universal name: ,
+position: [3.1478405, 6.861295, 5.4047165], parent: 236, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(238), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+238) local name: 左H2 3, universal name: ,
+position: [2.9042454, 6.1946635, 5.4382167], parent: 237, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(239), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+239) local name: 左H2 4, universal name: ,
+position: [2.5326967, 5.6191797, 5.3717165], parent: 238, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(240), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+240) local name: 左H2 5, universal name: ,
+position: [2.1090963, 5.1666265, 5.253717], parent: 239, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+241) local name: 左H3 1, universal name: ,
+position: [2.8848293, 5.6948, 3.6487167], parent: 232, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(242), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+242) local name: 左H3 2, universal name: ,
+position: [2.6774983, 5.123872, 3.6922166], parent: 241, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+243) local name: 左H4 1, universal name: ,
+position: [3.5609524, 6.3467236, 3.3907168], parent: 232, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+244) local name: 左H5 1, universal name: ,
+position: [1.5813798, 6.7086935, 4.588217], parent: 232, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(245), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+245) local name: 左H5 2, universal name: ,
+position: [1.3619759, 6.445357, 4.4157166], parent: 244, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(246), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None
+
+246) local name: 左H5 3, universal name: ,
+position: [1.1511035, 6.218013, 4.242217], parent: 245, transform level: 0,
+flags: Connection|Rotatable|Display|CanOperate,
+connection: index(-1), additional: None, fixed axis: None, local axis None, parent transform: None,
+inverse kinematics: None

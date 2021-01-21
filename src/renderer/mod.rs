@@ -19,7 +19,6 @@ pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
-pub mod text_cache;
 mod debug_renderer;
 
 use crate::utils::*;

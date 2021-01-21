@@ -1,0 +1,247 @@
+操作中心,Operation Center
+全ての親,All parents
+センター,Center
+グルーブ,Groove
+腰,Waist
+上半身,Upper body
+上半身2,Upper body 2
+首,Neck
+頭,Head
+左目,Left eye
+右目,Right eye
+両目,Both eyes
+眼鏡,Glasses
+あご,chin
+左眉,Left eyebrow
+右眉,Right eyebrow
+左眉頭,Left eyebrow head
+右眉頭,Right eyebrow head
+前髪1,Bangs 1
+右前髪,Right forelock
+右前髪1,Right forelock 1
+左前髪,Left bangs
+左前髪1,Left forelock1
+ﾈｸﾀｲ1,Necktie 1
+ﾈｸﾀｲ2,Necktie 2
+ﾈｸﾀｲ3,Necktie 3
+ﾈｸﾀｲ4,Necktie 4
+左r,Left r
+左r先,Left r first
+右r,Right r
+右r先,Right r first
+下半身,Lower body
+左肩P,Left shoulder P
+左肩,Left shoulder
+左肩C,Left shoulder C
+右肩P,Right shoulder P
+右肩,Right shoulder
+右肩C,Right shoulder C
+左腕,left arm
+左腕捩,Left arm torsion
+左腕捩1,Left arm wrench 1
+左腕捩2,left arm wrench 2
+左腕捩3,left arm wrench 3
+右腕,right arm
+右腕捩,right arm wrench
+右腕捩1,right arm wrench 1
+右腕捩2,right arm wrench 2
+右腕捩3,right arm wrench 3
+左ひじ,left elbow
+左手捩,left hand wrench
+左手捩1,left hand screw1
+左手捩2,left hand screw2
+左手捩3,Left hand torsion 3
+右ひじ,Right elbow
+右手捩,right hand wrench
+右手捩1,right hand wrench 1
+右手捩2,Right hand wrench 2
+右手捩3,Right hand wrench 3
+左手首,Left wrist
+左ダミー,Left dummy
+右手首,Right wrist
+右ダミー,Right dummy
+左親指０,Left thumb 0
+左親指１,Left thumb 1
+左親指２,Left thumb 2
+左中指１,Left middle finger 1
+左中指２,Left middle finger 2
+左中指３,Left middle finger 3
+左小指１,Left little finger 1
+左小指２,Left little finger 2
+左小指３,Left little finger 3
+左人指１,Left index finger 1
+左人指２,Left thumb 2
+左人指３,Left index finger 3
+左薬指１,Left ring finger 1
+左薬指２,Left ring finger 2
+左薬指３,Left ring finger 3
+右親指０,Right thumb 0
+右親指１,Right thumb1
+右親指２,Right thumb2
+右中指１,Right middle finger1
+右中指２,Right middle finger 2
+右中指３,Right middle finger 3
+右小指１,Right little finger 1
+右小指２,Right little finger 2
+右小指３,Right little finger 3
+右人指１,Right index finger 1
+右人指２,Right index finger 2
+右人指３,Right index finger 3
+右薬指１,Right ring finger 1
+右薬指２,Right ring finger 2
+右薬指３,Right ring finger 3
+右袖,Right sleeve
+左袖,Left sleeve
+腰キャンセル左,Left hip cancel
+左足,Left leg
+腰キャンセル右,Right hip cancel
+右足,Right leg
+左ひざ,Left knee
+右ひざ,Right knee
+左足首,Left ankle
+右足首,Right ankle
+左つま先,Left toe
+右つま先,Right toe
+左足IK親,Left foot IK Parent
+左足ＩＫ,Left foot IK
+右足IK親,Right foot IK Parent
+右足ＩＫ,Right foot IK
+左つま先ＩＫ,Left toe IK
+右つま先ＩＫ,Right toe IK
+舌0,Tongue 0
+舌1,Tongue 1
+舌2,Tongue 2
+上歯,Upper tooth
+頭先,Head tip
+右目先,Right eye tip
+左目先,Left eye tip
+両目先,Both eye tips
+左手先,Left hand tip
+右手先,Right hand tip
+左親指２先,Left thumb 2 tips
+左中指３先,Left middle finger 3 tips
+左小指３先,Left pinky 3 tips
+左人指３先,Left thumb 3 tips
+左薬指３先,Left ring finger 3 tips
+右親指２先,Right thumb 2 tips
+右中指３先,Right middle finger 3 tips
+右小指３先,Right pinky 3 tips
+右人指３先,Right thumb 3 tips
+右薬指３先,Right ring finger 3 tips
+下半身先,Lower body tip
+左つま先ＩＫ先,Left toe IK tip
+右つま先ＩＫ先,Right toe IK tip
+左足ＩＫ先,Left toe IK tip
+右足ＩＫ先,Right foot IK tip
+センター先,Center tip
+スカート_0_0,Skirt_0_0
+スカート_0_1,Skirt_0_1
+スカート_0_2,Skirt_0_2
+スカート_0_3,Skirt_0_3
+スカート_0_4,skirt_0_4
+スカート_0_5,skirt_0_5
+スカート_0_6,skirt_0_6
+スカート_0_7,skirt_0_7
+スカート_0_8,skirt_0_8
+スカート_0_9,skirt_0_9
+スカート_0_10,skirt_0_10
+スカート_0_11,skirt_0_11
+スカート_0_12,skirt_0_12
+スカート_0_13,skirt_0_13
+スカート_0_14,skirt_0_14
+スカート_0_15,skirt_0_15
+スカート_1_0,skirt_1_0
+スカート_1_1,skirt_1_1
+スカート_1_2,skirt_1_2
+スカート_1_3,Skirt_1_3
+スカート_1_4,Skirt_1_4
+スカート_1_5,Skirt_1_5
+スカート_1_6,Skirt_1_6
+スカート_1_7,Skirt_1_7
+スカート_1_8,skirt_1_8
+スカート_1_9,skirt_1_9
+スカート_1_10,skirt_1_10
+スカート_1_11,skirt_1_11
+スカート_1_12,skirt_1_12
+スカート_1_13,skirt_1_13
+スカート_1_14,skirt_1_14
+スカート_1_15,skirt_1_15
+右Y,Right Y
+右Y先,Right Y ahead
+左Y,Left Y
+左Y先,Left Y tip
+右足D,Right leg D
+右ひざD,Right Knee D
+右足首D,Right Ankle D
+右足先EX,Right Toe EX
+左足D,Left Foot D
+左ひざD,Left Knee D
+左足首D,Left Ankle D
+左足先EX,Left Toe EX
+右H1,Right H1
+右H2,Right H2
+右H3,Right H3
+右H4,Right H4
+右H5,Right H5
+右H6,Right H6
+右H7,Right H7
+右H8,Right H8
+右H9,Right H9
+右H10,Right H10
+右H11,Right H11
+右H12,Right H12
+右H13,Right H13
+右H14,Right H14
+右H15,Right H15
+右H16,Right H16
+右H17,Right H17
+右H18,Right H18
+右H19,Right H19
+右H20,Right H20
+右H先,Right H first
+右H2 1,Right H2 1
+右H2 2,Right H2 2
+右H2 3,Right H2 3
+右H2 4,Right H2 4
+右H2 5,Right H2 5
+右H2先,Right H2 first
+右H3 1,Right H3 1
+右H3 2,Right H3 2
+右H3先,Right H3 first
+右H4 1,Right H4 1
+右H4先,Right H4 first
+右H5 1,Right H5 1
+右H5 2,Right H5 2
+右H5 3,Right H5 3
+右H5先,Right H5 first
+左H1,Left H1
+左H2,Left H2
+左H3,Left H3
+左H4,Left H4
+左H5,Left H5
+左H6,Left H6
+左H7,Left H7
+左H8,Left H8
+左H9,Left H9
+左H10,Left H10
+左H11,Left H11
+左H12,Left H12
+左H13,Left H13
+左H14,Left H14
+左H15,Left H15
+左H16,Left H16
+左H17,Left H17
+左H18,Left H18
+左H19,Left H19
+左H20,Left H20
+左H2 1,Left H2 1
+左H2 2,Left H2 2
+左H2 3,Left H2 3
+左H2 4,Left H2 4
+左H2 5,Left H2 5
+左H3 1,Left H3 1
+左H3 2,Left H3 2
+左H4 1,Left H4 1
+左H5 1,Left H5 1
+左H5 2,Left H5 2
+左H5 3,Left H5 3

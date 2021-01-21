@@ -8,11 +8,13 @@ use vulkano::device::Queue;
 use vulkano::descriptor::DescriptorSet;
 use vulkano::{memory, command_buffer};
 
+mod text_cache;
+
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
-use super::text_cache::{TextCache, TextCacheError, TextCacheGetError};
 use super::CommonsVBO;
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
+use text_cache::{TextCache, TextCacheError, TextCacheGetError};
 
 pub struct DebugRenderer {
 	pipeline: Arc<DebugPipeline>,
@@ -186,6 +188,11 @@ impl DebugRenderer {
 		let edges = (line.width.ln() * 4.5).max(2.0) as u32;
 		let from = line.from.project(viewproj);
 		let to = line.to.project(viewproj);
+		
+		if from.z < 0.0 || to.z < 0.0 || from.z > 1.0 || to.z > 1.0 {
+			return
+		}
+		
 		let dir = (from - to).truncate().normalize();
 		let mut dir = Rad::atan2(dir.x, dir.y).0;
 		if !dir.is_normal() { dir = 0.0 }

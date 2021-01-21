@@ -42,6 +42,16 @@ pub fn set_flag<T>(key: &str, value: T)
 	     .insert(key.to_string(), Box::new(value));
 }
 
+#[allow(unused_macros)]
+macro_rules! dprint {
+	($( $args:expr ),*) => { if crate::debug::debug() { print!( $( $args ),* ); } }
+}
+
+#[allow(unused_macros)]
+macro_rules! dprintln {
+	($( $args:expr ),*) => { if crate::debug::debug() { println!( $( $args ),* ); } }
+}
+
 #[derive(Copy, Clone)]
 pub enum DebugPosition {
 	Screen(Vector2<f32>),
@@ -158,12 +168,18 @@ pub fn draw_text(text: impl Into<String>, position: impl Into<DebugPosition>, of
 	})
 }
 
-#[allow(unused_macros)]
-macro_rules! dprint {
-	($( $args:expr ),*) => { if crate::debug::debug() { print!( $( $args ),* ); } }
+fn split_comma(line: &str) -> Option<(&str, &str)> {
+	let mut splitter = line.splitn(2, ',');
+	let first = splitter.next()?;
+	let second = splitter.next()?;
+	Some((first, second))
 }
 
-#[allow(unused_macros)]
-macro_rules! dprintln {
-	($( $args:expr ),*) => { if crate::debug::debug() { println!( $( $args ),* ); } }
+lazy_static! {
+	static ref TRANSLATIONS: HashMap<&'static str, &'static str> = include_str!("./translations.txt").lines().filter_map(split_comma).collect();
+}
+
+pub fn translate(text: &str) -> Option<&'static str> {
+	TRANSLATIONS.get(text)
+	            .cloned() // Remove double ref
 }

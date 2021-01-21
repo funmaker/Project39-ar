@@ -18,5 +18,5 @@ Work in progress, might be incomplete...
 ## Acknowledgments
 
 Bit pattern texture made by Valve. [(Source)](https://github.com/ValveSoftware/openvr/blob/master/samples/bin/cube_texture.png)  
-Rust logo is a trademark owned by Mozilla Foundation. [(Source)](https://www.rust-lang.org/policies/media-guide)  
-YYB style Hatsune Miku renderer.model made by YYB. You can find original readme in `models\YYB式初音ミクCrude Hair`. [(Source)](https://bowlroll.net/file/67801)
+YYB style Hatsune Miku renderer.model made by YYB. You can find original readme in `models\YYB式初音ミクCrude Hair`. [(Source)](https://bowlroll.net/file/67801)  
+GNU Unifont made by Roman Czyborra. [(Source)](http://unifoundry.com/unifont/index.html)

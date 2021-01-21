@@ -9,8 +9,8 @@ use vulkano::device::Queue;
 use vulkano::sampler;
 use unifont::Glyph;
 
-use super::pipelines::debug::DebugTexturedPipeline;
-use super::pipelines::Pipelines;
+use crate::renderer::pipelines::debug::DebugTexturedPipeline;
+use crate::renderer::pipelines::Pipelines;
 use crate::renderer::pipelines::PipelineError;
 
 pub struct TextCache {

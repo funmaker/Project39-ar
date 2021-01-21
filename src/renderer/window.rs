@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::error::Error;
 use err_derive::Error;
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton};
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -216,15 +216,17 @@ impl Window {
 						window.set_cursor_position(center)?;
 					}
 					
-					Event::WindowEvent {
-						event: WindowEvent::CursorMoved { position, .. }, ..
+					Event::DeviceEvent {
+						event: DeviceEvent::MouseMotion {
+							delta
+						}, ..
 					} if is_cursor_trapped => {
 						let window = surface.window();
 						let size = window.inner_size();
-						let center = PhysicalPosition::new((size.width as f32 / 2.0).floor(), (size.height as f32 / 2.0).floor());
+						let center = PhysicalPosition::new(size.width / 2, size.height / 2);
 						
 						let cur_move = debug::get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-						debug::set_flag("mouse_move", (cur_move.0 + position.x as f32 - center.x, cur_move.1 + position.y as f32 - center.y));
+						debug::set_flag("mouse_move", (cur_move.0 + delta.0 as f32, cur_move.1 + delta.1 as f32));
 						
 						window.set_cursor_position(center)?;
 					}
