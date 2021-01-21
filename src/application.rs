@@ -205,7 +205,7 @@ pub enum ApplicationCreationError {
 pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
-	#[error(display = "{}", _0)] RenderError(#[error(source)] RendererRenderError),
+	#[error(display = "{}", _0)] RendererRenderError(#[error(source)] RendererRenderError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),

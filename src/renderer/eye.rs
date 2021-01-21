@@ -30,7 +30,7 @@ pub struct Eyes {
 impl Eyes {
 	pub fn new(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let frame_buffer_size = (960, 1080);
-		let projection = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 0.1, 1000.0);
+		let projection = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 0.01, 1000.0);
 		let view = Matrix4::identity();
 		
 		Ok(Eyes {

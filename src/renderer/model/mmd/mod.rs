@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use std::convert::TryFrom;
+use mmd::pmx::bone::BoneFlags;
 use cgmath::{Matrix4, Vector4, Vector3};
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
@@ -21,8 +22,6 @@ pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
 use sub_mesh::SubMesh;
-use std::hash::{Hasher, Hash};
-use mmd::pmx::bone::Connection;
 
 pub type Bone = mmd::Bone<i16>;
 
@@ -130,46 +129,49 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
-		for bone in self.bones.iter() {
-			use std::collections::hash_map::DefaultHasher;
-			
-			let mut hasher = DefaultHasher::new();
-			bone.local_name.hash(&mut hasher);
-			let col = hasher.finish();
-			let col: Vector4<f32> = Vector4::new(col % 256, col / 256 % 256, col / 256 / 256 % 256, 255).cast().unwrap() / 255.0;
-			
-			let pos = (model_matrix * Vector3::from(bone.position).extend(1.0)).truncate();
-			debug::draw_point(pos, 10.0, col);
-			
-			let text;
-			if !bone.universal_name.is_empty() {
-				text = &*bone.universal_name;
-			} else if let Some(translation) = debug::translate(&bone.local_name) {
-				text = translation;
-			} else {
-				text = &*bone.local_name;
-			}
-			debug::draw_text(text, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
-			
-			if bone.parent >= 0 {
-				let parent = &self.bones[bone.parent as usize];
-			
-				let ppos = (model_matrix * Vector3::from(parent.position).extend(1.0)).truncate();
-				debug::draw_line(pos, ppos, 4.0, col);
-			}
-			
-			match bone.connection {
-				Connection::Index(id) if id >= 0 => {
-					let con = &self.bones[id as usize];
-			
-					let ppos = (model_matrix * Vector3::from(con.position).extend(1.0)).truncate();
-					debug::draw_line(pos, ppos, 2.0, Vector4::new(1.0, 0.0, 0.0, 1.0));
-				},
-				// Connection::Position(vec) => {
-				// 	let ppos = (model_matrix * Vector3::from(vec).extend(1.0)).truncate();
-				// 	debug::draw_line(pos, ppos, 2.0, Vector4::new(1.0, 0.0, 0.0, 1.0));
-				// },
-				_ => {}
+		if debug::get_flag_or_default("KeyB") {
+			for bone in self.bones.iter() {
+				let mut col = Vector4::new(0.5, 0.5, 0.5, 1.0);
+				
+				if bone.bone_flags.contains(BoneFlags::InverseKinematics) {
+					col = Vector4::new(0.0, 1.0, 0.0, 1.0);
+				} else if bone.bone_flags.contains(BoneFlags::Rotatable) && bone.bone_flags.contains(BoneFlags::Movable) {
+					col = Vector4::new(1.0, 0.0, 1.0, 1.0);
+				} else if bone.bone_flags.contains(BoneFlags::Rotatable) {
+					col = Vector4::new(1.0, 0.5, 0.5, 1.0);
+				} else if bone.bone_flags.contains(BoneFlags::Movable) {
+					col = Vector4::new(0.5, 0.5, 1.0, 1.0);
+				}
+				
+				if !bone.bone_flags.contains(BoneFlags::CanOperate) {
+					col *= 0.5;
+					col.w *= 2.0;
+				}
+				
+				if !bone.bone_flags.contains(BoneFlags::Display) {
+					col *= 0.5;
+				}
+				
+				
+				let pos = (model_matrix * Vector3::from(bone.position).extend(1.0)).truncate();
+				debug::draw_point(pos, 10.0, col);
+				
+				let text;
+				if !bone.universal_name.is_empty() {
+					text = &*bone.universal_name;
+				} else if let Some(translation) = debug::translate(&bone.local_name) {
+					text = translation;
+				} else {
+					text = &*bone.local_name;
+				}
+				debug::draw_text(text, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
+				
+				if bone.parent >= 0 {
+					let parent = &self.bones[bone.parent as usize];
+					
+					let ppos = (model_matrix * Vector3::from(parent.position).extend(1.0)).truncate();
+					debug::draw_line(pos, ppos, 3.0, col);
+				}
 			}
 		}
 		
@@ -177,13 +179,13 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		for sub_mesh in self.sub_mesh.iter() {
 			if let Some((pipeline, set)) = sub_mesh.edge.clone() {
 				let index_buffer = self.indices.clone().into_buffer_slice().slice(sub_mesh.range.clone()).unwrap();
-				
+		
 				// calculate size of one pixel at distance 1m from camera
 				// Assume index
 				// 1440×1600 110 FOV
 				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;
 				let scale: f32 = pixel * sub_mesh.edge_scale;
-				
+		
 				builder.draw_indexed(pipeline,
 				                     &DynamicState::none(),
 				                     self.vertices.clone(),

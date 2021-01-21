@@ -49,8 +49,7 @@ impl SubMesh {
 		};
 		
 		let main_set = Arc::new(
-			PersistentDescriptorSet::start(main_pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?
-				.clone())
+			PersistentDescriptorSet::start(main_pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
 				.add_buffer(renderer.commons.clone())?
 				.add_buffer(material_buffer.clone())?
 				.add_sampled_image(texture.clone(), sampler.clone())?
