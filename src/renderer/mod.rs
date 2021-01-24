@@ -34,7 +34,7 @@ use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError}
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
 #[derive(Clone)]
-pub struct CommonsVBO {
+pub struct CommonsUBO {
 	projection: [Matrix4<f32>; 2],
 	view: [Matrix4<f32>; 2],
 	light_direction: [Vector4<f32>; 2],
@@ -43,7 +43,7 @@ pub struct CommonsVBO {
 
 pub struct Renderer {
 	pub instance: Arc<Instance>,
-	pub commons: Arc<DeviceLocalBuffer<CommonsVBO>>,
+	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
 	
 	vr: Option<Arc<VR>>,
 	device: Arc<Device>,
@@ -319,7 +319,7 @@ impl Renderer {
 		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
 		let pixel_scale = Vector2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
 		
-		let commons = CommonsVBO {
+		let commons = CommonsUBO {
 			projection: [self.eyes.left.projection, self.eyes.right.projection],
 			view: [view_left, view_right],
 			light_direction: [

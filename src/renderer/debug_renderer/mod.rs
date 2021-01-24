@@ -12,7 +12,7 @@ mod text_cache;
 
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
-use super::CommonsVBO;
+use super::CommonsUBO;
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
 use text_cache::{TextCache, TextCacheError, TextCacheGetError};
 
@@ -56,7 +56,7 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, commons: &CommonsVBO, pixel_scale: Vector2<f32>, eye: u32) -> Result<(), DebugRendererRederError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, commons: &CommonsUBO, pixel_scale: Vector2<f32>, eye: u32) -> Result<(), DebugRendererRederError> {
 		let viewproj = commons.projection[eye as usize] * commons.view[eye as usize];
 		
 		DEBUG_LINES.with(|lines| {

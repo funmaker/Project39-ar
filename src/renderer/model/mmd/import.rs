@@ -3,14 +3,20 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::ffi::{OsStr, OsString};
 use std::convert::TryFrom;
+use std::rc::Rc;
+use std::cell::RefCell;
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
+use mmd::pmx::bone::{BoneFlags, Connection};
+use mmd::WeightDeform;
 use fallible_iterator::FallibleIterator;
 use image::ImageFormat;
+use cgmath::{Matrix4, Vector3, Vector4};
 
 use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
-use super::{MMDModel, Vertex, MaterialInfo};
+use crate::debug;
+use super::{MMDModel, Vertex, MaterialInfo, Bone, BoneConnection};
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
 	let mut root = PathBuf::from(path);
@@ -109,18 +115,60 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 	
 	let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
 	
-	model.bones = bones_reader.iter().collect()?;
+	let bone_defs = bones_reader.iter()
+	                            .collect::<Vec<mmd::Bone<i32>>>()?;
 	
-	for bone in model.bones.iter_mut() {
-		bone.position[0] *= MMD_UNIT_SIZE;
-		bone.position[1] *= MMD_UNIT_SIZE;
-		bone.position[2] *= MMD_UNIT_SIZE;
-		if let mmd::pmx::bone::Connection::Position(mut pos) = bone.connection {
-			pos[0] *= MMD_UNIT_SIZE;
-			pos[1] *= MMD_UNIT_SIZE;
-			pos[2] *= MMD_UNIT_SIZE;
+	let bones = bone_defs.iter()
+	                     .enumerate()
+	                     .map(|(id, def)| {
+		                     let name = if def.universal_name.len() > 0 { &def.universal_name }
+		                                else if let Some(name) = debug::translate(&def.universal_name) {name}
+		                                else { &def.local_name };
+		                     
+		                     Rc::new(RefCell::new(Bone::new(id as usize, name)))
+	                     })
+	                     .collect::<Vec<_>>();
+	
+	for (id, def) in bone_defs.iter().enumerate() {
+		let mut bone = bones[id].borrow_mut();
+		
+		let mut col = Vector4::new(0.5, 0.5, 0.5, 1.0);
+		
+		if def.bone_flags.contains(BoneFlags::InverseKinematics) {
+			col = Vector4::new(0.0, 1.0, 0.0, 1.0);
+		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
+			col = Vector4::new(1.0, 0.0, 1.0, 1.0);
+		} else if def.bone_flags.contains(BoneFlags::Rotatable) {
+			col = Vector4::new(1.0, 0.5, 0.5, 1.0);
+		} else if def.bone_flags.contains(BoneFlags::Movable) {
+			col = Vector4::new(0.5, 0.5, 1.0, 1.0);
+		}
+		
+		if !def.bone_flags.contains(BoneFlags::CanOperate) {
+			col *= 0.5;
+			col.w *= 2.0;
+		}
+		
+		bone.color = col;
+		bone.orig = Vector3::from(def.position) * MMD_UNIT_SIZE;
+		bone.display = def.bone_flags.contains(BoneFlags::Display);
+		bone.connection = match def.connection {
+			Connection::Index(id) if id <= 0 => BoneConnection::None,
+			Connection::Index(id) => BoneConnection::Bone(bones[id as usize].clone()),
+			Connection::Position(pos) => BoneConnection::Offset(Vector3::from(pos) * MMD_UNIT_SIZE),
+		};
+		
+		if def.parent < 0 {
+			model.add_bone(bones[id].clone());
+			bone.transform = Matrix4::from_translation(bone.orig);
+		} else {
+			let mut parent = bones[def.parent as usize].borrow_mut();
+			parent.children.push(bones[id].clone());
+			bone.transform = Matrix4::from_translation(bone.orig - Vector3::from(parent.orig) * MMD_UNIT_SIZE);
 		}
 	}
+	
+	model.count_bones();
 	
 	Ok(model)
 }
@@ -170,13 +218,29 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsStri
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
-impl<I> From<mmd::Vertex<I>> for Vertex {
+impl<I: Into<i32>> From<mmd::Vertex<I>> for Vertex {
 	fn from(vertex: mmd::Vertex<I>) -> Self {
+		let (bones, bones_weights) = match vertex.weight_deform {
+			WeightDeform::Bdef1(bdef) => ([bdef.bone_index.into(), 0, 0, 0],
+			                              [1.0, 0.0, 0.0, 0.0]),
+			WeightDeform::Bdef2(bdef) => ([bdef.bone_1_index.into(), bdef.bone_2_index.into(), 0, 0],
+			                              [bdef.bone_1_weight, 1.0-bdef.bone_1_weight, 0.0, 0.0]),
+			WeightDeform::Bdef4(bdef) => ([bdef.bone_1_index.into(), bdef.bone_2_index.into(), bdef.bone_3_index.into(), bdef.bone_4_index.into()],
+			                              [bdef.bone_1_weight, bdef.bone_2_weight, bdef.bone_3_weight, bdef.bone_4_weight]),
+			WeightDeform::Sdef(sdef) => ([sdef.bone_1_index.into(), sdef.bone_2_index.into(), 0, 0], // TODO: Proper SDEF support
+			                             [sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0]),
+			WeightDeform::Qdef(_) => unimplemented!("QDEF weight deforms are not supported!"),
+		};
+		
+		let bones = [bones[0].max(0) as u32, bones[1].max(1) as u32, bones[2].max(2) as u32, bones[3].max(3) as u32];
+		
 		Vertex::new(
 			[-vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
 			[-vertex.normal[0], vertex.normal[1], vertex.normal[2]],
 			vertex.uv,
 			vertex.edge_scale,
+			bones,
+			bones_weights,
 		)
 	}
 }

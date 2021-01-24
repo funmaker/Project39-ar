@@ -4,6 +4,8 @@ layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 layout(location = 3) in float edge_scale;
+layout(location = 4) in uvec4 bones;
+layout(location = 5) in vec4 bones_weights;
 
 layout(location = 0) out vec3 f_pos;
 layout(location = 1) out vec2 f_uv;

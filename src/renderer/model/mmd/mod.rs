@@ -2,10 +2,9 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use std::convert::TryFrom;
-use mmd::pmx::bone::BoneFlags;
-use cgmath::{Matrix4, Vector4, Vector3};
+use cgmath::Matrix4;
 use image::{DynamicImage, GenericImageView, ImageFormat};
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess, CpuBufferPool};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
@@ -13,6 +12,7 @@ use vulkano::format::Format;
 
 mod sub_mesh;
 mod import;
+mod bone;
 
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 use crate::utils::ImageEx;
@@ -22,8 +22,7 @@ pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
 use sub_mesh::SubMesh;
-
-pub type Bone = mmd::Bone<i16>;
+use bone::{Bone, BoneRef, BoneConnection, BoneUBO};
 
 pub struct MMDModel<VI: VertexIndex> {
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -31,7 +30,9 @@ pub struct MMDModel<VI: VertexIndex> {
 	sub_mesh: Vec<SubMesh>,
 	fences: Vec<FenceCheck>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
-	pub bones: Vec<Bone>,
+	bones: Vec<BoneRef>,
+	bones_ubo: Vec<BoneUBO>,
+	bones_pool: CpuBufferPool<BoneUBO>,
 }
 
 impl<VI: VertexIndex> MMDModel<VI> {
@@ -48,6 +49,8 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let fences = vec![FenceCheck::new(vertices_promise.join(indices_promise))?];
 		
+		let bones_pool = CpuBufferPool::uniform_buffer(queue.device().clone());
+		
 		Ok(MMDModel {
 			vertices,
 			indices,
@@ -55,6 +58,8 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			fences,
 			default_tex: None,
 			bones: vec![],
+			bones_ubo: vec![],
+			bones_pool,
 		})
 	}
 	
@@ -120,6 +125,15 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		Ok(texture)
 	}
 	
+	fn add_bone(&mut self, bone: BoneRef) {
+		self.bones.push(bone);
+	}
+	
+	fn count_bones(&mut self) {
+		let count = self.bones.iter().map(|bone| bone.borrow().len()).sum();
+		self.bones_ubo.resize(count, BoneUBO::new());
+	}
+	
 	pub fn loaded(&self) -> bool {
 		self.fences.iter().all(|fence| fence.check())
 	}
@@ -130,49 +144,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		if !self.loaded() { return Ok(()) }
 		
 		if debug::get_flag_or_default("KeyB") {
-			for bone in self.bones.iter() {
-				let mut col = Vector4::new(0.5, 0.5, 0.5, 1.0);
-				
-				if bone.bone_flags.contains(BoneFlags::InverseKinematics) {
-					col = Vector4::new(0.0, 1.0, 0.0, 1.0);
-				} else if bone.bone_flags.contains(BoneFlags::Rotatable) && bone.bone_flags.contains(BoneFlags::Movable) {
-					col = Vector4::new(1.0, 0.0, 1.0, 1.0);
-				} else if bone.bone_flags.contains(BoneFlags::Rotatable) {
-					col = Vector4::new(1.0, 0.5, 0.5, 1.0);
-				} else if bone.bone_flags.contains(BoneFlags::Movable) {
-					col = Vector4::new(0.5, 0.5, 1.0, 1.0);
-				}
-				
-				if !bone.bone_flags.contains(BoneFlags::CanOperate) {
-					col *= 0.5;
-					col.w *= 2.0;
-				}
-				
-				if !bone.bone_flags.contains(BoneFlags::Display) {
-					col *= 0.5;
-				}
-				
-				
-				let pos = (model_matrix * Vector3::from(bone.position).extend(1.0)).truncate();
-				debug::draw_point(pos, 10.0, col);
-				
-				let text;
-				if !bone.universal_name.is_empty() {
-					text = &*bone.universal_name;
-				} else if let Some(translation) = debug::translate(&bone.local_name) {
-					text = translation;
-				} else {
-					text = &*bone.local_name;
-				}
-				debug::draw_text(text, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, col);
-				
-				if bone.parent >= 0 {
-					let parent = &self.bones[bone.parent as usize];
-					
-					let ppos = (model_matrix * Vector3::from(parent.position).extend(1.0)).truncate();
-					debug::draw_line(pos, ppos, 3.0, col);
-				}
-			}
+			self.bones.iter().for_each(|bone| bone.borrow().debug_draw(model_matrix));
 		}
 		
 		// Outline
