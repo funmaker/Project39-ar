@@ -10,6 +10,7 @@ pub mod simple;
 pub mod mmd;
 mod fence_check;
 
+use crate::application::entity::Bone;
 use super::RendererRenderError;
 use super::pipelines::PipelineError;
 pub use self::mmd::MMDModel;
@@ -17,7 +18,8 @@ pub use simple::SimpleModel;
 pub use fence_check::FenceCheck;
 
 pub trait Model {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError>;
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32, bones: &Vec<Bone>) -> Result<(), RendererRenderError>;
+	fn get_default_bones(&self) -> Vec<Bone>;
 }
 
 pub trait VertexIndex: Index + Copy + Send + Sync + Sized + FromPrimitive + 'static {}
@@ -25,7 +27,7 @@ impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + FromPrim
 
 #[derive(Debug, Error)]
 pub enum ModelError {
-	#[error(display = "Pipeline doesn't have layout set 0")] NoLayout,
+	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),

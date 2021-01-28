@@ -9,6 +9,7 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, AutoCommandBuffer, Subpa
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
 use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
+use vulkano::descriptor::descriptor_set;
 use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::format::{ClearValue, Format};
 use vulkano::sync::GpuFuture;
@@ -471,5 +472,8 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
 	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
+	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }

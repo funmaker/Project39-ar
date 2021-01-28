@@ -4,7 +4,7 @@ layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 layout(location = 3) in float edge_scale;
-layout(location = 4) in uvec4 bones;
+layout(location = 4) in uvec4 bones_indices;
 layout(location = 5) in vec4 bones_weights;
 
 layout(location = 0) out vec3 f_pos;
@@ -18,6 +18,10 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
+layout(set = 1, binding = 0) uniform Bones {
+	mat4 mats[256];
+} bones;
+
 layout(push_constant) uniform Pc {
 	mat4 model;
 	uint eye;
@@ -28,9 +32,17 @@ void main() {
 	mat4 mvp = commons.projection[pc.eye] * mv;
 	mat3 normal_matrix = mat3(mv);
 	
-	gl_Position = mvp * vec4(pos, 1.0);
+	vec4 anim_pos = vec4(0);
+	vec3 anim_normal = vec3(0);
+	
+	mat4x3 anim = mat4x3(0);
+	for(uint i = 0; i < 4; i++) {
+		anim += mat4x3(bones.mats[bones_indices[i]]) * bones_weights[i];
+	}
+	
+	gl_Position = mvp * vec4(anim * vec4(pos, 1.0), 1.0);
 	
 	f_pos = vec3(mv * vec4(pos, 1.0));
 	f_uv = uv;
-	f_normal = normalize(normal_matrix * normal);
+	f_normal = normalize(normal_matrix * (mat3(anim) * anim_normal));
 }

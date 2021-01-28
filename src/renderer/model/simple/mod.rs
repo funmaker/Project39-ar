@@ -17,6 +17,7 @@ pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::{Renderer, RendererRenderError};
 use crate::utils::ImageEx;
+use crate::application::entity::Bone;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 pub use import::SimpleModelLoadError;
 
@@ -84,7 +85,7 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for SimpleModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32) -> Result<(), RendererRenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32, _bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -95,6 +96,10 @@ impl<VI: VertexIndex> Model for SimpleModel<VI> {
 		                     (model_matrix, eye))?;
 		
 		Ok(())
+	}
+	
+	fn get_default_bones(&self) -> Vec<Bone> {
+		vec![]
 	}
 }
 

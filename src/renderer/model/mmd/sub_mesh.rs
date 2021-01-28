@@ -1,17 +1,18 @@
 use std::sync::Arc;
 use std::ops::Range;
+use std::cell::RefCell;
 use vulkano::buffer::ImmutableBuffer;
 use vulkano::image::ImmutableImage;
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor::descriptor_set::{PersistentDescriptorSet, FixedSizeDescriptorSetsPool};
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline, MMDPipelineAny};
 use crate::renderer::Renderer;
 use crate::renderer::model::ModelError;
 
-pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>);
+pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>, RefCell<FixedSizeDescriptorSetsPool>);
 
 pub struct MaterialInfo {
 	pub color: [f32; 4],
@@ -58,8 +59,10 @@ impl SubMesh {
 				.build()?
 		);
 		
+		let main_pool = RefCell::new(FixedSizeDescriptorSetsPool::new(main_pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
+		
 		let mut sub_mesh = SubMesh {
-			main: (main_pipeline, main_set),
+			main: (main_pipeline, main_set, main_pool),
 			transparent: None,
 			edge: None,
 			range,
@@ -84,7 +87,9 @@ impl SubMesh {
 					.build()?
 			);
 			
-			sub_mesh.transparent = Some((pipeline, set));
+			let pool = RefCell::new(FixedSizeDescriptorSetsPool::new(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
+			
+			sub_mesh.transparent = Some((pipeline, set, pool));
 		}
 		
 		if let Some((scale, color)) = edge {
@@ -101,7 +106,9 @@ impl SubMesh {
 					.build()?
 			);
 			
-			sub_mesh.edge = Some((pipeline.into(), set));
+			let pool = RefCell::new(FixedSizeDescriptorSetsPool::new(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
+			
+			sub_mesh.edge = Some((pipeline.into(), set, pool));
 		}
 		
 		Ok(sub_mesh)

@@ -8,7 +8,7 @@ use cgmath::num_traits::clamp;
 use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rotation3, Matrix4};
 
 mod vr;
-mod entity;
+pub mod entity;
 
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
@@ -63,6 +63,13 @@ impl Application {
 			Vector3::new(0.0, -1.0, -1.5),
 			Quaternion::from_angle_y(Rad::turn_div_2()),
 		));
+		
+		// scene.push(Entity::new(
+		// 	"Test",
+		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
+		// 	Vector3::new(0.0, -1.0, -1.5),
+		// 	Quaternion::from_angle_y(Rad::turn_div_2()),
+		// ));
 		
 		Ok(Application {
 			vr,

@@ -3,8 +3,6 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::ffi::{OsStr, OsString};
 use std::convert::TryFrom;
-use std::rc::Rc;
-use std::cell::RefCell;
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
@@ -13,10 +11,11 @@ use fallible_iterator::FallibleIterator;
 use image::ImageFormat;
 use cgmath::{Matrix4, Vector3, Vector4};
 
+use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::debug;
-use super::{MMDModel, Vertex, MaterialInfo, Bone, BoneConnection};
+use super::{MMDModel, Vertex, MaterialInfo};
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
 	let mut root = PathBuf::from(path);
@@ -79,7 +78,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 			                specular: material.specular_color,
 			                specularity: material.specular_strength,
 			                ambient: material.ambient_color,
-			                sphere_mode: sphere_mode,
+			                sphere_mode,
 		                };
 		
 		                let (texture, has_alpha) = textures.get(material.texture_index as usize)
@@ -118,57 +117,61 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 	let bone_defs = bones_reader.iter()
 	                            .collect::<Vec<mmd::Bone<i32>>>()?;
 	
-	let bones = bone_defs.iter()
-	                     .enumerate()
-	                     .map(|(id, def)| {
-		                     let name = if def.universal_name.len() > 0 { &def.universal_name }
-		                                else if let Some(name) = debug::translate(&def.universal_name) {name}
-		                                else { &def.local_name };
-		                     
-		                     Rc::new(RefCell::new(Bone::new(id as usize, name)))
-	                     })
-	                     .collect::<Vec<_>>();
+	let bone_defs = bone_defs.iter()
+	                         .collect::<Vec<_>>();
 	
-	for (id, def) in bone_defs.iter().enumerate() {
-		let mut bone = bones[id].borrow_mut();
-		
-		let mut col = Vector4::new(0.5, 0.5, 0.5, 1.0);
-		
-		if def.bone_flags.contains(BoneFlags::InverseKinematics) {
-			col = Vector4::new(0.0, 1.0, 0.0, 1.0);
-		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
-			col = Vector4::new(1.0, 0.0, 1.0, 1.0);
-		} else if def.bone_flags.contains(BoneFlags::Rotatable) {
-			col = Vector4::new(1.0, 0.5, 0.5, 1.0);
-		} else if def.bone_flags.contains(BoneFlags::Movable) {
-			col = Vector4::new(0.5, 0.5, 1.0, 1.0);
-		}
-		
-		if !def.bone_flags.contains(BoneFlags::CanOperate) {
-			col *= 0.5;
-			col.w *= 2.0;
-		}
-		
-		bone.color = col;
-		bone.orig = Vector3::from(def.position) * MMD_UNIT_SIZE;
-		bone.display = def.bone_flags.contains(BoneFlags::Display);
-		bone.connection = match def.connection {
-			Connection::Index(id) if id <= 0 => BoneConnection::None,
-			Connection::Index(id) => BoneConnection::Bone(bones[id as usize].clone()),
-			Connection::Position(pos) => BoneConnection::Offset(Vector3::from(pos) * MMD_UNIT_SIZE),
+	for def in bone_defs.iter() {
+		let name = if def.universal_name.len() > 0 {
+			&def.universal_name
+		} else if let Some(translated) = debug::translate(&def.local_name) {
+			translated
+		} else {
+			&def.local_name
 		};
 		
-		if def.parent < 0 {
-			model.add_bone(bones[id].clone());
-			bone.transform = Matrix4::from_translation(bone.orig);
+		let parent = if def.parent < 0 { None } else { Some(def.parent as usize) };
+		
+		let orig = Vector3::from(def.position).flip_x() * MMD_UNIT_SIZE;
+		let display = def.bone_flags.contains(BoneFlags::Display);
+		
+		let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
+			Vector4::new(0.0, 1.0, 0.0, 1.0)
+		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
+			Vector4::new(1.0, 0.0, 1.0, 1.0)
+		} else if def.bone_flags.contains(BoneFlags::Rotatable) {
+			Vector4::new(1.0, 0.5, 0.5, 1.0)
+		} else if def.bone_flags.contains(BoneFlags::Movable) {
+			Vector4::new(0.5, 0.5, 1.0, 1.0)
 		} else {
-			let mut parent = bones[def.parent as usize].borrow_mut();
-			parent.children.push(bones[id].clone());
-			bone.transform = Matrix4::from_translation(bone.orig - Vector3::from(parent.orig) * MMD_UNIT_SIZE);
+			Vector4::new(0.5, 0.5, 0.5, 1.0)
+		};
+		
+		if !def.bone_flags.contains(BoneFlags::CanOperate) {
+			color *= 0.5;
+			color.w *= 2.0;
 		}
+		
+		let connection = match def.connection {
+			Connection::Index(id) if id <= 0 => BoneConnection::None,
+			Connection::Index(id) => BoneConnection::Bone(id as usize),
+			Connection::Position(pos) => BoneConnection::Offset(Vector3::from(pos).flip_x() * MMD_UNIT_SIZE),
+		};
+		
+		let transform = if def.parent < 0 {
+			Matrix4::from_translation(orig)
+		} else {
+			let parent = bone_defs[def.parent as usize];
+			Matrix4::from_translation(orig - Vector3::from(parent.position).flip_x() * MMD_UNIT_SIZE)
+		};
+		
+		model.add_bone(Bone::new(name,
+		                         parent,
+		                         color,
+		                         transform,
+		                         orig,
+		                         display,
+		                         connection));
 	}
-	
-	model.count_bones();
 	
 	Ok(model)
 }
@@ -229,19 +232,31 @@ impl<I: Into<i32>> From<mmd::Vertex<I>> for Vertex {
 			                              [bdef.bone_1_weight, bdef.bone_2_weight, bdef.bone_3_weight, bdef.bone_4_weight]),
 			WeightDeform::Sdef(sdef) => ([sdef.bone_1_index.into(), sdef.bone_2_index.into(), 0, 0], // TODO: Proper SDEF support
 			                             [sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0]),
-			WeightDeform::Qdef(_) => unimplemented!("QDEF weight deforms are not supported!"),
+			WeightDeform::Qdef(_) => unimplemented!("QDEF weight deforms are not supported."),
 		};
 		
-		let bones = [bones[0].max(0) as u32, bones[1].max(1) as u32, bones[2].max(2) as u32, bones[3].max(3) as u32];
+		let bones_indices = [bones[0].max(0) as u32, bones[1].max(0) as u32, bones[2].max(0) as u32, bones[3].max(0) as u32];
+		let pos = Vector3::from(vertex.position).flip_x() * MMD_UNIT_SIZE;
+		let normal = Vector3::from(vertex.normal).flip_x();
 		
 		Vertex::new(
-			[-vertex.position[0] * MMD_UNIT_SIZE, vertex.position[1] * MMD_UNIT_SIZE, vertex.position[2] * MMD_UNIT_SIZE],
-			[-vertex.normal[0], vertex.normal[1], vertex.normal[2]],
+			pos.into(),
+			normal.into(),
 			vertex.uv,
 			vertex.edge_scale,
-			bones,
+			bones_indices,
 			bones_weights,
 		)
+	}
+}
+
+trait FlipX {
+	fn flip_x(self) -> Self;
+}
+
+impl FlipX for Vector3<f32> {
+	fn flip_x(self) -> Self {
+		Vector3::new(-self.x, self.y, self.z)
 	}
 }
 
