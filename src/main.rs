@@ -17,6 +17,7 @@ use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
 
 #[macro_use] #[allow(dead_code)] mod debug;
+#[allow(dead_code)] mod math;
 mod renderer;
 mod application;
 mod utils;

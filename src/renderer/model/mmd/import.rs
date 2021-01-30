@@ -9,13 +9,13 @@ use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::WeightDeform;
 use fallible_iterator::FallibleIterator;
 use image::ImageFormat;
-use cgmath::{Matrix4, Vector3, Vector4};
 
 use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::debug;
 use super::{MMDModel, Vertex, MaterialInfo};
+use crate::math::{Similarity3, Vec3, Color};
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
 	let mut root = PathBuf::from(path);
@@ -131,44 +131,43 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		
 		let parent = if def.parent < 0 { None } else { Some(def.parent as usize) };
 		
-		let orig = Vector3::from(def.position).flip_x() * MMD_UNIT_SIZE;
+		let orig = Vec3::from(def.position).flip_x() * MMD_UNIT_SIZE;
 		let display = def.bone_flags.contains(BoneFlags::Display);
 		
 		let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
-			Vector4::new(0.0, 1.0, 0.0, 1.0)
+			Color::green()
 		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
-			Vector4::new(1.0, 0.0, 1.0, 1.0)
+			Color::magenta()
 		} else if def.bone_flags.contains(BoneFlags::Rotatable) {
-			Vector4::new(1.0, 0.5, 0.5, 1.0)
+			Color::blue()
 		} else if def.bone_flags.contains(BoneFlags::Movable) {
-			Vector4::new(0.5, 0.5, 1.0, 1.0)
+			Color::dyellow()
 		} else {
-			Vector4::new(0.5, 0.5, 0.5, 1.0)
+			Color::dwhite()
 		};
 		
 		if !def.bone_flags.contains(BoneFlags::CanOperate) {
-			color *= 0.5;
-			color.w *= 2.0;
+			color = color.lightness(0.5);
 		}
 		
 		let connection = match def.connection {
 			Connection::Index(id) if id <= 0 => BoneConnection::None,
 			Connection::Index(id) => BoneConnection::Bone(id as usize),
-			Connection::Position(pos) => BoneConnection::Offset(Vector3::from(pos).flip_x() * MMD_UNIT_SIZE),
+			Connection::Position(pos) => BoneConnection::Offset(Vec3::from(pos).flip_x() * MMD_UNIT_SIZE),
 		};
 		
 		let transform = if def.parent < 0 {
-			Matrix4::from_translation(orig)
+			Similarity3::new(orig, Vec3::zeros(), 1.0)
 		} else {
 			let parent = bone_defs[def.parent as usize];
-			Matrix4::from_translation(orig - Vector3::from(parent.position).flip_x() * MMD_UNIT_SIZE)
+			Similarity3::new(orig - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE, Vec3::zeros(), 1.0)
 		};
 		
 		model.add_bone(Bone::new(name,
 		                         parent,
 		                         color,
 		                         transform,
-		                         orig,
+		                         orig.into(),
 		                         display,
 		                         connection));
 	}
@@ -236,12 +235,12 @@ impl<I: Into<i32>> From<mmd::Vertex<I>> for Vertex {
 		};
 		
 		let bones_indices = [bones[0].max(0) as u32, bones[1].max(0) as u32, bones[2].max(0) as u32, bones[3].max(0) as u32];
-		let pos = Vector3::from(vertex.position).flip_x() * MMD_UNIT_SIZE;
-		let normal = Vector3::from(vertex.normal).flip_x();
+		let pos = Vec3::from(vertex.position).flip_x() * MMD_UNIT_SIZE;
+		let normal = Vec3::from(vertex.normal).flip_x();
 		
 		Vertex::new(
-			pos.into(),
-			normal.into(),
+			pos,
+			normal,
 			vertex.uv,
 			vertex.edge_scale,
 			bones_indices,
@@ -254,9 +253,9 @@ trait FlipX {
 	fn flip_x(self) -> Self;
 }
 
-impl FlipX for Vector3<f32> {
+impl FlipX for Vec3 {
 	fn flip_x(self) -> Self {
-		Vector3::new(-self.x, self.y, self.z)
+		Vec3::new(-self.x, self.y, self.z)
 	}
 }
 

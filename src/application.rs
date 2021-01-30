@@ -4,8 +4,7 @@ use std::sync::Arc;
 use err_derive::Error;
 use openvr::{tracked_device_index, TrackedDeviceClass, TrackedControllerRole};
 use openvr_sys::{ETrackedDeviceProperty_Prop_RenderModelName_String, ETrackedDeviceProperty_Prop_TrackingSystemName_String};
-use cgmath::num_traits::clamp;
-use cgmath::{Vector3, Quaternion, One, Zero, Decomposed, Euler, Rad, Angle, Rotation3, Matrix4};
+use simba::scalar::SupersetOf;
 
 mod vr;
 pub mod entity;
@@ -14,7 +13,7 @@ use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
-use crate::utils::mat4;
+use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
 use crate::debug;
 pub use vr::VR;
 pub use entity::Entity;
@@ -27,7 +26,7 @@ pub struct Application {
 	vr_devices: HashMap<u32, usize>,
 }
 
-type FakePose = (Vector3<f32>, Euler<Rad<f32>>);
+type FakePose = (Translation3, (f32, f32));
 
 impl Application {
 	pub fn new(device: Option<usize>, camera_api: CameraAPI, vr: bool) -> Result<Application, ApplicationCreationError> {
@@ -53,22 +52,22 @@ impl Application {
 		scene.push(Entity::new(
 			"Cube",
 			SimpleModel::<u16>::from_obj("models/cube/cube", &mut renderer)?,
-			Vector3::new(0.0, -1.5, -1.5),
-			Quaternion::one(),
+			Point3::new(0.0, -1.5, -1.5),
+			Rot3::identity(),
 		));
 		
 		scene.push(Entity::new(
 			"初音ミク",
 			MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
-			Vector3::new(0.0, -1.0, -1.5),
-			Quaternion::from_angle_y(Rad::turn_div_2()),
+			Point3::new(0.0, -1.0, -1.5),
+			Rot3::from_euler_angles(0.0, 0.0, std::f32::consts::FRAC_PI_2),
 		));
 		
 		// scene.push(Entity::new(
 		// 	"Test",
 		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
-		// 	Vector3::new(0.0, -1.0, -1.5),
-		// 	Quaternion::from_angle_y(Rad::turn_div_2()),
+		// Vec3::new(0.0, -1.0, -3.0),
+		// Rot3::from_euler_angles(0.0, 0.0, std::f32::consts::FRAC_PI_2),
 		// ));
 		
 		Ok(Application {
@@ -84,7 +83,7 @@ impl Application {
 		let mut instant = Instant::now();
 		
 		let mut vr_buttons = 0;
-		let mut fake_pose = (Vector3::zero(), Euler{ x: Rad(0.0), y: Rad(0.0), z: Rad(0.0) });
+		let mut fake_pose: FakePose = (Translation3::identity(), (0.0, 0.0));
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -107,7 +106,7 @@ impl Application {
 		Ok(())
 	}
 	
-	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<Matrix4<f32>, ApplicationRunError> {
+	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<Isometry3, ApplicationRunError> {
 		let vr = self.vr.as_ref().expect("VR has not been initialized.");
 		
 		let poses = vr.compositor.wait_get_poses()?;
@@ -121,8 +120,8 @@ impl Application {
 						let mut entity = Entity::new(
 							vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_TrackingSystemName_String)?.to_string_lossy(),
 							SimpleModel::<u16>::from_openvr(model, texture, &mut self.renderer)?,
-							Vector3::zero(),
-							Quaternion::one(),
+							Point3::origin(),
+							Rot3::identity(),
 						);
 						
 						entity.move_to_pose(poses.render[i as usize]);
@@ -153,11 +152,12 @@ impl Application {
 			}
 		}
 		
-		Ok(mat4(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking()))
+		let orientation: AMat4 = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking().to_transform();
+		Ok(orientation.to_subset().unwrap())
 	}
 	
-	fn handle_fake_pose(&self, fake_pose: &mut FakePose, delta_time: Duration) -> Matrix4<f32> {
-		let (disp, rot) = fake_pose;
+	fn handle_fake_pose(&self, fake_pose: &mut FakePose, delta_time: Duration) -> Isometry3 {
+		let (position, (pitch, yaw)) = fake_pose;
 		
 		fn get_key(key: &str) -> f32 {
 			debug::get_flag_or_default::<bool>(key) as i32 as f32
@@ -170,20 +170,15 @@ impl Application {
 		let mouse_move = debug::get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
 		debug::set_flag("mouse_move", (0.0_f32, 0.0_f32));
 		
-		rot.y = rot.y + Rad(-mouse_move.0 * 0.01);
-		rot.x = clamp(rot.x + Rad(-mouse_move.1 * 0.01), -Rad::turn_div_4(), Rad::turn_div_4());
+		*yaw = *yaw + -mouse_move.0 * 0.01;
+		*pitch = (*pitch + -mouse_move.1 * 0.01).clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
 		
-		let quat = Quaternion::from_angle_y(rot.y) * Quaternion::from_angle_x(rot.x);
+		let rot = Rot3::from_euler_angles(*pitch, *yaw, 0.0);
+		let disp = rot * Vec3::new(x, 0.0, z) * dist + Vec3::y() * y;
 		
-		disp.y += y * dist;
-		*disp += quat * Vector3::new(x, 0.0, z) * dist;
+		position.vector += disp;
 		
-		// Y * X rotation
-		Decomposed {
-			scale: 1.0,
-			rot: quat,
-			disp: disp.clone(),
-		}.into()
+		Isometry3::from_parts(position.clone(), rot)
 	}
 }
 

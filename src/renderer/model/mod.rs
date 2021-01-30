@@ -1,10 +1,8 @@
-use cgmath::Matrix4;
 use err_derive::Error;
 use vulkano::{memory, sync};
 use vulkano::descriptor::descriptor_set;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::pipeline::input_assembly::Index;
-use cgmath::num_traits::FromPrimitive;
 
 pub mod simple;
 pub mod mmd;
@@ -13,17 +11,18 @@ mod fence_check;
 use crate::application::entity::Bone;
 use super::RendererRenderError;
 use super::pipelines::PipelineError;
+use crate::math::AMat4;
 pub use self::mmd::MMDModel;
 pub use simple::SimpleModel;
 pub use fence_check::FenceCheck;
 
 pub trait Model {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32, bones: &Vec<Bone>) -> Result<(), RendererRenderError>;
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32, bones: &Vec<Bone>) -> Result<(), RendererRenderError>;
 	fn get_default_bones(&self) -> Vec<Bone>;
 }
 
-pub trait VertexIndex: Index + Copy + Send + Sync + Sized + FromPrimitive + 'static {}
-impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + FromPrimitive + 'static {}
+pub trait VertexIndex: Index + Copy + Send + Sync + Sized + 'static {}
+impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + 'static {}
 
 #[derive(Debug, Error)]
 pub enum ModelError {

@@ -3,7 +3,6 @@ use std::ops::Range;
 use std::io::Cursor;
 use std::convert::TryFrom;
 use std::cell::RefCell;
-use cgmath::Matrix4;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferAccess, CpuBufferPool};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
@@ -20,6 +19,7 @@ use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::{Renderer, RendererRenderError};
 use crate::utils::ImageEx;
 use crate::debug;
+use crate::math::{Mat4, AMat4};
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
@@ -32,8 +32,8 @@ pub struct MMDModel<VI: VertexIndex> {
 	fences: Vec<FenceCheck>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 	default_bones: Vec<Bone>,
-	bones_ubo: RefCell<Vec<Matrix4<f32>>>,
-	bones_pool: CpuBufferPool<Matrix4<f32>>,
+	bones_ubo: RefCell<Vec<Mat4>>,
+	bones_pool: CpuBufferPool<Mat4>,
 }
 
 impl<VI: VertexIndex> MMDModel<VI> {
@@ -130,23 +130,23 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		self.default_bones.push(bone);
 	}
 	
-	fn draw_debug_bones(&self, model_matrix: Matrix4<f32>, bones: &Vec<Bone>, bones_mats: &Vec<Matrix4<f32>>) {
+	fn draw_debug_bones(&self, model_matrix: &AMat4, bones: &Vec<Bone>, bones_mats: &Vec<Mat4>) {
 		for (id, bone) in bones.iter().enumerate() {
 			if bone.display {
-				let pos = (model_matrix * bones_mats[id] * bone.orig.extend(1.0)).truncate();
+				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.orig));
 				
-				debug::draw_point(pos, 10.0, bone.color);
-				debug::draw_text(&bone.name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color);
+				debug::draw_point(&pos, 10.0, bone.color.clone());
+				debug::draw_text(&bone.name, &pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
 				
 				match &bone.connection {
 					BoneConnection::None => {}
 					BoneConnection::Bone(con) => {
-						let cpos = (model_matrix * bones_mats[*con] * bones[*con].orig.extend(1.0)).truncate();
-						debug::draw_line(pos, cpos, 3.0, bone.color);
+						let cpos = model_matrix.transform_point(&bones_mats[*con].transform_point(&bones[*con].orig));
+						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
 					}
 					BoneConnection::Offset(cpos) => {
-						let cpos = (model_matrix * bones_mats[id] * (bone.orig + cpos).extend(1.0)).truncate();
-						debug::draw_line(pos, cpos, 3.0, bone.color);
+						let cpos = model_matrix.transform_point(&bones_mats[id].transform_point(&(&bone.orig + cpos)));
+						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
 					}
 				}
 			}
@@ -159,7 +159,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32, bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32, bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		let buffer = {
@@ -168,19 +168,19 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			
 			for bone in bones {
 				let transform = match bone.parent {
-					None => bone.transform,
-					Some(id) => bones_mats[id] * bone.transform,
+					None => bone.transform.to_homogeneous(),
+					Some(id) => &bones_mats[id] * &bone.transform.to_homogeneous(),
 				};
 				
 				bones_mats.push(transform);
 			}
 			
 			for (id, mat) in bones_mats.iter_mut().enumerate() {
-				*mat = *mat * Matrix4::from_translation(-bones[id].orig);
+				*mat = mat.append_translation(&-&bones[id].orig.coords);
 			}
 			
 			if debug::get_flag_or_default("KeyB") {
-				self.draw_debug_bones(model_matrix, &bones, &bones_mats);
+				self.draw_debug_bones(&model_matrix, &bones, &bones_mats);
 			}
 			
 			self.bones_pool.chunk(bones_mats.drain(..)) // TODO: There has to be better way
@@ -198,13 +198,13 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				let scale: f32 = pixel * sub_mesh.edge_scale;
 				
 				let bones_set = pool.borrow_mut().next().add_buffer(buffer.clone())?.build()?;
-		
+				
 				builder.draw_indexed(pipeline,
 				                     &DynamicState::none(),
 				                     self.vertices.clone(),
 				                     index_buffer.clone(),
 				                     (set, bones_set),
-				                     (model_matrix, sub_mesh.edge_color, eye, scale))?;
+				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, eye, scale))?;
 			}
 		}
 		
@@ -220,7 +220,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			                     self.vertices.clone(),
 			                     index_buffer.clone(),
 			                     (set, bones_set),
-			                     (model_matrix, eye))?;
+			                     (model_matrix.to_homogeneous(), eye))?;
 		}
 		
 		// Transparent
@@ -235,7 +235,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.vertices.clone(),
 				                     index_buffer.clone(),
 				                     (set, bones_set),
-				                     (model_matrix, eye))?;
+				                     (model_matrix.to_homogeneous(), eye))?;
 			}
 		}
 		

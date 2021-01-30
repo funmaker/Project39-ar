@@ -7,19 +7,22 @@ use vulkano::format;
 use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
 use openvr::compositor::Texture;
-use cgmath::{Matrix4, Matrix, Deg, Transform, SquareMatrix};
 
-use crate::utils::{OpenVRPtr, mat4};
+use crate::utils::{OpenVRPtr};
 use crate::application::VR;
+use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
 use super::RenderPass;
 
 // Translates OpenGL projection matrix to Vulkan
-const CLIP: Matrix4<f32> = Matrix4::new(
-	1.0, 0.0, 0.0, 0.0,
-	0.0,-1.0, 0.0, 0.0,
-	0.0, 0.0, 0.5, 0.0,
-	0.0, 0.0, 0.5, 1.0,
-);
+// Can't be const because Mat4::new is not const fn or something
+fn clip() -> AMat4 {
+	AMat4::from_matrix_unchecked(Mat4::new(
+		1.0, 0.0, 0.0, 0.0,
+		0.0,-1.0, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.5,
+		0.0, 0.0, 0.0, 1.0,
+	))
+}
 
 pub struct Eyes {
 	pub left: Eye,
@@ -30,12 +33,12 @@ pub struct Eyes {
 impl Eyes {
 	pub fn new(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let frame_buffer_size = (960, 1080);
-		let projection = CLIP * cgmath::perspective(Deg(90.0), frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 0.01, 1000.0);
-		let view = Matrix4::identity();
+		let view = AMat4::identity();
+		let projection = clip() * Perspective3::new(frame_buffer_size.0 as f32 / frame_buffer_size.1 as f32, 90.0 / 360.0 * std::f32::consts::TAU, 0.01, 1000.0).as_projective();
 		
 		Ok(Eyes {
-			left: Eye::new(frame_buffer_size, view, projection, queue, render_pass)?,
-			right: Eye::new(frame_buffer_size, view, projection, queue, render_pass)?,
+			left: Eye::new(frame_buffer_size, view.clone(), projection, queue, render_pass)?,
+			right: Eye::new(frame_buffer_size, view.clone(), projection, queue, render_pass)?,
 			frame_buffer_size,
 		})
 	}
@@ -43,13 +46,11 @@ impl Eyes {
 	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let frame_buffer_size = vr.system.recommended_render_target_size();
 		
-		let view_left  = mat4(&vr.system.eye_to_head_transform(openvr::Eye::Left )).inverse_transform().unwrap();
-		let view_right = mat4(&vr.system.eye_to_head_transform(openvr::Eye::Right)).inverse_transform().unwrap();
+		let view_left  = vr.system.eye_to_head_transform(openvr::Eye::Left ).to_transform().inverse();
+		let view_right = vr.system.eye_to_head_transform(openvr::Eye::Right).to_transform().inverse();
 		
-		let proj_left:  Matrix4<f32> = CLIP
-		                             * Matrix4::from(vr.system.projection_matrix(openvr::Eye::Left,  0.1, 1000.1)).transpose();
-		let proj_right: Matrix4<f32> = CLIP
-		                             * Matrix4::from(vr.system.projection_matrix(openvr::Eye::Right, 0.1, 1000.1)).transpose();
+		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.1, 1000.1)));
+		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.1, 1000.1)));
 		
 		Ok(Eyes {
 			left: Eye::new(frame_buffer_size, view_left, proj_left, queue, render_pass)?,
@@ -64,8 +65,8 @@ pub struct Eye {
 	pub image: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
 	pub depth_image: Arc<AttachmentImage<format::D16Unorm>>,
 	pub texture: Texture,
-	pub view: Matrix4<f32>,
-	pub projection: Matrix4<f32>,
+	pub view: AMat4,
+	pub projection: PMat4,
 	pub frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync>,
 }
 
@@ -73,7 +74,7 @@ pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
 pub const DEPTH_FORMAT: Format = Format::D16Unorm;
 
 impl Eye {
-	pub fn new<RPD>(frame_buffer_size:(u32, u32), view: Matrix4<f32>, projection: Matrix4<f32>, queue: &Queue, render_pass: &Arc<RPD>)
+	pub fn new<RPD>(frame_buffer_size:(u32, u32), view: AMat4, projection: PMat4, queue: &Queue, render_pass: &Arc<RPD>)
 	                -> Result<Eye, EyeCreationError>
 	               where RPD: RenderPassAbstract + Sync + Send + 'static + ?Sized {
 		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];

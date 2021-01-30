@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use cgmath::Matrix4;
 use image::{DynamicImage, GenericImageView};
+use num_traits::FromPrimitive;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
@@ -18,6 +18,7 @@ use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::{Renderer, RendererRenderError};
 use crate::utils::ImageEx;
 use crate::application::entity::Bone;
+use crate::math::AMat4;
 use super::{Model, ModelError, VertexIndex, FenceCheck};
 pub use import::SimpleModelLoadError;
 
@@ -29,7 +30,7 @@ pub struct SimpleModel<VI: VertexIndex> {
 	fence: FenceCheck,
 }
 
-impl<VI: VertexIndex> SimpleModel<VI> {
+impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 	pub fn new(vertices: &[Vertex], indices: &[VI], source_image: DynamicImage, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
 		let width = source_image.width();
 		let height = source_image.height();
@@ -84,8 +85,8 @@ impl<VI: VertexIndex> SimpleModel<VI> {
 	}
 }
 
-impl<VI: VertexIndex> Model for SimpleModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: Matrix4<f32>, eye: u32, _bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
+impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
+	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32, _bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -93,7 +94,7 @@ impl<VI: VertexIndex> Model for SimpleModel<VI> {
 		                     self.vertices.clone(),
 		                     self.indices.clone(),
 		                     self.set.clone(),
-		                     (model_matrix, eye))?;
+		                     (model_matrix.to_homogeneous(), eye))?;
 		
 		Ok(())
 	}

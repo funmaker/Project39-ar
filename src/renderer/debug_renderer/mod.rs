@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::f32::consts::PI;
 use err_derive::Error;
-use cgmath::{Vector2, Matrix4, InnerSpace, Rad, Angle, ElementWise, Vector3};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::buffer::{CpuBufferPool, BufferUsage};
 use vulkano::device::Queue;
@@ -10,11 +9,13 @@ use vulkano::{memory, command_buffer};
 
 mod text_cache;
 
+use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
+use crate::math::{Vec2, Vec3, Rot2, PMat4};
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
 use super::CommonsUBO;
-use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
 use text_cache::{TextCache, TextCacheError, TextCacheGetError};
+use nalgebra::Unit;
 
 pub struct DebugRenderer {
 	pipeline: Arc<DebugPipeline>,
@@ -56,7 +57,7 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, commons: &CommonsUBO, pixel_scale: Vector2<f32>, eye: u32) -> Result<(), DebugRendererRederError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, commons: &CommonsUBO, pixel_scale: Vec2, eye: u32) -> Result<(), DebugRendererRederError> {
 		let viewproj = commons.projection[eye as usize] * commons.view[eye as usize];
 		
 		DEBUG_LINES.with(|lines| {
@@ -64,7 +65,7 @@ impl DebugRenderer {
 				if line.width <= 0.0 {
 					continue;
 				} else {
-					self.draw_line(line, viewproj, pixel_scale);
+					self.draw_line(line, &viewproj, &pixel_scale);
 				}
 			}
 		});
@@ -74,9 +75,9 @@ impl DebugRenderer {
 				if point.radius <= 0.0 {
 					continue;
 				} else if point.radius <= RING_MIN {
-					self.draw_circle(point, viewproj, pixel_scale);
+					self.draw_circle(point, &viewproj, &pixel_scale);
 				} else {
-					self.draw_ring(point, viewproj, pixel_scale);
+					self.draw_ring(point, &viewproj, &pixel_scale);
 				}
 			}
 		});
@@ -97,7 +98,7 @@ impl DebugRenderer {
 			for text in texts.borrow_mut().drain(..) {
 				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
-				} else if let Some(set) = self.draw_text(text, viewproj, pixel_scale)? {
+				} else if let Some(set) = self.draw_text(text, &viewproj, &pixel_scale)? {
 					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;
 					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 					
@@ -116,7 +117,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
-	fn draw_circle(&mut self, point: DebugPoint, viewproj: Matrix4<f32>, pixel_scale: Vector2<f32>) {
+	fn draw_circle(&mut self, point: DebugPoint, viewproj: &PMat4, pixel_scale: &Vec2) {
 		let edges = point.radius.log(1.2).max(4.0) as u32;
 		let center = point.position.project(viewproj);
 		
@@ -139,16 +140,16 @@ impl DebugRenderer {
 		}
 		
 		for id in 0..edges {
-			let angle = PI * 2.0 / edges as f32 * id as f32 + PI / 4.0;
-			let offset = Vector2::new(angle.sin() * pixel_scale.x, angle.cos() * pixel_scale.y) * point.radius;
+			let angle = std::f32::consts::TAU / edges as f32 * id as f32;
+			let offset = Rot2::new(angle).transform_vector(&Vec2::x()).component_mul(pixel_scale) * point.radius;
 			self.vertices.push(Vertex::new(
-				(center + offset.extend(0.0)).into(),
-				point.color.into()
+				&center.coords + offset.to_homogeneous(),
+				&point.color,
 			));
 		}
 	}
 	
-	fn draw_ring(&mut self, point: DebugPoint, viewproj: Matrix4<f32>, pixel_scale: Vector2<f32>) {
+	fn draw_ring(&mut self, point: DebugPoint, viewproj: &PMat4, pixel_scale: &Vec2) {
 		let edges = (point.radius.ln() * 9.0).max(4.0) as u32;
 		let center = point.position.project(viewproj);
 		
@@ -169,22 +170,22 @@ impl DebugRenderer {
 		}
 		
 		for id in 0..edges {
-			let angle = PI * 2.0 / edges as f32 * id as f32 + PI / 4.0;
-			let dir = Vector2::new(angle.sin() * pixel_scale.x, angle.cos() * pixel_scale.y);
-			let offset = dir * point.radius;
-			let offset_inner = dir * ((point.radius - RING_MIN / 2.0) * RING_WIDTH);
+			let angle = std::f32::consts::TAU / edges as f32 * id as f32;
+			let dir = Rot2::new(angle).transform_vector(&Vec2::x()).component_mul(&pixel_scale);
+			let offset = &dir * point.radius;
+			let offset_inner = &dir * ((point.radius - RING_MIN / 2.0) * RING_WIDTH);
 			self.vertices.push(Vertex::new(
-				(center + offset.extend(0.0)).into(),
-				point.color.into()
+				&center + offset.to_homogeneous(),
+				&point.color,
 			));
 			self.vertices.push(Vertex::new(
-				(center + offset_inner.extend(0.0)).into(),
-				point.color.into()
+				&center + offset_inner.to_homogeneous(),
+				&point.color,
 			));
 		}
 	}
 	
-	fn draw_line(&mut self, line: DebugLine, viewproj: Matrix4<f32>, pixel_scale: Vector2<f32>) {
+	fn draw_line(&mut self, line: DebugLine, viewproj: &PMat4, pixel_scale: &Vec2) {
 		let edges = (line.width.ln() * 4.5).max(2.0) as u32;
 		let from = line.from.project(viewproj);
 		let to = line.to.project(viewproj);
@@ -193,9 +194,8 @@ impl DebugRenderer {
 			return
 		}
 		
-		let dir = (from - to).truncate().normalize();
-		let mut dir = Rad::atan2(dir.x, dir.y).0;
-		if !dir.is_normal() { dir = 0.0 }
+		let dir = Unit::try_new((from - to).xy(), std::f32::EPSILON).unwrap_or(Vec2::x_axis());
+		let dir = Rot2::rotation_between_axis(&Vec2::x_axis(), &dir);
 		
 		let base_id = self.vertices.len() as u32;
 		let mut last_ids = (edges / 2 - 1, edges / 2);
@@ -221,30 +221,30 @@ impl DebugRenderer {
 		}
 		
 		for id in 0..edges {
-			let angle = dir + PI / edges as f32 * id as f32 - PI / 2.0;
-			let offset = Vector2::new(angle.sin() * pixel_scale.x, angle.cos() * pixel_scale.y) * line.width;
+			let angle = dir * Rot2::from_angle(PI / edges as f32 * id as f32 - PI / 2.0);
+			let offset = angle.transform_vector(&Vec2::x()).component_mul(pixel_scale) * line.width;
 			self.vertices.push(Vertex::new(
-				(from + offset.extend(0.0)).into(),
-				line.color.into()
+				&from + offset.to_homogeneous(),
+				&line.color
 			));
 		}
 	
 		for id in 0..edges {
-			let angle = dir + PI / edges as f32 * id as f32 + PI / 2.0;
-			let offset = Vector2::new(angle.sin() * pixel_scale.x, angle.cos() * pixel_scale.y) * line.width;
+			let angle = dir * Rot2::from_angle(PI / edges as f32 * id as f32 - PI / 2.0);
+			let offset = angle.transform_vector(&-Vec2::x()).component_mul(pixel_scale) * line.width;
 			self.vertices.push(Vertex::new(
-				(to + offset.extend(0.0)).into(),
-				line.color.into()
+				&to + offset.to_homogeneous(),
+				&line.color
 			));
 		}
 	}
 	
-	fn draw_text(&mut self, text: DebugText, viewproj: Matrix4<f32>, pixel_scale: Vector2<f32>) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRederError> {
+	fn draw_text(&mut self, text: DebugText, viewproj: &PMat4, pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRederError> {
 		let entry = self.text_cache.get(&text.text)?;
 		
-		let size_px = Vector2::new(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
-		let top_left = text.position.project(viewproj) + text.offset.evaluate(size_px).mul_element_wise(pixel_scale).extend(0.0);
-		let size = size_px.mul_element_wise(pixel_scale);
+		let size_px = Vec2::new(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
+		let top_left = text.position.project(viewproj) + text.offset.evaluate(size_px).coords.component_mul(&pixel_scale).to_homogeneous();
+		let size = size_px.component_mul(&pixel_scale);
 		
 		let start_id = self.text_vertices.len() as u32;
 		self.indexes.push(start_id);
@@ -255,24 +255,24 @@ impl DebugRenderer {
 		self.indexes.push(start_id + 3);
 		
 		self.text_vertices.push(TexturedVertex::new(
-			top_left.into(),
+			top_left,
 			[0.0, 0.0],
-			text.color.into(),
+			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			(top_left + Vector3::new(size.x, 0.0, 0.0)).into(),
+			top_left + Vec3::new(size.x, 0.0, 0.0),
 			[1.0, 0.0],
-			text.color.into(),
+			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			(top_left + Vector3::new(size.x, size.y, 0.0)).into(),
+			top_left + Vec3::new(size.x, size.y, 0.0),
 			[1.0, 1.0],
-			text.color.into(),
+			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			(top_left + Vector3::new(0.0, size.y, 0.0)).into(),
+			top_left + Vec3::new(0.0, size.y, 0.0),
 			[0.0, 1.0],
-			text.color.into(),
+			&text.color,
 		));
 		
 		Ok(Some(entry.set.clone()))

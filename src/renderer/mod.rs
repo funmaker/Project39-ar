@@ -1,6 +1,5 @@
 use std::sync::{Arc, mpsc};
 use err_derive::Error;
-use cgmath::{Matrix4, Transform, Vector3, Vector4, InnerSpace, Vector2};
 use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
@@ -26,6 +25,7 @@ use crate::utils::*;
 use crate::debug;
 use crate::application::VR;
 use crate::application::Entity;
+use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4};
 use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
@@ -36,9 +36,9 @@ type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
 #[derive(Clone)]
 pub struct CommonsUBO {
-	projection: [Matrix4<f32>; 2],
-	view: [Matrix4<f32>; 2],
-	light_direction: [Vector4<f32>; 2],
+	projection: [PMat4; 2],
+	view: [AMat4; 2],
+	light_direction: [Vec4; 2],
 	ambient: f32,
 }
 
@@ -303,7 +303,7 @@ impl Renderer {
 		                  format.1)?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: Matrix4<f32>, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
 		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
 		
 		if window.swapchain_regen_required {
@@ -314,18 +314,18 @@ impl Renderer {
 			}
 		}
 		
-		let view_base  = hmd_pose.inverse_transform().unwrap();
-		let view_left = self.eyes.left.view * view_base;
-		let view_right = self.eyes.right.view * view_base;
-		let light_source = Vector3::new(0.5, -0.5, -1.5).normalize();
-		let pixel_scale = Vector2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
+		let view_base = hmd_pose.inverse();
+		let view_left = &self.eyes.left.view * &view_base;
+		let view_right = &self.eyes.right.view * &view_base;
+		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
+		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
 		
 		let commons = CommonsUBO {
-			projection: [self.eyes.left.projection, self.eyes.right.projection],
+			projection: [self.eyes.left.projection.clone(), self.eyes.right.projection.clone()],
 			view: [view_left, view_right],
 			light_direction: [
-				(mat3(view_left)  * light_source).extend(0.0),
-				(mat3(view_right) * light_source).extend(0.0),
+				(view_left * light_source).to_homogeneous(),
+				(view_right * light_source).to_homogeneous(),
 			],
 			ambient: 0.25,
 		};
@@ -404,10 +404,12 @@ impl Renderer {
 			future = Box::new(future.then_signal_semaphore());
 		}
 		
+		let pose = hmd_pose.to_matrix().to_slice34();
+		
 		if let Some(ref vr) = self.vr {
 			unsafe {
-				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(mat34(hmd_pose)))?;
-				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(mat34(hmd_pose)))?;
+				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(pose))?;
+				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;
 			}
 		}
 		

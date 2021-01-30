@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::cell::RefCell;
 use std::any::Any;
-use cgmath::{Vector3, Vector2, Vector4, Matrix4};
+
+use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4};
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
@@ -54,84 +55,93 @@ macro_rules! dprintln {
 
 #[derive(Copy, Clone)]
 pub enum DebugPosition {
-	Screen(Vector2<f32>),
-	World(Vector3<f32>),
+	Screen(Point2),
+	World(Point3),
 }
 
 impl DebugPosition {
-	pub fn project(self, viewproj: Matrix4<f32>) -> Vector3<f32> {
+	pub fn project(self, viewproj: &PMat4) -> Point3 {
 		match self {
-			DebugPosition::Screen(screen) => screen.extend(0.0),
-			DebugPosition::World(world) => {
-				let screen = viewproj * world.extend(1.0);
-				return screen.truncate() / screen.w;
-			},
+			DebugPosition::Screen(screen) => screen.coords.push(0.0).into(),
+			DebugPosition::World(world) => viewproj.transform_point(&world),
 		}
 	}
 }
 
-impl From<Vector2<f32>> for DebugPosition {
-	fn from(vec: Vector2<f32>) -> Self {
-		DebugPosition::Screen(vec)
+impl From<Point2> for DebugPosition {
+	fn from(pos: Point2) -> Self {
+		DebugPosition::Screen(pos)
 	}
 }
 
-impl From<Vector3<f32>> for DebugPosition {
-	fn from(vec: Vector3<f32>) -> Self {
-		DebugPosition::World(vec)
+impl From<&Point2> for DebugPosition {
+	fn from(pos: &Point2) -> Self {
+		DebugPosition::Screen(pos.clone())
+	}
+}
+
+impl From<Point3> for DebugPosition {
+	fn from(pos: Point3) -> Self {
+		DebugPosition::World(pos)
+	}
+}
+
+impl From<&Point3> for DebugPosition {
+	fn from(pos: &Point3) -> Self {
+		DebugPosition::World(pos.clone())
 	}
 }
 
 pub struct DebugPoint {
 	pub position: DebugPosition,
 	pub radius: f32,
-	pub color: Vector4<f32>
+	pub color: Color,
 }
 
 pub struct DebugLine {
 	pub from: DebugPosition,
 	pub to: DebugPosition,
 	pub width: f32,
-	pub color: Vector4<f32>
+	pub color: Color,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum DebugOffset {
-	Center(Vector2<f32>),
-	TopLeft(Vector2<f32>),
-	Top(Vector2<f32>),
-	TopRight(Vector2<f32>),
-	Right(Vector2<f32>),
-	BottomRight(Vector2<f32>),
-	Bottom(Vector2<f32>),
-	BottomLeft(Vector2<f32>),
-	Left(Vector2<f32>),
+	Center(Translation2),
+	TopLeft(Translation2),
+	Top(Translation2),
+	TopRight(Translation2),
+	Right(Translation2),
+	BottomRight(Translation2),
+	Bottom(Translation2),
+	BottomLeft(Translation2),
+	Left(Translation2),
 }
 
 impl DebugOffset {
-	pub fn center(x: f32, y: f32)       -> DebugOffset { DebugOffset::Center(Vector2::new(x, y)) }
-	pub fn top_left(x: f32, y: f32)     -> DebugOffset { DebugOffset::TopLeft(Vector2::new(x, y)) }
-	pub fn top(x: f32, y: f32)          -> DebugOffset { DebugOffset::Top(Vector2::new(x, y)) }
-	pub fn top_right(x: f32, y: f32)    -> DebugOffset { DebugOffset::TopRight(Vector2::new(x, y)) }
-	pub fn right(x: f32, y: f32)        -> DebugOffset { DebugOffset::Right(Vector2::new(x, y)) }
-	pub fn bottom_right(x: f32, y: f32) -> DebugOffset { DebugOffset::BottomRight(Vector2::new(x, y)) }
-	pub fn bottom(x: f32, y: f32)       -> DebugOffset { DebugOffset::Bottom(Vector2::new(x, y)) }
-	pub fn bottom_left(x: f32, y: f32)  -> DebugOffset { DebugOffset::BottomLeft(Vector2::new(x, y)) }
-	pub fn left(x: f32, y: f32)         -> DebugOffset { DebugOffset::Left(Vector2::new(x, y)) }
+	pub fn top_left(x: f32, y: f32)     -> DebugOffset { DebugOffset::TopLeft(Translation2::new(x, y)) }
+	pub fn top(x: f32, y: f32)          -> DebugOffset { DebugOffset::Top(Translation2::new(x, y)) }
+	pub fn top_right(x: f32, y: f32)    -> DebugOffset { DebugOffset::TopRight(Translation2::new(x, y)) }
+	pub fn left(x: f32, y: f32)         -> DebugOffset { DebugOffset::Left(Translation2::new(x, y)) }
+	pub fn center(x: f32, y: f32)       -> DebugOffset { DebugOffset::Center(Translation2::new(x, y)) }
+	pub fn right(x: f32, y: f32)        -> DebugOffset { DebugOffset::Right(Translation2::new(x, y)) }
+	pub fn bottom_left(x: f32, y: f32)  -> DebugOffset { DebugOffset::BottomLeft(Translation2::new(x, y)) }
+	pub fn bottom(x: f32, y: f32)       -> DebugOffset { DebugOffset::Bottom(Translation2::new(x, y)) }
+	pub fn bottom_right(x: f32, y: f32) -> DebugOffset { DebugOffset::BottomRight(Translation2::new(x, y)) }
 }
 
 impl DebugOffset {
-	pub fn evaluate(&self, size: Vector2<f32>) -> Vector2<f32> {
+	pub fn evaluate(&self, size: Vec2) -> Point2 {
 		match self {
-			DebugOffset::Center(offset)      => offset - Vector2::new( size.x * 0.5, size.y * 0.5),
-			DebugOffset::TopLeft(offset)     => offset - Vector2::new( size.x * 1.0, size.y * 1.0),
-			DebugOffset::Top(offset)         => offset - Vector2::new( size.x * 0.5, size.y * 1.0),
-			DebugOffset::TopRight(offset)    => offset - Vector2::new(          0.0, size.y * 1.0),
-			DebugOffset::Right(offset)       => offset - Vector2::new(          0.0, size.y * 0.5),
-			DebugOffset::BottomRight(offset) => offset - Vector2::new(          0.0,          0.0),
-			DebugOffset::Bottom(offset)      => offset - Vector2::new( size.x * 0.5,          0.0),
-			DebugOffset::BottomLeft(offset)  => offset - Vector2::new( size.x * 1.0,          0.0),
-			DebugOffset::Left(offset)        => offset - Vector2::new( size.x * 1.0, size.y * 0.5),
+			DebugOffset::TopLeft(offset)     => offset * Point2::new(-size.x * 1.0, -size.y * 1.0),
+			DebugOffset::Top(offset)         => offset * Point2::new(-size.x * 0.5, -size.y * 1.0),
+			DebugOffset::TopRight(offset)    => offset * Point2::new(          0.0, -size.y * 1.0),
+			DebugOffset::Left(offset)        => offset * Point2::new(-size.x * 1.0, -size.y * 0.5),
+			DebugOffset::Center(offset)      => offset * Point2::new(-size.x * 0.5, -size.y * 0.5),
+			DebugOffset::Right(offset)       => offset * Point2::new(          0.0, -size.y * 0.5),
+			DebugOffset::BottomLeft(offset)  => offset * Point2::new(-size.x * 1.0,           0.0),
+			DebugOffset::Bottom(offset)      => offset * Point2::new(-size.x * 0.5,           0.0),
+			DebugOffset::BottomRight(offset) => offset * Point2::new(          0.0,           0.0),
 		}
 	}
 }
@@ -141,7 +151,7 @@ pub struct DebugText {
 	pub position: DebugPosition,
 	pub offset: DebugOffset,
 	pub size: f32,
-	pub color: Vector4<f32>
+	pub color: Color,
 }
 
 thread_local! {
@@ -150,19 +160,19 @@ thread_local! {
     pub static DEBUG_TEXTS: RefCell<Vec<DebugText>> = RefCell::new(vec![]);
 }
 
-pub fn draw_point(position: impl Into<DebugPosition>, radius: f32, color: Vector4<f32>) {
+pub fn draw_point(position: impl Into<DebugPosition>, radius: f32, color: Color) {
 	DEBUG_POINTS.with(|points| {
 		points.borrow_mut().push(DebugPoint{ position: position.into(), radius, color });
 	})
 }
 
-pub fn draw_line(from: impl Into<DebugPosition>, to: impl Into<DebugPosition>, width: f32, color: Vector4<f32>) {
+pub fn draw_line(from: impl Into<DebugPosition>, to: impl Into<DebugPosition>, width: f32, color: Color) {
 	DEBUG_LINES.with(|lines| {
 		lines.borrow_mut().push(DebugLine{ from: from.into(), to: to.into(), width, color });
 	})
 }
 
-pub fn draw_text(text: impl Into<String>, position: impl Into<DebugPosition>, offset: DebugOffset, size: f32, color: Vector4<f32>) {
+pub fn draw_text(text: impl Into<String>, position: impl Into<DebugPosition>, offset: DebugOffset, size: f32, color: Color) {
 	DEBUG_TEXTS.with(|texts| {
 		texts.borrow_mut().push(DebugText{ text: text.into(), position: position.into(), offset, size, color });
 	})

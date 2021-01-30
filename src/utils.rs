@@ -4,44 +4,8 @@ use vulkano::{VulkanObject, SynchronizedVulkanObject};
 use vulkano::device::{Device, Queue};
 use vulkano::image::{AttachmentImage, ImageAccess};
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
-use cgmath::{Matrix4, Matrix, Decomposed, Quaternion, Vector3, Zero, Matrix3, InnerSpace};
 use image::DynamicImage;
 
-// Math
-
-pub fn mat4(val: &[[f32; 4]; 3]) -> Matrix4<f32> {
-	let mat: Matrix4<f32> = [val[0], val[1], val[2], [0.0, 0.0, 0.0, 1.0]].into();
-	mat.transpose()
-}
-
-pub fn decompose(mut mat: Matrix4<f32>) -> Decomposed<Vector3<f32>, Quaternion<f32>> {
-	let disp = mat.w.truncate();
-	mat.w.set_zero();
-	
-	let scale = Vector3::new(mat.x.magnitude(), mat.y.magnitude(), mat.z.magnitude());
-	
-	mat.x /= scale.x;
-	mat.y /= scale.y;
-	mat.z /= scale.z;
-	
-	let rot: Quaternion<f32> = mat3(mat).into();
-	
-	Decomposed {
-		scale: scale.magnitude(),
-		rot,
-		disp,
-	}
-}
-
-pub fn mat34(mat: Matrix4<f32>) -> [[f32; 4]; 3] {
-	[[mat.x.x, mat.y.x, mat.z.x, mat.w.x],
-	 [mat.x.y, mat.y.y, mat.z.y, mat.w.y],
-	 [mat.x.z, mat.y.z, mat.z.z, mat.w.z]]
-}
-
-pub fn mat3(mat: Matrix4<f32>) -> Matrix3<f32> {
-	Matrix3::from_cols(mat.x.truncate(), mat.y.truncate(), mat.z.truncate())
-}
 
 // Images
 
