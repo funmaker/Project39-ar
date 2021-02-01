@@ -1,4 +1,4 @@
-use nalgebra::{Transform, U2, U3, DimNameAdd, U1, DefaultAllocator, DimNameSum, TCategory, RealField, Scalar};
+use nalgebra::{Transform, U2, U3, DimNameAdd, U1, DefaultAllocator, DimNameSum, RealField, Scalar, TAffine};
 use nalgebra::allocator::Allocator;
 use derive_deref::{Deref, DerefMut};
 use simba::scalar::{SubsetOf, SupersetOf};
@@ -37,15 +37,13 @@ pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
 pub trait ToTransform where DefaultAllocator: Allocator<Self::N, DimNameSum<Self::D, U1>, DimNameSum<Self::D, U1>> {
 	type N: RealField;
 	type D: DimNameAdd<U1>;
-	fn to_transform<T>(&self) -> Transform<Self::N, Self::D, T>
-	                             where T: TCategory;
+	fn to_transform(&self) -> Transform<Self::N, Self::D, TAffine>;
 }
 
 impl<N: RealField> ToTransform for nalgebra::UnitComplex<N> {
 	type N = N;
 	type D = U2;
-	fn to_transform<T>(&self) -> Transform<N, U2, T>
-	                             where T: TCategory {
+	fn to_transform(&self) -> Transform<N, U2, TAffine> {
 		Transform::from_matrix_unchecked(self.to_homogeneous())
 	}
 }
@@ -53,8 +51,19 @@ impl<N: RealField> ToTransform for nalgebra::UnitComplex<N> {
 impl<N: RealField> ToTransform for nalgebra::UnitQuaternion<N> {
 	type N = N;
 	type D = U3;
-	fn to_transform<T>(&self) -> Transform<N, U3, T>
-	                             where T: TCategory {
+	fn to_transform(&self) -> Transform<N, U3, TAffine> {
+		Transform::from_matrix_unchecked(self.to_homogeneous())
+	}
+}
+
+impl<N, D> ToTransform for nalgebra::Translation<N, D>
+	where N: RealField,
+	      D: DimNameAdd<U1>,
+	      DefaultAllocator: Allocator<N, D>,
+	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
+	type N = N;
+	type D = D;
+	fn to_transform(&self) -> Transform<N, D, TAffine> {
 		Transform::from_matrix_unchecked(self.to_homogeneous())
 	}
 }
@@ -67,8 +76,7 @@ impl<N, D, R> ToTransform for nalgebra::Isometry<N, D, R>
 	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
 	type N = N;
 	type D = D;
-	fn to_transform<T>(&self) -> Transform<N, D, T>
-	                             where T: TCategory {
+	fn to_transform(&self) -> Transform<N, D, TAffine> {
 		Transform::from_matrix_unchecked(self.to_homogeneous())
 	}
 }
@@ -81,8 +89,7 @@ impl<N, D, R> ToTransform for nalgebra::Similarity<N, D, R>
 	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
 	type N = N;
 	type D = D;
-	fn to_transform<T>(&self) -> Transform<N, D, T>
-	                             where T: TCategory {
+	fn to_transform(&self) -> Transform<N, D, TAffine> {
 		Transform::from_matrix_unchecked(self.to_homogeneous())
 	}
 }
@@ -90,8 +97,7 @@ impl<N, D, R> ToTransform for nalgebra::Similarity<N, D, R>
 impl<N: RealField> ToTransform for [[N; 4]; 3] {
 	type N = N;
 	type D = U3;
-	fn to_transform<T>(&self) -> Transform<N, U3, T>
-	                             where T: TCategory {
+	fn to_transform(&self) -> Transform<N, U3, TAffine> {
 		Transform::from_matrix_unchecked(
 			nalgebra::Matrix4::<N>::new(self[0][0], self[0][1], self[0][2], self[0][3],
 			                            self[1][0], self[1][1], self[1][2], self[1][3],
@@ -170,7 +176,13 @@ impl Color {
 	pub fn white()    -> Self { Color(Vec4::new(1.0, 1.0, 1.0, 1.0)) }
 	
 	pub fn opactiy(self, opacity: f32) -> Self { Color(self.0 * opacity) }
-	pub fn lightness(self, lightness: f32) -> Self { Color(self.0.component_mul(&Vec4::new(lightness, lightness, lightness, 1.0))) }
+	pub fn lightness(self, lightness: f32) -> Self { Color(
+		if lightness < 1.0 {
+			self.0.component_mul(&Vec4::new(lightness, lightness, lightness, 1.0))
+		} else {
+			self.0.component_div(&Vec4::new(lightness, lightness, lightness, 1.0)) + Vec4::new(1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 0.0)
+		}
+	) }
 }
 
 

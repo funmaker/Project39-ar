@@ -15,7 +15,7 @@ use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::debug;
 use super::{MMDModel, Vertex, MaterialInfo};
-use crate::math::{Similarity3, Vec3, Color};
+use crate::math::{Vec3, Color};
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
 	let mut root = PathBuf::from(path);
@@ -131,7 +131,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		
 		let parent = if def.parent < 0 { None } else { Some(def.parent as usize) };
 		
-		let orig = Vec3::from(def.position).flip_x() * MMD_UNIT_SIZE;
+		let model_pos = Vec3::from(def.position).flip_x() * MMD_UNIT_SIZE;
 		let display = def.bone_flags.contains(BoneFlags::Display);
 		
 		let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
@@ -139,7 +139,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
 			Color::magenta()
 		} else if def.bone_flags.contains(BoneFlags::Rotatable) {
-			Color::blue()
+			Color::blue().lightness(1.5)
 		} else if def.bone_flags.contains(BoneFlags::Movable) {
 			Color::dyellow()
 		} else {
@@ -156,18 +156,18 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 			Connection::Position(pos) => BoneConnection::Offset(Vec3::from(pos).flip_x() * MMD_UNIT_SIZE),
 		};
 		
-		let transform = if def.parent < 0 {
-			Similarity3::new(orig, Vec3::zeros(), 1.0)
+		let local_pos = if def.parent < 0 {
+			model_pos
 		} else {
 			let parent = bone_defs[def.parent as usize];
-			Similarity3::new(orig - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE, Vec3::zeros(), 1.0)
+			model_pos - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE
 		};
 		
 		model.add_bone(Bone::new(name,
 		                         parent,
 		                         color,
-		                         transform,
-		                         orig.into(),
+		                         &model_pos,
+		                         &local_pos,
 		                         display,
 		                         connection));
 	}

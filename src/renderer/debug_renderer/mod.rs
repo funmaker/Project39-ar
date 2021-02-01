@@ -125,8 +125,8 @@ impl DebugRenderer {
 		let mut sub = true;
 		
 		while last_ids.0 + 1 < last_ids.1 {
-			self.indexes.push(last_ids.1);
 			self.indexes.push(last_ids.0);
+			self.indexes.push(last_ids.1);
 			
 			if sub {
 				last_ids.0 += 1;
@@ -154,26 +154,26 @@ impl DebugRenderer {
 		let center = point.position.project(viewproj);
 		
 		let start = self.vertices.len() as u32;
+		self.indexes.push(start);
 		self.indexes.push(start + edges * 2 - 2);
-		self.indexes.push(start);
-		self.indexes.push(start + edges * 2 - 1);
 		self.indexes.push(start + edges * 2 - 1);
 		self.indexes.push(start);
+		self.indexes.push(start + edges * 2 - 1);
 		self.indexes.push(start + 1);
 		for id in 0..(edges - 1) {
 			self.indexes.push(start + id * 2);
-			self.indexes.push(start + id * 2 + 2);
-			self.indexes.push(start + id * 2 + 1);
 			self.indexes.push(start + id * 2 + 1);
 			self.indexes.push(start + id * 2 + 2);
+			self.indexes.push(start + id * 2 + 1);
 			self.indexes.push(start + id * 2 + 3);
+			self.indexes.push(start + id * 2 + 2);
 		}
 		
 		for id in 0..edges {
 			let angle = std::f32::consts::TAU / edges as f32 * id as f32;
 			let dir = Rot2::new(angle).transform_vector(&Vec2::x()).component_mul(&pixel_scale);
-			let offset = &dir * point.radius;
-			let offset_inner = &dir * ((point.radius - RING_MIN / 2.0) * RING_WIDTH);
+			let offset: Vec2 = &dir * point.radius;
+			let offset_inner: Vec2 = &dir * ((point.radius - RING_MIN / 2.0) * RING_WIDTH);
 			self.vertices.push(Vertex::new(
 				&center + offset.to_homogeneous(),
 				&point.color,
@@ -202,8 +202,8 @@ impl DebugRenderer {
 		let mut sub = false;
 		
 		while last_ids.0 != last_ids.1 + 1 {
-			self.indexes.push(base_id + last_ids.0);
 			self.indexes.push(base_id + last_ids.1);
+			self.indexes.push(base_id + last_ids.0);
 			
 			if sub {
 				if last_ids.0 == 0 {

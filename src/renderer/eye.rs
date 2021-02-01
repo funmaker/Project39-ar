@@ -34,7 +34,7 @@ impl Eyes {
 	pub fn new(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let frame_buffer_size = (960, 1080);
 		let view = AMat4::identity();
-		let projection = clip() * Perspective3::new(frame_buffer_size.0 as f32 / frame_buffer_size.1 as f32, 90.0 / 360.0 * std::f32::consts::TAU, 0.01, 1000.0).as_projective();
+		let projection = clip() * Perspective3::new(frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 90.0 / 360.0 * std::f32::consts::TAU, 0.01, 100.01).as_projective();
 		
 		Ok(Eyes {
 			left: Eye::new(frame_buffer_size, view.clone(), projection, queue, render_pass)?,
@@ -49,8 +49,8 @@ impl Eyes {
 		let view_left  = vr.system.eye_to_head_transform(openvr::Eye::Left ).to_transform().inverse();
 		let view_right = vr.system.eye_to_head_transform(openvr::Eye::Right).to_transform().inverse();
 		
-		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.1, 1000.1)));
-		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.1, 1000.1)));
+		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
+		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
 		
 		Ok(Eyes {
 			left: Eye::new(frame_buffer_size, view_left, proj_left, queue, render_pass)?,

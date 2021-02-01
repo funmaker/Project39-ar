@@ -19,7 +19,7 @@ use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::{Renderer, RendererRenderError};
 use crate::utils::ImageEx;
 use crate::debug;
-use crate::math::{Mat4, AMat4};
+use crate::math::{AMat4, ToTransform};
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use sub_mesh::MaterialInfo;
 pub use import::MMDModelLoadError;
@@ -32,8 +32,8 @@ pub struct MMDModel<VI: VertexIndex> {
 	fences: Vec<FenceCheck>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 	default_bones: Vec<Bone>,
-	bones_ubo: RefCell<Vec<Mat4>>,
-	bones_pool: CpuBufferPool<Mat4>,
+	bones_ubo: RefCell<Vec<AMat4>>,
+	bones_pool: CpuBufferPool<AMat4>,
 }
 
 impl<VI: VertexIndex> MMDModel<VI> {
@@ -130,10 +130,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		self.default_bones.push(bone);
 	}
 	
-	fn draw_debug_bones(&self, model_matrix: &AMat4, bones: &Vec<Bone>, bones_mats: &Vec<Mat4>) {
+	fn draw_debug_bones(&self, model_matrix: &AMat4, bones: &Vec<Bone>, bones_mats: &Vec<AMat4>) {
 		for (id, bone) in bones.iter().enumerate() {
 			if bone.display {
-				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.orig));
+				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.rest_pos()));
 				
 				debug::draw_point(&pos, 10.0, bone.color.clone());
 				debug::draw_text(&bone.name, &pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
@@ -141,11 +141,11 @@ impl<VI: VertexIndex> MMDModel<VI> {
 				match &bone.connection {
 					BoneConnection::None => {}
 					BoneConnection::Bone(con) => {
-						let cpos = model_matrix.transform_point(&bones_mats[*con].transform_point(&bones[*con].orig));
+						let cpos = model_matrix.transform_point(&bones_mats[*con].transform_point(&bones[*con].rest_pos()));
 						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
 					}
 					BoneConnection::Offset(cpos) => {
-						let cpos = model_matrix.transform_point(&bones_mats[id].transform_point(&(&bone.orig + cpos)));
+						let cpos = model_matrix.transform_point(&bones_mats[id].transform_point(&(&bone.rest_pos() + cpos)));
 						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
 					}
 				}
@@ -168,15 +168,15 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			
 			for bone in bones {
 				let transform = match bone.parent {
-					None => bone.transform.to_homogeneous(),
-					Some(id) => &bones_mats[id] * &bone.transform.to_homogeneous(),
+					None => &bone.local_transform * &bone.anim_transform.to_transform(),
+					Some(id) => &bones_mats[id] * &bone.local_transform * &bone.anim_transform,
 				};
 				
 				bones_mats.push(transform);
 			}
 			
 			for (id, mat) in bones_mats.iter_mut().enumerate() {
-				*mat = mat.append_translation(&-&bones[id].orig.coords);
+				*mat = *mat * &bones[id].inv_model_transform;
 			}
 			
 			if debug::get_flag_or_default("KeyB") {

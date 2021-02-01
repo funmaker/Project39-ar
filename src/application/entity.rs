@@ -49,11 +49,11 @@ impl Entity {
 		for id in 0..self.bones.len() {
 			if self.bones[id].name.starts_with("Right H") || self.bones[id].name.starts_with("Left H") {
 				let swing = self.hair_swing.sin() / 30.0;
-				self.bones[id].transform = Similarity3::new(&self.bones[id].orig - &self.bones[self.bones[id].parent.unwrap()].orig, Vec3::z() * swing, 1.0);
+				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 			if self.bones[id].name == "Bend" {
-				let swing = (self.hair_swing / 3.0).sin() * std::f32::consts::PI / 4.0;
-				self.bones[id].transform = Similarity3::new(&self.bones[id].orig - &self.bones[self.bones[id].parent.unwrap()].orig, Vec3::z() * swing, 1.0);
+				let swing = (self.hair_swing / 3.0).sin() * std::f32::consts::PI / 2.0;
+				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 		}
 	}
