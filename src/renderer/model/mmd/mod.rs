@@ -64,7 +64,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		})
 	}
 	
-	pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
+	pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: mmd::VertexIndex {
 		import::from_pmx(path, renderer)
 	}
 	

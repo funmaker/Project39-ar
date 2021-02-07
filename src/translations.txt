@@ -245,3 +245,137 @@
 左H5 1,Left H5 1
 左H5 2,Left H5 2
 左H5 3,Left H5 3
+真面目:serious
+困る:be embarrassed
+にこり:grin
+怒り:anger
+平行:parallel
+近:near
+近左:near left
+近右:near right
+離:away
+離左:left
+離右:left right
+短:short
+上:Up
+左上:Up Left
+右上:Top Right
+下:bottom
+左下:Lower left
+右下:Lower right
+前:Front
+眉頭:Top of eyebrow
+左眉頭:Left eyebrow
+右眉頭:Right eyebrow
+眉粗:Coarse eyebrows
+まばたき:Blink
+ウィンク２:Wink 2
+ｳｨﾝｸ２右:Wink 2 right
+bまばたき:b blink
+bウィンク２:b wink2
+bｳｨﾝｸ２右:b wink 2 right
+笑い:Laughter
+ウィンク:wink
+ウィンク右:Wink right
+b笑い:b Laugh
+bウィンク:b Wink
+bウィンク右:bwink right
+ｷﾘｯ:clink
+ｷﾞｭｯ:squeak
+なごみ:a smile
+はぅ:Huh
+びっくり:surprise
+じと目:eyes
+瞳小:small pupil
+瞳縦:eyes vertical
+恐ろしい子！:Horrible child!
+なぬ！:No!
+たれ目:droopy eyes
+カメラ目:camera eye
+はちゅ目:Hachi-me
+笑い目:Laughing eyes
+星目:Starry eyes
+はぁと:Huh?
+あ:A
+あ２:Ah 2
+い:I2
+い２:I2
+う:U
+え:E
+お:O
+ん:(1)
+▲:▲ ▲
+∧:▲∧
+□:□
+ワ:W
+ω:ohm
+ω□:ω□
+にやり:smiling
+にっこり:grin
+ぺろっ:Peeking
+口角上げ:Mouth angle up
+左口角上げ:Left corner of mouth raised
+右口角上げ:Right corner of mouth up
+口角下げ:Lower left corner of mouth
+左口角下げ:Lower left corner of mouth
+右口角下げ:Lower right corner of mouth
+口横広げ:Wide mouth
+左口横広げ:Left side of mouth widened
+右口横広げ:Right side of mouth widened
+歯無し上:Toothless Upper
+歯無し下:Toothless bottom
+舌無し:No tongue
+下睫毛消:Lower eyelashes erased
+HL消１:HL erased1
+もぐもぐ:Moxie
+左もぐもぐ:Left mottling
+右もぐもぐ:Right squirming
+涙:Tears
+涙長:Long tear
+涙上:Upper tear
+涙下:Lower tear
+涙前:before tear
+涙近:near tears
+照れ:embarrassment
+照れ2:Illness 2
+照れ3:Embarrassment 3
+鼻線消し:Nose line erased
+鼻線長:long nose line
+左燈:Left light
+右燈:Right light
+左！:Left!
+右！:Right!
+左△△△:Left △△△△
+右△△△:Right!
+左怒り:Left anger!
+右怒り:Right anger!
+左汗:Left sweat!
+右汗:Right sweat
+汗下:under sweat
+睫毛:eyelashes
+輪郭線が消えて:The contour line disappears and
+toon白くなる:toon becomes white
+toon深まる:toon deepens
+spa消える:spa disappear
+消えて:disappear
+全黒モード:All black mode
+全灰モード:All gray mode
+全白モード:All white mode
+小表情は消え:Small face disappear
+赤顔消え:Red face disappears
+眼鏡:Glasses
+マイクOFF:Microphone off
+HP消:HP off
+Tpose:Tpose
+Tpose2:Tpose2
+肩pose:Shoulder pose
+指に直:Direct to finger
+左手半開き:Left hand half open
+右手半開き:Right hand half open
+左手グー:Left hand goo
+右手グー:Right hand goo
+指を広げて:Spread your fingers.
+指をそろえる:Keep your fingers together
+eye暗い:Eye dark
+Hair shadow消え:Hair shadow off
+TDApose:TDApose

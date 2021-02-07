@@ -5,6 +5,7 @@
 #![feature(type_name_of_val)]
 #![feature(backtrace)]
 #![feature(osstring_ascii)]
+#![feature(vec_into_raw_parts)]
 #[macro_use] extern crate lazy_static;
 
 use std::env;

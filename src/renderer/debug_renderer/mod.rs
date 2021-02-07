@@ -248,11 +248,11 @@ impl DebugRenderer {
 		
 		let start_id = self.text_vertices.len() as u32;
 		self.indexes.push(start_id);
+		self.indexes.push(start_id + 2);
 		self.indexes.push(start_id + 1);
-		self.indexes.push(start_id + 2);
 		self.indexes.push(start_id);
-		self.indexes.push(start_id + 2);
 		self.indexes.push(start_id + 3);
+		self.indexes.push(start_id + 2);
 		
 		self.text_vertices.push(TexturedVertex::new(
 			top_left,

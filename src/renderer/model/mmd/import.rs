@@ -7,7 +7,6 @@ use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::WeightDeform;
-use fallible_iterator::FallibleIterator;
 use image::ImageFormat;
 
 use crate::application::entity::{Bone, BoneConnection};
@@ -17,7 +16,7 @@ use crate::debug;
 use super::{MMDModel, Vertex, MaterialInfo};
 use crate::math::{Vec3, Color};
 
-pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + TryFrom<u8> + TryFrom<u16> + TryFrom<i32> {
+pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
 	let mut root = PathBuf::from(path);
 	root.pop();
 	
@@ -27,98 +26,94 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 	// dprintln!("{}", header);
 	
 	let mut vertices_reader = mmd::VertexReader::new(header)?;
-	let vertices: Vec<Vertex> = vertices_reader.iter()
-	                                           .map(|v: mmd::Vertex<i16>| Ok(v.into()))
-	                                           .collect()?;
+	let vertices = vertices_reader.iter::<i16>()
+                                  .map(|v| v.map(Into::into))
+                                  .collect::<Result<Vec<Vertex>, _>>()?;
 	
 	let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
-	let indices: Vec<VI> = surfaces_reader.iter()
-	                                      .fold(Vec::new(), |mut acc, surface| { acc.extend_from_slice(&surface); Ok(acc) })?;
+	let indices = surfaces_reader.iter()
+	                             .collect::<Result<Vec<[VI; 3]>, _>>()?
+	                             .flatten();
 	
 	let mut model = MMDModel::new(&vertices, &indices, renderer)?;
 	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
+	let mut textures = vec![];
 	
-	let textures = textures_reader.iter()
-	                              .map_err(MMDModelLoadError::PmxError)
-	                              .map(|texture_path| {
-		                              let path = lookup_windows_path(&root, &texture_path)?;
-		                              let texture_reader = BufReader::new(File::open(path)?);
-		                              let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
-		                              let has_alpha = image.color().has_alpha();
+	for texture_path in textures_reader.iter() {
+		let texture_path = texture_path?;
+		let os_path = lookup_windows_path(&root, &texture_path)?;
+		let texture_reader = BufReader::new(File::open(os_path)?);
+		let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
+		let has_alpha = image.color().has_alpha();
 		
-		                              Ok((model.add_texture(image, renderer)?, has_alpha))
-	                              })
-	                              .collect::<Vec<_>>()?;
+		textures.push((model.add_texture(image, renderer)?, has_alpha));
+	}
 	
 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
 	let mut last_index = 0_usize;
 	
-	materials_reader.iter::<i32>()
-	                .map_err(MMDModelLoadError::PmxError)
-	                .for_each(|material| {
-		                let toon_index = match material.toon {
-			                Toon::Texture(id) => id,
-			                Toon::Internal(_) => -1
-		                };
+	for material in materials_reader.iter::<i32>() {
+		let material = material?;
 		
-		                let sphere_mode = if material.environment_index < 0 {
-			                0
-		                } else {
-			                match material.environment_blend_mode {
-				                EnvironmentBlendMode::Disabled => 0,
-				                EnvironmentBlendMode::Multiply => 1,
-				                EnvironmentBlendMode::Additive => 2,
-				                EnvironmentBlendMode::AdditionalVec4 => 3,
-			                }
-		                };
+		let toon_index = match material.toon {
+			Toon::Texture(id) => id,
+			Toon::Internal(_) => -1
+		};
 		
-		                let material_info = MaterialInfo {
-			                color: material.diffuse_color,
-			                specular: material.specular_color,
-			                specularity: material.specular_strength,
-			                ambient: material.ambient_color,
-			                sphere_mode,
-		                };
+		let sphere_mode = if material.environment_index < 0 {
+			0
+		} else {
+			match material.environment_blend_mode {
+				EnvironmentBlendMode::Disabled => 0,
+				EnvironmentBlendMode::Multiply => 1,
+				EnvironmentBlendMode::Additive => 2,
+				EnvironmentBlendMode::AdditionalVec4 => 3,
+			}
+		};
 		
-		                let (texture, has_alpha) = textures.get(material.texture_index as usize)
-		                                                   .cloned()
-		                                                   .map_or((None, false), |(texture, has_alpha)| (Some(texture), has_alpha));
+		let material_info = MaterialInfo {
+			color: material.diffuse_color,
+			specular: material.specular_color,
+			specularity: material.specular_strength,
+			ambient: material.ambient_color,
+			sphere_mode,
+		};
 		
-		                let toon = textures.get(toon_index as usize)
+		let (texture, has_alpha) = textures.get(material.texture_index as usize)
 		                                   .cloned()
-		                                   .map(|(t, _)| t);
+		                                   .map_or((None, false), |(texture, has_alpha)| (Some(texture), has_alpha));
 		
-		                let sphere_map = textures.get(material.environment_index as usize)
-		                                         .cloned()
-		                                         .map(|(t, _)| t);
+		let toon = textures.get(toon_index as usize)
+		                   .cloned()
+		                   .map(|(t, _)| t);
 		
-		                let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
+		let sphere_map = textures.get(material.environment_index as usize)
+		                         .cloned()
+		                         .map(|(t, _)| t);
 		
-		                model.add_sub_mesh(
-			                last_index .. last_index + material.surface_count as usize,
-			                material_info,
-			                texture,
-			                toon,
-			                sphere_map,
-			                material.draw_flags.contains(DrawingFlags::NoCull),
-			                !has_alpha,
-			                edge,
-			                renderer,
-		                )?;
+		let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
 		
-		                last_index += material.surface_count as usize;
+		model.add_sub_mesh(
+			last_index .. last_index + material.surface_count as usize,
+			material_info,
+			texture,
+			toon,
+			sphere_map,
+			material.draw_flags.contains(DrawingFlags::NoCull),
+			!has_alpha,
+			edge,
+			renderer,
+		)?;
 		
-		                Ok(())
-	                })?;
+		last_index += material.surface_count as usize;
+	}
+	
 	
 	let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
 	
 	let bone_defs = bones_reader.iter()
-	                            .collect::<Vec<mmd::Bone<i32>>>()?;
-	
-	let bone_defs = bone_defs.iter()
-	                         .collect::<Vec<_>>();
+	                            .collect::<Result<Vec<mmd::Bone<i32>>, _>>()?;
 	
 	for def in bone_defs.iter() {
 		let name = if def.universal_name.len() > 0 {
@@ -128,12 +123,12 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		} else {
 			&def.local_name
 		};
-		
+	
 		let parent = if def.parent < 0 { None } else { Some(def.parent as usize) };
-		
+	
 		let model_pos = Vec3::from(def.position).flip_x() * MMD_UNIT_SIZE;
 		let display = def.bone_flags.contains(BoneFlags::Display);
-		
+	
 		let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
 			Color::green()
 		} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
@@ -145,24 +140,24 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 		} else {
 			Color::dwhite()
 		};
-		
+	
 		if !def.bone_flags.contains(BoneFlags::CanOperate) {
 			color = color.lightness(0.5);
 		}
-		
+	
 		let connection = match def.connection {
 			Connection::Index(id) if id <= 0 => BoneConnection::None,
 			Connection::Index(id) => BoneConnection::Bone(id as usize),
 			Connection::Position(pos) => BoneConnection::Offset(Vec3::from(pos).flip_x() * MMD_UNIT_SIZE),
 		};
-		
+	
 		let local_pos = if def.parent < 0 {
 			model_pos
 		} else {
-			let parent = bone_defs[def.parent as usize];
+			let parent = &bone_defs[def.parent as usize];
 			model_pos - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE
 		};
-		
+	
 		model.add_bone(Bone::new(name,
 		                         parent,
 		                         color,
@@ -256,6 +251,21 @@ trait FlipX {
 impl FlipX for Vec3 {
 	fn flip_x(self) -> Self {
 		Vec3::new(-self.x, self.y, self.z)
+	}
+}
+
+trait FlattenArrayVec {
+	type Out;
+	fn flatten(self) -> Self::Out;
+}
+
+impl<T> FlattenArrayVec for Vec<[T; 3]> {
+	type Out = Vec<T>;
+	fn flatten(self) -> Self::Out {
+		unsafe {
+			let (ptr, len, cap) = self.into_raw_parts();
+			Vec::from_raw_parts(ptr as *mut T, len * 3, cap * 3)
+		}
 	}
 }
 
