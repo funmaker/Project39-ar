@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
-layout(set = 0, binding = 1) uniform Material {
+layout(set = 1, binding = 0) uniform Material {
 	vec4 color;
 	vec3 specular;
 	float specularity;
@@ -22,9 +22,9 @@ layout(set = 0, binding = 1) uniform Material {
 	uint sphere_mode;
 } material;
 
-layout(set = 0, binding = 2) uniform sampler2D tex;
-layout(set = 0, binding = 3) uniform sampler2D toon;
-layout(set = 0, binding = 4) uniform sampler2D sphere;
+layout(set = 1, binding = 1) uniform sampler2D tex;
+layout(set = 1, binding = 2) uniform sampler2D toon;
+layout(set = 1, binding = 3) uniform sampler2D sphere;
 
 layout(push_constant) uniform Pc {
 	mat4 model;

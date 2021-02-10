@@ -1,11 +1,13 @@
 use std::io::BufReader;
 use std::fs::File;
+use std::sync::Arc;
 use image::ImageFormat;
 
 use crate::renderer::Renderer;
 use crate::application::entity::{Bone, BoneConnection};
 use crate::math::{Color, Vec3};
-use super::{MMDModel, Vertex, MaterialInfo};
+use super::{MMDModel, Vertex, sub_mesh::MaterialInfo};
+use crate::renderer::model::mmd::shared::MMDModelShared;
 
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
@@ -42,7 +44,7 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	make_wall([ 0.2, 0.0,  0.2].into(), [-0.2, height,  0.2].into(), [ 0.0, 0.0,  1.0].into(), 50, bones_num);
 	make_wall([ 0.2, 0.0, -0.2].into(), [ 0.2, height,  0.2].into(), [ 1.0, 0.0,  0.0].into(), 50, bones_num);
 	
-	let mut model = MMDModel::new(&vertices, &indices, renderer).unwrap();
+	let mut model = MMDModelShared::new(&vertices, &indices, renderer).unwrap();
 	
 	let texture_reader = BufReader::new(File::open("models/missing.png").unwrap());
 	let image = image::load(texture_reader, ImageFormat::Png).unwrap();
@@ -85,5 +87,5 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	                         true,
 	                         BoneConnection::None));
 	
-	model
+	MMDModel::new(Arc::new(model), renderer).unwrap()
 }

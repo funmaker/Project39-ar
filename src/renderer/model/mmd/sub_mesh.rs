@@ -1,18 +1,17 @@
 use std::sync::Arc;
 use std::ops::Range;
-use std::cell::RefCell;
 use vulkano::buffer::ImmutableBuffer;
 use vulkano::image::ImmutableImage;
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
-use vulkano::descriptor::descriptor_set::{PersistentDescriptorSet, FixedSizeDescriptorSetsPool};
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline, MMDPipelineAny};
 use crate::renderer::Renderer;
 use crate::renderer::model::ModelError;
 
-pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>, RefCell<FixedSizeDescriptorSetsPool>);
+pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>);
 
 pub struct MaterialInfo {
 	pub color: [f32; 4],
@@ -50,8 +49,7 @@ impl SubMesh {
 		};
 		
 		let main_set = Arc::new(
-			PersistentDescriptorSet::start(main_pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
-				.add_buffer(renderer.commons.clone())?
+			PersistentDescriptorSet::start(main_pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 				.add_buffer(material_buffer.clone())?
 				.add_sampled_image(texture.clone(), sampler.clone())?
 				.add_sampled_image(toon.clone(), sampler.clone())?
@@ -59,10 +57,8 @@ impl SubMesh {
 				.build()?
 		);
 		
-		let main_pool = RefCell::new(FixedSizeDescriptorSetsPool::new(main_pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
-		
 		let mut sub_mesh = SubMesh {
-			main: (main_pipeline, main_set, main_pool),
+			main: (main_pipeline, main_set),
 			transparent: None,
 			edge: None,
 			range,
@@ -77,9 +73,7 @@ impl SubMesh {
 			};
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?
-					.clone())
-					.add_buffer(renderer.commons.clone())?
+				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_buffer(material_buffer.clone())?
 					.add_sampled_image(texture.clone(), sampler.clone())?
 					.add_sampled_image(toon.clone(), sampler.clone())?
@@ -87,9 +81,7 @@ impl SubMesh {
 					.build()?
 			);
 			
-			let pool = RefCell::new(FixedSizeDescriptorSetsPool::new(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
-			
-			sub_mesh.transparent = Some((pipeline, set, pool));
+			sub_mesh.transparent = Some((pipeline, set));
 		}
 		
 		if let Some((scale, color)) = edge {
@@ -99,16 +91,12 @@ impl SubMesh {
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?
-					.clone())
-					.add_buffer(renderer.commons.clone())?
+				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_sampled_image(texture.clone(), sampler.clone())?
 					.build()?
 			);
 			
-			let pool = RefCell::new(FixedSizeDescriptorSetsPool::new(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone()));
-			
-			sub_mesh.edge = Some((pipeline.into(), set, pool));
+			sub_mesh.edge = Some((pipeline.into(), set));
 		}
 		
 		Ok(sub_mesh)

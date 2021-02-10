@@ -2,7 +2,6 @@ use std::io::BufReader;
 use std::fs::File;
 use std::path::PathBuf;
 use std::ffi::{OsStr, OsString};
-use std::convert::TryFrom;
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
@@ -12,11 +11,11 @@ use image::ImageFormat;
 use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
-use crate::debug;
-use super::{MMDModel, Vertex, MaterialInfo};
 use crate::math::{Vec3, Color};
+use crate::debug;
+use super::{Vertex, sub_mesh::MaterialInfo, shared::MMDModelShared};
 
-pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
+pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
 	let mut root = PathBuf::from(path);
 	root.pop();
 	
@@ -35,7 +34,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>,
 	                             .collect::<Result<Vec<[VI; 3]>, _>>()?
 	                             .flatten();
 	
-	let mut model = MMDModel::new(&vertices, &indices, renderer)?;
+	let mut model = MMDModelShared::new(&vertices, &indices, renderer)?;
 	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
 	let mut textures = vec![];

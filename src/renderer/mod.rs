@@ -31,6 +31,7 @@ use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
 use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
+use model::ModelRenderError;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
 
@@ -360,25 +361,35 @@ impl Renderer {
 		                   1,
 		                   Filter::Linear)?
 		       .update_buffer(self.commons.clone(),
-		                      commons.clone())?
-		       .begin_render_pass(self.eyes.left.frame_buffer.clone(),
+		                      commons.clone())?;
+		
+		for entity in scene.iter_mut() {
+			entity.pre_render(&mut builder)?;
+		}
+		
+		builder.begin_render_pass(self.eyes.left.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for entity in scene.iter() {
+		for entity in scene.iter_mut() {
 			entity.render(&mut builder, 0)?;
 		}
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		
-		builder.end_render_pass()?
-		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
+		builder.end_render_pass()?;
+		
+		for entity in scene.iter_mut() {
+			entity.pre_render(&mut builder)?;
+		}
+		
+		builder.begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
-		for entity in scene.iter() {
+		for entity in scene.iter_mut() {
 			entity.render(&mut builder, 1)?;
 		}
 		
@@ -465,6 +476,7 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
 	#[error(display = "{}", _0)] DebugRendererRederError(#[error(source)] DebugRendererRederError),
+	#[error(display = "{}", _0)] ModelRenderError(#[error(source)] ModelRenderError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),

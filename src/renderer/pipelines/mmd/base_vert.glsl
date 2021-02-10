@@ -18,8 +18,8 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
-layout(set = 1, binding = 0) uniform Bones {
-	mat4 mats[256];
+layout(set = 0, binding = 1) uniform Bones {
+	mat4 mats[246];
 } bones;
 
 layout(push_constant) uniform Pc {

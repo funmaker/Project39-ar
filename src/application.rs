@@ -195,6 +195,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr camera with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
+	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),

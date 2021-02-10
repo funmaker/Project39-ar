@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use openvr::TrackedDevicePose;
@@ -18,12 +17,12 @@ pub struct Entity {
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
 	pub bones: Vec<Bone>,
-	model: Arc<dyn Model>,
+	model: Box<dyn Model>,
 	hair_swing: f32,
 }
 
 impl Entity {
-	pub fn new(name: impl Into<String>, model: impl IntoArcModel, position: Point3, angle: Rot3) -> Self {
+	pub fn new(name: impl Into<String>, model: impl IntoBoxedModel, position: Point3, angle: Rot3) -> Self {
 		let model = model.into();
 		
 		Entity {
@@ -31,7 +30,7 @@ impl Entity {
 			position: Isometry3::from_parts(position.coords.into(), angle),
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),
-			bones: model.get_default_bones(),
+			bones: model.get_default_bones().to_vec(),
 			model,
 			hair_swing: 0.0,
 		}
@@ -58,7 +57,13 @@ impl Entity {
 		}
 	}
 	
-	pub fn render(&self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RendererRenderError> {
+	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder) -> Result<(), RendererRenderError> {
+		self.model.pre_render(builder, &self.position.to_transform(), &self.bones)?;
+		
+		Ok(())
+	}
+	
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RendererRenderError> {
 		let pos: Point3 = self.position.translation.vector.into();
 		let ang = &self.position.rotation;
 		
@@ -68,7 +73,9 @@ impl Entity {
 		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		
-		self.model.render(builder, &self.position.to_transform(), eye, &self.bones)
+		self.model.render(builder, &self.position.to_transform(), eye)?;
+		
+		Ok(())
 	}
 	
 	pub fn move_to_pose(&mut self, pose: TrackedDevicePose) {
@@ -81,24 +88,18 @@ impl Entity {
 	}
 }
 
-pub trait IntoArcModel {
-	fn into(self) -> Arc<dyn Model>;
+pub trait IntoBoxedModel {
+	fn into(self) -> Box<dyn Model>;
 }
 
-impl IntoArcModel for Arc<dyn Model> {
-	fn into(self) -> Arc<dyn Model> {
+impl IntoBoxedModel for Box<dyn Model> {
+	fn into(self) -> Box<dyn Model> {
 		self
 	}
 }
 
-impl<M: Model + 'static> IntoArcModel for Arc<M> {
-	fn into(self) -> Arc<dyn Model> {
-		self
-	}
-}
-
-impl<M: Model + 'static> IntoArcModel for M {
-	fn into(self) -> Arc<dyn Model> {
-		Arc::new(self)
+impl<M: Model + 'static> IntoBoxedModel for M {
+	fn into(self) -> Box<dyn Model> {
+		Box::new(self)
 	}
 }

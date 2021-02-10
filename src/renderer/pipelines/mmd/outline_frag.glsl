@@ -11,7 +11,7 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
-layout(set = 0, binding = 1) uniform sampler2D tex;
+layout(set = 1, binding = 0) uniform sampler2D tex;
 
 layout(push_constant) uniform Pc {
 	mat4 model;

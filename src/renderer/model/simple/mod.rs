@@ -15,19 +15,19 @@ mod import;
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
-use crate::renderer::{Renderer, RendererRenderError};
+use crate::renderer::Renderer;
 use crate::utils::ImageEx;
-use crate::application::entity::Bone;
 use crate::math::AMat4;
-use super::{Model, ModelError, VertexIndex, FenceCheck};
+use super::{Model, ModelError, ModelRenderError, VertexIndex, FenceCheck};
 pub use import::SimpleModelLoadError;
 
+#[derive(Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
 	pipeline: Arc<DefaultPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
-	fence: FenceCheck,
+	fence: Arc<FenceCheck>,
 }
 
 impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
@@ -61,7 +61,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 			                             .build()?
 		);
 		
-		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?;
+		let fence = Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?);
 		
 		Ok(SimpleModel {
 			pipeline,
@@ -86,7 +86,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
-	fn render(&self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32, _bones: &Vec<Bone>) -> Result<(), RendererRenderError> {
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -99,8 +99,8 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 		Ok(())
 	}
 	
-	fn get_default_bones(&self) -> Vec<Bone> {
-		vec![]
+	fn try_clone(&self, _renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {
+		Ok(Box::new(self.clone()))
 	}
 }
 
