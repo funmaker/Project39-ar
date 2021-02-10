@@ -1,4 +1,5 @@
 use std::sync::{Arc, mpsc};
+use std::time::Instant;
 use err_derive::Error;
 use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
@@ -25,7 +26,7 @@ use crate::utils::*;
 use crate::debug;
 use crate::application::VR;
 use crate::application::Entity;
-use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4};
+use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4, Color, Point2};
 use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
@@ -57,6 +58,7 @@ pub struct Renderer {
 	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
     load_commands: mpsc::Receiver<AutoCommandBuffer>,
 	debug_renderer: DebugRenderer,
+	last_frame: Instant,
 }
 
 impl Renderer {
@@ -93,6 +95,8 @@ impl Renderer {
 		
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		
+		let last_frame = Instant::now();
+		
 		Ok(Renderer {
 			vr,
 			instance,
@@ -106,6 +110,7 @@ impl Renderer {
 			camera_image,
 			load_commands,
 			debug_renderer,
+			last_frame,
 		})
 	}
 	
@@ -290,7 +295,7 @@ impl Renderer {
 		
 		Ok(Swapchain::new(self.device.clone(),
 		                  surface,
-		                  caps.min_image_count,
+		                  2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(2)),
 		                  format.0,
 		                  dimensions,
 		                  1,
@@ -314,6 +319,11 @@ impl Renderer {
 				Ok(_) => {}
 			}
 		}
+		
+		let since_last_frame = self.last_frame.elapsed();
+		self.last_frame = Instant::now();
+		
+		debug::draw_text(format!("FPS: {}", (1.0 / since_last_frame.as_secs_f32()).floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		
 		let view_base = hmd_pose.inverse();
 		let view_left = &self.eyes.left.view * &view_base;
@@ -426,9 +436,11 @@ impl Renderer {
 		
 		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
 		
-		if window.render_required {
-			future = window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image)?;
-		}
+		future = match window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image) {
+			Ok(future) => future,
+			Err(WindowRenderError::Later(future)) => future,
+			Err(err) => return Err(err.into()),
+		};
 		
 		let future = future.then_signal_fence_and_flush();
 		

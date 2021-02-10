@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::error::Error;
+use std::time::Duration;
 use err_derive::Error;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -18,6 +19,7 @@ use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
 use crate::debug;
+use std::fmt::{Debug, Formatter};
 
 
 pub struct Window {
@@ -79,24 +81,23 @@ impl Window {
 	              -> Result<Box<dyn GpuFuture>, WindowRenderError> {
 		let (ref mut swapchain, ref mut images) = self.swapchain;
 		
-		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), None) {
+		let timeout = (!self.render_required).then_some(Duration::new(0, 0));
+		
+		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), timeout) {
 			Err(AcquireError::OutOfDate) => {
 				self.swapchain_regen_required = true;
-				Err(WindowRenderError::NeedRetry)
+				return Err(WindowRenderError::Later(future))
 			},
-			Err(err) => Err(err.into()),
-			Ok(res) => Ok(res),
-		}?;
+			Err(AcquireError::Timeout) => {
+				return Err(WindowRenderError::Later(future))
+			},
+			Err(err) => return Err(err.into()),
+			Ok(res) => res,
+		};
 		
 		if suboptimal {
 			eprintln!("Suboptimal");
 			self.swapchain_regen_required = true;
-		}
-		
-		if image_num > 2 {
-			eprintln!("Acquire_next_image returned {}! Skipping render.", image_num);
-			self.swapchain_regen_required = true;
-			return Err(WindowRenderError::NeedRetry);
 		}
 		
 		let out_dims = swapchain.dimensions();
@@ -131,6 +132,8 @@ impl Window {
 		                   Filter::Linear)?;
 		
 		let command_buffer = builder.build()?;
+		
+		self.render_required = false;
 		
 		Ok(Box::new(future.join(acquire_future)
 		                  .then_execute(queue.clone(), command_buffer)?
@@ -236,10 +239,14 @@ impl Window {
 						*control_flow = ControlFlow::Exit;
 					}
 					
-					Event::RedrawRequested(_) | Event::RedrawEventsCleared => {
+					Event::RedrawRequested(_) => {
 						*render_required = true;
 						*control_flow = ControlFlow::Exit;
 					},
+					
+					Event::RedrawEventsCleared => {
+						*control_flow = ControlFlow::Exit;
+					}
 					
 					_ => {}
 				}
@@ -266,12 +273,25 @@ pub enum WindowSwapchainRegenError {
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
 }
 
-#[derive(Debug, Error)]
+#[derive(Error)]
 pub enum WindowRenderError {
-	#[error(display = "Need Retry")] NeedRetry,
+	#[error(display = "Later")] Later(Box<dyn GpuFuture>),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] AcquireError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
+}
+
+impl Debug for WindowRenderError {
+	fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+		match &self {
+			WindowRenderError::Later(_)                      => f.debug_tuple("Later").field(&"GpuFuture").finish(),
+			WindowRenderError::AcquireError(inner)           => f.debug_tuple("AcquireError").field(inner).finish(),
+			WindowRenderError::BlitImageError(inner)         => f.debug_tuple("BlitImageError").field(inner).finish(),
+			WindowRenderError::OomError(inner)               => f.debug_tuple("OomError").field(inner).finish(),
+			WindowRenderError::BuildError(inner)             => f.debug_tuple("BuildError").field(inner).finish(),
+			WindowRenderError::CommandBufferExecError(inner) => f.debug_tuple("CommandBufferExecError").field(inner).finish(),
+		}
+	}
 }
