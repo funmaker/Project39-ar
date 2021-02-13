@@ -1,16 +1,12 @@
 use std::sync::Arc;
 use err_derive::Error;
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract};
-use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess};
+use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::format::Format;
 use vulkano::format;
 use vulkano::device::Queue;
-use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
-use openvr::compositor::Texture;
 
-use crate::utils::{OpenVRPtr};
-use crate::application::VR;
-use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
+use crate::math::{Mat4, Perspective3, AMat4, PMat4};
 use super::RenderPass;
 
 // Translates OpenGL projection matrix to Vulkan
@@ -42,29 +38,12 @@ impl Eyes {
 			frame_buffer_size,
 		})
 	}
-	
-	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
-		let frame_buffer_size = vr.system.recommended_render_target_size();
-		
-		let view_left  = vr.system.eye_to_head_transform(openvr::Eye::Left ).to_transform().inverse();
-		let view_right = vr.system.eye_to_head_transform(openvr::Eye::Right).to_transform().inverse();
-		
-		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
-		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
-		
-		Ok(Eyes {
-			left: Eye::new(frame_buffer_size, view_left, proj_left, queue, render_pass)?,
-			right: Eye::new(frame_buffer_size, view_right, proj_right, queue, render_pass)?,
-			frame_buffer_size,
-		})
-	}
 }
 
 
 pub struct Eye {
 	pub image: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
 	pub depth_image: Arc<AttachmentImage<format::D16Unorm>>,
-	pub texture: Texture,
 	pub view: AMat4,
 	pub projection: PMat4,
 	pub frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync>,
@@ -91,22 +70,6 @@ impl Eye {
 		
 		let depth_image = AttachmentImage::transient(device.clone(), dimensions, format::D16Unorm)?;
 		
-		let texture = Texture {
-			handle: Handle::Vulkan(vulkan::Texture {
-				        image: (*image).as_ptr(),
-				        device: device.as_ptr(),
-				        physical_device: device.physical_device().as_ptr(),
-				        instance: device.instance().as_ptr(),
-				        queue: queue.as_ptr(),
-				        queue_family_index: queue.family().id(),
-				        width: image.dimensions().width(),
-				        height: image.dimensions().height(),
-				        format: image.format() as u32,
-				        sample_count: image.samples(),
-			        }),
-			color_space: ColorSpace::Gamma,
-		};
-		
 		
 		let frame_buffer = Arc::new(Framebuffer::start(render_pass.clone())
 		                       .add(image.clone())?
@@ -116,7 +79,6 @@ impl Eye {
 		Ok(Eye {
 			image,
 			depth_image,
-			texture,
 			view,
 			projection,
 			frame_buffer,

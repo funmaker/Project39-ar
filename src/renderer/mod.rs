@@ -1,37 +1,29 @@
-use std::sync::{Arc, mpsc};
-use std::time::Instant;
+use std::sync::Arc;
 use err_derive::Error;
-use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
+use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, memory};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
-use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
+use vulkano::instance::{Instance, InstanceExtensions, PhysicalDevice};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, AutoCommandBuffer, SubpassContents};
-use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
-use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents};
+use vulkano::device::{Device, DeviceExtensions, Features, Queue};
+use vulkano::image::{SwapchainImage, ImageUsage};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
 use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::format::{ClearValue, Format};
 use vulkano::sync::GpuFuture;
-use vulkano::sampler::Filter;
 
 pub mod model;
-pub mod camera;
 pub mod eye;
 pub mod window;
 pub mod pipelines;
-mod debug_renderer;
 
-use crate::utils::*;
 use crate::debug;
-use crate::application::VR;
 use crate::application::Entity;
-use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4, Color, Point2};
-use camera::{CameraStartError, Camera};
+use crate::math::{Vec3, Vec4, Isometry3, AMat4, PMat4};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
-use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
 use model::ModelRenderError;
 
 type RenderPass = dyn RenderPassAbstract + Send + Sync;
@@ -48,38 +40,27 @@ pub struct Renderer {
 	pub instance: Arc<Instance>,
 	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
 	
-	vr: Option<Arc<VR>>,
 	device: Arc<Device>,
 	queue: Arc<Queue>,
 	load_queue: Arc<Queue>,
 	pipelines: Pipelines,
 	eyes: Eyes,
 	previous_frame_end: Option<Box<dyn GpuFuture>>,
-	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
-    load_commands: mpsc::Receiver<AutoCommandBuffer>,
-	debug_renderer: DebugRenderer,
-	last_frame: Instant,
 }
 
 impl Renderer {
-	pub fn new<C>(vr: Option<Arc<VR>>, device: Option<usize>, camera: C)
-	             -> Result<Renderer, RendererError>
-	             where C: Camera {
-		let instance = Renderer::create_vulkan_instance(&vr)?;
+	pub fn new(device: Option<usize>) -> Result<Renderer, RendererError> {
+		let instance = Renderer::create_vulkan_instance()?;
 		
 		if debug::debug() {
 			Renderer::install_debug_callbacks(&instance);
 		}
 		
-		let physical = Renderer::create_physical_device(device, &instance, &vr)?;
-		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
+		let physical = Renderer::create_physical_device(device, &instance)?;
+		let (device, queue, load_queue) = Renderer::create_device(physical)?;
 		let render_pass = Renderer::create_render_pass(&device)?;
 		
-		let eyes = if let Some(ref vr) = vr {
-			Eyes::new_vr(vr, &queue, &render_pass)?
-		} else {
-			Eyes::new(&queue, &render_pass)?
-		};
+		let eyes = Eyes::new(&queue, &render_pass)?;
 		
 		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
 		
@@ -89,16 +70,9 @@ impl Renderer {
 		                                                  ..BufferUsage::none() },
 		                                     Some(queue.family()))?;
 		
-		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		
-		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
-		
-		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
-		
-		let last_frame = Instant::now();
+		let pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		
 		Ok(Renderer {
-			vr,
 			instance,
 			commons,
 			device,
@@ -107,14 +81,10 @@ impl Renderer {
 			pipelines,
 			eyes,
 			previous_frame_end,
-			camera_image,
-			load_commands,
-			debug_renderer,
-			last_frame,
 		})
 	}
 	
-	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
+	fn create_vulkan_instance() -> Result<Arc<Instance>, RendererError> {
 		dprintln!("List of Vulkan debugging layers available to use:");
 		let layers = vulkano::instance::layers_list()?;
 		for layer in layers {
@@ -123,12 +93,9 @@ impl Renderer {
 		
 		let app_infos = vulkano::app_info_from_cargo_toml!();
 		
-		let vr_extensions = vr.as_ref().map(|vr| vr.compositor.vulkan_instance_extensions_required()).unwrap_or_default();
-		
-		let extensions = RawInstanceExtensions::new(vr_extensions)
-		                                       .union(&(&vulkano_win::required_extensions()).into())
-		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug::debug(),
-		                                                                      ..InstanceExtensions::none() }).into());
+		let extensions = vulkano_win::required_extensions()
+		                              .union(&InstanceExtensions { ext_debug_utils: debug::debug(),
+		                                                           ..InstanceExtensions::none() });
 		
 		let layers = if debug::debug() {
 			// TODO: Get better GPU
@@ -137,7 +104,7 @@ impl Renderer {
 			vec![]
 		};
 		
-		Ok(Instance::new(Some(&app_infos), extensions, layers)?)
+		Ok(Instance::new(Some(&app_infos), &extensions, layers)?)
 	}
 	
 	fn install_debug_callbacks(instance: &Arc<Instance>) {
@@ -179,7 +146,7 @@ impl Renderer {
 		});
 	}
 	
-	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
+	fn create_physical_device(device: Option<usize>, instance: &Arc<Instance>) -> Result<PhysicalDevice, RendererError> {
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
@@ -189,14 +156,7 @@ impl Renderer {
 			          device.driver_version());
 		}
 		
-		let physical = vr.as_ref()
-		                 .and_then(|vr| vr.system.vulkan_output_device(instance.as_ptr()))
-		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
-		                 .or_else(|| {
-			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
-			                 PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
-		                 })
-		                 .ok_or(RendererError::NoDevices)?;
+		let physical = PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next().ok_or(RendererError::NoDevices)?;
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
 		          physical.index(),
@@ -207,7 +167,7 @@ impl Renderer {
 		Ok(physical)
 	}
 	
-	fn create_device(physical: PhysicalDevice, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
+	fn create_device(physical: PhysicalDevice) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
 		for family in physical.queue_families() {
 			dprintln!("Found a queue family with {:?} queue(s){}{}{}{}",
 		          family.queues_count(),
@@ -230,13 +190,10 @@ impl Renderer {
 			// (load_queue_family, 0.2),
 		];
 		
-		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
-		
 		let (device, mut queues) = Device::new(physical,
 		                                       &Features::none(),
-		                                       RawDeviceExtensions::new(vr_extensions)
-			                                       .union(&(&DeviceExtensions { khr_swapchain: true,
-				                                       ..DeviceExtensions::none() }).into()),
+		                                       &DeviceExtensions { khr_swapchain: true,
+		                                                           ..DeviceExtensions::none() },
 		                                       families.into_iter())?;
 		
 		let queue = queues.next().ok_or(RendererError::NoQueue)?;
@@ -253,7 +210,7 @@ impl Renderer {
 			vulkano::single_pass_renderpass!(device.clone(),
 				attachments: {
 					color: {
-						load: Load,
+						load: Clear,
 						store: Store,
 						format: eye::IMAGE_FORMAT,
 						samples: 1,
@@ -320,16 +277,10 @@ impl Renderer {
 			}
 		}
 		
-		let since_last_frame = self.last_frame.elapsed();
-		self.last_frame = Instant::now();
-		
-		debug::draw_text(format!("FPS: {}", (1.0 / since_last_frame.as_secs_f32()).floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
-		
 		let view_base = hmd_pose.inverse();
 		let view_left = &self.eyes.left.view * &view_base;
 		let view_right = &self.eyes.right.view * &view_base;
 		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
-		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
 		
 		let commons = CommonsUBO {
 			projection: [self.eyes.left.projection.clone(), self.eyes.right.projection.clone()],
@@ -341,36 +292,8 @@ impl Renderer {
 			ambient: 0.25,
 		};
 		
-		let [camera_width, camera_height] = self.camera_image.dimensions();
-		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
-		
 		let mut builder = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?;
-		// TODO: do this during render pass? Bliting can't be used with multisampling
-		builder.blit_image(self.camera_image.clone(),
-		                   [0, 0, 0],
-		                   [camera_width as i32 / 2, camera_height as i32, 1],
-		                   0,
-		                   0,
-		                   self.eyes.left.image.clone(),
-		                   [0, 0, 0],
-		                   [eye_width as i32, eye_height as i32, 1],
-		                   0,
-		                   0,
-		                   1,
-		                   Filter::Linear)?
-		       .blit_image(self.camera_image.clone(),
-		                   [camera_width as i32 / 2, 0, 0],
-		                   [camera_width as i32, camera_height as i32, 1],
-		                   0,
-		                   0,
-		                   self.eyes.right.image.clone(),
-		                   [0, 0, 0],
-		                   [eye_width as i32, eye_height as i32, 1],
-		                   0,
-		                   0,
-		                   1,
-		                   Filter::Linear)?
-		       .update_buffer(self.commons.clone(),
+		builder.update_buffer(self.commons.clone(),
 		                      commons.clone())?;
 		
 		for entity in scene.iter_mut() {
@@ -379,14 +302,12 @@ impl Renderer {
 		
 		builder.begin_render_pass(self.eyes.left.frame_buffer.clone(),
 		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
+		                          vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.0]),
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder, 0)?;
 		}
-		
-		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		
 		builder.end_render_pass()?;
 		
@@ -396,14 +317,12 @@ impl Renderer {
 		
 		builder.begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
+		                          vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.0]),
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder, 1)?;
 		}
-		
-		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 1)?;
 		
 		builder.end_render_pass()?;
 		
@@ -411,27 +330,8 @@ impl Renderer {
 		
 		let mut future = self.previous_frame_end.take().unwrap();
 		
-		// TODO: Optimize Boxes
-		while let Ok(command) = self.load_commands.try_recv() {
-			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
-				future = Box::new(future.then_signal_semaphore()
-				                           .then_execute(self.load_queue.clone(), command)?);
-			} else {
-				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
-			}
-		}
-		
 		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
 			future = Box::new(future.then_signal_semaphore());
-		}
-		
-		let pose = hmd_pose.to_matrix().to_slice34();
-		
-		if let Some(ref vr) = self.vr {
-			unsafe {
-				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(pose))?;
-				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;
-			}
 		}
 		
 		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
@@ -465,8 +365,6 @@ pub enum RendererError {
 	#[error(display = "No devices available.")] NoDevices,
 	#[error(display = "No compute queue available.")] NoQueue,
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
-	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
-	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
@@ -487,7 +385,6 @@ pub enum RendererSwapchainError {
 pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
-	#[error(display = "{}", _0)] DebugRendererRederError(#[error(source)] DebugRendererRederError),
 	#[error(display = "{}", _0)] ModelRenderError(#[error(source)] ModelRenderError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
@@ -501,5 +398,4 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
-	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }

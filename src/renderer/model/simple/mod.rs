@@ -9,7 +9,6 @@ use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
-use openvr::render_models;
 
 mod import;
 
@@ -31,6 +30,7 @@ pub struct SimpleModel<VI: VertexIndex> {
 }
 
 impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
+	#[allow(unused)]
 	pub fn new(vertices: &[Vertex], indices: &[VI], source_image: DynamicImage, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
 		let width = source_image.width();
 		let height = source_image.height();
@@ -72,12 +72,9 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		})
 	}
 	
+	#[allow(unused)]
 	pub fn from_obj(path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
 		import::from_obj(path, renderer)
-	}
-	
-	pub fn from_openvr(model: render_models::Model, texture: render_models::Texture, renderer: &mut Renderer) -> Result<SimpleModel<u16>, SimpleModelLoadError> {
-		import::from_openvr(model, texture, renderer)
 	}
 	
 	pub fn loaded(&self) -> bool {

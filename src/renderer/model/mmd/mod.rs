@@ -13,9 +13,8 @@ mod import;
 mod shared;
 
 use super::{Model, ModelError, ModelRenderError, VertexIndex};
-use crate::application::entity::{Bone, BoneConnection};
+use crate::application::entity::{Bone};
 use crate::renderer::Renderer;
-use crate::debug;
 use crate::math::{AMat4, ToTransform};
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
@@ -57,33 +56,11 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		})
 	}
 	
+	#[allow(unused)]
 	pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: mmd::VertexIndex {
 		let shared = import::from_pmx(path, renderer)?;
 		
 		Ok(MMDModel::new(Arc::new(shared), renderer)?)
-	}
-	
-	fn draw_debug_bones(&self, model_matrix: &AMat4, bones: &Vec<Bone>) {
-		for (id, bone) in bones.iter().enumerate() {
-			if bone.display {
-				let pos = model_matrix.transform_point(&self.bones_mats[id].transform_point(&bone.rest_pos()));
-				
-				debug::draw_point(&pos, 10.0, bone.color.clone());
-				debug::draw_text(&bone.name, &pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
-				
-				match &bone.connection {
-					BoneConnection::None => {}
-					BoneConnection::Bone(con) => {
-						let cpos = model_matrix.transform_point(&self.bones_mats[*con].transform_point(&bones[*con].rest_pos()));
-						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
-					}
-					BoneConnection::Offset(cpos) => {
-						let cpos = model_matrix.transform_point(&self.bones_mats[id].transform_point(&(&bone.rest_pos() + cpos)));
-						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
-					}
-				}
-			}
-		}
 	}
 	
 	pub fn loaded(&self) -> bool {
@@ -92,7 +69,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, model_matrix: &AMat4, bones: &Vec<Bone>) -> Result<(), ModelRenderError> {
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, _model_matrix: &AMat4, bones: &Vec<Bone>) -> Result<(), ModelRenderError> {
 		for bone in bones {
 			let transform = match bone.parent {
 				None => &bone.local_transform * &bone.anim_transform.to_transform(),
@@ -104,10 +81,6 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		
 		for (id, mat) in self.bones_mats.iter_mut().enumerate() {
 			*mat = *mat * &bones[id].inv_model_transform;
-		}
-		
-		if debug::get_flag_or_default("KeyB") {
-			self.draw_debug_bones(&model_matrix, &bones);
 		}
 		
 		let buffer = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;

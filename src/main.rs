@@ -23,7 +23,7 @@ mod renderer;
 mod application;
 mod utils;
 
-use application::{Application, CameraAPI, ApplicationCreationError, ApplicationRunError};
+use application::{Application, ApplicationCreationError, ApplicationRunError};
 
 
 fn main() {
@@ -55,10 +55,8 @@ fn run_application() -> Result<(), RunError> {
 	let mut opts = Options::new();
 	
 	opts.optopt("d", "device", "Select fallback device to use", "NUMBER");
-	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr|dummy");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
-	opts.optflag("n", "novr", "Non VR mode. The program will not use OpenVR. Use Keyboard and mouse to move.");
 	
 	let matches = opts.parse(&args[1..])?;
 	
@@ -70,20 +68,8 @@ fn run_application() -> Result<(), RunError> {
 	debug::set_debug(matches.opt_present("debug"));
 	
 	let device = matches.opt_get("d")?;
-	let camera = matches.opt_get("c")?
-	                    .unwrap_or("openvr".to_string())
-	                    .to_lowercase();
-	let novr = matches.opt_present("novr");
 	
-	let camera = match &*camera {
-		"opencv" => CameraAPI::OpenCV,
-		"openvr" => CameraAPI::OpenVR,
-		#[cfg(windows)] "escapi" => CameraAPI::Escapi,
-		"dummy" => CameraAPI::Dummy,
-		_ => return Err(RunError::BadCamera(camera)),
-	};
-	
-	let application = Application::new(device, camera, !novr)?;
+	let application = Application::new(device)?;
 	
 	application.run()?;
 	
@@ -135,7 +121,6 @@ fn panic_hook() -> impl Fn(&PanicInfo) {
 
 #[derive(Debug, Error)]
 pub enum RunError {
-	#[error(display = "Unknown camera provider: {}", _0)] BadCamera(String),
 	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
 	#[error(display = "{}", _0)] GetoptsError(#[error(source)] getopts::Fail),

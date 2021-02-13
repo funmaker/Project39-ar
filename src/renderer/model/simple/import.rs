@@ -1,15 +1,15 @@
 use std::io::BufReader;
 use std::fs::File;
 use err_derive::Error;
-use image::{ImageFormat, DynamicImage, ImageBuffer};
+use image::ImageFormat;
 use obj::Obj;
-use openvr::render_models;
 use num_traits::FromPrimitive;
 
 use crate::renderer::model::{VertexIndex, ModelError};
 use crate::renderer::Renderer;
 use super::{SimpleModel, Vertex};
 
+#[allow(unused)]
 pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
 	let model_reader = BufReader::new(File::open(format!("{}.obj", path))?);
 	let model: Obj<obj::TexturedVertex, VI> = obj::load_obj(model_reader)?;
@@ -34,28 +34,6 @@ impl From<&obj::TexturedVertex> for Vertex {
 		)
 	}
 }
-
-
-pub fn from_openvr(model: render_models::Model, texture: render_models::Texture, renderer: &mut Renderer) -> Result<SimpleModel<u16>, SimpleModelLoadError> {
-	let vertices: Vec<Vertex> = model.vertices().iter().map(Into::into).collect();
-	let indices: Vec<u16> = model.indices().iter().copied().map(Into::into).collect();
-	let size = texture.dimensions();
-	let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
-	
-	Ok(SimpleModel::new(
-		&vertices,
-		&indices,
-		image,
-		renderer
-	)?)
-}
-
-impl From<&render_models::Vertex> for Vertex {
-	fn from(vertex: &render_models::Vertex) -> Self {
-		Vertex::new(vertex.position, vertex.normal, vertex.texture_coord)
-	}
-}
-
 
 
 #[derive(Debug, Error)]

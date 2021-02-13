@@ -26,6 +26,7 @@ impl Bone {
 		}
 	}
 	
+	#[allow(unused)]
 	pub fn rest_pos(&self) -> Point3 {
 		self.inv_model_transform.inverse_transform_point(&Point3::origin())
 	}

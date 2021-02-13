@@ -1,14 +1,11 @@
 use std::time::Duration;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
-use openvr::TrackedDevicePose;
-use simba::scalar::SupersetOf;
 
 mod bone;
 
 use crate::renderer::model::Model;
 use crate::renderer::RendererRenderError;
-use crate::math::{Vec3, Rot3, Point3, Isometry3, Color, ToTransform, AMat4, Similarity3};
-use crate::debug;
+use crate::math::{Vec3, Rot3, Point3, Isometry3, ToTransform};
 pub use bone::{Bone, BoneConnection};
 
 pub struct Entity {
@@ -64,27 +61,9 @@ impl Entity {
 	}
 	
 	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RendererRenderError> {
-		let pos: Point3 = self.position.translation.vector.into();
-		let ang = &self.position.rotation;
-		
-		debug::draw_point(&pos, 32.0, Color::magenta());
-		debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
-		debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
-		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
-		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
-		
 		self.model.render(builder, &self.position.to_transform(), eye)?;
 		
 		Ok(())
-	}
-	
-	pub fn move_to_pose(&mut self, pose: TrackedDevicePose) {
-		let orientation: AMat4 = pose.device_to_absolute_tracking().to_transform();
-		let orientation: Similarity3 = orientation.to_subset().unwrap();
-		
-		self.position = orientation.isometry;
-		self.velocity = pose.velocity().clone().into();
-		self.angular_velocity = pose.angular_velocity().clone().into();
 	}
 }
 
