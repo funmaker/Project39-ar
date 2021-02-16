@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, ImageFormat};
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool, TypedBufferAccess};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
@@ -13,7 +13,7 @@ use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
 use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
 use crate::renderer::Renderer;
 use crate::utils::ImageEx;
-use crate::math::AMat4;
+use crate::math::{AMat4, Vec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
 use vulkano::descriptor::PipelineLayoutAbstract;
@@ -25,6 +25,8 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub default_bones: Vec<Bone>,
 	pub fences: Vec<FenceCheck>,
 	pub bones_pool: CpuBufferPool<AMat4>,
+	pub shapekeys: Option<Arc<ImmutableBuffer<[Vec4]>>>,
+	pub morphs_pool: CpuBufferPool<f32>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 }
 
@@ -43,6 +45,7 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 		let fences = vec![FenceCheck::new(vertices_promise.join(indices_promise))?];
 		
 		let bones_pool = CpuBufferPool::upload(queue.device().clone());
+		let morphs_pool = CpuBufferPool::upload(queue.device().clone());
 		
 		Ok(MMDModelShared {
 			vertices,
@@ -51,6 +54,8 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 			fences,
 			default_bones: vec![],
 			default_tex: None,
+			shapekeys: None,
+			morphs_pool,
 			bones_pool,
 		})
 	}
@@ -115,6 +120,27 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 	
 	pub fn add_bone(&mut self, bone: Bone) {
 		self.default_bones.push(bone);
+	}
+	
+	pub fn add_morphs(&mut self, morphs: &[Vec<(VI, Vec3)>], renderer: &mut Renderer) -> Result<(), ModelError> {
+		let vertices = self.vertices.len();
+		let mut morphs_vec = vec![Vec4::zeros(); vertices * morphs.len()];
+		
+		for (mid, morph) in morphs.iter().enumerate() {
+			for &(oid, ref offset) in morph {
+				let oid: usize = oid.into();
+				morphs_vec[mid * vertices + oid] = offset.to_homogeneous();
+			}
+		}
+		
+		let (buffer, promise) = ImmutableBuffer::from_iter(morphs_vec.into_iter(),
+		                                                   BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
+		                                                   renderer.load_queue.clone())?;
+		
+		self.shapekeys = Some(buffer);
+		self.fences.push(FenceCheck::new(promise)?);
+		
+		Ok(())
 	}
 	
 	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<UnsafeDescriptorSetLayout>, ModelError> {

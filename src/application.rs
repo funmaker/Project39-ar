@@ -41,20 +41,29 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut fake_pose: FakePose = (Translation3::identity(), (0.0, 0.0));
 		
-		let tests = [1, 5, 10, 20, 50, 100];
-		let mut results = vec![];
+		// let tests = [1, 5, 10, 20, 50, 100];
+		// let mut results = vec![];
+		//
+		// for count in &tests {
+		// 	let result = self.run_test(&mut fake_pose, *count)?;
+		//
+		// 	results.push((*count, result));
+		// }
+		//
+		// println!("\nResults:");
+		//
+		// for (count, result) in results {
+		// 	println!("{}: {}", count, result);
+		// }
 		
-		for count in &tests {
-			let result = self.run_test(&mut fake_pose, *count)?;
-			
-			results.push((*count, result));
-		}
+		self.scene.push(Entity::new(
+			"Miku",
+			self.model.try_clone(&mut self.renderer)?,
+			Point3::new(0.0, -1.0, -1.0),
+			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
+		));
 		
-		println!("\nResults:");
-		
-		for (count, result) in results {
-			println!("{}: {}", count, result);
-		}
+		self.run_for(&mut fake_pose, Duration::new(999999999, 0))?;
 		
 		Ok(())
 	}

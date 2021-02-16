@@ -6,6 +6,7 @@ mod bone;
 use crate::renderer::model::Model;
 use crate::renderer::RendererRenderError;
 use crate::math::{Vec3, Rot3, Point3, Isometry3, ToTransform};
+use crate::debug;
 pub use bone::{Bone, BoneConnection};
 
 pub struct Entity {
@@ -14,6 +15,7 @@ pub struct Entity {
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
 	pub bones: Vec<Bone>,
+	pub morphs: Vec<f32>,
 	model: Box<dyn Model>,
 	hair_swing: f32,
 }
@@ -28,6 +30,7 @@ impl Entity {
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),
 			bones: model.get_default_bones().to_vec(),
+			morphs: vec![0.0; model.morphs_count()],
 			model,
 			hair_swing: 0.0,
 		}
@@ -52,10 +55,30 @@ impl Entity {
 				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 		}
+		
+		let presets = vec![
+			(1, &[0, 29, 66][..]),
+			(2, &[1, 45, 92]),
+			(3, &[24, 65]),
+			(4, &[39, 60]),
+			(5, &[47, 2, 61]),
+		];
+		
+		for (key, morphs) in presets {
+			if debug::get_flag_or_default(&format!("KeyKey{}", key)) {
+				for &morph in morphs {
+					self.morphs[morph] = (self.morphs[morph] + 0.1).clamp(0.0, 1.0);
+				}
+			} else {
+				for &morph in morphs {
+					self.morphs[morph] = (self.morphs[morph] - 0.1).clamp(0.0, 1.0);
+				}
+			}
+		}
 	}
 	
 	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder) -> Result<(), RendererRenderError> {
-		self.model.pre_render(builder, &self.position.to_transform(), &self.bones)?;
+		self.model.pre_render(builder, &self.position.to_transform(), &self.bones, &self.morphs)?;
 		
 		Ok(())
 	}

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::mem::size_of;
 use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer};
+use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::descriptor::DescriptorSet;
 use vulkano::device::DeviceOwned;
@@ -24,6 +24,7 @@ pub struct MMDModel<VI: VertexIndex> {
 	shared: Arc<MMDModelShared<VI>>,
 	bones_mats: Vec<AMat4>,
 	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
+	morphs_ubo: Arc<DeviceLocalBuffer<[f32]>>,
 	model_set: Arc<dyn DescriptorSet + Send + Sync>,
 }
 
@@ -41,10 +42,23 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         },
 		                                         Some(renderer.queue.family()))?;
 		
+		let morphs_count = ((shared.shapekeys.as_ref().unwrap().len() as f32 / 4.0).ceil() * 4.0) as usize;
+		
+		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
+		                                         size_of::<f32>() * morphs_count,
+		                                         BufferUsage {
+			                                         transfer_destination: true,
+			                                         uniform_buffer: true,
+			                                         ..BufferUsage::none()
+		                                         },
+		                                         Some(renderer.queue.family()))?;
+		
 		let model_set = Arc::new(
 			PersistentDescriptorSet::start(shared.commons_layout(renderer)?)
 				.add_buffer(renderer.commons.clone())?
 				.add_buffer(bones_ubo.clone())?
+				.add_buffer(shared.shapekeys.as_ref().unwrap().clone())?
+				.add_buffer(morphs_ubo.clone())?
 				.build()?
 		);
 		
@@ -52,6 +66,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			bones_mats,
 			bones_ubo,
 			shared,
+			morphs_ubo,
 			model_set,
 		})
 	}
@@ -69,7 +84,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, _model_matrix: &AMat4, bones: &Vec<Bone>) -> Result<(), ModelRenderError> {
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, _model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> {
 		for bone in bones {
 			let transform = match bone.parent {
 				None => &bone.local_transform * &bone.anim_transform.to_transform(),
@@ -83,9 +98,11 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			*mat = *mat * &bones[id].inv_model_transform;
 		}
 		
-		let buffer = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
+		let bone_buf = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
+		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
-		builder.copy_buffer(buffer, self.bones_ubo.clone())?;
+		let morph_buf = self.shared.morphs_pool.chunk(morphs.iter().copied())?;
+		builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?;
 		
 		Ok(())
 	}
@@ -145,6 +162,10 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	
 	fn get_default_bones(&self) -> &[Bone] {
 		&self.shared.default_bones
+	}
+	
+	fn morphs_count(&self) -> usize {
+		self.morphs_ubo.len()
 	}
 	
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {

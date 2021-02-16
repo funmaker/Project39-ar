@@ -5,6 +5,7 @@ use std::ffi::{OsStr, OsString};
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
+use mmd::pmx::morph::Offsets;
 use mmd::WeightDeform;
 use image::ImageFormat;
 
@@ -165,6 +166,21 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 		                         display,
 		                         connection));
 	}
+	
+	let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
+	let mut morphs = Vec::with_capacity(morphs_reader.count as usize);
+	
+	for morph in morphs_reader.iter::<i32, VI, i32, i32, i32>() {
+		let morph = morph?;
+		let panel = morph.panel;
+		let name = debug::translate(&morph.local_name).unwrap_or(&morph.local_name);
+		if let Offsets::Vertex(offsets) = morph.offsets {
+			println!("{}: {} {}", morphs.len(), panel, name);
+			morphs.push(offsets.iter().map(|offset| (offset.vertex, Vec3::from(offset.offset).flip_x() * MMD_UNIT_SIZE)).collect());
+		}
+	}
+	
+	model.add_morphs(&morphs, renderer)?;
 	
 	Ok(model)
 }
