@@ -6,7 +6,6 @@ mod bone;
 use crate::renderer::model::Model;
 use crate::renderer::RendererRenderError;
 use crate::math::{Vec3, Rot3, Point3, Isometry3, ToTransform};
-use crate::debug;
 pub use bone::{Bone, BoneConnection};
 
 pub struct Entity {
@@ -53,26 +52,6 @@ impl Entity {
 			if self.bones[id].name == "Bend" {
 				let swing = (self.hair_swing / 3.0).sin() * std::f32::consts::PI / 2.0;
 				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
-			}
-		}
-		
-		let presets = vec![
-			(1, &[0, 29, 66][..]),
-			(2, &[1, 45, 92]),
-			(3, &[24, 65]),
-			(4, &[39, 60]),
-			(5, &[47, 2, 61]),
-		];
-		
-		for (key, morphs) in presets {
-			if debug::get_flag_or_default(&format!("KeyKey{}", key)) {
-				for &morph in morphs {
-					self.morphs[morph] = (self.morphs[morph] + 0.1).clamp(0.0, 1.0);
-				}
-			} else {
-				for &morph in morphs {
-					self.morphs[morph] = (self.morphs[morph] - 0.1).clamp(0.0, 1.0);
-				}
 			}
 		}
 	}
