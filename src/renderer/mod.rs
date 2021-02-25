@@ -329,7 +329,7 @@ impl Renderer {
 		let command_buffer = builder.build()?;
 		
 		let mut future = if let Some(previous_frame_end) = self.previous_frame_end.take() {
-			previous_frame_end.wait(None);
+			previous_frame_end.wait(None)?;
 			previous_frame_end.boxed()
 		} else {
 			sync::now(self.device.clone()).boxed()
