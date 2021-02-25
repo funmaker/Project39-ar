@@ -42,7 +42,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         },
 		                                         Some(renderer.queue.family()))?;
 		
-		let morphs_count = ((shared.shapekeys.as_ref().unwrap().len() as f32 / 4.0).ceil() * 4.0) as usize;
+		let morphs_count = ((shared.morphs_count as f32 / 4.0).ceil() * 4.0) as usize;
 		
 		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
 		                                         size_of::<f32>() * morphs_count,

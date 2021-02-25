@@ -133,7 +133,7 @@ impl Window {
 		
 		let command_buffer = builder.build()?;
 		
-		// self.render_required = false;
+		self.render_required = false;
 		
 		Ok(Box::new(future.join(acquire_future)
 		                  .then_execute(queue.clone(), command_buffer)?

@@ -26,6 +26,7 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub fences: Vec<FenceCheck>,
 	pub bones_pool: CpuBufferPool<AMat4>,
 	pub shapekeys: Option<Arc<ImmutableBuffer<[Vec4]>>>,
+	pub morphs_count: usize,
 	pub morphs_pool: CpuBufferPool<f32>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 }
@@ -55,6 +56,7 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 			default_bones: vec![],
 			default_tex: None,
 			shapekeys: None,
+			morphs_count: 0,
 			morphs_pool,
 			bones_pool,
 		})
@@ -138,6 +140,7 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 		                                                   renderer.load_queue.clone())?;
 		
 		self.shapekeys = Some(buffer);
+		self.morphs_count = morphs.len();
 		self.fences.push(FenceCheck::new(promise)?);
 		
 		Ok(())
