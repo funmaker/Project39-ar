@@ -33,7 +33,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let bones_mats = Vec::with_capacity(shared.default_bones.len());
 		let bones_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<AMat4>() * bone_count,
+		                                         bone_count,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         uniform_buffer: true,
