@@ -105,6 +105,15 @@ impl Application {
 			
 			for entity in self.scene.iter_mut() {
 				entity.tick(delta_time);
+				
+				for morph in entity.morphs.iter_mut() {
+					*morph = 0.0;
+				}
+				
+				let morphs = entity.morphs.len();
+				for _ in 0 .. 10 {
+					entity.morphs[rand::random::<usize>() % morphs] = rand::random();
+				}
 			}
 			
 			self.renderer.render(pose, &mut self.scene, &mut self.window)?;

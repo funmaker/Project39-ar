@@ -14,6 +14,7 @@ pub struct Entity {
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
 	pub bones: Vec<Bone>,
+	pub morphs: Vec<f32>,
 	model: Box<dyn Model>,
 	hair_swing: f32,
 }
@@ -28,6 +29,7 @@ impl Entity {
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),
 			bones: model.get_default_bones().to_vec(),
+			morphs: vec![0.0; model.morphs_count()],
 			model,
 			hair_swing: 0.0,
 		}
@@ -55,7 +57,7 @@ impl Entity {
 	}
 	
 	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder) -> Result<(), RendererRenderError> {
-		self.model.pre_render(builder, &self.position.to_transform(), &self.bones)?;
+		self.model.pre_render(builder, &self.position.to_transform(), &self.bones, &self.morphs)?;
 		
 		Ok(())
 	}

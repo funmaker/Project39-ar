@@ -68,7 +68,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, _model_matrix: &AMat4, bones: &Vec<Bone>) -> Result<(), ModelRenderError> {
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<StandardCommandPoolBuilder>, _model_matrix: &AMat4, bones: &[Bone], _morphs: &[f32]) -> Result<(), ModelRenderError> {
 		for bone in bones {
 			let transform = match bone.parent {
 				None => &bone.local_transform * &bone.anim_transform.to_transform(),
@@ -82,9 +82,8 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			*mat = *mat * &bones[id].inv_model_transform;
 		}
 		
-		let buffer = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
-		
-		builder.copy_buffer(buffer, self.bones_ubo.clone())?;
+		let bone_buf = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
+		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
 		Ok(())
 	}
@@ -144,6 +143,10 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	
 	fn get_default_bones(&self) -> &[Bone] {
 		&self.shared.default_bones
+	}
+	
+	fn morphs_count(&self) -> usize {
+		self.shared.morphs_count
 	}
 	
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {

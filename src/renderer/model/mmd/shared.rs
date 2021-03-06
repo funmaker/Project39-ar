@@ -13,7 +13,7 @@ use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
 use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
 use crate::renderer::Renderer;
 use crate::utils::ImageEx;
-use crate::math::AMat4;
+use crate::math::{AMat4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
 use vulkano::descriptor::PipelineLayoutAbstract;
@@ -25,6 +25,7 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub default_bones: Vec<Bone>,
 	pub fences: Vec<FenceCheck>,
 	pub bones_pool: CpuBufferPool<AMat4>,
+	pub morphs_count: usize,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 }
 
@@ -51,6 +52,7 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 			fences,
 			default_bones: vec![],
 			default_tex: None,
+			morphs_count: 0,
 			bones_pool,
 		})
 	}
@@ -115,6 +117,12 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 	
 	pub fn add_bone(&mut self, bone: Bone) {
 		self.default_bones.push(bone);
+	}
+	
+	pub fn add_morphs(&mut self, morphs: &[Vec<(VI, Vec3)>], _renderer: &mut Renderer) -> Result<(), ModelError> {
+		self.morphs_count = morphs.len();
+		
+		Ok(())
 	}
 	
 	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<UnsafeDescriptorSetLayout>, ModelError> {
