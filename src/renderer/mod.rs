@@ -309,13 +309,8 @@ impl Renderer {
 			entity.render(&mut builder, 0)?;
 		}
 		
-		builder.end_render_pass()?;
-		
-		for entity in scene.iter_mut() {
-			entity.pre_render(&mut builder)?;
-		}
-		
-		builder.begin_render_pass(self.eyes.right.frame_buffer.clone(),
+		builder.end_render_pass()?
+		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.0]),
 		                                ClearValue::Depth(1.0) ])?;

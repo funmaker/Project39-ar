@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::mem::size_of;
 use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer, TypedBufferAccess};
@@ -34,7 +33,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let bones_mats = Vec::with_capacity(shared.default_bones.len());
 		let bones_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<AMat4>() * bone_count,
+		                                         bone_count,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         uniform_buffer: true,
@@ -42,10 +41,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         },
 		                                         Some(renderer.queue.family()))?;
 		
-		let morphs_count = ((shared.morphs_count as f32 / 4.0).ceil() * 4.0) as usize;
+		let morphs_count = (shared.morphs_count + 3) / 4 * 4 as usize;
 		
 		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<f32>() * morphs_count,
+		                                         morphs_count,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         uniform_buffer: true,
