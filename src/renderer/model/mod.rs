@@ -44,5 +44,6 @@ pub enum ModelError {
 pub enum ModelRenderError {
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
 	#[error(display = "{}", _0)] CopyBufferError(#[error(source)] command_buffer::CopyBufferError),
+	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }

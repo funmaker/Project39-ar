@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
-use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer, TypedBufferAccess};
+use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::descriptor::DescriptorSet;
 use vulkano::device::DeviceOwned;
@@ -19,11 +19,19 @@ pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
 use shared::MMDModelShared;
 
+#[derive(Debug, Clone)]
+struct Morphs {
+	indexes: [i32; 112],
+	weights: [f32; 112],
+	count: i32,
+}
+
 pub struct MMDModel<VI: VertexIndex> {
 	shared: Arc<MMDModelShared<VI>>,
 	bones_mats: Vec<AMat4>,
 	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
-	morphs_ubo: Arc<DeviceLocalBuffer<[f32]>>,
+	morphs_ubo: Arc<DeviceLocalBuffer<Morphs>>,
+	morphs: Morphs,
 	model_set: Arc<dyn DescriptorSet + Send + Sync>,
 }
 
@@ -41,16 +49,19 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         },
 		                                         Some(renderer.queue.family()))?;
 		
-		let morphs_count = (shared.morphs_count + 3) / 4 * 4 as usize;
-		
-		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         morphs_count,
+		let morphs_ubo = DeviceLocalBuffer::new(shared.vertices.device().clone(),
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         uniform_buffer: true,
 			                                         ..BufferUsage::none()
 		                                         },
 		                                         Some(renderer.queue.family()))?;
+		
+		let morphs = Morphs {
+			indexes: [0; 112],
+			weights: [0.0; 112],
+			count: 0,
+		};
 		
 		let model_set = Arc::new(
 			PersistentDescriptorSet::start(shared.commons_layout(renderer)?)
@@ -66,6 +77,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			bones_ubo,
 			shared,
 			morphs_ubo,
+			morphs,
 			model_set,
 		})
 	}
@@ -100,8 +112,16 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		let bone_buf = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
 		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
-		let morph_buf = self.shared.morphs_pool.chunk(morphs.iter().copied())?;
-		builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?;
+		self.morphs.count = 0;
+		for (id, &weight) in morphs.iter().enumerate() {
+			if weight.abs() > f32::EPSILON {
+				self.morphs.indexes[self.morphs.count as usize] = id as i32;
+				self.morphs.weights[self.morphs.count as usize] = weight;
+				self.morphs.count += 1;
+			}
+		}
+		
+		builder.update_buffer(self.morphs_ubo.clone(), self.morphs.clone())?;
 		
 		Ok(())
 	}
@@ -164,7 +184,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	}
 	
 	fn morphs_count(&self) -> usize {
-		self.morphs_ubo.len()
+		110
 	}
 	
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {

@@ -25,7 +25,9 @@ layout(set = 0, binding = 2) uniform ShapeKeys {
 } shapekeys;
 
 layout(set = 0, binding = 3) uniform Morphs {
+	ivec4 indexes[28];
 	vec4 weights[28];
+	int count;
 } morphs;
 
 layout(push_constant) uniform Pc {
@@ -46,8 +48,8 @@ void main() {
 	}
 	
 	vec3 morph_pos = vec3(0);
-	for(uint i = 0; i < 110; i++) {
-		morph_pos += vec3(shapekeys.offsets[i][gl_VertexIndex] * morphs.weights[i / 4][i % 4]);
+	for(uint i = 0; i < morphs.count; i++) {
+		morph_pos += vec3(shapekeys.offsets[morphs.indexes[i / 4][i % 4]][gl_VertexIndex] * morphs.weights[i / 4][i % 4]);
 	}
 	
 	vec4 view_pos = mv * vec4(anim * vec4(pos + morph_pos, 1.0), 1.0);
