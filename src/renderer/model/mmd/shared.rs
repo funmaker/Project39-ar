@@ -13,7 +13,7 @@ use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
 use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
 use crate::renderer::Renderer;
 use crate::utils::ImageEx;
-use crate::math::{AMat4, Vec4, Vec3};
+use crate::math::{AMat4, Vec3, Vec4};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
 use vulkano::descriptor::PipelineLayoutAbstract;
@@ -25,8 +25,8 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub default_bones: Vec<Bone>,
 	pub fences: Vec<FenceCheck>,
 	pub bones_pool: CpuBufferPool<AMat4>,
-	pub shapekeys: Option<Arc<ImmutableBuffer<[Vec4]>>>,
 	pub morphs_count: usize,
+	pub shapekeys: Option<Arc<ImmutableBuffer<[Vec4]>>>,
 	pub morphs_pool: CpuBufferPool<f32>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 }
@@ -55,8 +55,8 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 			fences,
 			default_bones: vec![],
 			default_tex: None,
-			shapekeys: None,
 			morphs_count: 0,
+			shapekeys: None,
 			morphs_pool,
 			bones_pool,
 		})
