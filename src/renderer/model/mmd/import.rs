@@ -172,10 +172,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	
 	for morph in morphs_reader.iter::<i32, VI, i32, i32, i32>() {
 		let morph = morph?;
-		let panel = morph.panel;
-		let name = debug::translate(&morph.local_name).unwrap_or(&morph.local_name);
 		if let Offsets::Vertex(offsets) = morph.offsets {
-			println!("{}: {} {}", morphs.len(), panel, name);
 			morphs.push(offsets.iter().map(|offset| (offset.vertex, Vec3::from(offset.offset).flip_x() * MMD_UNIT_SIZE)).collect());
 		}
 	}

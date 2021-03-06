@@ -1,5 +1,7 @@
 use std::time::{Instant, Duration};
 use err_derive::Error;
+use rand::rngs::StdRng;
+use rand::{SeedableRng, Rng};
 
 pub mod entity;
 
@@ -15,12 +17,13 @@ pub struct Application {
 	window: Window,
 	scene: Vec<Entity>,
 	model: MMDModel<u16>,
+	seed: u64,
 }
 
 type FakePose = (Translation3, (f32, f32));
 
 impl Application {
-	pub fn new(device: Option<usize>) -> Result<Application, ApplicationCreationError> {
+	pub fn new(device: Option<usize>, seed: u64) -> Result<Application, ApplicationCreationError> {
 		let mut renderer = Renderer::new(device)?;
 		
 		let window = Window::new(&renderer)?;
@@ -35,38 +38,34 @@ impl Application {
 			window,
 			scene,
 			model,
+			seed,
 		})
 	}
 	
-	pub fn run(mut self) -> Result<(), ApplicationRunError> {
+	pub fn run(mut self, models: &[usize], morphs: &[usize], spin_dur: Duration, test_dur: Duration) -> Result<(), ApplicationRunError> {
 		let mut fake_pose: FakePose = (Translation3::identity(), (0.0, 0.0));
 		
-		let tests = [1, 5, 10, 20, 50, 100];
-		let mut results = vec![];
+		println!("models,morphs,frames");
 		
-		for count in &tests {
-			let result = self.run_test(&mut fake_pose, *count)?;
-			
-			results.push((*count, result));
-		}
-		
-		println!("\nResults:");
-		
-		for (count, result) in results {
-			println!("{}: {}", count, result);
+		for &models_count in models {
+			for &morphs_count in morphs {
+				let result = self.run_test(&mut fake_pose, models_count, morphs_count, spin_dur, test_dur)?;
+				
+				println!("{},{},{}", models_count, morphs_count, result);
+			}
 		}
 		
 		Ok(())
 	}
 	
-	pub fn run_test(&mut self, fake_pose: &mut FakePose, count: usize) -> Result<usize, ApplicationRunError> {
+	pub fn run_test(&mut self, fake_pose: &mut FakePose, models: usize, morphs: usize, spin_dur: Duration, test_dur: Duration) -> Result<usize, ApplicationRunError> {
 		self.scene.clear();
 		
-		println!("\nTesting {} models", count);
-		println!("Setting up...");
+		dprintln!("\nTesting {} models {} morphs", models, morphs);
+		dprintln!("Setting up...");
 		
-		for id in 0..count {
-			let x = (id % 10) as f32 - count.min(10) as f32 * 0.5;
+		for id in 0..models {
+			let x = (id % 10) as f32 - models.min(10) as f32 * 0.5;
 			let z = -5.0 - (id / 10) as f32 * 0.5;
 			
 			self.scene.push(Entity::new(
@@ -77,29 +76,30 @@ impl Application {
 			));
 		}
 		
-		println!("Warming up...");
+		dprintln!("Warming up...");
 		
-		self.run_for(fake_pose, Duration::from_secs(1))?;
+		self.run_for(morphs, fake_pose, spin_dur)?;
 		
-		println!("Test start");
+		dprintln!("Test start");
 		
-		let result = self.run_for(fake_pose, Duration::from_secs(10))?;
+		let result = self.run_for(morphs, fake_pose, test_dur)?;
 		
-		println!("Done: {} frames", result);
+		dprintln!("Done: {} frames", result);
 		
 		Ok(result)
 	}
 	
-	pub fn run_for(&mut self, fake_pose: &mut FakePose, duration: Duration) -> Result<usize, ApplicationRunError> {
+	pub fn run_for(&mut self, morphs: usize, fake_pose: &mut FakePose, duration: Duration) -> Result<usize, ApplicationRunError> {
 		let start = Instant::now();
-		let mut instant = Instant::now();
+		let mut prev_frame = Instant::now();
+		let mut rng = StdRng::seed_from_u64(self.seed);
 		let mut frames = 0;
 		
 		while !self.window.quit_required && start.elapsed() < duration {
 			self.window.pull_events();
 			
-			let delta_time = instant.elapsed();
-			instant = Instant::now();
+			let delta_time = prev_frame.elapsed();
+			prev_frame = Instant::now();
 			
 			let pose = self.handle_fake_pose(fake_pose, delta_time);
 			
@@ -110,9 +110,8 @@ impl Application {
 					*morph = 0.0;
 				}
 				
-				let morphs = entity.morphs.len();
-				for _ in 0 .. 10 {
-					entity.morphs[rand::random::<usize>() % morphs] = rand::random();
+				for id in rand::seq::index::sample(&mut rng, entity.morphs.len(), morphs) {
+					entity.morphs[id] = rng.gen();
 				}
 			}
 			
