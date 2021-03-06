@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::mem::size_of;
 use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer};
