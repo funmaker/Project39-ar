@@ -1,10 +1,9 @@
 use std::sync::Arc;
-use std::mem::size_of;
 use vulkano::command_buffer::pool::standard::StandardCommandPoolBuilder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::buffer::{BufferUsage, BufferAccess, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor::DescriptorSet;
+use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
 use vulkano::device::DeviceOwned;
 
 pub mod test;
@@ -15,7 +14,8 @@ mod shared;
 use super::{Model, ModelError, ModelRenderError, VertexIndex};
 use crate::application::entity::{Bone};
 use crate::renderer::Renderer;
-use crate::math::{AMat4, ToTransform};
+use crate::math::{AMat4, ToTransform, IVec4};
+use crate::renderer::pipelines::mmd::GROUP_SIZE;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
 use shared::MMDModelShared;
@@ -24,7 +24,10 @@ pub struct MMDModel<VI: VertexIndex> {
 	shared: Arc<MMDModelShared<VI>>,
 	bones_mats: Vec<AMat4>,
 	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
-	morphs_ubo: Arc<DeviceLocalBuffer<[f32]>>,
+	morphs_vec: Vec<IVec4>,
+	morphs_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
+	offsets_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
+	morphs_set: Arc<dyn DescriptorSet + Send + Sync>,
 	model_set: Arc<dyn DescriptorSet + Send + Sync>,
 }
 
@@ -34,7 +37,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let bones_mats = Vec::with_capacity(shared.default_bones.len());
 		let bones_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<AMat4>() * bone_count,
+		                                         bone_count,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         uniform_buffer: true,
@@ -42,23 +45,45 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         },
 		                                         Some(renderer.queue.family()))?;
 		
-		let morphs_count = ((shared.morphs_count as f32 / 4.0).ceil() * 4.0) as usize;
-		
+		let morphs_count = (shared.morphs_sizes.len() + 1) / 2;
 		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<f32>() * morphs_count,
-		                                         BufferUsage {
-			                                         transfer_destination: true,
-			                                         uniform_buffer: true,
-			                                         ..BufferUsage::none()
-		                                         },
-		                                         Some(renderer.queue.family()))?;
+		                                          morphs_count,
+		                                          BufferUsage {
+			                                          transfer_destination: true,
+			                                          storage_buffer: true,
+			                                          uniform_buffer: true,
+			                                          ..BufferUsage::none()
+		                                          },
+		                                          Some(renderer.queue.family()))?;
+		
+		let offsets_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
+		                                           shared.vertices.len(),
+		                                           BufferUsage {
+			                                           transfer_destination: true,
+			                                           storage_buffer: true,
+			                                           uniform_buffer: true,
+			                                           ..BufferUsage::none()
+		                                           },
+		                                           Some(renderer.queue.family()))?;
+		
+		let layout = shared.morphs_pipeline.layout()
+		                                   .descriptor_set_layout(0)
+		                                   .ok_or(ModelError::NoLayout)?
+		                                   .clone();
+		
+		let morphs_set = Arc::new(
+			PersistentDescriptorSet::start(layout)
+				.add_buffer(morphs_ubo.clone())?
+				.add_buffer(shared.morphs_desc.as_ref().unwrap().clone())?
+				.add_buffer(offsets_ubo.clone())?
+				.build()?
+		);
 		
 		let model_set = Arc::new(
 			PersistentDescriptorSet::start(shared.commons_layout(renderer)?)
 				.add_buffer(renderer.commons.clone())?
 				.add_buffer(bones_ubo.clone())?
-				.add_buffer(shared.shapekeys.as_ref().unwrap().clone())?
-				.add_buffer(morphs_ubo.clone())?
+				.add_buffer(offsets_ubo.clone())?
 				.build()?
 		);
 		
@@ -66,7 +91,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			bones_mats,
 			bones_ubo,
 			shared,
+			morphs_vec: vec![],
 			morphs_ubo,
+			morphs_set,
+			offsets_ubo,
 			model_set,
 		})
 	}
@@ -101,8 +129,42 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		let bone_buf = self.shared.bones_pool.chunk(self.bones_mats.drain(..))?;
 		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
-		let morph_buf = self.shared.morphs_pool.chunk(morphs.iter().copied())?;
-		builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?;
+		self.morphs_vec.clear();
+		let mut max_size = 0;
+		let mut packing = false;
+		for (id, scale) in morphs.iter().enumerate() {
+			if scale.abs() > f32::EPSILON {
+				if packing {
+					if let Some(last) = self.morphs_vec.last_mut() {
+						last.z = id as i32;
+						last.w = scale.to_bits() as i32;
+					}
+				} else {
+					self.morphs_vec.push(IVec4::new(id as i32, scale.to_bits() as i32, 0, 0));
+				}
+				
+				packing = !packing;
+				
+				if self.shared.morphs_sizes[id] > max_size {
+					max_size = self.shared.morphs_sizes[id];
+				}
+			}
+		}
+		
+		if self.morphs_vec.is_empty() {
+			builder.fill_buffer(self.offsets_ubo.clone(), 0)?;
+		} else {
+			let groups = (max_size + GROUP_SIZE - 1) / GROUP_SIZE;
+			
+			let morph_buf = self.shared.morphs_pool.chunk(self.morphs_vec.iter().copied())?;
+			
+			builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
+			       .fill_buffer(self.offsets_ubo.clone(), 0)?
+			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1],
+			                 self.shared.morphs_pipeline.clone(),
+			                 self.morphs_set.clone(),
+			                 ())?;
+		}
 		
 		Ok(())
 	}
@@ -165,7 +227,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	}
 	
 	fn morphs_count(&self) -> usize {
-		self.morphs_ubo.len()
+		self.shared.morphs_sizes.len()
 	}
 	
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, ImageFormat};
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool, TypedBufferAccess};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
 use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
@@ -10,10 +10,10 @@ use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
 
 use crate::application::entity::Bone;
 use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
-use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
+use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, GROUP_SIZE};
 use crate::renderer::Renderer;
 use crate::utils::ImageEx;
-use crate::math::{AMat4, Vec4, Vec3};
+use crate::math::{AMat4, Vec3, IVec4};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
 use vulkano::descriptor::PipelineLayoutAbstract;
@@ -25,9 +25,10 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub default_bones: Vec<Bone>,
 	pub fences: Vec<FenceCheck>,
 	pub bones_pool: CpuBufferPool<AMat4>,
-	pub shapekeys: Option<Arc<ImmutableBuffer<[Vec4]>>>,
-	pub morphs_count: usize,
-	pub morphs_pool: CpuBufferPool<f32>,
+	pub morphs_desc: Option<Arc<ImmutableBuffer<[IVec4]>>>,
+	pub morphs_sizes: Vec<usize>,
+	pub morphs_pool: CpuBufferPool<IVec4>,
+	pub morphs_pipeline: Arc<MMDPipelineMorphs>,
 	default_tex: Option<Arc<ImmutableImage<Format>>>,
 }
 
@@ -48,6 +49,8 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 		let bones_pool = CpuBufferPool::upload(queue.device().clone());
 		let morphs_pool = CpuBufferPool::upload(queue.device().clone());
 		
+		let morphs_pipeline = renderer.pipelines.get()?;
+		
 		Ok(MMDModelShared {
 			vertices,
 			indices,
@@ -55,9 +58,10 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 			fences,
 			default_bones: vec![],
 			default_tex: None,
-			shapekeys: None,
-			morphs_count: 0,
+			morphs_desc: None,
+			morphs_sizes: vec![],
 			morphs_pool,
+			morphs_pipeline,
 			bones_pool,
 		})
 	}
@@ -125,22 +129,31 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 	}
 	
 	pub fn add_morphs(&mut self, morphs: &[Vec<(VI, Vec3)>], renderer: &mut Renderer) -> Result<(), ModelError> {
-		let vertices = self.vertices.len();
-		let mut morphs_vec = vec![Vec4::zeros(); vertices * morphs.len()];
+		let morph_size = morphs.iter()
+		                       .map(|v| v.len())
+		                       .max()
+		                       .unwrap_or(GROUP_SIZE);
+		
+		let morph_size = (morph_size + GROUP_SIZE - 1) / GROUP_SIZE * GROUP_SIZE;
+		let morhs_count = morphs.len();
+		
+		let mut morphs_vec = vec![IVec4::zeros(); morph_size * morphs.len()];
 		
 		for (mid, morph) in morphs.iter().enumerate() {
-			for &(oid, ref offset) in morph {
-				let oid: usize = oid.into();
-				morphs_vec[mid * vertices + oid] = offset.to_homogeneous();
+			for (oid, (index, offset)) in morph.iter().enumerate() {
+				morphs_vec[mid + oid * morhs_count] = IVec4::new((offset.x * 1_000_000.0) as i32,
+				                                                 (offset.y * 1_000_000.0) as i32,
+				                                                 (offset.z * 1_000_000.0) as i32,
+				                                                 (*index).into());
 			}
 		}
 		
 		let (buffer, promise) = ImmutableBuffer::from_iter(morphs_vec.into_iter(),
-		                                                   BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
+		                                                   BufferUsage{ storage_buffer: true, uniform_buffer: true, ..BufferUsage::none() },
 		                                                   renderer.load_queue.clone())?;
 		
-		self.shapekeys = Some(buffer);
-		self.morphs_count = morphs.len();
+		self.morphs_desc = Some(buffer);
+		self.morphs_sizes.extend(morphs.iter().map(|v| v.len()));
 		self.fences.push(FenceCheck::new(promise)?);
 		
 		Ok(())

@@ -22,13 +22,9 @@ layout(set = 0, binding = 1) uniform Bones {
 	mat4 mats[246];
 } bones;
 
-layout(set = 0, binding = 2) uniform ShapeKeys {
-	vec4 offsets[110][35960];
-} shapekeys;
-
-layout(set = 0, binding = 3) uniform Morphs {
-	vec4 weights[28];
-} morphs;
+layout(set = 0, binding = 2) uniform Offsets {
+	ivec4 vecs[35960];
+} offsets;
 
 layout(push_constant) uniform Pc {
 	mat4 model;
@@ -48,10 +44,7 @@ void main() {
 		anim += mat4x3(bones.mats[bones_indices[i]]) * bones_weights[i];
 	}
 	
-	vec3 morph_pos = vec3(0);
-	for(uint i = 0; i < 110; i++) {
-		morph_pos += vec3(shapekeys.offsets[i][gl_VertexIndex] * morphs.weights[i / 4][i % 4]);
-	}
+	vec3 morph_offset = vec3(offsets.vecs[gl_VertexIndex].xyz) / 1000000.0;
 	
 	gl_Position = mvp * vec4(anim * vec4(pos + morph_pos, 1.0), 1.0);
 	
