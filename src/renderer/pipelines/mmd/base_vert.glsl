@@ -44,7 +44,7 @@ void main() {
 		anim += mat4x3(bones.mats[bones_indices[i]]) * bones_weights[i];
 	}
 	
-	vec3 morph_offset = vec3(offsets.vecs[gl_VertexIndex].xyz) / 1000000.0;
+	vec3 morph_pos = vec3(offsets.vecs[gl_VertexIndex].xyz) / 1000000.0;
 	
 	gl_Position = mvp * vec4(anim * vec4(pos + morph_pos, 1.0), 1.0);
 	
