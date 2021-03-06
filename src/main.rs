@@ -13,6 +13,7 @@ use std::panic;
 use std::fmt::Debug;
 use std::panic::PanicInfo;
 use std::error::Error;
+use std::time::Duration;
 use getopts::Options;
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
@@ -55,6 +56,11 @@ fn run_application() -> Result<(), RunError> {
 	let mut opts = Options::new();
 	
 	opts.optopt("d", "device", "Select fallback device to use", "NUMBER");
+	opts.optopt("n", "models", "Comma-separated models counts, default: 1,5,10,20,50,100", "COUNTS");
+	opts.optopt("m", "morphs", "Comma-separated morphs counts, default: 0,1,2,4,8,16,32,64", "COUNTS");
+	opts.optopt("", "spindur", "Warm up duration in seconds, default: 1", "TIME");
+	opts.optopt("t", "testdur", "Test duration in seconds, default: 10", "TIME");
+	opts.optopt("s", "seed", "RNG seed, 64-bit unsigned integer", "NUMBER");
 	opts.optflag("", "debug", "Enable debugging layer and info");
 	opts.optflag("h", "help", "Print this help menu");
 	
@@ -67,11 +73,27 @@ fn run_application() -> Result<(), RunError> {
 	
 	debug::set_debug(matches.opt_present("debug"));
 	
-	let device = matches.opt_get("d")?;
+	let device = matches.opt_get("device")?;
+	let models: Vec<usize> = matches.opt_get("models")?
+	                                .unwrap_or_else(|| "1,5,10,20,50,100".to_string())
+	                                .split(",")
+	                                .map(str::parse)
+	                                .collect::<Result<_, _>>()?;
+	let morphs: Vec<usize> = matches.opt_get("morphs")?
+	                                .unwrap_or_else(|| "0,1,2,4,8,16,32,64".to_string())
+	                                .split(",")
+	                                .map(str::parse)
+	                                .collect::<Result<_, _>>()?;
+	let spin_dur = Duration::from_secs_f32(matches.opt_get("spindur")?.unwrap_or(1.0));
+	let test_dur = Duration::from_secs_f32(matches.opt_get("testdur")?.unwrap_or(10.0));
+	let seed = matches.opt_get("seed")?
+	                  .map(|s: String| s.parse())
+	                  .transpose()?
+	                  .unwrap_or(rand::random());
 	
-	let application = Application::new(device)?;
+	let application = Application::new(device, seed)?;
 	
-	application.run()?;
+	application.run(&models, &morphs, spin_dur, test_dur)?;
 	
 	Ok(())
 }
@@ -125,5 +147,6 @@ pub enum RunError {
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
 	#[error(display = "{}", _0)] GetoptsError(#[error(source)] getopts::Fail),
 	#[error(display = "{}", _0)] ParseIntError(#[error(source)] std::num::ParseIntError),
+	#[error(display = "{}", _0)] ParseFloatError(#[error(source)] std::num::ParseFloatError),
 	#[error(display = "{}", _0)] Infallible(#[error(source)] std::convert::Infallible),
 }
