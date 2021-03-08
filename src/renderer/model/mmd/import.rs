@@ -1,6 +1,6 @@
 use std::io::BufReader;
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::ffi::{OsStr, OsString};
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
@@ -44,8 +44,9 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	for texture_path in textures_reader.iter() {
 		let texture_path = texture_path?;
 		let os_path = lookup_windows_path(&root, &texture_path)?;
-		let texture_reader = BufReader::new(File::open(os_path)?);
-		let texture = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
+		let texture_reader = BufReader::new(File::open(&os_path)?);
+		let format = find_image_format(&os_path)?;
+		let texture = image::load(texture_reader, format)?;
 		let has_alpha = texture.color().has_alpha();
 		
 		model.add_texture(texture);
@@ -211,6 +212,18 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsStri
 		Some(next_dir) => Ok(next_dir),
 		None => Err(MMDModelLoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
 	}
+}
+
+fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoadError> {
+	Ok(match imghdr::from_file(&path)? {
+		Some(imghdr::Type::Gif) => ImageFormat::Gif,
+		Some(imghdr::Type::Tiff) => ImageFormat::Tiff,
+		Some(imghdr::Type::Jpeg) => ImageFormat::Jpeg,
+		Some(imghdr::Type::Bmp) => ImageFormat::Bmp,
+		Some(imghdr::Type::Png) => ImageFormat::Png,
+		Some(imghdr::Type::Webp) => ImageFormat::WebP,
+		_ => ImageFormat::from_path(&path)?,
+	})
 }
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
