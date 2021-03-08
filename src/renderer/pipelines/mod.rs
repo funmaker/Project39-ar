@@ -68,4 +68,5 @@ pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 pub enum PipelineError {
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] vulkano::framebuffer::RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] vulkano::pipeline::GraphicsPipelineCreationError),
+	#[error(display = "{}", _0)] ComputePipelineCreationError(#[error(source)] vulkano::pipeline::ComputePipelineCreationError),
 }

@@ -6,8 +6,7 @@ use image::ImageFormat;
 use crate::renderer::Renderer;
 use crate::application::entity::{Bone, BoneConnection};
 use crate::math::{Color, Vec3};
-use super::{MMDModel, Vertex, sub_mesh::MaterialInfo};
-use crate::renderer::model::mmd::shared::MMDModelShared;
+use super::{MMDModel, Vertex, shared::MMDModelShared, shared::SubMeshDesc};
 
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
@@ -44,22 +43,29 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	make_wall([ 0.2, 0.0,  0.2].into(), [-0.2, height,  0.2].into(), [ 0.0, 0.0,  1.0].into(), 50, bones_num);
 	make_wall([ 0.2, 0.0, -0.2].into(), [ 0.2, height,  0.2].into(), [ 1.0, 0.0,  0.0].into(), 50, bones_num);
 	
-	let mut model = MMDModelShared::new(&vertices, &indices, renderer).unwrap();
+	let indices_range = 0 .. indices.len();
+	
+	let mut model = MMDModelShared::new(vertices, indices);
 	
 	let texture_reader = BufReader::new(File::open("models/missing.png").unwrap());
 	let image = image::load(texture_reader, ImageFormat::Png).unwrap();
 	
-	let texture = model.add_texture(image, renderer).unwrap();
+	model.add_texture(image);
 	
-	let material_info = MaterialInfo {
+	model.add_sub_mesh(SubMeshDesc {
+		range: indices_range,
+		texture: Some(0),
+		toon: None,
+		sphere_map: None,
 		color: [1.0, 1.0, 1.0, 1.0],
 		specular: [1.0, 1.0, 1.0],
 		specularity: 1.0,
 		ambient: [0.0, 0.0, 0.0],
-		sphere_mode: 0
-	};
-	
-	model.add_sub_mesh(0..indices.len(), material_info, Some(texture), None, None, false, true, None, renderer).unwrap();
+		sphere_mode: 0,
+		no_cull: false,
+		opaque: true,
+		edge: None
+	});
 	
 	model.add_bone(Bone::new("Root",
 	                         None,
@@ -86,6 +92,8 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	                         &Vec3::new(0.0, height / (bones_num + 1) as f32, 0.0),
 	                         true,
 	                         BoneConnection::None));
+	
+	let model = model.build(renderer).unwrap();
 	
 	MMDModel::new(Arc::new(model), renderer).unwrap()
 }

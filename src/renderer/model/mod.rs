@@ -1,3 +1,4 @@
+use std::ops::Range;
 use err_derive::Error;
 use vulkano::{memory, sync, command_buffer};
 use vulkano::descriptor::descriptor_set;
@@ -18,18 +19,20 @@ pub use fence_check::FenceCheck;
 
 pub trait Model {
 	#[allow(unused_variables)]
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, bones: &Vec<Bone>) -> Result<(), ModelRenderError> { Ok(()) }
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> { Ok(()) }
 	fn render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError>;
 	fn get_default_bones(&self) -> &[Bone] { &[] }
+	fn morphs_count(&self) -> usize { 0 }
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError>;
 }
 
-pub trait VertexIndex: Index + Copy + Send + Sync + Sized + 'static {}
-impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + 'static {}
+pub trait VertexIndex: Index + Copy + Send + Sync + Sized + Into<i32> + 'static {}
+impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<i32> + 'static {}
 
 #[derive(Debug, Error)]
 pub enum ModelError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
+	#[error(display = "Invalid indices range: {:?}, len: {}", _0, _1)] IndicesRangeError(Range<usize>, usize),
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
@@ -43,5 +46,7 @@ pub enum ModelError {
 pub enum ModelRenderError {
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
 	#[error(display = "{}", _0)] CopyBufferError(#[error(source)] command_buffer::CopyBufferError),
+	#[error(display = "{}", _0)] FillBufferError(#[error(source)] command_buffer::FillBufferError),
+	#[error(display = "{}", _0)] DispatchError(#[error(source)] command_buffer::DispatchError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }

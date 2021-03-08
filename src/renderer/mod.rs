@@ -12,7 +12,7 @@ use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
 use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::format::{ClearValue, Format};
-use vulkano::sync::GpuFuture;
+use vulkano::sync::{GpuFuture, FenceSignalFuture};
 use vulkano::sampler::Filter;
 
 pub mod model;
@@ -54,7 +54,7 @@ pub struct Renderer {
 	load_queue: Arc<Queue>,
 	pipelines: Pipelines,
 	eyes: Eyes,
-	previous_frame_end: Option<Box<dyn GpuFuture>>,
+	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
 	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
     load_commands: mpsc::Receiver<AutoCommandBuffer>,
 	debug_renderer: DebugRenderer,
@@ -81,7 +81,7 @@ impl Renderer {
 			Eyes::new(&queue, &render_pass)?
 		};
 		
-		let previous_frame_end = Some(Box::new(sync::now(device.clone())) as Box<_>);
+		let previous_frame_end = None;
 		
 		let commons = DeviceLocalBuffer::new(device.clone(),
 		                                     BufferUsage{ transfer_destination: true,
@@ -235,8 +235,11 @@ impl Renderer {
 		let (device, mut queues) = Device::new(physical,
 		                                       &Features::none(),
 		                                       RawDeviceExtensions::new(vr_extensions)
-			                                       .union(&(&DeviceExtensions { khr_swapchain: true,
-				                                       ..DeviceExtensions::none() }).into()),
+			                                       .union(&(&DeviceExtensions {
+				                                       khr_swapchain: true,
+				                                       khr_storage_buffer_storage_class: true,
+				                                       ..DeviceExtensions::none()
+			                                       }).into()),
 		                                       families.into_iter())?;
 		
 		let queue = queues.next().ok_or(RendererError::NoQueue)?;
@@ -310,7 +313,9 @@ impl Renderer {
 	}
 	
 	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
-		self.previous_frame_end.as_mut().unwrap().cleanup_finished();
+		if let Some(previous_frame_end) = &mut self.previous_frame_end {
+			previous_frame_end.cleanup_finished();
+		}
 		
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
@@ -388,13 +393,8 @@ impl Renderer {
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
 		
-		builder.end_render_pass()?;
-		
-		for entity in scene.iter_mut() {
-			entity.pre_render(&mut builder)?;
-		}
-		
-		builder.begin_render_pass(self.eyes.right.frame_buffer.clone(),
+		builder.end_render_pass()?
+		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
@@ -409,7 +409,12 @@ impl Renderer {
 		
 		let command_buffer = builder.build()?;
 		
-		let mut future = self.previous_frame_end.take().unwrap();
+		let mut future = if let Some(previous_frame_end) = self.previous_frame_end.take() {
+			previous_frame_end.wait(None)?;
+			previous_frame_end.boxed()
+		} else {
+			sync::now(self.device.clone()).boxed()
+		};
 		
 		// TODO: Optimize Boxes
 		while let Ok(command) = self.load_commands.try_recv() {
@@ -422,7 +427,7 @@ impl Renderer {
 		}
 		
 		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
-			future = Box::new(future.then_signal_semaphore());
+			future = future.then_signal_semaphore().boxed();
 		}
 		
 		let pose = hmd_pose.to_matrix().to_slice34();
@@ -434,7 +439,7 @@ impl Renderer {
 			}
 		}
 		
-		future = Box::new(future.then_execute(self.queue.clone(), command_buffer)?);
+		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
 		
 		future = match window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image) {
 			Ok(future) => future,
@@ -446,11 +451,10 @@ impl Renderer {
 		
 		match future {
 			Ok(future) => {
-				self.previous_frame_end = Some(Box::new(future) as Box<_>);
+				self.previous_frame_end = Some(future);
 			},
 			Err(sync::FlushError::OutOfDate) => {
 				eprintln!("Flush Error: Out of date, ignoring");
-				self.previous_frame_end = Some(Box::new(sync::now(self.device.clone())) as Box<_>);
 			},
 			Err(err) => return Err(err.into()),
 		}

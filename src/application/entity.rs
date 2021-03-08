@@ -17,6 +17,7 @@ pub struct Entity {
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
 	pub bones: Vec<Bone>,
+	pub morphs: Vec<f32>,
 	model: Box<dyn Model>,
 	hair_swing: f32,
 }
@@ -31,6 +32,7 @@ impl Entity {
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),
 			bones: model.get_default_bones().to_vec(),
+			morphs: vec![0.0; model.morphs_count()],
 			model,
 			hair_swing: 0.0,
 		}
@@ -55,10 +57,30 @@ impl Entity {
 				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 		}
+		
+		if self.name == "初音ミク" {
+			let presets = vec![
+				(1, &[0, 29, 66][..]),
+				(2, &[1, 45, 92]),
+				(3, &[24, 65]),
+				(4, &[39, 60]),
+				(5, &[47, 2, 61]),
+			];
+			
+			for morph in self.morphs.iter_mut() {
+				*morph = (*morph - 5.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
+			}
+			
+			let active = presets.iter().filter(|p| debug::get_flag_or_default(&format!("KeyKey{}", p.0))).flat_map(|p| p.1.iter());
+			
+			for &id in active {
+				self.morphs[id] = (self.morphs[id] + 10.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
+			}
+		}
 	}
 	
 	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder) -> Result<(), RendererRenderError> {
-		self.model.pre_render(builder, &self.position.to_transform(), &self.bones)?;
+		self.model.pre_render(builder, &self.position.to_transform(), &self.bones, &self.morphs)?;
 		
 		Ok(())
 	}

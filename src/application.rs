@@ -63,12 +63,12 @@ impl Application {
 			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
 		));
 		
-		scene.push(Entity::new(
-			"Test",
-			crate::renderer::model::mmd::test::test_model(&mut renderer),
-			Point3::new(2.0, -1.0, -3.0),
-			Rot3::from_euler_angles(0.0, 0.0, 0.0),
-		));
+		// scene.push(Entity::new(
+		// 	"Test",
+		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
+		// 	Point3::new(2.0, -1.0, -3.0),
+		// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
+		// ));
 		
 		Ok(Application {
 			vr,

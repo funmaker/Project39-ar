@@ -5,6 +5,7 @@ use std::ffi::{OsStr, OsString};
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
+use mmd::pmx::morph::Offsets;
 use mmd::WeightDeform;
 use image::ImageFormat;
 
@@ -13,7 +14,8 @@ use crate::renderer::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::math::{Vec3, Color};
 use crate::debug;
-use super::{Vertex, sub_mesh::MaterialInfo, shared::MMDModelShared};
+use super::{Vertex, shared::MMDModelShared, shared::SubMeshDesc};
+use std::convert::TryInto;
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
 	let mut root = PathBuf::from(path);
@@ -34,19 +36,20 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	                             .collect::<Result<Vec<[VI; 3]>, _>>()?
 	                             .flatten();
 	
-	let mut model = MMDModelShared::new(&vertices, &indices, renderer)?;
+	let mut model = MMDModelShared::new(vertices, indices);
 	
 	let mut textures_reader = mmd::TextureReader::new(surfaces_reader)?;
-	let mut textures = vec![];
+	let mut textures_alpha = vec![];
 	
 	for texture_path in textures_reader.iter() {
 		let texture_path = texture_path?;
 		let os_path = lookup_windows_path(&root, &texture_path)?;
 		let texture_reader = BufReader::new(File::open(os_path)?);
-		let image = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
-		let has_alpha = image.color().has_alpha();
+		let texture = image::load(texture_reader, ImageFormat::from_path(&texture_path)?)?;
+		let has_alpha = texture.color().has_alpha();
 		
-		textures.push((model.add_texture(image, renderer)?, has_alpha));
+		model.add_texture(texture);
+		textures_alpha.push(has_alpha);
 	}
 	
 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
@@ -71,46 +74,33 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 			}
 		};
 		
-		let material_info = MaterialInfo {
+		let has_alpha = material.texture_index.try_into()
+		                                      .ok()
+		                                      .and_then(|id: usize| textures_alpha.get(id))
+		                                      .copied()
+		                                      .unwrap_or(true);
+		
+		let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
+		
+		model.add_sub_mesh(SubMeshDesc {
+			range: last_index .. last_index + material.surface_count as usize,
+			texture: material.texture_index.try_into().ok(),
+			toon: toon_index.try_into().ok(),
+			sphere_map: material.environment_index.try_into().ok(),
 			color: material.diffuse_color,
 			specular: material.specular_color,
 			specularity: material.specular_strength,
 			ambient: material.ambient_color,
 			sphere_mode,
-		};
-		
-		let (texture, has_alpha) = textures.get(material.texture_index as usize)
-		                                   .cloned()
-		                                   .map_or((None, false), |(texture, has_alpha)| (Some(texture), has_alpha));
-		
-		let toon = textures.get(toon_index as usize)
-		                   .cloned()
-		                   .map(|(t, _)| t);
-		
-		let sphere_map = textures.get(material.environment_index as usize)
-		                         .cloned()
-		                         .map(|(t, _)| t);
-		
-		let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
-		
-		model.add_sub_mesh(
-			last_index .. last_index + material.surface_count as usize,
-			material_info,
-			texture,
-			toon,
-			sphere_map,
-			material.draw_flags.contains(DrawingFlags::NoCull),
-			!has_alpha,
-			edge,
-			renderer,
-		)?;
+			no_cull: material.draw_flags.contains(DrawingFlags::NoCull),
+			opaque: !has_alpha,
+			edge
+		});
 		
 		last_index += material.surface_count as usize;
 	}
 	
-	
 	let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
-	
 	let bone_defs = bones_reader.iter()
 	                            .collect::<Result<Vec<mmd::Bone<i32>>, _>>()?;
 	
@@ -166,7 +156,18 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 		                         connection));
 	}
 	
-	Ok(model)
+	let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
+	
+	for morph in morphs_reader.iter::<i32, VI, i32, i32, i32>() {
+		let morph = morph?;
+		if let Offsets::Vertex(offsets) = morph.offsets {
+			model.add_morph(offsets.iter()
+			                       .map(|offset| (offset.vertex, Vec3::from(offset.offset).flip_x() * MMD_UNIT_SIZE))
+			                       .collect());
+		}
+	}
+	
+	Ok(model.build(renderer)?)
 }
 
 // Windows why

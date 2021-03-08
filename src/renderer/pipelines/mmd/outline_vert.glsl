@@ -20,6 +20,10 @@ layout(set = 0, binding = 1) uniform Bones {
 	mat4 mats[246];
 } bones;
 
+layout(set = 0, binding = 2) uniform Offsets {
+	ivec4 vecs[35960];
+} offsets;
+
 layout(push_constant) uniform Pc {
 	mat4 model;
 	vec4 color;
@@ -37,7 +41,9 @@ void main() {
 		anim += mat4x3(bones.mats[bones_indices[i]]) * bones_weights[i];
 	}
 	
-	vec4 view_pos = mv * vec4(anim * vec4(pos, 1.0), 1.0);
+	vec3 morph_pos = vec3(offsets.vecs[gl_VertexIndex].xyz) / 1000000.0;
+	
+	vec4 view_pos = mv * vec4(anim * vec4(pos + morph_pos, 1.0), 1.0);
 	vec3 view_normal = normalize(normal_matrix * (mat3(anim) * normal));
 	view_pos += vec4(view_normal * pc.scale * edge_scale * length(vec3(view_pos)), 0.0);
 	
