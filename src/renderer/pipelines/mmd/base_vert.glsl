@@ -18,12 +18,12 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
-layout(set = 0, binding = 1) uniform Bones {
-	mat4 mats[246];
+layout(set = 0, binding = 1) buffer Bones {
+	mat4 mats[];
 } bones;
 
-layout(set = 0, binding = 2) uniform Offsets {
-	ivec4 vecs[35960];
+layout(set = 0, binding = 2) buffer Offsets {
+	ivec4 vecs[];
 } offsets;
 
 layout(push_constant) uniform Pc {

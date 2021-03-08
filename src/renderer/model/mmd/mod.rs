@@ -41,7 +41,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                         size_of::<AMat4>() * bone_count,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
-			                                         uniform_buffer: true,
+			                                         storage_buffer: true,
 			                                         ..BufferUsage::none()
 		                                         },
 		                                         Some(renderer.queue.family()))?;
@@ -52,7 +52,6 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                          BufferUsage {
 			                                          transfer_destination: true,
 			                                          storage_buffer: true,
-			                                          uniform_buffer: true,
 			                                          ..BufferUsage::none()
 		                                          },
 		                                          Some(renderer.queue.family()))?;
@@ -62,7 +61,6 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                           BufferUsage {
 			                                           transfer_destination: true,
 			                                           storage_buffer: true,
-			                                           uniform_buffer: true,
 			                                           ..BufferUsage::none()
 		                                           },
 		                                           Some(renderer.queue.family()))?;
@@ -190,7 +188,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1],
 			                 self.shared.morphs_pipeline.clone(),
 			                 self.morphs_set.clone(),
-			                 ())?;
+			                 self.shared.morphs_max_size as u32)?;
 		}
 		
 		Ok(())

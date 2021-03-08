@@ -7,6 +7,7 @@ use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+use vulkano::descriptor::PipelineLayoutAbstract;
 
 use crate::application::entity::Bone;
 use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
@@ -16,7 +17,6 @@ use crate::utils::ImageEx;
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
-use vulkano::descriptor::PipelineLayoutAbstract;
 
 pub struct MMDModelShared<VI: VertexIndex> {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -25,6 +25,7 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub bones_pool: CpuBufferPool<AMat4>,
 	pub morphs_offsets: Arc<ImmutableBuffer<[IVec4]>>,
 	pub morphs_sizes: Vec<usize>,
+	pub morphs_max_size: usize,
 	pub morphs_pool: CpuBufferPool<IVec4>,
 	pub morphs_pipeline: Arc<MMDPipelineMorphs>,
 	pub fence: FenceCheck,
@@ -167,20 +168,18 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let morphs_sizes = self.morphs.iter()
 		                              .map(|v| v.len())
 		                              .collect::<Vec<_>>();
+		let morphs_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
+		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
 		let (morphs_offsets, morphs_promise) = {
-			let morph_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
-			let morph_max_size = (morph_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
-			let morphs_count = self.morphs.len();
-			
-			let mut offsets = vec![IVec4::zeros(); morph_max_size * morphs_count];
+			let mut offsets = vec![IVec4::zeros(); morphs_max_size * self.morphs.len()];
 			
 			for (mid, morph) in self.morphs.into_iter().enumerate() {
 				for (oid, (index, offset)) in morph.into_iter().enumerate() {
-					offsets[mid + oid * morphs_count] = IVec4::new((offset.x * 1_000_000.0) as i32,
-					                                               (offset.y * 1_000_000.0) as i32,
-					                                               (offset.z * 1_000_000.0) as i32,
-					                                               index.into());
+					offsets[mid * morphs_max_size + oid] = IVec4::new((offset.x * 1_000_000.0) as i32,
+					                                                  (offset.y * 1_000_000.0) as i32,
+					                                                  (offset.z * 1_000_000.0) as i32,
+					                                                  index.into());
 				}
 			}
 			
@@ -206,6 +205,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			bones_pool,
 			morphs_offsets,
 			morphs_sizes,
+			morphs_max_size,
 			morphs_pool,
 			morphs_pipeline,
 			fence,
