@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferViewRef};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};

@@ -13,7 +13,7 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildErr
 use vulkano::device::{Queue, Device};
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
-use vulkano::{format, OomError};
+use vulkano::OomError;
 use vulkano_win::{VkSurfaceBuild, CreationError};
 use winit::window::Window as WinitWindow;
 

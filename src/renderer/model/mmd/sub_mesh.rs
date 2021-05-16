@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferSlice};
 use vulkano::image::{ImmutableImage, view::ImageView};
-use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;

@@ -12,7 +12,7 @@ pub mod entity;
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
-use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError, Model};
+use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
 use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
 use crate::debug;
 pub use vr::VR;
