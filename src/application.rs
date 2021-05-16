@@ -12,7 +12,7 @@ pub mod entity;
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
-use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
+use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError, Model};
 use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
 use crate::debug;
 pub use vr::VR;
@@ -174,7 +174,7 @@ impl Application {
 		*pitch = (*pitch + -mouse_move.1 * 0.01).clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
 		
 		let rot = Rot3::from_euler_angles(*pitch, *yaw, 0.0);
-		let disp = rot * Vec3::new(x, 0.0, z) * dist + Vec3::y() * y;
+		let disp = rot * Vec3::new(x, 0.0, z) * dist + Vec3::y() * y * dist;
 		
 		position.vector += disp;
 		

@@ -1,5 +1,5 @@
 use std::time::Duration;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use openvr::TrackedDevicePose;
 use simba::scalar::SupersetOf;
 
@@ -79,13 +79,13 @@ impl Entity {
 		}
 	}
 	
-	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder) -> Result<(), RendererRenderError> {
+	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), RendererRenderError> {
 		self.model.pre_render(builder, &self.position.to_transform(), &self.bones, &self.morphs)?;
 		
 		Ok(())
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, eye: u32) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, eye: u32) -> Result<(), RendererRenderError> {
 		let pos: Point3 = self.position.translation.vector.into();
 		let ang = &self.position.rotation;
 		

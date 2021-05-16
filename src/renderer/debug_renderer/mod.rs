@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::f32::consts::PI;
 use err_derive::Error;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{CpuBufferPool, BufferUsage};
 use vulkano::device::Queue;
 use vulkano::descriptor::DescriptorSet;
@@ -57,7 +57,7 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder, commons: &CommonsUBO, pixel_scale: Vec2, eye: u32) -> Result<(), DebugRendererRederError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2, eye: u32) -> Result<(), DebugRendererRederError> {
 		let viewproj = commons.projection[eye as usize] * commons.view[eye as usize];
 		
 		DEBUG_LINES.with(|lines| {
@@ -91,7 +91,8 @@ impl DebugRenderer {
 			                     vertex_buffer,
 			                     index_buffer,
 			                     (),
-			                     ())?;
+			                     (),
+			                     None)?;
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
@@ -107,7 +108,8 @@ impl DebugRenderer {
 					                     vertex_buffer,
 					                     index_buffer,
 					                     set,
-					                     ())?;
+					                     (),
+					                     None)?;
 				}
 			}
 			

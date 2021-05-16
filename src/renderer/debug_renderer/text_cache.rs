@@ -4,7 +4,7 @@ use err_derive::Error;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::descriptor::{descriptor_set, DescriptorSet, PipelineLayoutAbstract};
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
-use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::device::Queue;
 use vulkano::sampler;
 use unifont::Glyph;
@@ -49,7 +49,7 @@ impl TextCache {
 			let data = Rasterizer::new(glyphs);
 			
 			let (image, image_promise) = ImmutableImage::from_iter(data,
-			                                                       Dimensions::Dim2d{ width, height },
+			                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                                                       MipmapsCount::One,
 			                                                       vulkano::format::Format::R8Unorm,
 			                                                       self.queue.clone())?;
@@ -68,7 +68,7 @@ impl TextCache {
 			
 			let set = Arc::new(
 				PersistentDescriptorSet::start(self.pipeline.descriptor_set_layout(0).unwrap().clone())
-					.add_sampled_image(image.clone(), sampler.clone())?
+					.add_sampled_image(ImageView::new(image)?, sampler.clone())?
 					.build()?
 			);
 			
@@ -161,6 +161,7 @@ pub enum TextCacheError {
 #[derive(Debug, Error)]
 pub enum TextCacheGetError {
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),

@@ -9,7 +9,7 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError, CommandBufferUsage};
 use vulkano::device::{Queue, Device};
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
@@ -63,7 +63,10 @@ impl Window {
 	pub fn regen_swapchain(&mut self) -> Result<(), WindowSwapchainRegenError> {
 		let dimensions = self.surface.window().inner_size().into();
 		
-		self.swapchain = self.swapchain.0.recreate_with_dimensions(dimensions)
+		self.swapchain = self.swapchain.0
+		                     .recreate()
+		                     .dimensions(dimensions)
+		                     .build()
 		                     .map_err(|err| match err {
 			                     SwapchainCreationError::UnsupportedDimensions => WindowSwapchainRegenError::NeedRetry, // No idea why this happens on linux
 			                     err => err.into(),
@@ -76,8 +79,8 @@ impl Window {
 	              device: &Arc<Device>,
 	              queue: &Arc<Queue>,
 	              future: Box<dyn GpuFuture>,
-	              left: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
-	              right: &Arc<AttachmentImage<format::R8G8B8A8Srgb>>)
+	              left: &Arc<AttachmentImage>,
+	              right: &Arc<AttachmentImage>)
 	              -> Result<Box<dyn GpuFuture>, WindowRenderError> {
 		let (ref mut swapchain, ref mut images) = self.swapchain;
 		
@@ -104,7 +107,7 @@ impl Window {
 		let left_dims = left.dimensions();
 		let right_dims = right.dimensions();
 		
-		let mut builder = AutoCommandBufferBuilder::new(device.clone(), queue.family().clone())?;
+		let mut builder = AutoCommandBufferBuilder::primary(device.clone(), queue.family().clone(), CommandBufferUsage::OneTimeSubmit)?;
 		
 		builder.blit_image(left.clone(),
 		                   [0, 0, 0],

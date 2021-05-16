@@ -1,9 +1,8 @@
 use std::sync::Arc;
 use err_derive::Error;
-use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract};
-use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess};
+use vulkano::render_pass::{Framebuffer, FramebufferAbstract, RenderPass};
+use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView};
 use vulkano::format::Format;
-use vulkano::format;
 use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
 use openvr::compositor::Texture;
@@ -11,7 +10,6 @@ use openvr::compositor::Texture;
 use crate::utils::{OpenVRPtr};
 use crate::application::VR;
 use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
-use super::RenderPass;
 
 // Translates OpenGL projection matrix to Vulkan
 // Can't be const because Mat4::new is not const fn or something
@@ -62,8 +60,8 @@ impl Eyes {
 
 
 pub struct Eye {
-	pub image: Arc<AttachmentImage<format::R8G8B8A8Srgb>>,
-	pub depth_image: Arc<AttachmentImage<format::D16Unorm>>,
+	pub image: Arc<AttachmentImage>,
+	pub depth_image: Arc<AttachmentImage>,
 	pub texture: Texture,
 	pub view: AMat4,
 	pub projection: PMat4,
@@ -74,22 +72,21 @@ pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
 pub const DEPTH_FORMAT: Format = Format::D16Unorm;
 
 impl Eye {
-	pub fn new<RPD>(frame_buffer_size:(u32, u32), view: AMat4, projection: PMat4, queue: &Queue, render_pass: &Arc<RPD>)
-	                -> Result<Eye, EyeCreationError>
-	               where RPD: RenderPassAbstract + Sync + Send + 'static + ?Sized {
+	pub fn new(frame_buffer_size:(u32, u32), view: AMat4, projection: PMat4, queue: &Queue, render_pass: &Arc<RenderPass>)
+	          -> Result<Eye, EyeCreationError> {
 		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];
 		
 		let device = queue.device();
 		
 		let image = AttachmentImage::with_usage(device.clone(),
 		                                        dimensions,
-		                                        format::R8G8B8A8Srgb,
+		                                        IMAGE_FORMAT,
 		                                        ImageUsage { transfer_source: true,
 		                                                     transfer_destination: true,
 		                                                     sampled: true,
 		                                                     ..ImageUsage::none() })?;
 		
-		let depth_image = AttachmentImage::transient(device.clone(), dimensions, format::D16Unorm)?;
+		let depth_image = AttachmentImage::transient(device.clone(), dimensions, DEPTH_FORMAT)?;
 		
 		let texture = Texture {
 			handle: Handle::Vulkan(vulkan::Texture {
@@ -109,8 +106,8 @@ impl Eye {
 		
 		
 		let frame_buffer = Arc::new(Framebuffer::start(render_pass.clone())
-		                       .add(image.clone())?
-		                       .add(depth_image.clone())?
+		                       .add(ImageView::new(image.clone())?)?
+		                       .add(ImageView::new(depth_image.clone())?)?
 		                       .build()?);
 		
 		Ok(Eye {
@@ -127,5 +124,6 @@ impl Eye {
 #[derive(Debug, Error)]
 pub enum EyeCreationError {
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
-	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] vulkano::framebuffer::FramebufferCreationError),
+	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
+	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] vulkano::render_pass::FramebufferCreationError),
 }

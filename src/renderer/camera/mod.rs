@@ -3,12 +3,12 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc;
 use err_derive::Error;
-use vulkano::{memory, format};
-use vulkano::command_buffer::{self, AutoCommandBufferBuilder, AutoCommandBuffer};
-use vulkano::command_buffer::pool::CommandPool;
+use vulkano::{memory};
+use vulkano::command_buffer::{self, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::buffer::{self, CpuBufferPool, BufferSlice, BufferAccess};
 use vulkano::image::{AttachmentImage, ImageUsage};
-use vulkano::device::{Queue, Device};
+use vulkano::device::{Queue};
+use vulkano::format::Format;
 
 #[cfg(windows)] mod escapi;
 mod opencv;
@@ -22,17 +22,17 @@ pub use self::dummy::Dummy;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
-pub const CAPTURE_FPS: u64 = 60;
+pub const CAPTURE_FPS: u64 = 1080;
 pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 
 pub trait Camera: Send + Sized + 'static {
 	fn capture(&mut self) -> Result<&[u8], CameraCaptureError>;
 	
 	fn start(mut self, queue: Arc<Queue>)
-		     -> Result<(Arc<AttachmentImage<format::B8G8R8A8Unorm>>, mpsc::Receiver<AutoCommandBuffer>), CameraStartError> {
+		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<PrimaryAutoCommandBuffer>), CameraStartError> {
 		let target = AttachmentImage::with_usage(queue.device().clone(),
 		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
-		                                         format::B8G8R8A8Unorm,
+		                                         Format::B8G8R8A8Unorm,
 		                                         ImageUsage { transfer_source: true,
 			                                         transfer_destination: true,
 			                                         ..ImageUsage::none() })?;
@@ -51,11 +51,9 @@ pub trait Camera: Send + Sized + 'static {
 		Ok((ret, receiver))
 	}
 	
-	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage<format::B8G8R8A8Unorm>>, sender: mpsc::SyncSender<AutoCommandBuffer>) -> Result<(), CaptureLoopError> {
+	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage>, sender: mpsc::SyncSender<PrimaryAutoCommandBuffer>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
-		let mut _last_capture = Instant::now();
-		
-		let _lock = Device::standard_command_pool(queue.device(), queue.family()).alloc(false, 1); // https://github.com/vulkano-rs/vulkano/issues/1471
+		let mut last_capture = Instant::now();
 		
 		loop {
 			let frame = match self.capture() {
@@ -64,8 +62,8 @@ pub trait Camera: Send + Sized + 'static {
 				Err(err) => return Err(err.into()),
 			};
 			
-			// println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
-			_last_capture = Instant::now();
+			println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
+			last_capture = Instant::now();
 			
 			let sub_buffer = buffer.chunk(
 				frame.chunks_exact(CHUNK_SIZE)
@@ -73,7 +71,7 @@ pub trait Camera: Send + Sized + 'static {
 			)?;
 			let sub_slice: BufferSlice<[u8], _> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
 			
-			let mut builder  = AutoCommandBufferBuilder::new(queue.device().clone(), queue.family())?;
+			let mut builder  = AutoCommandBufferBuilder::primary(queue.device().clone(), queue.family(), CommandBufferUsage::OneTimeSubmit)?;
 			builder.copy_buffer_to_image(sub_slice, target.clone())?;
 			let command_buffer = builder.build()?;
 			

@@ -1,16 +1,15 @@
 use std::sync::{Arc, mpsc};
 use std::time::Instant;
 use err_derive::Error;
-use vulkano::{pipeline, device, instance, sync, framebuffer, command_buffer, swapchain, format, memory};
+use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, AutoCommandBuffer, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
 use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
-use vulkano::framebuffer::RenderPassAbstract;
 use vulkano::format::{ClearValue, Format};
 use vulkano::sync::{GpuFuture, FenceSignalFuture};
 use vulkano::sampler::Filter;
@@ -33,8 +32,7 @@ use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
 use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
 use model::ModelRenderError;
-
-type RenderPass = dyn RenderPassAbstract + Send + Sync;
+use vulkano::render_pass::RenderPass;
 
 #[derive(Clone)]
 pub struct CommonsUBO {
@@ -55,8 +53,8 @@ pub struct Renderer {
 	pipelines: Pipelines,
 	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
-	camera_image: Arc<AttachmentImage<format::B8G8R8A8Unorm>>,
-    load_commands: mpsc::Receiver<AutoCommandBuffer>,
+	camera_image: Arc<AttachmentImage>,
+	load_commands: mpsc::Receiver<PrimaryAutoCommandBuffer>,
 	debug_renderer: DebugRenderer,
 	last_frame: Instant,
 }
@@ -172,7 +170,7 @@ impl Renderer {
 			};
 			
 			println!("{} {} {}: {}",
-			         msg.layer_prefix,
+			         msg.layer_prefix.unwrap_or("UNKNOWN"),
 			         ty,
 			         severity,
 			         msg.description);
@@ -221,13 +219,13 @@ impl Renderer {
 		                           .find(|&q| q.supports_graphics())
 		                           .ok_or(RendererError::NoQueue)?;
 		
-		// let load_queue_family = physical.queue_families()
-		//                                 .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
-		//                                 .unwrap_or(queue_family);
+		let load_queue_family = physical.queue_families()
+		                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
+		                                .unwrap_or(queue_family);
 		
 		let families = vec![
 			(queue_family, 0.5),
-			// (load_queue_family, 0.2),
+			(load_queue_family, 0.2),
 		];
 		
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
@@ -243,10 +241,7 @@ impl Renderer {
 		                                       families.into_iter())?;
 		
 		let queue = queues.next().ok_or(RendererError::NoQueue)?;
-		
-		// let load_queue = queues.next().ok_or(RendererCreationError::NoQueue)?;
-		// TODO: Get better GPU
-		let load_queue = queue.clone();
+		let load_queue = queues.next().ok_or(RendererError::NoQueue)?;
 		
 		Ok((device, queue, load_queue))
 	}
@@ -296,20 +291,20 @@ impl Renderer {
 			..ImageUsage::none()
 		};
 		
-		Ok(Swapchain::new(self.device.clone(),
-		                  surface,
-		                  2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(2)),
-		                  format.0,
-		                  dimensions,
-		                  1,
-		                  usage,
-		                  &self.queue,
-		                  SurfaceTransform::Identity,
-		                  alpha,
-		                  PresentMode::Fifo,
-		                  FullscreenExclusive::Allowed,
-		                  false,
-		                  format.1)?)
+		Ok(Swapchain::start(self.device.clone(), surface)
+		             .num_images(2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(2)))
+		             .format(format.0)
+		             .dimensions(dimensions)
+		             .layers(1)
+		             .usage(usage)
+		             .sharing_mode(&self.queue)
+		             .transform(SurfaceTransform::Identity)
+		             .composite_alpha(alpha)
+		             .present_mode(PresentMode::Fifo)
+		             .fullscreen_exclusive(FullscreenExclusive::Allowed)
+		             .clipped(false)
+		             .color_space(format.1)
+		             .build()?)
 	}
 	
 	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
@@ -349,7 +344,7 @@ impl Renderer {
 		let [camera_width, camera_height] = self.camera_image.dimensions();
 		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
 		
-		let mut builder = AutoCommandBufferBuilder::new(self.device.clone(), self.queue.family())?;
+		let mut builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
 		// TODO: do this during render pass? Bliting can't be used with multisampling
 		builder.blit_image(self.camera_image.clone(),
 		                   [0, 0, 0],
@@ -376,7 +371,7 @@ impl Renderer {
 		                   1,
 		                   Filter::Linear)?
 		       .update_buffer(self.commons.clone(),
-		                      commons.clone())?;
+		                      Arc::new(commons.clone()))?;
 		
 		for entity in scene.iter_mut() {
 			entity.pre_render(&mut builder)?;
@@ -475,7 +470,7 @@ pub enum RendererError {
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] framebuffer::RenderPassCreationError),
+	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::GraphicsPipelineCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }

@@ -2,7 +2,7 @@ use std::ops::Range;
 use err_derive::Error;
 use vulkano::{memory, sync, command_buffer};
 use vulkano::descriptor::descriptor_set;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::input_assembly::Index;
 
 pub mod simple;
@@ -19,8 +19,8 @@ pub use fence_check::FenceCheck;
 
 pub trait Model {
 	#[allow(unused_variables)]
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> { Ok(()) }
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError>;
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> { Ok(()) }
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError>;
 	fn get_default_bones(&self) -> &[Bone] { &[] }
 	fn morphs_count(&self) -> usize { 0 }
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError>;
@@ -37,6 +37,7 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),

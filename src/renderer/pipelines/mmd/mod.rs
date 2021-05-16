@@ -66,7 +66,7 @@ mmd_pipelines!(
 pub const MORPH_GROUP_SIZE: usize = 32;
 
 #[derive(Debug, Deref)]
-pub struct MMDPipelineMorphs(ComputePipeline<PipelineLayout<morph_comp::Layout>>);
+pub struct MMDPipelineMorphs(ComputePipeline<PipelineLayout<morph_comp::MainLayout>>);
 
 unsafe impl SafeDeref for MMDPipelineMorphs {}
 

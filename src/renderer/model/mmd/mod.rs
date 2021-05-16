@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::mem::size_of;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
@@ -133,7 +133,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Model for MMDModel<VI> {
-	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> {
+	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> {
 		for bone in bones {
 			let transform = match bone.parent {
 				None => &bone.local_transform * &bone.anim_transform.to_transform(),
@@ -188,13 +188,14 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1],
 			                 self.shared.morphs_pipeline.clone(),
 			                 self.morphs_set.clone(),
-			                 self.shared.morphs_max_size as u32)?;
+			                 self.shared.morphs_max_size as u32,
+			                 None)?;
 		}
 		
 		Ok(())
 	}
 	
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		// Outline
@@ -211,7 +212,8 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, eye, scale))?;
+				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, eye, scale),
+				                     None)?;
 			}
 		}
 		
@@ -224,7 +226,8 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			                     self.shared.vertices.clone(),
 			                     sub_mesh.indices.clone(),
 			                     (self.model_set.clone(), mesh_set),
-			                     (model_matrix.to_homogeneous(), eye))?;
+			                     (model_matrix.to_homogeneous(), eye),
+			                     None)?;
 		}
 		
 		// Transparent
@@ -235,7 +238,8 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.to_homogeneous(), eye))?;
+				                     (model_matrix.to_homogeneous(), eye),
+				                     None)?;
 			}
 		}
 		

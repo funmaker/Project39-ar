@@ -16,11 +16,11 @@ layout(set = 0, binding = 0) uniform Commons {
 	float ambient;
 } commons;
 
-layout(set = 0, binding = 1) buffer Bones {
+layout(set = 0, binding = 1) readonly buffer Bones {
 	mat4 mats[];
 } bones;
 
-layout(set = 0, binding = 2) buffer Offsets {
+layout(set = 0, binding = 2) readonly buffer Offsets {
 	ivec4 vecs[];
 } offsets;
 

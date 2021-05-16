@@ -5,8 +5,9 @@ authors = ["Fun Maker <funmaker95@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano = "0.20.0"
-vulkano-shaders = "0.20.0"
+vulkano = "0.23.0"
+vulkano-shaders = "0.23.0"
+vulkano-win = "0.23.0"
 image = "0.23.12"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"
@@ -19,7 +20,6 @@ num-traits = "0.2.14"
 num-derive = "0.3.3"
 lazy_static = "1.4.0"
 winit = "0.24.0"
-vulkano-win = "0.20.0"
 mmd = { git = "https://github.com/funmaker/mmd-rs" }
 #mmd = { path = "../mmd-rs" }
 downcast-rs = "1.2.0"

@@ -3,7 +3,7 @@ use std::ops::Range;
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool, BufferAccess, TypedBufferAccess};
-use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
@@ -14,6 +14,7 @@ use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
 use crate::utils::ImageEx;
+use crate::utils::VecFuture;
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
@@ -87,13 +88,20 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 	}
 	
 	pub fn build(self, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, ModelError> {
+		let mut image_promises = VecFuture::new(renderer.device.clone());
+		let mut buffer_promises = VecFuture::new(renderer.device.clone());
+		
 		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(self.vertices.into_iter(),
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
 		                                                              renderer.load_queue.clone())?;
+		buffer_promises.push(vertices_promise);
 		
 		let (indices, indices_promise) = ImmutableBuffer::from_iter(self.indices.into_iter(),
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
 		                                                            renderer.load_queue.clone())?;
+		buffer_promises.push(indices_promise);
+		
+		let mut images = vec![];
 		
 		let (default_tex, default_tex_promise) = {
 			let texture_reader = Cursor::new(&include_bytes!("./default_tex.png")[..]);
@@ -102,30 +110,27 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			let height = image.height();
 			
 			ImmutableImage::from_iter(image.into_pre_mul_iter(),
-			                          Dimensions::Dim2d{ width, height },
+			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                          MipmapsCount::Log2,
 			                          Format::R8G8B8A8Unorm,
 			                          renderer.load_queue.clone())?
 		};
-		
-		let mut images_promise = default_tex_promise.boxed();
-		let mut images = vec![];
+		image_promises.push(default_tex_promise);
 		
 		for texture in self.textures {
 			let width = texture.width();
 			let height = texture.height();
 			
 			let (image, promise) = ImmutableImage::from_iter(texture.into_pre_mul_iter(),
-			                                                 Dimensions::Dim2d{ width, height },
+			                                                 ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                                                 MipmapsCount::Log2,
 			                                                 Format::R8G8B8A8Unorm,
 			                                                 renderer.load_queue.clone())?;
 			
-			images_promise = images_promise.join(promise).boxed();
+			image_promises.push(promise);
 			images.push(image);
 		}
 		
-		let mut material_promises = vulkano::sync::now(renderer.device.clone()).boxed();
 		let mut sub_meshes = vec![];
 		
 		for desc in self.sub_meshes {
@@ -160,7 +165,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			
 			let sub_mesh = SubMesh::new(indices, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
 			
-			material_promises = material_promises.join(material_promise).boxed();
+			buffer_promises.push(material_promise);
 			sub_meshes.push(sub_mesh);
 		}
 		
@@ -187,16 +192,14 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			                           BufferUsage{ storage_buffer: true, uniform_buffer: true, ..BufferUsage::none() },
 			                           renderer.load_queue.clone())?
 		};
+		buffer_promises.push(morphs_promise);
 		
 		let bones_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
 		let morphs_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
 		
 		let morphs_pipeline = renderer.pipelines.get()?;
 		
-		let fence = FenceCheck::new(vertices_promise.join(indices_promise)
-		                                            .join(images_promise)
-		                                            .join(material_promises)
-		                                            .join(morphs_promise))?;
+		let fence = FenceCheck::new(image_promises.join(buffer_promises))?;
 		
 		Ok(MMDModelShared {
 			vertices,

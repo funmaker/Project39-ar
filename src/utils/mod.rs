@@ -6,6 +6,10 @@ use vulkano::image::{AttachmentImage, ImageAccess};
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
 use image::DynamicImage;
 
+mod vec_future;
+
+pub use vec_future::VecFuture;
+
 
 // Images
 
@@ -82,7 +86,7 @@ impl<'a> OpenVRPtr for Queue {
 	}
 }
 
-impl<F: 'static + Send + Sync> OpenVRPtr for AttachmentImage<F> {
+impl OpenVRPtr for AttachmentImage {
 	type PtrType = u64;
 	
 	fn as_ptr(&self) -> Self::PtrType {

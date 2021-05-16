@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage};
-use vulkano::image::{ImmutableImage, Dimensions, MipmapsCount};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, BufferViewRef};
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use openvr::render_models;
@@ -47,18 +47,19 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		                                                            queue.clone())?;
 		
 		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
-		                                                       Dimensions::Dim2d{ width, height },
+		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 		                                                       MipmapsCount::Log2,
 		                                                       Format::R8G8B8A8Unorm,
 		                                                       queue.clone())?;
 		
+		let view = ImageView::new(image)?;
 		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
 		
 		let set = Arc::new(
 			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
-			                             .add_buffer(renderer.commons.clone())?
-			                             .add_sampled_image(image.clone(), sampler.clone())?
-			                             .build()?
+			                        .add_buffer(renderer.commons.clone())?
+			                        .add_sampled_image(view, sampler)?
+			                        .build()?
 		);
 		
 		let fence = Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?);
@@ -86,7 +87,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -94,7 +95,8 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 		                     self.vertices.clone(),
 		                     self.indices.clone(),
 		                     self.set.clone(),
-		                     (model_matrix.to_homogeneous(), eye))?;
+		                     (model_matrix.to_homogeneous(), eye),
+		                     None)?;
 		
 		Ok(())
 	}

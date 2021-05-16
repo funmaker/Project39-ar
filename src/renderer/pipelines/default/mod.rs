@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use derive_deref::Deref;
 use vulkano::pipeline::GraphicsPipeline;
-use vulkano::framebuffer::{RenderPassAbstract, Subpass};
+use vulkano::render_pass::{RenderPass, Subpass};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
@@ -10,7 +10,6 @@ use vulkano::descriptor::PipelineLayoutAbstract;
 
 mod vertex;
 
-use crate::renderer::RenderPass;
 use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
 pub use vertex::Vertex;
 
@@ -36,8 +35,7 @@ mod frag {
 pub struct DefaultPipeline(
 	GraphicsPipeline<
 		SingleBufferDefinition<Vertex>,
-		Box<dyn PipelineLayoutAbstract + Send + Sync>,
-		Arc<dyn RenderPassAbstract + Send + Sync>
+		Box<dyn PipelineLayoutAbstract + Send + Sync>
 	>
 );
 
