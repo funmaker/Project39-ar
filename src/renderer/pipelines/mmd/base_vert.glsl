@@ -36,9 +36,6 @@ void main() {
 	mat4 mvp = commons.projection[pc.eye] * mv;
 	mat3 normal_matrix = mat3(mv);
 	
-	vec4 anim_pos = vec4(0);
-	vec3 anim_normal = vec3(0);
-	
 	mat4x3 anim = mat4x3(0);
 	for(uint i = 0; i < 4; i++) {
 		anim += mat4x3(bones.mats[bones_indices[i]]) * bones_weights[i];
@@ -50,5 +47,5 @@ void main() {
 	
 	f_pos = vec3(mv * vec4(pos, 1.0));
 	f_uv = uv;
-	f_normal = normalize(normal_matrix * (mat3(anim) * anim_normal));
+	f_normal = normalize(normal_matrix * (mat3(anim) * normal));
 }

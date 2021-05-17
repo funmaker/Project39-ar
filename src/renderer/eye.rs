@@ -42,6 +42,7 @@ impl Eyes {
 	}
 	
 	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
+		let vr = vr.lock().unwrap();
 		let frame_buffer_size = vr.system.recommended_render_target_size();
 		
 		let view_left  = vr.system.eye_to_head_transform(openvr::Eye::Left ).to_transform().inverse();

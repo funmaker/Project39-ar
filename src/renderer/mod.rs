@@ -121,7 +121,7 @@ impl Renderer {
 		
 		let app_infos = vulkano::app_info_from_cargo_toml!();
 		
-		let vr_extensions = vr.as_ref().map(|vr| vr.compositor.vulkan_instance_extensions_required()).unwrap_or_default();
+		let vr_extensions = vr.as_ref().map(|vr| vr.lock().unwrap().compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
 		let extensions = RawInstanceExtensions::new(vr_extensions)
 		                                       .union(&(&vulkano_win::required_extensions()).into())
@@ -188,7 +188,7 @@ impl Renderer {
 		}
 		
 		let physical = vr.as_ref()
-		                 .and_then(|vr| vr.system.vulkan_output_device(instance.as_ptr()))
+		                 .and_then(|vr| vr.lock().unwrap().system.vulkan_output_device(instance.as_ptr()))
 		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
 		                 .or_else(|| {
 			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
@@ -228,7 +228,7 @@ impl Renderer {
 			(load_queue_family, 0.2),
 		];
 		
-		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.compositor, &physical)).unwrap_or_default();
+		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.lock().unwrap().compositor, &physical)).unwrap_or_default();
 		
 		let (device, mut queues) = Device::new(physical,
 		                                       &Features::none(),
@@ -428,6 +428,7 @@ impl Renderer {
 		let pose = hmd_pose.to_matrix().to_slice34();
 		
 		if let Some(ref vr) = self.vr {
+			let vr = vr.lock().unwrap();
 			unsafe {
 				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(pose))?;
 				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;

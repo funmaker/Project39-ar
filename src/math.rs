@@ -139,18 +139,18 @@ impl VRSlice for Mat4 {
 	
 	fn to_slice34(&self) -> [[f32; 4]; 3] {
 		[
-			[self.m11, self.m21, self.m31, self.m41],
-			[self.m12, self.m22, self.m32, self.m42],
-			[self.m13, self.m23, self.m33, self.m43],
+			[self.m11, self.m12, self.m13, self.m14],
+			[self.m21, self.m22, self.m23, self.m24],
+			[self.m31, self.m32, self.m33, self.m34],
 		]
 	}
 	
 	fn to_slice44(&self) -> [[f32; 4]; 4] {
 		[
-			[self.m11, self.m21, self.m31, self.m41],
-			[self.m12, self.m22, self.m32, self.m42],
-			[self.m13, self.m23, self.m33, self.m43],
-			[self.m14, self.m24, self.m34, self.m44],
+			[self.m11, self.m12, self.m13, self.m14],
+			[self.m21, self.m22, self.m23, self.m24],
+			[self.m31, self.m32, self.m33, self.m34],
+			[self.m41, self.m42, self.m43, self.m44]
 		]
 	}
 }

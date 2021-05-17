@@ -28,7 +28,7 @@ impl CameraService {
 		})
 	}
 	
-	pub fn get_frame_buffer(&mut self, frame_type: FrameType) -> Result<&FrameBuffer, TrackedCameraError> {
+	pub fn get_frame_buffer(&mut self, frame_type: FrameType) -> Result<&mut FrameBuffer, TrackedCameraError> {
 		let mut buffer = self.frame_buffer
 		                     .take()
 		                     .filter(|fb| fb.frame_type == frame_type)
@@ -72,7 +72,7 @@ impl CameraService {
 			buffer,
 		});
 		
-		Ok(self.frame_buffer.as_ref().unwrap())
+		Ok(self.frame_buffer.as_mut().unwrap())
 	}
 	
 	fn new_buffer(&self, frame_type: FrameType) -> Result<Vec<u8>, TrackedCameraError> {

@@ -15,7 +15,7 @@ use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
 use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
 use crate::debug;
-pub use vr::VR;
+pub use vr::{VR, VRInner};
 pub use entity::Entity;
 
 pub struct Application {
@@ -30,7 +30,7 @@ type FakePose = (Translation3, (f32, f32));
 
 impl Application {
 	pub fn new(device: Option<usize>, camera_api: CameraAPI, vr: bool) -> Result<Application, ApplicationCreationError> {
-		let vr = vr.then(|| VR::new())
+		let vr = vr.then(|| VRInner::new())
 		           .transpose()?
 		           .map(Arc::new);
 		
@@ -40,7 +40,7 @@ impl Application {
 		
 		let mut renderer = match camera_api {
 			CameraAPI::OpenCV => Renderer::new(vr.clone(), device, camera::OpenCV::new()?)?,
-			CameraAPI::OpenVR => Renderer::new(vr.clone(), device, camera::OpenVR::new(&vr.as_ref().unwrap())?)?,
+			CameraAPI::OpenVR => Renderer::new(vr.clone(), device, camera::OpenVR::new(vr.clone().unwrap())?)?,
 			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), device, camera::Escapi::new()?)?,
 			CameraAPI::Dummy => Renderer::new(vr.clone(), device, camera::Dummy::new())?,
 		};
@@ -52,21 +52,21 @@ impl Application {
 		scene.push(Entity::new(
 			"Cube",
 			SimpleModel::<u16>::from_obj("models/cube/cube", &mut renderer)?,
-			Point3::new(0.0, -1.5, -1.5),
+			Point3::new(0.0, -0.5, 0.0),
 			Rot3::identity(),
 		));
 		
 		scene.push(Entity::new(
 			"初音ミク",
 			MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
-			Point3::new(0.0, -1.0, -1.5),
+			Point3::new(0.0, 0.0, 0.0),
 			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
 		));
 		
 		scene.push(Entity::new(
 			"Test",
 			crate::renderer::model::mmd::test::test_model(&mut renderer),
-			Point3::new(2.0, -1.0, -3.0),
+			Point3::new(2.0, 0.0, -1.5),
 			Rot3::from_euler_angles(0.0, 0.0, 0.0),
 		));
 		
@@ -83,7 +83,7 @@ impl Application {
 		let mut instant = Instant::now();
 		
 		let mut vr_buttons = 0;
-		let mut fake_pose: FakePose = (Translation3::identity(), (0.0, 0.0));
+		let mut fake_pose: FakePose = (Vec3::new(0.0, 1.5, 1.5).into(), (0.0, 0.0));
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -107,7 +107,7 @@ impl Application {
 	}
 	
 	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<Isometry3, ApplicationRunError> {
-		let vr = self.vr.as_ref().expect("VR has not been initialized.");
+		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		
 		let poses = vr.compositor.wait_get_poses()?;
 		

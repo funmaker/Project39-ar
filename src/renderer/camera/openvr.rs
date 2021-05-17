@@ -10,6 +10,7 @@ use super::{Camera, CameraCaptureError};
 use crate::application::VR;
 use crate::debug;
 use tracked_camera::{TrackedCamera, FrameType, CameraService};
+use std::sync::Arc;
 
 pub const CAPTURE_INDEX: u32 = 0;
 
@@ -18,13 +19,14 @@ pub struct OpenVR {
 	tracked_camera: TrackedCamera,
 	service: CameraService,
 	last_capture: Instant,
+	vr: Arc<VR>,
 }
 
 impl OpenVR {
-	pub fn new(vr: &VR) -> Result<OpenVR, OpenVRCameraError> {
+	pub fn new(vr: Arc<VR>) -> Result<OpenVR, OpenVRCameraError> {
 		let index = CAPTURE_INDEX;
 		
-		let tracked_camera = TrackedCamera::new(&vr.context)?;
+		let tracked_camera = TrackedCamera::new(&vr.lock().unwrap().context)?;
 		
 		if debug::debug() {
 			println!("Has Camera {}", tracked_camera.has_camera(index));
@@ -64,6 +66,7 @@ impl OpenVR {
 			tracked_camera,
 			service,
 			last_capture: Instant::now(),
+			vr,
 		})
 	}
 }
@@ -84,16 +87,30 @@ impl Camera for OpenVR {
 			_ => unreachable!(),
 		};
 		
-		let ret = self.service.get_frame_buffer(mode)
-		                      .map(|fb| fb.buffer.as_slice())
-		                      .map_err(|err| match err.code {
-			                      sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
-			                      _ => CameraCaptureError::Other(err.into()),
-		                      });
+		let mut ret;
+		
+		{
+			// TODO: put tracked cameras inside vr mutex
+			let lock = self.vr.lock().unwrap();
+			ret = self.service.get_frame_buffer(mode)
+			                  .map(|fb| fb.buffer.as_mut_slice())
+			                  .map_err(|err| match err.code {
+				                  sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
+				                  _ => CameraCaptureError::Other(err.into()),
+			                  });
+			drop(lock);
+		};
+		
+		// TODO: probably can be ignored later
+		if let Ok(ref mut slice) = ret {
+			for pos in (3..slice.len()).step_by(4) {
+				slice[pos] = 255;
+			}
+		}
 		
 		self.last_capture = Instant::now();
 		
-		ret
+		ret.map(|x| &*x)
 	}
 }
 
