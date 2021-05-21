@@ -19,6 +19,7 @@ mod dummy;
 pub use self::opencv::{OpenCV, OpenCVCameraError};
 pub use self::openvr::{OpenVR, OpenVRCameraError};
 pub use self::dummy::Dummy;
+use crate::debug;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
@@ -62,7 +63,7 @@ pub trait Camera: Send + Sized + 'static {
 				Err(err) => return Err(err.into()),
 			};
 			
-			println!("{} FPS\t{}", 1.0 / last_capture.elapsed().as_secs_f32(), frame.len());
+			debug::set_flag("CAMERA_FPS", 1.0 / last_capture.elapsed().as_secs_f32());
 			last_capture = Instant::now();
 			
 			let sub_buffer = buffer.chunk(

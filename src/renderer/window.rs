@@ -18,6 +18,7 @@ use vulkano_win::{VkSurfaceBuild, CreationError};
 use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
+use crate::math::Vec2;
 use crate::debug;
 use std::fmt::{Debug, Formatter};
 
@@ -36,16 +37,27 @@ impl Window {
 	pub fn new(renderer: &Renderer) -> Result<Window, WindowCreationError> {
 		let event_loop = EventLoop::new();
 		
-		let surface = WindowBuilder::new().with_transparent(true)
-		                                  .with_inner_size(PhysicalSize::new(1920, 1080))
-		                                  .with_title("Project 39")
-		                                  .build_vk_surface(&event_loop, renderer.instance.clone())?;
+		let surface = WindowBuilder::new()
+		                            .with_transparent(true)
+		                            .with_resizable(true)
+		                            .with_inner_size(PhysicalSize::new(1920, 1080)) // TODO: set from framebuffer size
+		                            .with_title("Project 39")
+		                            .build_vk_surface(&event_loop, renderer.instance.clone())?;
+		
+		fn into_vec(ps: PhysicalSize<u32>) -> Vec2 {
+			Vec2::new(ps.width as f32, ps.height as f32)
+		}
 		
 		let window = surface.window();
-		let size = window.outer_size();
-		let monitor_size = window.current_monitor().map(|mon| mon.size()).unwrap_or(size);
+		let size = into_vec(window.outer_size());
+		let monitor_size = window.current_monitor()
+		                         .map(|mon| into_vec(mon.size()))
+		                         .unwrap_or(size.clone());
+		let centered_pos = (monitor_size - size) / 2.0;
 		
-		window.set_outer_position(PhysicalPosition::new((monitor_size.width - size.width) / 2, (monitor_size.height - size.height) / 2));
+		if centered_pos.x >= 0.0 && centered_pos.y >= 0.0 {
+			window.set_outer_position(PhysicalPosition::new(centered_pos.x, centered_pos.y));
+		}
 		
 		let swapchain = renderer.create_swapchain(surface.clone())?;
 		

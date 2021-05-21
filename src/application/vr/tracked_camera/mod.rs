@@ -3,11 +3,9 @@ use openvr_sys as sys;
 
 mod error;
 mod utils;
-mod service;
 
 pub use error::*;
 pub use utils::*;
-pub use service::*;
 
 #[derive(Copy, Clone)]
 pub struct TrackedCamera(FnTable);
@@ -70,8 +68,53 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
-	pub fn get_camera_service(&self, index: TrackedDeviceIndex) -> Result<CameraService, TrackedCameraError> {
-		CameraService::new(self.clone(), index)
+	pub unsafe fn acquire_video_streaming_service(&self, index: TrackedDeviceIndex) -> Result<TrackedCameraHandle, TrackedCameraError> {
+		let mut out = 0;
+		
+		check_err(self.0,
+			self.0.AcquireVideoStreamingService.unwrap()(index,
+			                                             &mut out)
+		)?;
+		
+		Ok(out)
+	}
+	
+	pub unsafe fn release_video_streaming_service(&self, handle: TrackedCameraHandle) -> Result<(), TrackedCameraError> {
+		check_err(self.0,
+			self.0.ReleaseVideoStreamingService.unwrap()(handle)
+		)?;
+		
+		Ok(())
+	}
+	
+	pub unsafe fn get_video_stream_frame_buffer(&self, handle: TrackedCameraHandle, frame_type: FrameType, buffer: &mut [u8]) -> Result<CameraVideoStreamFrameHeader, TrackedCameraError> {
+		let mut header = CameraVideoStreamFrameHeader {
+			eFrameType: frame_type.into(),
+			nWidth: 0,
+			nHeight: 0,
+			nBytesPerPixel: 0,
+			nFrameSequence: 0,
+			standingTrackedDevicePose: sys::TrackedDevicePose_t {
+				mDeviceToAbsoluteTracking: sys::HmdMatrix34_t { m: [[0.0; 4]; 3] },
+				vVelocity: sys::HmdVector3_t { v: [0.0, 0.0, 0.0] },
+				vAngularVelocity: sys::HmdVector3_t { v: [0.0, 0.0, 0.0] },
+				eTrackingResult: 0,
+				bPoseIsValid: false,
+				bDeviceIsConnected: false
+			},
+			ulFrameExposureTime: 0
+		};
+		
+		check_err(self.0,
+			self.0.GetVideoStreamFrameBuffer.unwrap()(handle,
+			                                          frame_type.into(),
+			                                          buffer.as_mut_ptr() as *mut _,
+			                                          buffer.len() as u32,
+			                                          &mut header,
+			                                          std::mem::size_of::<CameraVideoStreamFrameHeader>() as u32)
+		)?;
+		
+		Ok(header)
 	}
 }
 

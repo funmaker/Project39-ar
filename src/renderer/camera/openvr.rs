@@ -4,31 +4,26 @@ use std::time::{Instant, Duration};
 use err_derive::Error;
 use openvr_sys as sys;
 
-mod tracked_camera;
-
 use super::{Camera, CameraCaptureError};
-use crate::application::VR;
+use crate::application::vr::{VR, FrameType, TrackedCameraError, CameraService};
 use crate::debug;
-use tracked_camera::{TrackedCamera, FrameType, CameraService};
 use std::sync::Arc;
 
 pub const CAPTURE_INDEX: u32 = 0;
 
 pub struct OpenVR {
 	index: sys::TrackedDeviceIndex_t,
-	tracked_camera: TrackedCamera,
-	service: CameraService,
 	last_capture: Instant,
-	vr: Arc<VR>,
+	service: CameraService,
 }
 
 impl OpenVR {
 	pub fn new(vr: Arc<VR>) -> Result<OpenVR, OpenVRCameraError> {
 		let index = CAPTURE_INDEX;
 		
-		let tracked_camera = TrackedCamera::new(&vr.lock().unwrap().context)?;
-		
 		if debug::debug() {
+			let tracked_camera = &vr.lock().unwrap().tracked_camera;
+			
 			println!("Has Camera {}", tracked_camera.has_camera(index));
 			println!();
 			println!("Distorted");
@@ -59,14 +54,12 @@ impl OpenVR {
 			println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.0, 1.0));
 		}
 		
-		let service = tracked_camera.get_camera_service(index)?;
+		let service = CameraService::new(vr, index)?;
 		
 		Ok(OpenVR {
 			index,
-			tracked_camera,
-			service,
 			last_capture: Instant::now(),
-			vr,
+			service,
 		})
 	}
 }
@@ -89,17 +82,12 @@ impl Camera for OpenVR {
 		
 		let mut ret;
 		
-		{
-			// TODO: put tracked cameras inside vr mutex
-			let lock = self.vr.lock().unwrap();
-			ret = self.service.get_frame_buffer(mode)
-			                  .map(|fb| fb.buffer.as_mut_slice())
-			                  .map_err(|err| match err.code {
-				                  sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
-				                  _ => CameraCaptureError::Other(err.into()),
-			                  });
-			drop(lock);
-		};
+		ret = self.service.get_frame_buffer(mode)
+		                  .map(|fb| fb.buffer.as_mut_slice())
+		                  .map_err(|err| match err.code {
+			                  sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
+			                  _ => CameraCaptureError::Other(err.into()),
+		                  });
 		
 		// TODO: probably can be ignored later
 		if let Ok(ref mut slice) = ret {
@@ -116,8 +104,7 @@ impl Camera for OpenVR {
 
 #[derive(Debug, Error)]
 pub enum OpenVRCameraError {
-	#[error(display = "{}", _0)] InitError(#[error(source)] tracked_camera::InitError),
-	#[error(display = "{}", _0)] TrackedCameraError(#[error(source)] tracked_camera::TrackedCameraError),
+	#[error(display = "{}", _0)] TrackedCameraError(#[error(source)] TrackedCameraError),
 }
 
 

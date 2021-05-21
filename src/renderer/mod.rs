@@ -324,6 +324,7 @@ impl Renderer {
 		self.last_frame = Instant::now();
 		
 		debug::draw_text(format!("FPS: {}", (1.0 / since_last_frame.as_secs_f32()).floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
+		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
 		let view_base = hmd_pose.inverse();
 		let view_left = &self.eyes.left.view * &view_base;
