@@ -308,7 +308,7 @@ impl Renderer {
 	}
 	
 	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
-		if let Some(previous_frame_end) = &mut self.previous_frame_end {
+		if let Some(ref mut previous_frame_end) = self.previous_frame_end {
 			previous_frame_end.cleanup_finished();
 		}
 		
@@ -426,16 +426,6 @@ impl Renderer {
 			future = future.then_signal_semaphore().boxed();
 		}
 		
-		let pose = hmd_pose.to_matrix().to_slice34();
-		
-		if let Some(ref vr) = self.vr {
-			let vr = vr.lock().unwrap();
-			unsafe {
-				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture, None, Some(pose))?;
-				vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;
-			}
-		}
-		
 		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
 		
 		future = match window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image) {
@@ -445,6 +435,20 @@ impl Renderer {
 		};
 		
 		let future = future.then_signal_fence_and_flush();
+		
+		// TODO: Move to another thread
+		if let Ok(ref future) = future {
+			if let Some(ref vr) = self.vr {
+				future.wait(None)?;
+				
+				let pose = hmd_pose.to_matrix().to_slice34();
+				let vr = vr.lock().unwrap();
+				unsafe {
+					vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture,  None, Some(pose))?;
+					vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;
+				}
+			}
+		}
 		
 		match future {
 			Ok(future) => {
