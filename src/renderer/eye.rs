@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use err_derive::Error;
 use vulkano::render_pass::{Framebuffer, FramebufferAbstract, RenderPass};
-use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView};
+use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, ImageDimensions};
 use vulkano::format::Format;
 use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
@@ -10,6 +10,9 @@ use openvr::compositor::Texture;
 use crate::utils::{OpenVRPtr};
 use crate::application::VR;
 use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
+
+pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
+pub const DEPTH_FORMAT: Format = Format::D16Unorm;
 
 // Translates OpenGL projection matrix to Vulkan
 // Can't be const because Mat4::new is not const fn or something
@@ -23,22 +26,24 @@ fn clip() -> AMat4 {
 }
 
 pub struct Eyes {
-	pub left: Eye,
-	pub right: Eye,
-	pub frame_buffer_size: (u32, u32)
+	pub main_image: Arc<AttachmentImage>,
+	pub side_image: Arc<AttachmentImage>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
+	pub depth_image: Arc<AttachmentImage>,
+	pub frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync>,
+	pub frame_buffer_size: (u32, u32),
+	pub textures: (Texture, Texture),
+	pub view: (AMat4, AMat4),
+	pub projection: (PMat4, PMat4),
 }
 
+
 impl Eyes {
-	pub fn new(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
+	pub fn new_novr(queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let frame_buffer_size = (960, 1080);
 		let view = AMat4::identity();
 		let projection = clip() * Perspective3::new(frame_buffer_size.1 as f32 / frame_buffer_size.0 as f32, 90.0 / 360.0 * std::f32::consts::TAU, 0.01, 100.01).as_projective();
 		
-		Ok(Eyes {
-			left: Eye::new(frame_buffer_size, view.clone(), projection, queue, render_pass)?,
-			right: Eye::new(frame_buffer_size, view.clone(), projection, queue, render_pass)?,
-			frame_buffer_size,
-		})
+		Self::new(frame_buffer_size, (view.clone(), view), (projection, projection), queue, render_pass)
 	}
 	
 	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
@@ -51,73 +56,89 @@ impl Eyes {
 		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
 		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
 		
-		Ok(Eyes {
-			left: Eye::new(frame_buffer_size, view_left, proj_left, queue, render_pass)?,
-			right: Eye::new(frame_buffer_size, view_right, proj_right, queue, render_pass)?,
-			frame_buffer_size,
-		})
+		Self::new(frame_buffer_size, (view_left, view_right), (proj_left, proj_right), queue, render_pass)
 	}
-}
-
-
-pub struct Eye {
-	pub image: Arc<AttachmentImage>,
-	pub depth_image: Arc<AttachmentImage>,
-	pub texture: Texture,
-	pub view: AMat4,
-	pub projection: PMat4,
-	pub frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync>,
-}
-
-pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
-pub const DEPTH_FORMAT: Format = Format::D16Unorm;
-
-impl Eye {
-	pub fn new(frame_buffer_size:(u32, u32), view: AMat4, projection: PMat4, queue: &Queue, render_pass: &Arc<RenderPass>)
-	          -> Result<Eye, EyeCreationError> {
-		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];
-		
+	
+	pub fn new(frame_buffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), queue: &Queue, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let device = queue.device();
 		
-		let image = AttachmentImage::with_usage(device.clone(),
-		                                        dimensions,
-		                                        IMAGE_FORMAT,
-		                                        ImageUsage { transfer_source: true,
-		                                                     transfer_destination: true,
-		                                                     sampled: true,
-		                                                     ..ImageUsage::none() })?;
+		let dimensions = ImageDimensions::Dim2d {
+			width: frame_buffer_size.0,
+			height: frame_buffer_size.1,
+			array_layers: 2,
+		};
+		
+		let side_dimensions = ImageDimensions::Dim2d {
+			width: frame_buffer_size.0,
+			height: frame_buffer_size.1,
+			array_layers: 1,
+		};
+		
+		let main_image = AttachmentImage::with_usage(device.clone(),
+		                                             dimensions,
+		                                             IMAGE_FORMAT,
+		                                             ImageUsage { transfer_source: true,
+		                                                          transfer_destination: true,
+		                                                          sampled: true,
+		                                                          ..ImageUsage::none() })?;
+		
+		let side_image = AttachmentImage::with_usage(device.clone(),
+		                                             side_dimensions,
+		                                             IMAGE_FORMAT,
+		                                             ImageUsage { transfer_source: true,
+		                                                          transfer_destination: true,
+		                                                          sampled: true,
+		                                                          ..ImageUsage::none() })?;
 		
 		let depth_image = AttachmentImage::transient(device.clone(), dimensions, DEPTH_FORMAT)?;
 		
-		let texture = Texture {
+		let handle_defs = vulkan::Texture {
+			image: 0,
+			device: device.as_ptr(),
+			physical_device: device.physical_device().as_ptr(),
+			instance: device.instance().as_ptr(),
+			queue: queue.as_ptr(),
+			queue_family_index: queue.family().id(),
+			width: main_image.dimensions().width(),
+			height: main_image.dimensions().height(),
+			format: main_image.format() as u32,
+			sample_count: main_image.samples(),
+		};
+		
+		let left_texture = Texture {
 			handle: Handle::Vulkan(vulkan::Texture {
-				        image: (*image).as_ptr(),
-				        device: device.as_ptr(),
-				        physical_device: device.physical_device().as_ptr(),
-				        instance: device.instance().as_ptr(),
-				        queue: queue.as_ptr(),
-				        queue_family_index: queue.family().id(),
-				        width: image.dimensions().width(),
-				        height: image.dimensions().height(),
-				        format: image.format() as u32,
-				        sample_count: image.samples(),
-			        }),
+				image: (*main_image).as_ptr(),
+				..handle_defs
+			}),
+			color_space: ColorSpace::Gamma,
+		};
+		
+		let right_texture = Texture {
+			handle: Handle::Vulkan(vulkan::Texture {
+				image: (*side_image).as_ptr(),
+				..handle_defs
+			}),
 			color_space: ColorSpace::Gamma,
 		};
 		
 		
-		let frame_buffer = Arc::new(Framebuffer::start(render_pass.clone())
-		                       .add(ImageView::new(image.clone())?)?
-		                       .add(ImageView::new(depth_image.clone())?)?
-		                       .build()?);
+		let frame_buffer = Arc::new(
+			Framebuffer::with_dimensions(render_pass.clone(),
+			                             [frame_buffer_size.0, frame_buffer_size.1, 1])
+			            .add(ImageView::new(main_image.clone())?)?
+			            .add(ImageView::new(depth_image.clone())?)?
+			            .build()?
+		);
 		
-		Ok(Eye {
-			image,
+		Ok(Eyes {
+			main_image,
+			side_image,
 			depth_image,
-			texture,
+			frame_buffer,
+			frame_buffer_size,
+			textures: (left_texture, right_texture),
 			view,
 			projection,
-			frame_buffer,
 		})
 	}
 }

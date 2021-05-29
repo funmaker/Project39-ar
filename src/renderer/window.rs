@@ -91,8 +91,7 @@ impl Window {
 	              device: &Arc<Device>,
 	              queue: &Arc<Queue>,
 	              future: Box<dyn GpuFuture>,
-	              left: &Arc<AttachmentImage>,
-	              right: &Arc<AttachmentImage>)
+	              image: &Arc<AttachmentImage>)
 	              -> Result<Box<dyn GpuFuture>, WindowRenderError> {
 		let (ref mut swapchain, ref mut images) = self.swapchain;
 		
@@ -116,14 +115,13 @@ impl Window {
 		}
 		
 		let out_dims = swapchain.dimensions();
-		let left_dims = left.dimensions();
-		let right_dims = right.dimensions();
+		let image_dims = image.dimensions();
 		
 		let mut builder = AutoCommandBufferBuilder::primary(device.clone(), queue.family().clone(), CommandBufferUsage::OneTimeSubmit)?;
 		
-		builder.blit_image(left.clone(),
+		builder.blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [left_dims[0] as i32, left_dims[1] as i32, 1],
+		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
 		                   0,
 		                   0,
 		                   images[image_num].clone(),
@@ -133,10 +131,10 @@ impl Window {
 		                   0,
 		                   1,
 		                   Filter::Linear)?
-		       .blit_image(right.clone(),
+		       .blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [right_dims[0] as i32, right_dims[1] as i32, 1],
-		                   0,
+		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
+		                   1,
 		                   0,
 		                   images[image_num].clone(),
 		                   [out_dims[0] as i32 / 2, 0, 0],

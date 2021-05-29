@@ -4,9 +4,9 @@
 #![feature(trace_macros)]
 #![feature(type_name_of_val)]
 #![feature(backtrace)]
-#![feature(osstring_ascii)]
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
+#![feature(drain_filter)]
 #[macro_use] extern crate lazy_static;
 
 use std::env;

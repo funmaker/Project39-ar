@@ -85,7 +85,7 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, eye: u32) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), RendererRenderError> {
 		let pos: Point3 = self.position.translation.vector.into();
 		let ang = &self.position.rotation;
 		
@@ -95,7 +95,7 @@ impl Entity {
 		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		
-		self.model.render(builder, &self.position.to_transform(), eye)?;
+		self.model.render(builder, &self.position.to_transform())?;
 		
 		Ok(())
 	}

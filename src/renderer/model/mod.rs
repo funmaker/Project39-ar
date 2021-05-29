@@ -20,7 +20,7 @@ pub use fence_check::FenceCheck;
 pub trait Model {
 	#[allow(unused_variables)]
 	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> { Ok(()) }
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError>;
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError>;
 	fn get_default_bones(&self) -> &[Bone] { &[] }
 	fn morphs_count(&self) -> usize { 0 }
 	fn try_clone(&self, renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError>;

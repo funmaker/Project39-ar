@@ -60,10 +60,10 @@ pub enum DebugPosition {
 }
 
 impl DebugPosition {
-	pub fn project(self, viewproj: &PMat4) -> Point3 {
+	pub fn project(self, viewproj: &(PMat4, PMat4)) -> (Point3, Point3) {
 		match self {
-			DebugPosition::Screen(screen) => screen.coords.push(0.0).into(),
-			DebugPosition::World(world) => viewproj.transform_point(&world),
+			DebugPosition::Screen(screen) => (screen.coords.push(0.0).into(), screen.coords.push(0.0).into()),
+			DebugPosition::World(world) => (viewproj.0.transform_point(&world), viewproj.1.transform_point(&world)),
 		}
 	}
 }

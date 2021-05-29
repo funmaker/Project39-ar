@@ -87,7 +87,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		builder.draw_indexed(self.pipeline.clone(),
@@ -95,7 +95,7 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 		                     self.vertices.clone(),
 		                     self.indices.clone(),
 		                     self.set.clone(),
-		                     (model_matrix.to_homogeneous(), eye),
+		                     model_matrix.to_homogeneous(),
 		                     None)?;
 		
 		Ok(())

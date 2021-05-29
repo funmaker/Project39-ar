@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_multiview : require
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 normal;
@@ -16,12 +17,11 @@ layout(set = 0, binding = 0) uniform Commons {
 
 layout(push_constant) uniform Pc {
 	mat4 model;
-	uint eye;
 } pc;
 
 void main() {
-	mat4 mv = commons.view[pc.eye] * pc.model;
-	mat4 mvp = commons.projection[pc.eye] * mv;
+	mat4 mv = commons.view[gl_ViewIndex] * pc.model;
+	mat4 mvp = commons.projection[gl_ViewIndex] * mv;
 	mat3 normal_matrix = mat3(mv);
 	
 	gl_Position = mvp * vec4(pos, 1.0);

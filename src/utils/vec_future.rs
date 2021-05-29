@@ -62,30 +62,30 @@ unsafe impl<GF> GpuFuture for VecFuture<GF>
 		Ok(())
 	}
 
+	// TODO: Fix this shit
 	#[inline]
 	unsafe fn build_submission(&self) -> Result<SubmitAnyBuilder, FlushError> {
 		let submissions = self.vec.iter()
 		                          .map(|future| future.build_submission())
-		                          .collect::<Result<Vec<_>, _>>()
-		                          .unwrap();
+		                          .collect::<Result<Vec<_>, _>>()?;
 
-		let mut semaphore = None::<SubmitSemaphoresWaitBuilder>;
+		let semaphore = None::<SubmitSemaphoresWaitBuilder>;
 		let mut command = None::<SubmitCommandBufferBuilder>;
-		let mut bind_sparse = None::<SubmitBindSparseBuilder>;
+		let bind_sparse = None::<SubmitBindSparseBuilder>;
 
-		for (submission, future) in submissions.into_iter().zip(self.vec.iter()) {
+		for (submission, _future) in submissions.into_iter().zip(self.vec.iter()) {
 			match submission {
 				SubmitAnyBuilder::Empty => {},
-				SubmitAnyBuilder::SemaphoresWait(s) => {
-					future.flush()?;
-					if let Some(merged) = &mut semaphore {
-						merged.merge(s);
-					} else {
-						semaphore = Some(s);
-					}
+				SubmitAnyBuilder::SemaphoresWait(_s) => {
+					// future.flush()?;
+					// if let Some(merged) = &mut semaphore {
+					// 	merged.merge(s);
+					// } else {
+					// 	semaphore = Some(s);
+					// }
+					unimplemented!()
 				}
 				SubmitAnyBuilder::CommandBuffer(c) => {
-					future.flush()?;
 					if let Some(merged) = command.take() {
 						command = Some(merged.merge(c));
 					} else {
@@ -93,17 +93,19 @@ unsafe impl<GF> GpuFuture for VecFuture<GF>
 					}
 				}
 				SubmitAnyBuilder::QueuePresent(_) => {
-					future.flush()?;
+					// future.flush()?;
+					unimplemented!()
 				}
-				SubmitAnyBuilder::BindSparse(bs) => {
-					future.flush()?;
-					if let Some(merged) = &mut bind_sparse {
-						// TODO: this panics if both bind sparse have been given a fence already
-						//       annoying, but not impossible, to handle
-						merged.merge(bs).unwrap();
-					} else {
-						bind_sparse = Some(bs);
-					}
+				SubmitAnyBuilder::BindSparse(_bs) => {
+					// future.flush()?;
+					// if let Some(merged) = &mut bind_sparse {
+					// 	// TODO: this panics if both bind sparse have been given a fence already
+					// 	//       annoying, but not impossible, to handle
+					// 	merged.merge(bs).unwrap();
+					// } else {
+					// 	bind_sparse = Some(bs);
+					// }
+					unimplemented!()
 				}
 			}
 		}

@@ -3,7 +3,7 @@ use std::time::{Instant, Duration};
 use std::sync::Arc;
 use err_derive::Error;
 use openvr::{tracked_device_index, TrackedDeviceClass, TrackedControllerRole};
-use openvr_sys::{ETrackedDeviceProperty_Prop_RenderModelName_String, ETrackedDeviceProperty_Prop_TrackingSystemName_String};
+use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use simba::scalar::SupersetOf;
 
 pub mod vr;
@@ -123,7 +123,7 @@ impl Application {
 					} else if let Ok(Some(model)) = model {
 						if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 							let mut entity = Entity::new(
-								vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_TrackingSystemName_String)?.to_string_lossy(),
+								format!("{:?}", vr.system.tracked_device_class(i)),
 								SimpleModel::<u16>::from_openvr(model, texture, &mut self.renderer)?,
 								Point3::origin(),
 								Rot3::identity(),

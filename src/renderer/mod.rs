@@ -7,7 +7,7 @@ use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, Phy
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
-use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage};
+use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage, ImageLayout};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
 use vulkano::format::{ClearValue, Format};
@@ -20,6 +20,7 @@ pub mod eye;
 pub mod window;
 pub mod pipelines;
 mod debug_renderer;
+mod openvr_cb;
 
 use crate::utils::*;
 use crate::debug;
@@ -32,7 +33,8 @@ use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
 use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
 use model::ModelRenderError;
-use vulkano::render_pass::RenderPass;
+use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
+use crate::renderer::openvr_cb::OpenVRCommandBuffer;
 
 #[derive(Clone)]
 pub struct CommonsUBO {
@@ -57,6 +59,7 @@ pub struct Renderer {
 	load_commands: mpsc::Receiver<PrimaryAutoCommandBuffer>,
 	debug_renderer: DebugRenderer,
 	last_frame: Instant,
+	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
 impl Renderer {
@@ -64,10 +67,9 @@ impl Renderer {
 	             -> Result<Renderer, RendererError>
 	             where C: Camera {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
-		
-		if debug::debug() {
-			Renderer::install_debug_callbacks(&instance);
-		}
+		let debug_callback = debug::debug()
+		                           .then(|| Renderer::create_debug_callbacks(&instance))
+		                           .transpose()?;
 		
 		let physical = Renderer::create_physical_device(device, &instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
@@ -76,7 +78,7 @@ impl Renderer {
 		let eyes = if let Some(ref vr) = vr {
 			Eyes::new_vr(vr, &queue, &render_pass)?
 		} else {
-			Eyes::new(&queue, &render_pass)?
+			Eyes::new_novr(&queue, &render_pass)?
 		};
 		
 		let previous_frame_end = None;
@@ -96,9 +98,10 @@ impl Renderer {
 		let last_frame = Instant::now();
 		
 		Ok(Renderer {
-			vr,
 			instance,
 			commons,
+			vr,
+			debug_callback,
 			device,
 			queue,
 			load_queue,
@@ -114,8 +117,8 @@ impl Renderer {
 	
 	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
 		dprintln!("List of Vulkan debugging layers available to use:");
-		let layers = vulkano::instance::layers_list()?;
-		for layer in layers {
+		let available_layers: Vec<_> = vulkano::instance::layers_list()?.collect();
+		for layer in &available_layers {
 			dprintln!("\t{}", layer.name());
 		}
 		
@@ -126,27 +129,37 @@ impl Renderer {
 		let extensions = RawInstanceExtensions::new(vr_extensions)
 		                                       .union(&(&vulkano_win::required_extensions()).into())
 		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug::debug(),
+		                                                                      khr_get_physical_device_properties2: true,
 		                                                                      ..InstanceExtensions::none() }).into());
 		
-		let layers = if debug::debug() {
-			// TODO: Get better GPU
-			vec![/*"VK_LAYER_LUNARG_standard_validation"*/]
-		} else {
-			vec![]
-		};
+		let mut layers = vec![];
+		
+		if debug::debug() {
+			layers.push("VK_LAYER_KHRONOS_validation");
+		}
+		
+		let removed = layers.drain_filter(|&mut layer| available_layers.iter().all(|al| al.name() != layer));
+		
+		for layer in removed {
+			eprintln!("MISSING LAYER: {}", layer);
+		}
 		
 		Ok(Instance::new(Some(&app_infos), extensions, layers)?)
 	}
 	
-	fn install_debug_callbacks(instance: &Arc<Instance>) {
-		let severity = MessageSeverity { error:       true,
+	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugCallback, RendererError> {
+		let severity = MessageSeverity {
+			error:       true,
 			warning:     true,
 			information: false,
-			verbose:     true, };
+			verbose:     false,
+		};
 		
 		let ty = MessageType::all();
 		
-		let _debug_callback = DebugCallback::new(instance, severity, ty, |msg| {
+		Ok(DebugCallback::new(instance, severity, ty, |msg| {
+			if !debug::debug() { return }
+			
 			let severity = if msg.severity.error {
 				"error"
 			} else if msg.severity.warning {
@@ -156,7 +169,7 @@ impl Renderer {
 			} else if msg.severity.verbose {
 				"verbose"
 			} else {
-				panic!("no-impl");
+				unimplemented!();
 			};
 			
 			let ty = if msg.ty.general {
@@ -166,7 +179,7 @@ impl Renderer {
 			} else if msg.ty.performance {
 				"performance"
 			} else {
-				panic!("no-impl");
+				unimplemented!();
 			};
 			
 			println!("{} {} {}: {}",
@@ -174,7 +187,7 @@ impl Renderer {
 			         ty,
 			         severity,
 			         msg.description);
-		});
+		})?)
 	}
 	
 	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
@@ -195,6 +208,10 @@ impl Renderer {
 			                 PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
 		                 })
 		                 .ok_or(RendererError::NoDevices)?;
+		
+		if physical.extended_properties().max_multiview_view_count().unwrap_or(0) < 2 {
+			return Err(RendererError::MultiviewNotSupported);
+		}
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
 		          physical.index(),
@@ -231,11 +248,15 @@ impl Renderer {
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.lock().unwrap().compositor, &physical)).unwrap_or_default();
 		
 		let (device, mut queues) = Device::new(physical,
-		                                       &Features::none(),
+		                                       &Features {
+			                                       multiview: true,
+			                                       ..Features::none()
+		                                       },
 		                                       RawDeviceExtensions::new(vr_extensions)
 			                                       .union(&(&DeviceExtensions {
 				                                       khr_swapchain: true,
 				                                       khr_storage_buffer_storage_class: true,
+				                                       khr_multiview: true,
 				                                       ..DeviceExtensions::none()
 			                                       }).into()),
 		                                       families.into_iter())?;
@@ -247,31 +268,53 @@ impl Renderer {
 	}
 	
 	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
-		Ok(Arc::new(
-			vulkano::single_pass_renderpass!(device.clone(),
-				attachments: {
-					color: {
-						load: Load,
-						store: Store,
-						format: eye::IMAGE_FORMAT,
-						samples: 1,
-					},
-					depth: {
-						load: Clear,
-						store: DontCare,
-						format: eye::DEPTH_FORMAT,
-						samples: 1,
-					}
-				},
-				pass: {
-					color: [color],
-					depth_stencil: {depth}
-				}
-			)?
-		))
+		let attachments = vec![
+			AttachmentDesc {
+				format: eye::IMAGE_FORMAT,
+				samples: 1,
+				load: LoadOp::Load,
+				store: StoreOp::Store,
+				stencil_load: LoadOp::Load,
+				stencil_store: StoreOp::Store,
+				initial_layout: ImageLayout::ColorAttachmentOptimal,
+				final_layout: ImageLayout::ColorAttachmentOptimal,
+			},
+			AttachmentDesc {
+				format: eye::DEPTH_FORMAT,
+				samples: 1,
+				load: LoadOp::Clear,
+				store: StoreOp::DontCare,
+				stencil_load: LoadOp::Clear,
+				stencil_store: StoreOp::DontCare,
+				initial_layout: ImageLayout::DepthStencilAttachmentOptimal,
+				final_layout: ImageLayout::DepthStencilAttachmentOptimal,
+			},
+		];
+		
+		let subpasses = vec![
+			SubpassDesc {
+				color_attachments: vec![(0, ImageLayout::ColorAttachmentOptimal)],
+				depth_stencil: Some((1, ImageLayout::DepthStencilAttachmentOptimal)),
+				input_attachments: vec![],
+				resolve_attachments: vec![],
+				preserve_attachments: vec![],
+			}
+		];
+		
+		let dependencies = vec![];
+		
+		let render_pass = RenderPass::new(device.clone(),
+		                                  RenderPassDesc::new(attachments, subpasses, dependencies),
+		                                  Some(MultiviewDesc::with_views_correlated(2)))?;
+		
+		Ok(Arc::new(render_pass))
 	}
 	
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
+		if !surface.is_supported(self.queue.family())? {
+			return Err(RendererSwapchainError::SurfaceNotSupported)
+		}
+		
 		let caps = surface.capabilities(self.device.physical_device())?;
 		let dimensions = caps.current_extent.unwrap_or(caps.min_image_extent);
 		let format = caps.supported_formats
@@ -327,13 +370,13 @@ impl Renderer {
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
 		let view_base = hmd_pose.inverse();
-		let view_left = &self.eyes.left.view * &view_base;
-		let view_right = &self.eyes.right.view * &view_base;
+		let view_left = &self.eyes.view.0 * &view_base;
+		let view_right = &self.eyes.view.1 * &view_base;
 		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
 		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
 		
 		let commons = CommonsUBO {
-			projection: [self.eyes.left.projection.clone(), self.eyes.right.projection.clone()],
+			projection: [self.eyes.projection.0.clone(), self.eyes.projection.1.clone()],
 			view: [view_left, view_right],
 			light_direction: [
 				(view_left * light_source).to_homogeneous(),
@@ -342,7 +385,7 @@ impl Renderer {
 			ambient: 0.25,
 		};
 		
-		let [camera_width, camera_height] = self.camera_image.dimensions();
+		let [camera_width, camera_height] = self.camera_image.dimensions().width_height();
 		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
 		
 		let mut builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
@@ -352,7 +395,7 @@ impl Renderer {
 		                   [camera_width as i32 / 2, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.left.image.clone(),
+		                   self.eyes.main_image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -364,10 +407,10 @@ impl Renderer {
 		                   [camera_width as i32, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.right.image.clone(),
+		                   self.eyes.main_image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
-		                   0,
+		                   1,
 		                   0,
 		                   1,
 		                   Filter::Linear)?
@@ -378,30 +421,30 @@ impl Renderer {
 			entity.pre_render(&mut builder)?;
 		}
 		
-		builder.begin_render_pass(self.eyes.left.frame_buffer.clone(),
+		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          vec![ ClearValue::None,
 		                                ClearValue::Depth(1.0) ])?;
 		
 		for entity in scene.iter_mut() {
-			entity.render(&mut builder, 0)?;
+			entity.render(&mut builder)?;
 		}
 		
-		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 0)?;
+		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
-		       .begin_render_pass(self.eyes.right.frame_buffer.clone(),
-		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
-		                                ClearValue::Depth(1.0) ])?;
+			   .copy_image(self.eyes.main_image.clone(),
+		                   [0, 0, 0],
+		                   1,
+		                   0,
+		                   self.eyes.side_image.clone(),
+		                   [0, 0, 0],
+		                   0,
+		                   0,
+		                   [eye_width as u32, eye_height as u32, 1],
+		                   1)?;
 		
-		for entity in scene.iter_mut() {
-			entity.render(&mut builder, 1)?;
-		}
 		
-		self.debug_renderer.render(&mut builder, &commons, pixel_scale, 1)?;
-		
-		builder.end_render_pass()?;
 		
 		let command_buffer = builder.build()?;
 		
@@ -428,29 +471,35 @@ impl Renderer {
 		
 		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
 		
-		future = match window.render(&self.device, &self.queue, future, &mut self.eyes.left.image, &mut self.eyes.right.image) {
+		// TODO: Move to another thread
+		if let Some(ref vr) = self.vr {
+			let pose = hmd_pose.to_matrix().to_slice34();
+			let vr = vr.lock().unwrap();
+			unsafe {
+				future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.main_image.clone(), self.device.clone(), self.queue.family())?)?
+				      .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?
+				      .then_signal_fence_and_flush()?
+				      .wait(None)?;
+				
+				debug::set_debug(false); // Hide internal OpenVR warnings
+				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(pose))?;
+				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(pose))?;
+				debug::set_debug(true);
+				
+				future = sync::now(self.device.clone())
+				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.main_image.clone(),  self.device.clone(), self.queue.family())?)?
+				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.side_image.clone(),  self.device.clone(), self.queue.family())?)?
+				              .boxed()
+			}
+		}
+		
+		future = match window.render(&self.device, &self.queue, future, &self.eyes.main_image) {
 			Ok(future) => future,
 			Err(WindowRenderError::Later(future)) => future,
 			Err(err) => return Err(err.into()),
 		};
 		
-		let future = future.then_signal_fence_and_flush();
-		
-		// TODO: Move to another thread
-		if let Ok(ref future) = future {
-			if let Some(ref vr) = self.vr {
-				future.wait(None)?;
-				
-				let pose = hmd_pose.to_matrix().to_slice34();
-				let vr = vr.lock().unwrap();
-				unsafe {
-					vr.compositor.submit(openvr::Eye::Left,  &self.eyes.left.texture,  None, Some(pose))?;
-					vr.compositor.submit(openvr::Eye::Right, &self.eyes.right.texture, None, Some(pose))?;
-				}
-			}
-		}
-		
-		match future {
+		match future.then_signal_fence_and_flush() {
 			Ok(future) => {
 				self.previous_frame_end = Some(future);
 			},
@@ -469,11 +518,13 @@ impl Renderer {
 pub enum RendererError {
 	#[error(display = "No devices available.")] NoDevices,
 	#[error(display = "No compute queue available.")] NoQueue,
+	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
+	#[error(display = "{}", _0)] DebugCallbackCreationError(#[error(source)] instance::debug::DebugCallbackCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
@@ -483,6 +534,7 @@ pub enum RendererError {
 
 #[derive(Debug, Error)]
 pub enum RendererSwapchainError {
+	#[error(display = "Surface presentation is not supported.")] SurfaceNotSupported,
 	#[error(display = "{}", _0)] CapabilitiesError(#[error(source)] swapchain::CapabilitiesError),
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
@@ -502,6 +554,7 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
+	#[error(display = "{}", _0)] CopyImageError(#[error(source)] command_buffer::CopyImageError),
 	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),

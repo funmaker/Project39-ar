@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_multiview : require
 
 layout(location = 0) in vec3 f_pos;
 layout(location = 1) in vec2 f_uv;
@@ -28,13 +29,12 @@ layout(set = 1, binding = 3) uniform sampler2D sphere;
 
 layout(push_constant) uniform Pc {
 	mat4 model;
-	uint eye;
 } pc;
 
 layout(constant_id = 0) const bool transparent_pass = false;
 
 void main() {
-	vec3 light_direction = commons.light_direction[pc.eye].xyz;
+	vec3 light_direction = commons.light_direction[gl_ViewIndex].xyz;
 	float lambert = dot(-f_normal, light_direction);
 	
 	vec3 reflected = normalize(-reflect(light_direction,f_normal));

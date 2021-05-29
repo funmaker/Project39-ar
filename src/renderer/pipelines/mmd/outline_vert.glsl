@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_multiview : require
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 normal;
@@ -27,13 +28,12 @@ layout(set = 0, binding = 2) readonly buffer Offsets {
 layout(push_constant) uniform Pc {
 	mat4 model;
 	vec4 color;
-	uint eye;
 	float scale;
 } pc;
 
 void main() {
-	mat4 mv = commons.view[pc.eye] * pc.model;
-	mat4 mvp = commons.projection[pc.eye] * mv;
+	mat4 mv = commons.view[gl_ViewIndex] * pc.model;
+	mat4 mvp = commons.projection[gl_ViewIndex] * mv;
 	mat3 normal_matrix = mat3(mv);
 	
 	mat4x3 anim = mat4x3(0);
@@ -47,7 +47,7 @@ void main() {
 	vec3 view_normal = normalize(normal_matrix * (mat3(anim) * normal));
 	view_pos += vec4(view_normal * pc.scale * edge_scale * length(vec3(view_pos)), 0.0);
 	
-	gl_Position = commons.projection[pc.eye] * view_pos;
+	gl_Position = commons.projection[gl_ViewIndex] * view_pos;
 	
 	f_uv = uv;
 }

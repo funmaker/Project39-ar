@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_multiview : require
 
 layout(location = 0) in vec2 f_uv;
 
@@ -16,7 +17,6 @@ layout(set = 1, binding = 0) uniform sampler2D tex;
 layout(push_constant) uniform Pc {
 	mat4 model;
 	vec4 color;
-	uint eye;
 	float scale;
 } pc;
 

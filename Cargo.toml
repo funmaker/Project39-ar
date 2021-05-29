@@ -5,9 +5,15 @@ authors = ["Fun Maker <funmaker95@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano = "0.23.0"
-vulkano-shaders = "0.23.0"
-vulkano-win = "0.23.0"
+vulkano = { git = "https://github.com/funmaker/vulkano", rev = "ea5b0b833e95d7b2e039c60faa34db4ab7b84440" }
+vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "ea5b0b833e95d7b2e039c60faa34db4ab7b84440" }
+vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "ea5b0b833e95d7b2e039c60faa34db4ab7b84440" }
+#vulkano = { path = "../vulkano/vulkano" }
+#vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
+#vulkano-win = { path = "../vulkano/vulkano-win" }
+#vulkano = "0.23.0"
+#vulkano-shaders = "0.23.0"
+#vulkano-win = "0.23.0"
 image = "0.23.12"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"

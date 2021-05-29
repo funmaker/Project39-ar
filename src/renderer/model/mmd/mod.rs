@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::mem::size_of;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
@@ -195,12 +195,13 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		Ok(())
 	}
 	
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, eye: u32) -> Result<(), ModelRenderError> {
+	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
 		// Outline
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
+				// TODO: Generalize
 				// calculate size of one pixel at distance 1m from camera
 				// Assume index
 				// 1440×1600 110 FOV
@@ -212,7 +213,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, eye, scale),
+				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, scale),
 				                     None)?;
 			}
 		}
@@ -226,7 +227,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			                     self.shared.vertices.clone(),
 			                     sub_mesh.indices.clone(),
 			                     (self.model_set.clone(), mesh_set),
-			                     (model_matrix.to_homogeneous(), eye),
+			                     model_matrix.to_homogeneous(),
 			                     None)?;
 		}
 		
@@ -238,7 +239,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.to_homogeneous(), eye),
+				                     model_matrix.to_homogeneous(),
 				                     None)?;
 			}
 		}

@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_multiview : require
 
 layout(location = 0) in vec2 f_uv;
 layout(location = 1) in vec3 f_normal;
@@ -17,11 +18,10 @@ layout(set = 0, binding = 1) uniform sampler2D tex;
 
 layout(push_constant) uniform Pc {
 	mat4 model;
-	uint eye;
 } pc;
 
 void main() {
-	vec3 light_direction = commons.light_direction[pc.eye].xyz;
+	vec3 light_direction = commons.light_direction[gl_ViewIndex].xyz;
 	float lambert = max(dot(-f_normal, light_direction), 0.0);
 	float light = lambert * (1.0 - commons.ambient) + commons.ambient;
 	

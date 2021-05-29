@@ -6,7 +6,7 @@ use err_derive::Error;
 use vulkano::{memory};
 use vulkano::command_buffer::{self, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::buffer::{self, CpuBufferPool, BufferSlice, BufferAccess};
-use vulkano::image::{AttachmentImage, ImageUsage};
+use vulkano::image::{AttachmentImage, ImageUsage, ImageDimensions};
 use vulkano::device::{Queue};
 use vulkano::format::Format;
 
@@ -32,7 +32,11 @@ pub trait Camera: Send + Sized + 'static {
 	fn start(mut self, queue: Arc<Queue>)
 		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<PrimaryAutoCommandBuffer>), CameraStartError> {
 		let target = AttachmentImage::with_usage(queue.device().clone(),
-		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
+		                                         ImageDimensions::Dim2d {
+			                                         width: CAPTURE_WIDTH,
+			                                         height: CAPTURE_HEIGHT,
+			                                         array_layers: 1,
+		                                         },
 		                                         Format::B8G8R8A8Unorm,
 		                                         ImageUsage { transfer_source: true,
 			                                         transfer_destination: true,

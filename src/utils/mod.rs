@@ -2,7 +2,7 @@ use std::ffi::CString;
 use vulkano::instance::{Instance, PhysicalDevice};
 use vulkano::{VulkanObject, SynchronizedVulkanObject};
 use vulkano::device::{Device, Queue};
-use vulkano::image::{AttachmentImage, ImageAccess};
+use vulkano::image::{AttachmentImage, ImageAccess, StorageImage, ImmutableImage};
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
 use image::DynamicImage;
 
@@ -70,7 +70,7 @@ impl<'a> OpenVRPtr for PhysicalDevice<'a> {
 	}
 }
 
-impl<'a> OpenVRPtr for Device {
+impl OpenVRPtr for Device {
 	type PtrType = *mut VkDevice_T;
 	
 	fn as_ptr(&self) -> Self::PtrType {
@@ -78,7 +78,7 @@ impl<'a> OpenVRPtr for Device {
 	}
 }
 
-impl<'a> OpenVRPtr for Queue {
+impl OpenVRPtr for Queue {
 	type PtrType = *mut VkQueue_T;
 	
 	fn as_ptr(&self) -> Self::PtrType {
@@ -87,6 +87,22 @@ impl<'a> OpenVRPtr for Queue {
 }
 
 impl OpenVRPtr for AttachmentImage {
+	type PtrType = u64;
+	
+	fn as_ptr(&self) -> Self::PtrType {
+		self.inner().image.internal_object() as Self::PtrType
+	}
+}
+
+impl OpenVRPtr for ImmutableImage {
+	type PtrType = u64;
+	
+	fn as_ptr(&self) -> Self::PtrType {
+		self.inner().image.internal_object() as Self::PtrType
+	}
+}
+
+impl OpenVRPtr for StorageImage {
 	type PtrType = u64;
 	
 	fn as_ptr(&self) -> Self::PtrType {
