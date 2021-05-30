@@ -29,6 +29,8 @@ layout(set = 0, binding = 2) readonly buffer Offsets {
 
 layout(push_constant) uniform Pc {
 	mat4 model;
+	vec4 _pad_color;
+	float _pad_scale;
 } pc;
 
 void main() {

@@ -1883,12 +1883,12 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 [[package]]
 name = "vk-sys"
 version = "0.6.1"
-source = "git+https://github.com/funmaker/vulkano?rev=ea5b0b833e95d7b2e039c60faa34db4ab7b84440#ea5b0b833e95d7b2e039c60faa34db4ab7b84440"
+source = "git+https://github.com/funmaker/vulkano?rev=70162b35774447dcc937321e3707abb9af87f151#70162b35774447dcc937321e3707abb9af87f151"
 
 [[package]]
 name = "vulkano"
 version = "0.23.0"
-source = "git+https://github.com/funmaker/vulkano?rev=ea5b0b833e95d7b2e039c60faa34db4ab7b84440#ea5b0b833e95d7b2e039c60faa34db4ab7b84440"
+source = "git+https://github.com/funmaker/vulkano?rev=70162b35774447dcc937321e3707abb9af87f151#70162b35774447dcc937321e3707abb9af87f151"
 dependencies = [
  "crossbeam-queue",
  "fnv",
@@ -1903,7 +1903,7 @@ dependencies = [
 [[package]]
 name = "vulkano-shaders"
 version = "0.23.0"
-source = "git+https://github.com/funmaker/vulkano?rev=ea5b0b833e95d7b2e039c60faa34db4ab7b84440#ea5b0b833e95d7b2e039c60faa34db4ab7b84440"
+source = "git+https://github.com/funmaker/vulkano?rev=70162b35774447dcc937321e3707abb9af87f151#70162b35774447dcc937321e3707abb9af87f151"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1914,7 +1914,7 @@ dependencies = [
 [[package]]
 name = "vulkano-win"
 version = "0.22.0"
-source = "git+https://github.com/funmaker/vulkano?rev=ea5b0b833e95d7b2e039c60faa34db4ab7b84440#ea5b0b833e95d7b2e039c60faa34db4ab7b84440"
+source = "git+https://github.com/funmaker/vulkano?rev=70162b35774447dcc937321e3707abb9af87f151#70162b35774447dcc937321e3707abb9af87f151"
 dependencies = [
  "cocoa 0.20.2",
  "metal",

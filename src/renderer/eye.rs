@@ -7,7 +7,7 @@ use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
 use openvr::compositor::Texture;
 
-use crate::utils::{OpenVRPtr};
+use crate::utils::OpenVRPtr;
 use crate::application::VR;
 use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
 

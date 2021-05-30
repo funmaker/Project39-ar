@@ -151,14 +151,17 @@ impl Renderer {
 		let severity = MessageSeverity {
 			error:       true,
 			warning:     true,
-			information: false,
-			verbose:     false,
+			information: true,
+			verbose:     true,
 		};
 		
 		let ty = MessageType::all();
 		
 		Ok(DebugCallback::new(instance, severity, ty, |msg| {
 			if !debug::debug() { return }
+			if msg.ty.general && msg.severity.verbose { return }
+			
+			// debug::debugger();
 			
 			let severity = if msg.severity.error {
 				"error"
@@ -169,7 +172,7 @@ impl Renderer {
 			} else if msg.severity.verbose {
 				"verbose"
 			} else {
-				unimplemented!();
+				"unknown"
 			};
 			
 			let ty = if msg.ty.general {
@@ -179,7 +182,7 @@ impl Renderer {
 			} else if msg.ty.performance {
 				"performance"
 			} else {
-				unimplemented!();
+				"unknown"
 			};
 			
 			println!("{} {} {}: {}",

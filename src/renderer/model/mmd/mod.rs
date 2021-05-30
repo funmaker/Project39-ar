@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::mem::size_of;
+use num_traits::Zero;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
@@ -15,7 +16,7 @@ use super::{Model, ModelError, ModelRenderError, VertexIndex};
 use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::Renderer;
 use crate::debug;
-use crate::math::{AMat4, ToTransform, IVec4};
+use crate::math::{AMat4, ToTransform, IVec4, Vec4};
 use crate::renderer::pipelines::mmd::MORPH_GROUP_SIZE;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
@@ -198,6 +199,8 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
+		let model_matrix = model_matrix.to_homogeneous();
+		
 		// Outline
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
@@ -213,7 +216,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.to_homogeneous(), sub_mesh.edge_color, scale),
+				                     (model_matrix.clone(), sub_mesh.edge_color, scale),
 				                     None)?;
 			}
 		}
@@ -227,7 +230,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			                     self.shared.vertices.clone(),
 			                     sub_mesh.indices.clone(),
 			                     (self.model_set.clone(), mesh_set),
-			                     model_matrix.to_homogeneous(),
+			                     (model_matrix.clone(), Vec4::zero(), 0.0),
 			                     None)?;
 		}
 		
@@ -239,7 +242,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     model_matrix.to_homogeneous(),
+				                     (model_matrix.clone(), Vec4::zero(), 0.0),
 				                     None)?;
 			}
 		}

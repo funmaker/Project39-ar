@@ -16,6 +16,10 @@ pub fn debug() -> bool {
 	read
 }
 
+pub fn debugger() {
+	() // Breakpoint
+}
+
 pub fn set_debug(value: bool) {
 	DEBUG.store(value, Ordering::Relaxed);
 }

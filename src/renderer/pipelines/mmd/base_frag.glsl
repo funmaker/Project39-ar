@@ -29,6 +29,8 @@ layout(set = 1, binding = 3) uniform sampler2D sphere;
 
 layout(push_constant) uniform Pc {
 	mat4 model;
+	vec4 _pad_color;
+	float _pad_scale;
 } pc;
 
 layout(constant_id = 0) const bool transparent_pass = false;
