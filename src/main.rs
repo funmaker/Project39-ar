@@ -7,6 +7,7 @@
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(drain_filter)]
+#![feature(osstring_ascii)]
 #[macro_use] extern crate lazy_static;
 
 use std::fs;
@@ -53,21 +54,30 @@ fn main() {
 
 fn run_application() -> Result<(), RunError> {
 	let config_path = "config.toml";
+	let file_name = std::env::args().next().unwrap_or("project39-ar.exe".to_string());
 	
 	let mut config = if fs::metadata(config_path).is_ok() {
 		let config_file = fs::read_to_string(config_path)?;
 		toml::from_str(&config_file)?
 	} else {
+		eprintln!("\nUnable to locate config.toml!");
+		eprintln!("Use `{} --example_config` to print an example config.\n", file_name);
+		
 		Config::default()
 	};
 	
 	if let Err(err) = config.apply_args() {
-		print_usage();
+		print_usage(&file_name, config);
 		return Err(err.into());
 	}
 	
 	if config.help {
-		print_usage();
+		print_usage(&file_name, config);
+		return Ok(());
+	}
+	
+	if config.example_config {
+		println!("{}", Config::default_toml()?);
 		return Ok(());
 	}
 	
@@ -80,10 +90,12 @@ fn run_application() -> Result<(), RunError> {
 	Ok(())
 }
 
-fn print_usage() {
+fn print_usage(filename: &str, mut config: Config) {
+	config.help = false;
+	
 	println!("Usage:");
-	println!("    {} [options]", std::env::args().next().unwrap_or("project39-ar.exe".to_string()));
-	println!("\n{}", Config::usage());
+	println!("    {} [options]", filename);
+	println!("\n{}", config.usage());
 }
 
 fn panic_hook() -> impl Fn(&PanicInfo) {
@@ -134,5 +146,6 @@ pub enum RunError {
 	#[error(display = "{}", _0)] ParseFloatError(#[error(source)] std::num::ParseFloatError),
 	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
 	#[error(display = "{}", _0)] Infallible(#[error(source)] std::convert::Infallible),
-	#[error(display = "{}", _0)] TomlError(#[error(source)] toml::de::Error),
+	#[error(display = "{}", _0)] DeserializationError(#[error(source)] toml::de::Error),
+	#[error(display = "{}", _0)] SerializationError(#[error(source)] toml::ser::Error),
 }

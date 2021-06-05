@@ -28,8 +28,8 @@ impl OpenCV {
 		
 		Ok(OpenCV{
 			inner,
-			frame: Mat::default()?,
-			frame_rgba: Mat::default()?,
+			frame: Mat::default(),
+			frame_rgba: Mat::default(),
 		})
 	}
 }

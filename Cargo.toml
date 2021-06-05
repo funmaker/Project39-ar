@@ -21,7 +21,7 @@ err-derive = "0.3.0"
 getopts = "0.2.21"
 arc-swap = "1.2.0"
 obj-rs = "0.6.2"
-opencv = { version = "0.47.0", features = ["buildtime-bindgen"] }
+opencv = { version = "0.53.0" }
 num-traits = "0.2.14"
 lazy_static = "1.4.0"
 winit = "0.24.0"
