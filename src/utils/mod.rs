@@ -7,6 +7,7 @@ use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T
 use image::DynamicImage;
 
 mod vec_future;
+pub mod from_args;
 
 pub use vec_future::VecFuture;
 

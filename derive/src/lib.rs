@@ -82,6 +82,7 @@ pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     
     let name = &ast.ident;
     let gen = quote! {
+        
         impl FromArgs for #name {
             fn usage_impl(&self, _short: &str, path: &str, doc: &str) -> String {
                 let mut ret = String::new();

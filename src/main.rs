@@ -7,7 +7,6 @@
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(drain_filter)]
-#![feature(osstring_ascii)]
 #[macro_use] extern crate lazy_static;
 
 use std::fs;
@@ -26,6 +25,7 @@ mod utils;
 mod config;
 
 use application::{Application, ApplicationCreationError, ApplicationRunError};
+use utils::from_args::ArgsError;
 use config::Config;
 
 
@@ -141,7 +141,7 @@ pub enum RunError {
 	#[error(display = "Unknown camera provider: {}", _0)] BadCamera(String),
 	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
-	#[error(display = "{}", _0)] ArgsError(#[error(source)] config::ArgsError),
+	#[error(display = "{}", _0)] ArgsError(#[error(source)] ArgsError),
 	#[error(display = "{}", _0)] ParseIntError(#[error(source)] std::num::ParseIntError),
 	#[error(display = "{}", _0)] ParseFloatError(#[error(source)] std::num::ParseFloatError),
 	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
