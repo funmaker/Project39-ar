@@ -9,12 +9,11 @@
 #![feature(drain_filter)]
 #[macro_use] extern crate lazy_static;
 
-use std::env;
+use std::fs;
 use std::panic;
 use std::fmt::Debug;
 use std::panic::PanicInfo;
 use std::error::Error;
-use getopts::Options;
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
 
@@ -23,8 +22,10 @@ use native_dialog::{MessageDialog, MessageType};
 mod renderer;
 mod application;
 mod utils;
+mod config;
 
-use application::{Application, CameraAPI, ApplicationCreationError, ApplicationRunError};
+use application::{Application, ApplicationCreationError, ApplicationRunError};
+use config::Config;
 
 
 fn main() {
@@ -51,49 +52,38 @@ fn main() {
 }
 
 fn run_application() -> Result<(), RunError> {
-	let args: Vec<String> = env::args().collect();
-	let program = args[0].clone();
-	let mut opts = Options::new();
+	let config_path = "config.toml";
 	
-	opts.optopt("d", "device", "Select fallback device to use", "NUMBER");
-	opts.optopt("c", "camera", "Select camera API", "escapi|opencv|openvr|dummy");
-	opts.optflag("", "debug", "Enable debugging layer and info");
-	opts.optflag("h", "help", "Print this help menu");
-	opts.optflag("n", "novr", "Non VR mode. The program will not use OpenVR. Use Keyboard and mouse to move.");
+	let mut config = if fs::metadata(config_path).is_ok() {
+		let config_file = fs::read_to_string(config_path)?;
+		toml::from_str(&config_file)?
+	} else {
+		Config::default()
+	};
 	
-	let matches = opts.parse(&args[1..])?;
+	if let Err(err) = config.apply_args() {
+		print_usage();
+		return Err(err.into());
+	}
 	
-	if matches.opt_present("h") {
-		print_usage(&program, opts);
+	if config.help {
+		print_usage();
 		return Ok(());
 	}
 	
-	debug::set_debug(matches.opt_present("debug"));
+	debug::set_debug(config.debug);
+	config::set(config);
 	
-	let device = matches.opt_get("d")?;
-	let camera = matches.opt_get("c")?
-	                    .unwrap_or("openvr".to_string())
-	                    .to_lowercase();
-	let novr = matches.opt_present("novr");
-	
-	let camera = match &*camera {
-		"opencv" => CameraAPI::OpenCV,
-		"openvr" => CameraAPI::OpenVR,
-		#[cfg(windows)] "escapi" => CameraAPI::Escapi,
-		"dummy" => CameraAPI::Dummy,
-		_ => return Err(RunError::BadCamera(camera)),
-	};
-	
-	let application = Application::new(device, camera, !novr)?;
-	
+	let application = Application::new()?;
 	application.run()?;
 	
 	Ok(())
 }
 
-fn print_usage(program: &str, opts: Options) {
-	let brief = format!("Usage: {} [options]", program);
-	print!("{}", opts.usage(&brief));
+fn print_usage() {
+	println!("Usage:");
+	println!("    {} [options]", std::env::args().next().unwrap_or("project39-ar.exe".to_string()));
+	println!("\n{}", Config::usage());
 }
 
 fn panic_hook() -> impl Fn(&PanicInfo) {
@@ -139,7 +129,10 @@ pub enum RunError {
 	#[error(display = "Unknown camera provider: {}", _0)] BadCamera(String),
 	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
-	#[error(display = "{}", _0)] GetoptsError(#[error(source)] getopts::Fail),
+	#[error(display = "{}", _0)] ArgsError(#[error(source)] config::ArgsError),
 	#[error(display = "{}", _0)] ParseIntError(#[error(source)] std::num::ParseIntError),
+	#[error(display = "{}", _0)] ParseFloatError(#[error(source)] std::num::ParseFloatError),
+	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
 	#[error(display = "{}", _0)] Infallible(#[error(source)] std::convert::Infallible),
+	#[error(display = "{}", _0)] TomlError(#[error(source)] toml::de::Error),
 }

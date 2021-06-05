@@ -23,7 +23,7 @@ use crate::debug;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
-pub const CAPTURE_FPS: u64 = 1080;
+pub const CAPTURE_FPS: u64 = 140;
 pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 
 pub trait Camera: Send + Sized + 'static {

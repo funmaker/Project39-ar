@@ -5,12 +5,13 @@ use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, rende
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
+use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
 use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage, ImageLayout};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
-use vulkano::format::{ClearValue, Format};
+use vulkano::format::Format;
 use vulkano::sync::{GpuFuture, FenceSignalFuture};
 use vulkano::sampler::Filter;
 
@@ -23,9 +24,8 @@ mod debug_renderer;
 mod openvr_cb;
 
 use crate::utils::*;
-use crate::debug;
-use crate::application::VR;
-use crate::application::Entity;
+use crate::{debug, config};
+use crate::application::{VR, Entity};
 use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4, Color, Point2};
 use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
@@ -33,8 +33,7 @@ use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
 use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
 use model::ModelRenderError;
-use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
-use crate::renderer::openvr_cb::OpenVRCommandBuffer;
+use openvr_cb::OpenVRCommandBuffer;
 
 #[derive(Clone)]
 pub struct CommonsUBO {
@@ -63,22 +62,23 @@ pub struct Renderer {
 }
 
 impl Renderer {
-	pub fn new<C>(vr: Option<Arc<VR>>, device: Option<usize>, camera: C)
+	pub fn new<C>(vr: Option<Arc<VR>>, camera: C)
 	             -> Result<Renderer, RendererError>
 	             where C: Camera {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
-		let debug_callback = debug::debug()
-		                           .then(|| Renderer::create_debug_callbacks(&instance))
-		                           .transpose()?;
+		let debug_callback = config::get()
+		                            .validation
+		                            .then(|| Renderer::create_debug_callbacks(&instance))
+		                            .transpose()?;
 		
-		let physical = Renderer::create_physical_device(device, &instance, &vr)?;
+		let physical = Renderer::create_physical_device(&instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
 		let render_pass = Renderer::create_render_pass(&device)?;
 		
 		let eyes = if let Some(ref vr) = vr {
 			Eyes::new_vr(vr, &queue, &render_pass)?
 		} else {
-			Eyes::new_novr(&queue, &render_pass)?
+			Eyes::new_novr(&config::get().novr, &queue, &render_pass)?
 		};
 		
 		let previous_frame_end = None;
@@ -193,7 +193,7 @@ impl Renderer {
 		})?)
 	}
 	
-	fn create_physical_device<'a>(device: Option<usize>, instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
+	fn create_physical_device<'a>(instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
@@ -208,7 +208,7 @@ impl Renderer {
 		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
 		                 .or_else(|| {
 			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
-			                 PhysicalDevice::enumerate(&instance).skip(device.unwrap_or(0)).next()
+			                 PhysicalDevice::enumerate(&instance).skip(config::get().gpu_id).next()
 		                 })
 		                 .ok_or(RendererError::NoDevices)?;
 		
@@ -271,33 +271,35 @@ impl Renderer {
 	}
 	
 	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
-		let attachments = vec![
+		let samples = config::get().msaa;
+		
+		let mut attachments = vec![
 			AttachmentDesc {
 				format: eye::IMAGE_FORMAT,
-				samples: 1,
-				load: LoadOp::Load,
+				samples,
+				load: LoadOp::DontCare,
 				store: StoreOp::Store,
-				stencil_load: LoadOp::Load,
-				stencil_store: StoreOp::Store,
+				stencil_load: LoadOp::DontCare,
+				stencil_store: StoreOp::DontCare,
 				initial_layout: ImageLayout::ColorAttachmentOptimal,
 				final_layout: ImageLayout::ColorAttachmentOptimal,
 			},
 			AttachmentDesc {
 				format: eye::DEPTH_FORMAT,
-				samples: 1,
+				samples,
 				load: LoadOp::Clear,
 				store: StoreOp::DontCare,
-				stencil_load: LoadOp::Clear,
+				stencil_load: LoadOp::DontCare,
 				stencil_store: StoreOp::DontCare,
 				initial_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				final_layout: ImageLayout::DepthStencilAttachmentOptimal,
 			},
 		];
 		
-		let subpasses = vec![
+		let mut subpasses = vec![
 			SubpassDesc {
-				color_attachments: vec![(0, ImageLayout::ColorAttachmentOptimal)],
-				depth_stencil: Some((1, ImageLayout::DepthStencilAttachmentOptimal)),
+				color_attachments: vec![(0, attachments[0].final_layout)],
+				depth_stencil: Some((1, attachments[0].final_layout)),
 				input_attachments: vec![],
 				resolve_attachments: vec![],
 				preserve_attachments: vec![],
@@ -305,6 +307,21 @@ impl Renderer {
 		];
 		
 		let dependencies = vec![];
+		
+		if samples > 1 {
+			attachments.push(AttachmentDesc {
+				format: eye::IMAGE_FORMAT,
+				samples: 1,
+				load: LoadOp::DontCare,
+				store: StoreOp::Store,
+				stencil_load: LoadOp::DontCare,
+				stencil_store: StoreOp::DontCare,
+				initial_layout: ImageLayout::TransferDstOptimal,
+				final_layout: ImageLayout::TransferDstOptimal,
+			});
+			
+			subpasses[0].resolve_attachments.push((2, ImageLayout::TransferDstOptimal))
+		}
 		
 		let render_pass = RenderPass::new(device.clone(),
 		                                  RenderPassDesc::new(attachments, subpasses, dependencies),
@@ -376,7 +393,7 @@ impl Renderer {
 		let view_left = &self.eyes.view.0 * &view_base;
 		let view_right = &self.eyes.view.1 * &view_base;
 		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
-		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32);
+		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
 		
 		let commons = CommonsUBO {
 			projection: [self.eyes.projection.0.clone(), self.eyes.projection.1.clone()],
@@ -398,7 +415,7 @@ impl Renderer {
 		                   [camera_width as i32 / 2, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.main_image.clone(),
+		                   self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   0,
@@ -410,7 +427,7 @@ impl Renderer {
 		                   [camera_width as i32, camera_height as i32, 1],
 		                   0,
 		                   0,
-		                   self.eyes.main_image.clone(),
+		                   self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   [eye_width as i32, eye_height as i32, 1],
 		                   1,
@@ -426,8 +443,7 @@ impl Renderer {
 		
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
 		                          SubpassContents::Inline,
-		                          vec![ ClearValue::None,
-		                                ClearValue::Depth(1.0) ])?;
+		                          self.eyes.clear_values.iter().copied())?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder)?;
@@ -436,7 +452,7 @@ impl Renderer {
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
-			   .copy_image(self.eyes.main_image.clone(),
+			   .copy_image(self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   1,
 		                   0,
@@ -479,7 +495,7 @@ impl Renderer {
 			let pose = hmd_pose.to_matrix().to_slice34();
 			let vr = vr.lock().unwrap();
 			unsafe {
-				future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.main_image.clone(), self.device.clone(), self.queue.family())?)?
+				future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
 				      .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?
 				      .then_signal_fence_and_flush()?
 				      .wait(None)?;
@@ -490,13 +506,13 @@ impl Renderer {
 				debug::set_debug(true);
 				
 				future = sync::now(self.device.clone())
-				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.main_image.clone(),  self.device.clone(), self.queue.family())?)?
+				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?
 				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.side_image.clone(),  self.device.clone(), self.queue.family())?)?
 				              .boxed()
 			}
 		}
 		
-		future = match window.render(&self.device, &self.queue, future, &self.eyes.main_image) {
+		future = match window.render(&self.device, &self.queue, future, &self.eyes.resolved_image) {
 			Ok(future) => future,
 			Err(WindowRenderError::Later(future)) => future,
 			Err(err) => return Err(err.into()),

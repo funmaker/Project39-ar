@@ -1,0 +1,16 @@
+debug = true
+validation = true
+gpu_id = 0
+ssaa = 1
+msaa = 2
+
+[camera]
+driver = "openvr"
+id = 0
+
+[novr]
+enabled = false
+frame_buffer_width = 960
+frame_buffer_height = 1080
+fov = 90
+

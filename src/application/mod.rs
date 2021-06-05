@@ -15,6 +15,7 @@ use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
 use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
 use crate::debug;
+use crate::config::{self, CameraAPI};
 pub use vr::{VR, VRError};
 pub use entity::Entity;
 
@@ -29,20 +30,21 @@ pub struct Application {
 type FakePose = (Translation3, (f32, f32));
 
 impl Application {
-	pub fn new(device: Option<usize>, camera_api: CameraAPI, vr: bool) -> Result<Application, ApplicationCreationError> {
-		let vr = vr.then(|| VR::new())
-		           .transpose()?
-		           .map(Arc::new);
+	pub fn new() -> Result<Application, ApplicationCreationError> {
+		let config = config::get();
+		let vr = (!config.novr.enabled).then(|| VR::new())
+		                               .transpose()?
+		                               .map(Arc::new);
 		
-		if vr.is_none() && camera_api == CameraAPI::OpenVR {
+		if vr.is_none() && config.camera.driver == CameraAPI::OpenVR {
 			return Err(ApplicationCreationError::OpenVRCameraInNoVR);
 		}
 		
-		let mut renderer = match camera_api {
-			CameraAPI::OpenCV => Renderer::new(vr.clone(), device, camera::OpenCV::new()?)?,
-			CameraAPI::OpenVR => Renderer::new(vr.clone(), device, camera::OpenVR::new(vr.clone().unwrap())?)?,
-			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), device, camera::Escapi::new()?)?,
-			CameraAPI::Dummy => Renderer::new(vr.clone(), device, camera::Dummy::new())?,
+		let mut renderer = match config.camera.driver {
+			CameraAPI::OpenCV => Renderer::new(vr.clone(), camera::OpenCV::new()?)?,
+			CameraAPI::OpenVR => Renderer::new(vr.clone(), camera::OpenVR::new(vr.clone().unwrap())?)?,
+			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), camera::Escapi::new()?)?,
+			CameraAPI::Dummy => Renderer::new(vr.clone(), camera::Dummy::new())?,
 		};
 		
 		let window = Window::new(&renderer)?;
@@ -186,14 +188,6 @@ impl Application {
 		
 		Isometry3::from_parts(position.clone(), rot)
 	}
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum CameraAPI {
-	#[cfg(windows)] Escapi,
-	OpenCV,
-	OpenVR,
-	Dummy,
 }
 
 #[derive(Debug, Error)]
