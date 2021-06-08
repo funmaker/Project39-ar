@@ -138,7 +138,7 @@ fn panic_hook() -> impl Fn(&PanicInfo) {
 
 #[derive(Debug, Error)]
 pub enum RunError {
-	#[error(display = "Unknown camera provider: {}", _0)] BadCamera(String),
+	#[error(display = "Unknown background provider: {}", _0)] BadCamera(String),
 	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
 	#[error(display = "{}", _0)] ArgsError(#[error(source)] ArgsError),

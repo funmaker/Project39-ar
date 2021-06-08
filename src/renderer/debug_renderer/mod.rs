@@ -33,8 +33,8 @@ const RING_MIN: f32 = 5.0;
 const RING_WIDTH: f32 = 0.9;
 
 impl DebugRenderer {
-	pub fn new(queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
-		let device = queue.device();
+	pub fn new(load_queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
+		let device = load_queue.device();
 		let pipeline = pipelines.get()?;
 		let text_pipeline = pipelines.get()?;
 		
@@ -42,7 +42,7 @@ impl DebugRenderer {
 		let text_vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
 		let indexes_pool = CpuBufferPool::new(device.clone(), BufferUsage::index_buffer());
 		
-		let text_cache = TextCache::new(queue, pipelines)?;
+		let text_cache = TextCache::new(load_queue, pipelines)?;
 		
 		Ok(DebugRenderer {
 			pipeline,
@@ -57,7 +57,7 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2) -> Result<(), DebugRendererRederError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2) -> Result<(), DebugRendererRenderError> {
 		let viewproj = (
 			commons.projection[0] * commons.view[0],
 			commons.projection[1] * commons.view[1],
@@ -117,7 +117,7 @@ impl DebugRenderer {
 				}
 			}
 			
-			Ok::<_, DebugRendererRederError>(())
+			Ok::<_, DebugRendererRenderError>(())
 		})?;
 		
 		Ok(())
@@ -251,7 +251,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRederError> {
+	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRenderError> {
 		let entry = self.text_cache.get(&text.text)?;
 		
 		let size_px = Vec2::new(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
@@ -308,7 +308,7 @@ pub enum DebugRendererError {
 }
 
 #[derive(Debug, Error)]
-pub enum DebugRendererRederError {
+pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),

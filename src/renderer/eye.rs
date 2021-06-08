@@ -99,7 +99,8 @@ impl Eyes {
 			                                         dimensions,
 			                                         samples,
 			                                         IMAGE_FORMAT,
-			                                         ImageUsage::none())?
+			                                         ImageUsage { color_attachment: true,
+			                                                      ..ImageUsage::none() })?
 		} else {
 			resolved_image.clone()
 		};

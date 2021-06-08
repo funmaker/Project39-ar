@@ -205,7 +205,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
 				// TODO: Generalize
-				// calculate size of one pixel at distance 1m from camera
+				// calculate size of one pixel at distance 1m from background
 				// Assume index
 				// 1440×1600 110 FOV
 				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;

@@ -10,7 +10,7 @@ use vulkano::descriptor::PipelineLayoutAbstract;
 
 mod vertex;
 
-use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
+use super::{Pipeline, PipelineError};
 pub use vertex::Vertex;
 
 mod vert {
@@ -18,7 +18,7 @@ mod vert {
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/default/vert.glsl"
+		path: "src/renderer/pipelines/background/vert.glsl"
 	}
 }
 
@@ -27,27 +27,27 @@ mod frag {
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/default/frag.glsl"
+		path: "src/renderer/pipelines/background/frag.glsl"
 	}
 }
 
 #[derive(Debug, Deref)]
-pub struct DefaultPipeline(
+pub struct BackgroundPipeline(
 	GraphicsPipeline<
 		SingleBufferDefinition<Vertex>,
 		Box<dyn PipelineLayoutAbstract + Send + Sync>
 	>
 );
 
-unsafe impl SafeDeref for DefaultPipeline {} // Inner is not visible, this should be safe
+unsafe impl SafeDeref for BackgroundPipeline {}
 
-impl Pipeline for DefaultPipeline {
+impl Pipeline for BackgroundPipeline {
 	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(DefaultPipeline(
+		Ok(Arc::new(BackgroundPipeline(
 			GraphicsPipeline::start()
 				.vertex_input_single_buffer()
 				.vertex_shader(vs.main_entry_point(), ())
@@ -57,9 +57,8 @@ impl Pipeline for DefaultPipeline {
 					depth_range: 0.0..1.0,
 				}))
 				.fragment_shader(fs.main_entry_point(), ())
-				.depth_stencil_simple_depth()
+				.depth_stencil_disabled()
 				.cull_mode_back()
-				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.build(device.clone())?
 		)))

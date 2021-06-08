@@ -38,7 +38,7 @@ pub trait Camera: Send + Sized + 'static {
 			                                         array_layers: 1,
 		                                         },
 		                                         Format::B8G8R8A8Unorm,
-		                                         ImageUsage { transfer_source: true,
+		                                         ImageUsage { sampled: true,
 			                                         transfer_destination: true,
 			                                         ..ImageUsage::none() })?;
 		let ret = target.clone();
@@ -49,7 +49,7 @@ pub trait Camera: Send + Sized + 'static {
 			match self.capture_loop(queue, target, sender) {
 				Ok(()) => {},
 				Err(CaptureLoopError::Quitting) => return,
-				Err(err) => panic!("Error while capturing camera: {:?}", err),
+				Err(err) => panic!("Error while capturing background: {:?}", err),
 			}
 		});
 		

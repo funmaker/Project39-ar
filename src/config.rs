@@ -32,7 +32,7 @@ pub struct Config {
 
 #[derive(Deserialize, Serialize, Debug, FromArgs)]
 pub struct CameraConfig {
-	/// Select camera API to use: escapi, opencv, openvr or dummy.
+	/// Select background API to use: escapi, opencv, openvr or dummy.
 	#[arg_short = "c"] #[arg_rename = ""] pub driver: CameraAPI,
 	/// Camera device index. Ignored if openvr is used.
 	pub id: usize,

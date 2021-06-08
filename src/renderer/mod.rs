@@ -8,12 +8,11 @@ use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
-use vulkano::image::{AttachmentImage, SwapchainImage, ImageUsage, ImageLayout};
+use vulkano::image::{SwapchainImage, ImageUsage, ImageLayout};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
 use vulkano::format::Format;
 use vulkano::sync::{GpuFuture, FenceSignalFuture};
-use vulkano::sampler::Filter;
 
 pub mod model;
 pub mod camera;
@@ -22,6 +21,7 @@ pub mod window;
 pub mod pipelines;
 mod debug_renderer;
 mod openvr_cb;
+mod background;
 
 use crate::utils::*;
 use crate::{debug, config};
@@ -31,9 +31,10 @@ use camera::{CameraStartError, Camera};
 use eye::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
-use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRederError};
+use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRenderError};
 use model::ModelRenderError;
 use openvr_cb::OpenVRCommandBuffer;
+use background::{Background, BackgroundError, BackgroundRenderError};
 
 #[derive(Clone)]
 pub struct CommonsUBO {
@@ -54,7 +55,7 @@ pub struct Renderer {
 	pipelines: Pipelines,
 	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
-	camera_image: Arc<AttachmentImage>,
+	background: Background,
 	load_commands: mpsc::Receiver<PrimaryAutoCommandBuffer>,
 	debug_renderer: DebugRenderer,
 	last_frame: Instant,
@@ -81,21 +82,18 @@ impl Renderer {
 			Eyes::new_novr(&config::get().novr, &queue, &render_pass)?
 		};
 		
-		let previous_frame_end = None;
-		
 		let commons = DeviceLocalBuffer::new(device.clone(),
 		                                     BufferUsage{ transfer_destination: true,
 		                                                  uniform_buffer: true,
 		                                                  ..BufferUsage::none() },
 		                                     Some(queue.family()))?;
 		
-		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
-		
+		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
+		let background = Background::new(camera_image, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
-		
 		let last_frame = Instant::now();
+		let previous_frame_end = None;
 		
 		Ok(Renderer {
 			instance,
@@ -108,7 +106,7 @@ impl Renderer {
 			pipelines,
 			eyes,
 			previous_frame_end,
-			camera_image,
+			background,
 			load_commands,
 			debug_renderer,
 			last_frame,
@@ -134,7 +132,7 @@ impl Renderer {
 		
 		let mut layers = vec![];
 		
-		if debug::debug() {
+		if config::get().validation {
 			layers.push("VK_LAYER_KHRONOS_validation");
 		}
 		
@@ -299,7 +297,7 @@ impl Renderer {
 		let mut subpasses = vec![
 			SubpassDesc {
 				color_attachments: vec![(0, attachments[0].final_layout)],
-				depth_stencil: Some((1, attachments[0].final_layout)),
+				depth_stencil: Some((1, attachments[1].final_layout)),
 				input_attachments: vec![],
 				resolve_attachments: vec![],
 				preserve_attachments: vec![],
@@ -405,36 +403,10 @@ impl Renderer {
 			ambient: 0.25,
 		};
 		
-		let [camera_width, camera_height] = self.camera_image.dimensions().width_height();
 		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
 		
 		let mut builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
-		// TODO: do this during render pass? Bliting can't be used with multisampling
-		builder.blit_image(self.camera_image.clone(),
-		                   [0, 0, 0],
-		                   [camera_width as i32 / 2, camera_height as i32, 1],
-		                   0,
-		                   0,
-		                   self.eyes.resolved_image.clone(),
-		                   [0, 0, 0],
-		                   [eye_width as i32, eye_height as i32, 1],
-		                   0,
-		                   0,
-		                   1,
-		                   Filter::Linear)?
-		       .blit_image(self.camera_image.clone(),
-		                   [camera_width as i32 / 2, 0, 0],
-		                   [camera_width as i32, camera_height as i32, 1],
-		                   0,
-		                   0,
-		                   self.eyes.resolved_image.clone(),
-		                   [0, 0, 0],
-		                   [eye_width as i32, eye_height as i32, 1],
-		                   1,
-		                   0,
-		                   1,
-		                   Filter::Linear)?
-		       .update_buffer(self.commons.clone(),
+		builder.update_buffer(self.commons.clone(),
 		                      Arc::new(commons.clone()))?;
 		
 		for entity in scene.iter_mut() {
@@ -444,6 +416,8 @@ impl Renderer {
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
+		
+		self.background.render(&mut builder)?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder)?;
@@ -541,6 +515,7 @@ pub enum RendererError {
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
+	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DebugCallbackCreationError(#[error(source)] instance::debug::DebugCallbackCreationError),
@@ -563,7 +538,8 @@ pub enum RendererSwapchainError {
 pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
-	#[error(display = "{}", _0)] DebugRendererRederError(#[error(source)] DebugRendererRederError),
+	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
+	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
 	#[error(display = "{}", _0)] ModelRenderError(#[error(source)] ModelRenderError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),

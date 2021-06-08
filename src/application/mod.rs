@@ -192,7 +192,7 @@ impl Application {
 
 #[derive(Debug, Error)]
 pub enum ApplicationCreationError {
-	#[error(display = "OpenvR unavailable. You can't use openvr camera with --novr flag.")] OpenVRCameraInNoVR,
+	#[error(display = "OpenvR unavailable. You can't use openvr background with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
