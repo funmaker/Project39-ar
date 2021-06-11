@@ -1,5 +1,4 @@
-use nalgebra::{Transform, U2, U3, DimNameAdd, U1, DefaultAllocator, DimNameSum, RealField, Scalar, TAffine};
-use nalgebra::allocator::Allocator;
+use nalgebra::{Scalar, Transform, TCategory};
 use derive_deref::{Deref, DerefMut};
 use simba::scalar::{SubsetOf, SupersetOf};
 use std::any::Any;
@@ -38,78 +37,6 @@ pub type Mat3 = nalgebra::Matrix3<f32>;
 pub type Mat4 = nalgebra::Matrix4<f32>;
 pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
 
-pub trait ToTransform where DefaultAllocator: Allocator<Self::N, DimNameSum<Self::D, U1>, DimNameSum<Self::D, U1>> {
-	type N: RealField;
-	type D: DimNameAdd<U1>;
-	fn to_transform(&self) -> Transform<Self::N, Self::D, TAffine>;
-}
-
-impl<N: RealField> ToTransform for nalgebra::UnitComplex<N> {
-	type N = N;
-	type D = U2;
-	fn to_transform(&self) -> Transform<N, U2, TAffine> {
-		Transform::from_matrix_unchecked(self.to_homogeneous())
-	}
-}
-
-impl<N: RealField> ToTransform for nalgebra::UnitQuaternion<N> {
-	type N = N;
-	type D = U3;
-	fn to_transform(&self) -> Transform<N, U3, TAffine> {
-		Transform::from_matrix_unchecked(self.to_homogeneous())
-	}
-}
-
-impl<N, D> ToTransform for nalgebra::Translation<N, D>
-	where N: RealField,
-	      D: DimNameAdd<U1>,
-	      DefaultAllocator: Allocator<N, D>,
-	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
-	type N = N;
-	type D = D;
-	fn to_transform(&self) -> Transform<N, D, TAffine> {
-		Transform::from_matrix_unchecked(self.to_homogeneous())
-	}
-}
-
-impl<N, D, R> ToTransform for nalgebra::Isometry<N, D, R>
-	where N: RealField,
-	      D: DimNameAdd<U1>,
-	      R: SubsetOf<nalgebra::MatrixN<N, DimNameSum<D, U1>>>,
-	      DefaultAllocator: Allocator<N, D>,
-	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
-	type N = N;
-	type D = D;
-	fn to_transform(&self) -> Transform<N, D, TAffine> {
-		Transform::from_matrix_unchecked(self.to_homogeneous())
-	}
-}
-
-impl<N, D, R> ToTransform for nalgebra::Similarity<N, D, R>
-	where N: RealField,
-	      D: DimNameAdd<U1>,
-	      R: SubsetOf<nalgebra::MatrixN<N, DimNameSum<D, U1>>>,
-	      DefaultAllocator: Allocator<N, D>,
-	      DefaultAllocator: Allocator<N, DimNameSum<D, U1>, DimNameSum<D, U1>> {
-	type N = N;
-	type D = D;
-	fn to_transform(&self) -> Transform<N, D, TAffine> {
-		Transform::from_matrix_unchecked(self.to_homogeneous())
-	}
-}
-
-impl<N: RealField> ToTransform for [[N; 4]; 3] {
-	type N = N;
-	type D = U3;
-	fn to_transform(&self) -> Transform<N, U3, TAffine> {
-		Transform::from_matrix_unchecked(
-			nalgebra::Matrix4::<N>::new(self[0][0], self[0][1], self[0][2], self[0][3],
-			                            self[1][0], self[1][1], self[1][2], self[1][3],
-			                            self[2][0], self[2][1], self[2][2], self[2][3],
-			                             N::zero(),  N::zero(),  N::zero(),   N::one())
-		)
-	}
-}
 
 pub trait VRSlice {
 	fn from_slice34(from: &[[f32; 4]; 3]) -> Self;
@@ -152,6 +79,24 @@ impl VRSlice for Mat4 {
 			[self.m31, self.m32, self.m33, self.m34],
 			[self.m41, self.m42, self.m43, self.m44]
 		]
+	}
+}
+
+impl<C: TCategory> VRSlice for Transform<f32, C, 3> {
+	fn from_slice34(from: &[[f32; 4]; 3]) -> Self {
+		Mat4::from_slice34(from).to_subset_lossy()
+	}
+	
+	fn from_slice44(from: &[[f32; 4]; 4]) -> Self {
+		Mat4::from_slice44(from).to_subset_lossy()
+	}
+	
+	fn to_slice34(&self) -> [[f32; 4]; 3] {
+		self.to_homogeneous().to_slice34()
+	}
+	
+	fn to_slice44(&self) -> [[f32; 4]; 4] {
+		self.to_homogeneous().to_slice44()
 	}
 }
 

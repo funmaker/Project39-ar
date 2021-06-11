@@ -13,7 +13,7 @@ use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
-use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, ToTransform, Translation3};
+use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, Translation3, VRSlice};
 use crate::debug;
 use crate::config::{self, CameraAPI};
 pub use vr::{VR, VRError};
@@ -160,7 +160,7 @@ impl Application {
 			}
 		}
 		
-		let orientation: AMat4 = poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking().to_transform();
+		let orientation = AMat4::from_slice34(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking());
 		Ok(orientation.to_subset().unwrap())
 	}
 	

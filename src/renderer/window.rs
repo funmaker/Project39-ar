@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::error::Error;
 use std::time::Duration;
+use std::fmt::{Debug, Formatter};
 use err_derive::Error;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -20,7 +21,6 @@ use winit::window::Window as WinitWindow;
 use super::{Renderer, RendererSwapchainError};
 use crate::math::Vec2;
 use crate::debug;
-use std::fmt::{Debug, Formatter};
 
 
 pub struct Window {
@@ -40,7 +40,7 @@ impl Window {
 		let surface = WindowBuilder::new()
 		                            .with_transparent(true)
 		                            .with_resizable(true)
-		                            .with_inner_size(PhysicalSize::new(1920, 1080)) // TODO: set from framebuffer size
+		                            .with_inner_size(PhysicalSize::new(1920, 960)) // TODO: set from framebuffer size
 		                            .with_title("Project 39")
 		                            .build_vk_surface(&event_loop, renderer.instance.clone())?;
 		

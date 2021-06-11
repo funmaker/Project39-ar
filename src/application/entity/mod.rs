@@ -1,13 +1,13 @@
 use std::time::Duration;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use openvr::TrackedDevicePose;
-use simba::scalar::SupersetOf;
+use simba::scalar::{SupersetOf, SubsetOf};
 
 mod bone;
 
 use crate::renderer::model::Model;
 use crate::renderer::RendererRenderError;
-use crate::math::{Vec3, Rot3, Point3, Isometry3, Color, ToTransform, AMat4, Similarity3};
+use crate::math::{Vec3, Rot3, Point3, Isometry3, Color, AMat4, Similarity3, VRSlice};
 use crate::debug;
 pub use bone::{Bone, BoneConnection};
 
@@ -80,7 +80,7 @@ impl Entity {
 	}
 	
 	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), RendererRenderError> {
-		self.model.pre_render(builder, &self.position.to_transform(), &self.bones, &self.morphs)?;
+		self.model.pre_render(builder, &self.position.to_superset(), &self.bones, &self.morphs)?;
 		
 		Ok(())
 	}
@@ -95,13 +95,13 @@ impl Entity {
 		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		
-		self.model.render(builder, &self.position.to_transform())?;
+		self.model.render(builder, &self.position.to_superset())?;
 		
 		Ok(())
 	}
 	
 	pub fn move_to_pose(&mut self, pose: TrackedDevicePose) {
-		let orientation: AMat4 = pose.device_to_absolute_tracking().to_transform();
+		let orientation = AMat4::from_slice34(pose.device_to_absolute_tracking());
 		let orientation: Similarity3 = orientation.to_subset().unwrap();
 		
 		self.position = orientation.isometry;

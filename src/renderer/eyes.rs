@@ -10,7 +10,7 @@ use openvr::compositor::Texture;
 use crate::config;
 use crate::utils::OpenVRPtr;
 use crate::application::VR;
-use crate::math::{Mat4, Perspective3, ToTransform, AMat4, VRSlice, PMat4, SubsetOfLossy};
+use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy};
 use crate::config::NovrConfig;
 
 pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
@@ -54,8 +54,8 @@ impl Eyes {
 		let vr = vr.lock().unwrap();
 		let min_frame_buffer_size = vr.system.recommended_render_target_size();
 		
-		let view_left  = vr.system.eye_to_head_transform(openvr::Eye::Left ).to_transform().inverse();
-		let view_right = vr.system.eye_to_head_transform(openvr::Eye::Right).to_transform().inverse();
+		let view_left  = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr.system.eye_to_head_transform(openvr::Eye::Left ))).inverse();
+		let view_right = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr.system.eye_to_head_transform(openvr::Eye::Right))).inverse();
 		
 		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
 		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));

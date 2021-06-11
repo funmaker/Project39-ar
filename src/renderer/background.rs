@@ -6,13 +6,26 @@ use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::descriptor::{DescriptorSet, descriptor_set, PipelineLayoutAbstract};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::view::ImageView;
-use vulkano::sampler::Sampler;
+use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
-use vulkano::{memory, sync, command_buffer};
+use vulkano::sync::GpuFuture;
+use vulkano::{memory, sync, command_buffer, sampler};
 
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
 use super::model::FenceCheck;
+use crate::math::{Vec4, Vec2};
+use crate::config;
+
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
+struct Intrinsics {
+	hfov: [Vec2; 2],
+	dfov: [Vec2; 2],
+	coeffs: [Vec4; 2],
+	scale: [Vec2; 2],
+	center: [Vec2; 2],
+}
 
 pub struct Background {
 	pipeline: Arc<BackgroundPipeline>,
@@ -23,6 +36,7 @@ pub struct Background {
 
 impl Background {
 	pub fn new(camera_image: Arc<AttachmentImage>, queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<Background, BackgroundError> {
+		let config = config::get();
 		let pipeline: Arc<BackgroundPipeline> = pipelines.get()?;
 		
 		let square = [
@@ -38,16 +52,59 @@ impl Background {
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
 		                                                              queue.clone())?;
 		
+		let hfov = [
+			config.camera.left.size.cast::<f32>().component_div(&config.camera.left.focal_length) / 2.0,
+			config.camera.right.size.cast::<f32>().component_div(&config.camera.right.focal_length) / 2.0,
+		];
+		
+		let mut dfov = hfov;
+		
+		
+		
+		let intrinsics = Intrinsics {
+			hfov,
+			dfov,
+			coeffs: [
+				config.camera.left.coeffs.clone(),
+				config.camera.right.coeffs.clone(),
+			],
+			scale: [
+				config.camera.left.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()),
+				config.camera.right.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()),
+			],
+			center: [
+				config.camera.left.center.component_div(&config.camera.frame_buffer_size.cast()),
+				config.camera.right.center.component_div(&config.camera.frame_buffer_size.cast()),
+			],
+		};
+		
+		let (intrinsics, intrinsics_promise) = ImmutableBuffer::from_data(intrinsics,
+		                                                                  BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
+		                                                                  queue.clone())?;
+		
 		let view = ImageView::new(camera_image)?;
-		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
+		let sampler = Sampler::new(
+			queue.device().clone(),
+			Filter::Linear,
+			Filter::Linear,
+			MipmapMode::Nearest,
+			SamplerAddressMode::ClampToEdge,
+			SamplerAddressMode::ClampToEdge,
+			SamplerAddressMode::ClampToEdge,
+			0.0,
+			1.0,
+			0.0,
+			1.0,
+		)?;
 		
 		let set = Arc::new(
 			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(BackgroundError::NoLayout)?.clone())
+				.add_buffer(intrinsics.clone())?
 				.add_sampled_image(view, sampler)?
 				.build()?
 		);
 		
-		let fence = Arc::new(FenceCheck::new(vertices_promise)?);
+		let fence = Arc::new(FenceCheck::new(vertices_promise.join(intrinsics_promise))?);
 		
 		Ok(Background {
 			pipeline,
@@ -83,6 +140,7 @@ pub enum BackgroundError {
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }
 
 #[derive(Debug, Error)]

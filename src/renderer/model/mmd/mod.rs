@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::mem::size_of;
 use num_traits::Zero;
+use simba::scalar::SubsetOf;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
@@ -16,7 +17,7 @@ use super::{Model, ModelError, ModelRenderError, VertexIndex};
 use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::Renderer;
 use crate::debug;
-use crate::math::{AMat4, ToTransform, IVec4, Vec4};
+use crate::math::{AMat4, IVec4, Vec4};
 use crate::renderer::pipelines::mmd::MORPH_GROUP_SIZE;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
@@ -137,7 +138,10 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 	fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4, bones: &[Bone], morphs: &[f32]) -> Result<(), ModelRenderError> {
 		for bone in bones {
 			let transform = match bone.parent {
-				None => &bone.local_transform * &bone.anim_transform.to_transform(),
+				None => {
+					let transform: AMat4 = bone.anim_transform.to_superset();
+					&bone.local_transform * &transform
+				},
 				Some(id) => &self.bones_mats[id] * &bone.local_transform * &bone.anim_transform,
 			};
 		

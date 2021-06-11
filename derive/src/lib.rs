@@ -5,7 +5,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{self, Data, Meta};
 
-#[proc_macro_derive(FromArgs, attributes(arg_short, arg_rename))]
+#[proc_macro_derive(FromArgs, attributes(arg_short, arg_rename, arg_skip))]
 pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     
@@ -26,6 +26,12 @@ pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
         let mut name = quote!( stringify!(#field_name) );
         
         for attr in &field.attrs {
+            if attr.path
+                   .get_ident()
+                   .map_or(false, |i| i.to_string() == "arg_skip") {
+                continue;
+            }
+            
             if let Ok(Meta::NameValue(meta)) = attr.parse_meta() {
                 if let Some(ident) = meta.path.get_ident() {
                     match ident.to_string().as_str() {

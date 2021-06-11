@@ -16,7 +16,7 @@ use vulkano::sync::{GpuFuture, FenceSignalFuture};
 
 pub mod model;
 pub mod camera;
-pub mod eye;
+pub mod eyes;
 pub mod window;
 pub mod pipelines;
 mod debug_renderer;
@@ -28,7 +28,7 @@ use crate::{debug, config};
 use crate::application::{VR, Entity};
 use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4, Color, Point2};
 use camera::{CameraStartError, Camera};
-use eye::{Eyes, EyeCreationError};
+use eyes::{Eyes, EyeCreationError};
 use window::{Window, WindowSwapchainRegenError, WindowRenderError};
 use pipelines::Pipelines;
 use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRenderError};
@@ -114,7 +114,7 @@ impl Renderer {
 	}
 	
 	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
-		dprintln!("List of Vulkan debugging layers available to use:");
+		dprintln!("List of Vulkan layers available to use:");
 		let available_layers: Vec<_> = vulkano::instance::layers_list()?.collect();
 		for layer in &available_layers {
 			dprintln!("\t{}", layer.name());
@@ -273,7 +273,7 @@ impl Renderer {
 		
 		let mut attachments = vec![
 			AttachmentDesc {
-				format: eye::IMAGE_FORMAT,
+				format: eyes::IMAGE_FORMAT,
 				samples,
 				load: LoadOp::DontCare,
 				store: StoreOp::Store,
@@ -283,7 +283,7 @@ impl Renderer {
 				final_layout: ImageLayout::ColorAttachmentOptimal,
 			},
 			AttachmentDesc {
-				format: eye::DEPTH_FORMAT,
+				format: eyes::DEPTH_FORMAT,
 				samples,
 				load: LoadOp::Clear,
 				store: StoreOp::DontCare,
@@ -308,7 +308,7 @@ impl Renderer {
 		
 		if samples > 1 {
 			attachments.push(AttachmentDesc {
-				format: eye::IMAGE_FORMAT,
+				format: eyes::IMAGE_FORMAT,
 				samples: 1,
 				load: LoadOp::DontCare,
 				store: StoreOp::Store,

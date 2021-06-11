@@ -13,7 +13,6 @@ pub struct FrameSize {
 
 #[derive(Default, Debug)]
 pub struct Intrinsics {
-	pub width: u32,
 	pub focal_length: [f32; 2],
 	pub center: [f32; 2],
 }

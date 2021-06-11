@@ -6,7 +6,9 @@ use std::env;
 use serde_derive::{Deserialize, Serialize};
 use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
+
 use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
+use crate::math::{IVec2, Vec2, Vec4};
 
 #[derive(Deserialize, Serialize, Debug, FromArgs)]
 pub struct Config {
@@ -24,7 +26,7 @@ pub struct Config {
 	pub ssaa: f32,
 	/// Super-Sampling Anti-Aliasing factor.
 	pub msaa: u32,
-	/// Camera Configuration
+	/// Camera configuration
 	pub camera: CameraConfig,
 	/// Non VR mode
 	pub novr: NovrConfig,
@@ -36,6 +38,26 @@ pub struct CameraConfig {
 	#[arg_short = "c"] #[arg_rename = ""] pub driver: CameraAPI,
 	/// Camera device index. Ignored if openvr is used.
 	pub id: usize,
+	/// Frame buffer.
+	/*#[serde(skip)] #[arg_skip]*/ pub frame_buffer_size: IVec2,
+	/// Left camera eye
+	pub left: CameraEyeConfig,
+	/// Right camera eye
+	pub right: CameraEyeConfig,
+}
+
+#[derive(Deserialize, Serialize, Debug, FromArgs)]
+pub struct CameraEyeConfig {
+	/// Frame offset on the frame buffer.
+	pub offset: IVec2,
+	/// Per eye frame size.
+	pub size: IVec2,
+	/// Focal length.
+	pub focal_length: Vec2,
+	/// Lens center.
+	pub center: Vec2,
+	/// Distortion coefficients.
+	pub coeffs: Vec4,
 }
 
 #[derive(Deserialize, Serialize, Debug, FromArgs)]
@@ -58,8 +80,6 @@ pub enum CameraAPI {
 	OpenVR,
 	Dummy,
 }
-
-args_terminals! { CameraAPI }
 
 impl Config {
 	pub fn usage(&self) -> String {
@@ -119,6 +139,8 @@ impl Default for Config {
 		toml::from_str(include_str!("../config.toml")).expect("Bad config during compilation")
 	}
 }
+
+args_terminals! { CameraAPI }
 
 impl FromStr for CameraAPI {
 	type Err = toml::de::Error;
