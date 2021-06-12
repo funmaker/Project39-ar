@@ -121,7 +121,7 @@ impl Window {
 		
 		builder.blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
+		                   [image_dims[0] as i32, image_dims[1] as i32, 1],
 		                   0,
 		                   0,
 		                   images[image_num].clone(),
@@ -133,7 +133,7 @@ impl Window {
 		                   Filter::Linear)?
 		       .blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
+		                   [image_dims[0] as i32, image_dims[1] as i32, 1],
 		                   1,
 		                   0,
 		                   images[image_num].clone(),

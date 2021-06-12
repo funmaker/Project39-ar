@@ -3,7 +3,7 @@ use err_derive::Error;
 use vulkano::image::AttachmentImage;
 use vulkano::device::Queue;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
-use vulkano::descriptor::{DescriptorSet, descriptor_set, PipelineLayoutAbstract};
+use vulkano::descriptor::{DescriptorSet, descriptor_set};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
@@ -16,6 +16,7 @@ use super::pipelines::{PipelineError, Pipelines};
 use super::model::FenceCheck;
 use crate::math::{Vec4, Vec2};
 use crate::config;
+use vulkano::pipeline::GraphicsPipelineAbstract;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
@@ -98,7 +99,7 @@ impl Background {
 		)?;
 		
 		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(BackgroundError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(0).ok_or(BackgroundError::NoLayout)?.clone())
 				.add_buffer(intrinsics.clone())?
 				.add_sampled_image(view, sampler)?
 				.build()?

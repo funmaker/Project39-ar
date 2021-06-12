@@ -6,7 +6,6 @@ use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::SafeDeref;
-use vulkano::descriptor::PipelineLayoutAbstract;
 
 mod vertex;
 
@@ -32,12 +31,7 @@ mod frag {
 }
 
 #[derive(Debug, Deref)]
-pub struct BackgroundPipeline(
-	GraphicsPipeline<
-		SingleBufferDefinition<Vertex>,
-		Box<dyn PipelineLayoutAbstract + Send + Sync>
-	>
-);
+pub struct BackgroundPipeline(GraphicsPipeline<SingleBufferDefinition<Vertex>>);
 
 unsafe impl SafeDeref for BackgroundPipeline {}
 

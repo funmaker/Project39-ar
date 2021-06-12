@@ -2,12 +2,13 @@ use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferSlice};
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::Sampler;
-use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
+use vulkano::descriptor::{DescriptorSet};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline, MMDPipelineAny};
 use crate::renderer::Renderer;
 use crate::renderer::model::{ModelError, VertexIndex};
+use vulkano::pipeline::GraphicsPipelineAbstract;
 
 pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>);
 
@@ -52,7 +53,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 		let sphere_map_view = ImageView::new(sphere_map)?;
 		
 		let main_set = Arc::new(
-			PersistentDescriptorSet::start(main_pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 				.add_buffer(material_buffer.clone())?
 				.add_sampled_image(texture_view.clone(), sampler.clone())?
 				.add_sampled_image(toon_view.clone(), sampler.clone())?
@@ -76,7 +77,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 			};
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_buffer(material_buffer.clone())?
 					.add_sampled_image(texture_view.clone(), sampler.clone())?
 					.add_sampled_image(toon_view.clone(), sampler.clone())?
@@ -94,7 +95,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_sampled_image(texture_view.clone(), sampler.clone())?
 					.build()?
 			);

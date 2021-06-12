@@ -6,7 +6,6 @@ use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::vertex::SingleBufferDefinition;
 use vulkano::SafeDeref;
-use vulkano::descriptor::PipelineLayoutAbstract;
 
 mod vertex;
 
@@ -32,12 +31,7 @@ mod frag {
 }
 
 #[derive(Debug, Deref)]
-pub struct DebugPipeline(
-	GraphicsPipeline<
-		SingleBufferDefinition<Vertex>,
-		Box<dyn PipelineLayoutAbstract + Send + Sync>
-	>
-);
+pub struct DebugPipeline(GraphicsPipeline<SingleBufferDefinition<Vertex>>);
 
 unsafe impl SafeDeref for DebugPipeline {}
 
@@ -84,12 +78,7 @@ mod tex_frag {
 }
 
 #[derive(Debug, Deref)]
-pub struct DebugTexturedPipeline(
-	GraphicsPipeline<
-		SingleBufferDefinition<TexturedVertex>,
-		Box<dyn PipelineLayoutAbstract + Send + Sync>
-	>
-);
+pub struct DebugTexturedPipeline(GraphicsPipeline<SingleBufferDefinition<TexturedVertex>>);
 
 unsafe impl SafeDeref for DebugTexturedPipeline {}
 

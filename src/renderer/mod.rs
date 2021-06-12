@@ -1,14 +1,16 @@
 use std::sync::{Arc, mpsc};
 use std::time::Instant;
+use std::ffi::CString;
+use std::convert::TryInto;
 use err_derive::Error;
-use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory};
+use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory, Version};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
-use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, PhysicalDevice};
+use vulkano::instance::{Instance, InstanceExtensions, PhysicalDevice};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
-use vulkano::device::{Device, DeviceExtensions, RawDeviceExtensions, Features, Queue};
-use vulkano::image::{SwapchainImage, ImageUsage, ImageLayout};
+use vulkano::device::{Device, DeviceExtensions, Features, Queue};
+use vulkano::image::{SwapchainImage, ImageUsage, ImageLayout, SampleCount};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::descriptor::descriptor_set;
 use vulkano::format::Format;
@@ -124,11 +126,14 @@ impl Renderer {
 		
 		let vr_extensions = vr.as_ref().map(|vr| vr.lock().unwrap().compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
-		let extensions = RawInstanceExtensions::new(vr_extensions)
-		                                       .union(&(&vulkano_win::required_extensions()).into())
-		                                       .union(&(&InstanceExtensions { ext_debug_utils: debug::debug(),
-		                                                                      khr_get_physical_device_properties2: true,
-		                                                                      ..InstanceExtensions::none() }).into());
+		let extensions = InstanceExtensions::from(vr_extensions.iter().map(CString::as_c_str))
+		                                    .union(&vulkano_win::required_extensions())
+		                                    .union(&InstanceExtensions {
+			                                    ext_debug_utils: debug::debug(),
+			                                    khr_get_physical_device_properties2: true, // required by multiview
+			                                    khr_external_semaphore_capabilities: true, // required by khr_external_semaphore from vr_extensions
+			                                    ..InstanceExtensions::none()
+		                                    });
 		
 		let mut layers = vec![];
 		
@@ -142,7 +147,7 @@ impl Renderer {
 			eprintln!("MISSING LAYER: {}", layer);
 		}
 		
-		Ok(Instance::new(Some(&app_infos), extensions, layers)?)
+		Ok(Instance::new(Some(&app_infos), Version::V1_2, &extensions, layers)?)
 	}
 	
 	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugCallback, RendererError> {
@@ -253,13 +258,12 @@ impl Renderer {
 			                                       multiview: true,
 			                                       ..Features::none()
 		                                       },
-		                                       RawDeviceExtensions::new(vr_extensions)
-			                                       .union(&(&DeviceExtensions {
-				                                       khr_swapchain: true,
-				                                       khr_storage_buffer_storage_class: true,
-				                                       khr_multiview: true,
-				                                       ..DeviceExtensions::none()
-			                                       }).into()),
+		                                       &DeviceExtensions::from(vr_extensions.iter().map(CString::as_c_str))
+		                                                         .union(&DeviceExtensions {
+			                                                         khr_swapchain: true,
+			                                                         khr_storage_buffer_storage_class: true,
+			                                                         ..DeviceExtensions::none()
+		                                                         }),
 		                                       families.into_iter())?;
 		
 		let queue = queues.next().ok_or(RendererError::NoQueue)?;
@@ -269,7 +273,8 @@ impl Renderer {
 	}
 	
 	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
-		let samples = config::get().msaa;
+		let msaa = config::get().msaa;
+		let samples = msaa.try_into().map_err(|_| RendererError::InvalidMultiSamplingCount(msaa))?;
 		
 		let mut attachments = vec![
 			AttachmentDesc {
@@ -304,12 +309,10 @@ impl Renderer {
 			}
 		];
 		
-		let dependencies = vec![];
-		
-		if samples > 1 {
+		if samples != SampleCount::Sample1 {
 			attachments.push(AttachmentDesc {
 				format: eyes::IMAGE_FORMAT,
-				samples: 1,
+				samples: SampleCount::Sample1,
 				load: LoadOp::DontCare,
 				store: StoreOp::Store,
 				stencil_load: LoadOp::DontCare,
@@ -321,9 +324,18 @@ impl Renderer {
 			subpasses[0].resolve_attachments.push((2, ImageLayout::TransferDstOptimal))
 		}
 		
-		let render_pass = RenderPass::new(device.clone(),
-		                                  RenderPassDesc::new(attachments, subpasses, dependencies),
-		                                  Some(MultiviewDesc::with_views_correlated(2)))?;
+		let render_pass_desc = RenderPassDesc::with_multiview(
+			attachments,
+			subpasses,
+			vec![],
+			MultiviewDesc {
+				view_masks: vec![0b11],
+				correlation_masks: vec![0b11],
+				view_offsets: vec![],
+			}
+		);
+		
+		let render_pass = RenderPass::new(device.clone(), render_pass_desc)?;
 		
 		Ok(Arc::new(render_pass))
 	}
@@ -437,8 +449,6 @@ impl Renderer {
 		                   [eye_width as u32, eye_height as u32, 1],
 		                   1)?;
 		
-		
-		
 		let command_buffer = builder.build()?;
 		
 		let mut future = if let Some(previous_frame_end) = self.previous_frame_end.take() {
@@ -512,6 +522,7 @@ pub enum RendererError {
 	#[error(display = "No devices available.")] NoDevices,
 	#[error(display = "No compute queue available.")] NoQueue,
 	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
+	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),

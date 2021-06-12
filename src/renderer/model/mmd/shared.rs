@@ -7,7 +7,6 @@ use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
-use vulkano::descriptor::PipelineLayoutAbstract;
 
 use crate::application::entity::Bone;
 use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
@@ -18,6 +17,7 @@ use crate::utils::VecFuture;
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
+use vulkano::pipeline::GraphicsPipelineAbstract;
 
 pub struct MMDModelShared<VI: VertexIndex> {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -42,7 +42,7 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 		               .map(|mesh| mesh.main.0.clone())
 		               .ok_or(ModelError::NoLayout)
 		               .or_else(|_| renderer.pipelines.get::<MMDPipelineOpaque>().map_err(Into::into).map(Into::into))
-		               .and_then(|pipeline| pipeline.descriptor_set_layout(0).cloned().ok_or(ModelError::NoLayout))
+		               .and_then(|pipeline| pipeline.layout().descriptor_set_layout(0).cloned().ok_or(ModelError::NoLayout))
 	}
 }
 

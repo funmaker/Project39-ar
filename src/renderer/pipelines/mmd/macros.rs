@@ -29,14 +29,10 @@ macro_rules! mmd_pipelines {
 		use vulkano::pipeline::viewport::Viewport;
 		use vulkano::device::DeviceOwned;
 		use vulkano::pipeline::vertex::SingleBufferDefinition;
-		use vulkano::descriptor::PipelineLayoutAbstract;
 		
 		use $crate::renderer::pipelines::{Pipeline, PipelineError, pre_mul_alpha_blending};
 		
-		type MMDPipelineInner = GraphicsPipeline<
-			SingleBufferDefinition<Vertex>,
-			Box<dyn PipelineLayoutAbstract + Send + Sync>
-		>;
+		type MMDPipelineInner = GraphicsPipeline<SingleBufferDefinition<Vertex>>;
 		
 		#[derive(Clone)]
 		pub enum MMDPipelineAny {

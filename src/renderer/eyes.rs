@@ -1,7 +1,8 @@
 use std::sync::Arc;
+use std::convert::TryInto;
 use err_derive::Error;
 use vulkano::render_pass::{Framebuffer, FramebufferAbstract, RenderPass};
-use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, ImageDimensions};
+use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, SampleCount};
 use vulkano::format::{Format, ClearValue};
 use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
@@ -66,55 +67,62 @@ impl Eyes {
 	pub fn new(min_frame_buffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), queue: &Queue, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let device = queue.device();
 		let config = config::get();
-		let samples = config.msaa;
+		let samples = config.msaa.try_into().map_err(|_| EyeCreationError::InvalidMultiSamplingCount(config.msaa))?;
 		
 		let frame_buffer_size = (
 			(min_frame_buffer_size.0 as f32 * config.ssaa) as u32,
 			(min_frame_buffer_size.1 as f32 * config.ssaa) as u32,
 		);
 		
-		let dimensions = ImageDimensions::Dim2d {
-			width: frame_buffer_size.0,
-			height: frame_buffer_size.1,
-			array_layers: 2,
-		};
+		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];
 		
-		let side_dimensions = ImageDimensions::Dim2d {
-			width: frame_buffer_size.0,
-			height: frame_buffer_size.1,
-			array_layers: 1,
-		};
+		let resolved_image = AttachmentImage::multisampled_with_usage_with_layers(device.clone(),
+		                                                                          dimensions,
+		                                                                          2,
+		                                                                          SampleCount::Sample1,
+		                                                                          IMAGE_FORMAT,
+		                                                                          ImageUsage {
+			                                                                          transfer_source: true,
+			                                                                          transfer_destination: true,
+			                                                                          sampled: true,
+			                                                                          ..ImageUsage::none()
+		                                                                          })?;
 		
-		let resolved_image = AttachmentImage::multisampled_with_usage(device.clone(),
-		                                                 dimensions,
-		                                                 1,
-		                                                 IMAGE_FORMAT,
-		                                                 ImageUsage { transfer_source: true,
-		                                                              transfer_destination: true,
-		                                                              sampled: true,
-		                                                              ..ImageUsage::none() })?;
-		
-		let main_image = if samples > 1 {
-			AttachmentImage::multisampled_with_usage(device.clone(),
-			                                         dimensions,
-			                                         samples,
-			                                         IMAGE_FORMAT,
-			                                         ImageUsage { color_attachment: true,
-			                                                      ..ImageUsage::none() })?
+		let main_image = if samples != SampleCount::Sample1 {
+			AttachmentImage::multisampled_with_usage_with_layers(device.clone(),
+			                                                     dimensions,
+			                                                     2,
+			                                                     samples,
+			                                                     IMAGE_FORMAT,
+			                                                     ImageUsage {
+				                                                     color_attachment: true,
+				                                                     ..ImageUsage::none()
+			                                                     })?
 		} else {
 			resolved_image.clone()
 		};
 		
 		let side_image = AttachmentImage::multisampled_with_usage(device.clone(),
-		                                             side_dimensions,
-		                                             1,
-		                                             IMAGE_FORMAT,
-		                                             ImageUsage { transfer_source: true,
-		                                                          transfer_destination: true,
-		                                                          sampled: true,
-		                                                          ..ImageUsage::none() })?;
+		                                                          dimensions,
+		                                                          SampleCount::Sample1,
+		                                                          IMAGE_FORMAT,
+		                                                          ImageUsage {
+			                                                          transfer_source: true,
+			                                                          transfer_destination: true,
+			                                                          sampled: true,
+			                                                          ..ImageUsage::none()
+		                                                          })?;
 		
-		let depth_image = AttachmentImage::transient_multisampled(device.clone(), dimensions, samples, DEPTH_FORMAT)?;
+		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(device.clone(),
+		                                                                       dimensions,
+		                                                                       2,
+		                                                                       samples,
+		                                                                       DEPTH_FORMAT,
+		                                                                       ImageUsage {
+			                                                                       depth_stencil_attachment: true,
+			                                                                       transient_attachment: true,
+			                                                                       ..ImageUsage::none()
+		                                                                       })?;
 		
 		let handle_defs = vulkan::Texture {
 			image: 0,
@@ -123,15 +131,15 @@ impl Eyes {
 			instance: device.instance().as_ptr(),
 			queue: queue.as_ptr(),
 			queue_family_index: queue.family().id(),
-			width: main_image.dimensions().width(),
-			height: main_image.dimensions().height(),
-			format: main_image.format() as u32,
-			sample_count: main_image.samples(),
+			width: resolved_image.dimensions().width(),
+			height: resolved_image.dimensions().height(),
+			format: resolved_image.format() as u32,
+			sample_count: 1,
 		};
 		
 		let left_texture = Texture {
 			handle: Handle::Vulkan(vulkan::Texture {
-				image: (*main_image).as_ptr(),
+				image: (*resolved_image).as_ptr(),
 				..handle_defs
 			}),
 			color_space: ColorSpace::Gamma,
@@ -150,7 +158,7 @@ impl Eyes {
 			.add(ImageView::new(main_image.clone())?)?
 			.add(ImageView::new(depth_image.clone())?)?;
 		
-		let frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync> = if samples > 1 {
+		let frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync> = if samples != SampleCount::Sample1 {
 			Arc::new(
 				frame_buffer.add(ImageView::new(resolved_image.clone())?)?
 				            .build()?
@@ -162,7 +170,7 @@ impl Eyes {
 		let mut clear_values = vec![ ClearValue::None,
 		                             ClearValue::Depth(1.0) ];
 		
-		if samples > 1 {
+		if samples != SampleCount::Sample1 {
 			clear_values.push(ClearValue::None)
 		}
 		
@@ -183,6 +191,7 @@ impl Eyes {
 
 #[derive(Debug, Error)]
 pub enum EyeCreationError {
+	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] vulkano::render_pass::FramebufferCreationError),

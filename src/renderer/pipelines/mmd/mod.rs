@@ -1,5 +1,4 @@
 use vulkano::pipeline::ComputePipeline;
-use vulkano::descriptor::pipeline_layout::PipelineLayout;
 
 #[macro_use] mod macros;
 mod vertex;
@@ -66,7 +65,7 @@ mmd_pipelines!(
 pub const MORPH_GROUP_SIZE: usize = 32;
 
 #[derive(Debug, Deref)]
-pub struct MMDPipelineMorphs(ComputePipeline<PipelineLayout<morph_comp::MainLayout>>);
+pub struct MMDPipelineMorphs(ComputePipeline);
 
 unsafe impl SafeDeref for MMDPipelineMorphs {}
 

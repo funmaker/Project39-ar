@@ -4,7 +4,7 @@ use num_traits::FromPrimitive;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
-use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
+use vulkano::descriptor::DescriptorSet;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
 use vulkano::format::Format;
@@ -20,6 +20,7 @@ use crate::utils::ImageEx;
 use crate::math::AMat4;
 use super::{Model, ModelError, ModelRenderError, VertexIndex, FenceCheck};
 pub use import::SimpleModelLoadError;
+use vulkano::pipeline::GraphicsPipelineAbstract;
 
 #[derive(Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
@@ -56,7 +57,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
 		
 		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
 			                        .add_buffer(renderer.commons.clone())?
 			                        .add_sampled_image(view, sampler)?
 			                        .build()?

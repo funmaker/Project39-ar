@@ -5,7 +5,7 @@ use simba::scalar::SubsetOf;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor::{DescriptorSet, PipelineLayoutAbstract};
+use vulkano::descriptor::DescriptorSet;
 use vulkano::device::DeviceOwned;
 
 pub mod test;
@@ -22,6 +22,7 @@ use crate::renderer::pipelines::mmd::MORPH_GROUP_SIZE;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
 use shared::MMDModelShared;
+use vulkano::pipeline::ComputePipelineAbstract;
 
 pub struct MMDModel<VI: VertexIndex> {
 	shared: Arc<MMDModelShared<VI>>,
@@ -67,7 +68,8 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                                           },
 		                                           Some(renderer.queue.family()))?;
 		
-		let compute_layout = shared.morphs_pipeline.layout()
+		let compute_layout = shared.morphs_pipeline
+		                           .layout()
 		                           .descriptor_set_layout(0)
 		                           .ok_or(ModelError::NoLayout)?
 		                                   .clone();

@@ -22,9 +22,9 @@ pub struct Config {
 	#[arg_short = "v"] pub validation: bool,
 	/// Fallback GPU device to use.
 	pub gpu_id: usize,
-	/// Multi-Sampling Anti-Aliasing factor.
-	pub ssaa: f32,
 	/// Super-Sampling Anti-Aliasing factor.
+	pub ssaa: f32,
+	/// Multi-Sampling Anti-Aliasing factor.
 	pub msaa: u32,
 	/// Camera configuration
 	pub camera: CameraConfig,
@@ -39,7 +39,7 @@ pub struct CameraConfig {
 	/// Camera device index. Ignored if openvr is used.
 	pub id: usize,
 	/// Frame buffer.
-	/*#[serde(skip)] #[arg_skip]*/ pub frame_buffer_size: IVec2,
+	#[serde(skip)] #[arg_skip] pub frame_buffer_size: IVec2,
 	/// Left camera eye
 	pub left: CameraEyeConfig,
 	/// Right camera eye

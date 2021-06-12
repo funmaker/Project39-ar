@@ -5,12 +5,12 @@ authors = ["Fun Maker <funmaker95@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
-vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
-vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
-#vulkano = { path = "../vulkano/vulkano" }
-#vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
-#vulkano-win = { path = "../vulkano/vulkano-win" }
+#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
+#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
+#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "70162b35774447dcc937321e3707abb9af87f151" }
+vulkano = { path = "../vulkano/vulkano" }
+vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
+vulkano-win = { path = "../vulkano/vulkano-win" }
 #vulkano = "0.23.0"
 #vulkano-shaders = "0.23.0"
 #vulkano-win = "0.23.0"
@@ -24,7 +24,7 @@ obj-rs = "0.6.2"
 opencv = { version = "0.53.0" }
 num-traits = "0.2.14"
 lazy_static = "1.4.0"
-winit = "0.24.0"
+winit = "0.25.0"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "9edb771b6e29da7a320acc94e8d293a4b8b0a289" }
 #mmd = { path = "../mmd-rs" }
 downcast-rs = "1.2.0"
