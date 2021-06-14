@@ -11,7 +11,7 @@ use openvr::compositor::Texture;
 use crate::config;
 use crate::utils::OpenVRPtr;
 use crate::application::VR;
-use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy};
+use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy, Vec4};
 use crate::config::NovrConfig;
 
 pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
@@ -38,6 +38,7 @@ pub struct Eyes {
 	pub textures: (Texture, Texture),
 	pub view: (AMat4, AMat4),
 	pub projection: (PMat4, PMat4),
+	pub raw_projection: (Vec4, Vec4),
 	pub clear_values: Vec<ClearValue>,
 }
 
@@ -45,10 +46,15 @@ pub struct Eyes {
 impl Eyes {
 	pub fn new_novr(config: &NovrConfig, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let min_frame_buffer_size = (config.frame_buffer_width, config.frame_buffer_height);
-		let view = AMat4::identity();
-		let projection = clip() * Perspective3::new(config.frame_buffer_width as f32 / config.frame_buffer_height as f32, config.fov / 360.0 * std::f32::consts::TAU, 0.01, 100.01).as_projective();
+		let aspect = config.frame_buffer_width as f32 / config.frame_buffer_height as f32;
+		let fovx = config.fov / 360.0 * std::f32::consts::TAU;
+		let fovy = fovx / aspect;
 		
-		Self::new(min_frame_buffer_size, (view.clone(), view), (projection, projection), queue, render_pass)
+		let view = AMat4::identity();
+		let projection = clip() * Perspective3::new(aspect, fovy, 0.01, 100.01).as_projective();
+		let raw = Vec4::new(-fovx.tan(), fovx.tan() * 2.0, -fovy.tan(), fovy.tan() * 2.0);
+		
+		Self::new(min_frame_buffer_size, (view, view), (projection, projection), (raw, raw), queue, render_pass)
 	}
 	
 	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
@@ -61,10 +67,16 @@ impl Eyes {
 		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
 		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
 		
-		Self::new(min_frame_buffer_size, (view_left, view_right), (proj_left, proj_right), queue, render_pass)
+		let raw_left  = vr.system.projection_raw(openvr::Eye::Left);
+		let raw_left = Vec4::new(raw_left.left, raw_left.right - raw_left.left, raw_left.top, raw_left.bottom - raw_left.top);
+		
+		let raw_right = vr.system.projection_raw(openvr::Eye::Right);
+		let raw_right = Vec4::new(raw_right.left, raw_right.right - raw_right.left, raw_right.top, raw_right.bottom - raw_right.top);
+		
+		Self::new(min_frame_buffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), queue, render_pass)
 	}
 	
-	pub fn new(min_frame_buffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), queue: &Queue, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
+	pub fn new(min_frame_buffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), queue: &Queue, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {
 		let device = queue.device();
 		let config = config::get();
 		let samples = config.msaa.try_into().map_err(|_| EyeCreationError::InvalidMultiSamplingCount(config.msaa))?;
@@ -184,6 +196,7 @@ impl Eyes {
 			textures: (left_texture, right_texture),
 			view,
 			projection,
+			raw_projection,
 			clear_values,
 		})
 	}

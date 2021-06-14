@@ -35,6 +35,7 @@ pub struct MMDModel<VI: VertexIndex> {
 	model_set: Arc<dyn DescriptorSet + Send + Sync>,
 }
 
+#[allow(dead_code)]
 impl<VI: VertexIndex> MMDModel<VI> {
 	fn new(shared: Arc<MMDModelShared<VI>>, renderer: &mut Renderer) -> Result<MMDModel<VI>, ModelError> {
 		let bone_count = shared.default_bones.len();

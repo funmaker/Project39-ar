@@ -1,7 +1,7 @@
 use std::sync::Mutex;
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use err_derive::Error;
-use derive_deref::Deref;
 use openvr::{Context, System, Compositor, RenderModels};
 
 mod tracked_camera;
@@ -30,7 +30,6 @@ impl Drop for VRInner {
 	}
 }
 
-#[derive(Deref)]
 pub struct VR(Mutex<VRInner>);
 
 impl VR {
@@ -53,6 +52,14 @@ impl VR {
 			render_models,
 			tracked_camera,
 		})))
+	}
+}
+
+impl Deref for VR {
+	type Target = Mutex<VRInner>;
+	
+	fn deref(&self) -> &Self::Target {
+		&self.0
 	}
 }
 

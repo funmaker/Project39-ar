@@ -31,6 +31,7 @@ pub struct SimpleModel<VI: VertexIndex> {
 	fence: Arc<FenceCheck>,
 }
 
+#[allow(dead_code)]
 impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 	pub fn new(vertices: &[Vertex], indices: &[VI], source_image: DynamicImage, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
 		let width = source_image.width();

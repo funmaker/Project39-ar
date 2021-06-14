@@ -6,7 +6,8 @@ macro_rules! mmd_shaders {
 			
 			vulkano_shaders::shader! {
 				ty: $type,
-				path: $source
+				path: $source,
+				spirv_version: "1.3"
 			}
 		}
 	)* }

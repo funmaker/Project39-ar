@@ -92,7 +92,7 @@ impl Renderer {
 		
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		let background = Background::new(camera_image, &queue, &mut pipelines)?;
+		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		let last_frame = Instant::now();
 		let previous_frame_end = None;
@@ -130,6 +130,7 @@ impl Renderer {
 		                                    .union(&vulkano_win::required_extensions())
 		                                    .union(&InstanceExtensions {
 			                                    ext_debug_utils: debug::debug(),
+			                                    ext_debug_report: debug::debug(), // required by RenderDoc
 			                                    khr_get_physical_device_properties2: true, // required by multiview
 			                                    khr_external_semaphore_capabilities: true, // required by khr_external_semaphore from vr_extensions
 			                                    ..InstanceExtensions::none()
@@ -197,13 +198,17 @@ impl Renderer {
 	}
 	
 	fn create_physical_device<'a>(instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
+		fn stringify<D: std::fmt::Display>(val: &Option<D>) -> String {
+			val.as_ref().map_or_else(|| "Unknown".to_string(), |val| val.to_string())
+		}
+		
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
 			          device.index(),
-			          device.name(),
-			          device.api_version(),
-			          device.driver_version());
+			          stringify(&device.properties().device_name),
+			          stringify(&device.properties().api_version),
+			          stringify(&device.properties().driver_version));
 		}
 		
 		let physical = vr.as_ref()
@@ -215,15 +220,15 @@ impl Renderer {
 		                 })
 		                 .ok_or(RendererError::NoDevices)?;
 		
-		if physical.extended_properties().max_multiview_view_count().unwrap_or(0) < 2 {
+		if physical.properties().max_multiview_view_count.unwrap_or(0) < 2 {
 			return Err(RendererError::MultiviewNotSupported);
 		}
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
 		          physical.index(),
-		          physical.name(),
-		          physical.api_version(),
-		          physical.driver_version());
+		          stringify(&physical.properties().device_name),
+		          stringify(&physical.properties().api_version),
+		          stringify(&physical.properties().driver_version));
 		
 		Ok(physical)
 	}
@@ -438,7 +443,7 @@ impl Renderer {
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
-			   .copy_image(self.eyes.resolved_image.clone(),
+			   /*.copy_image(self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   1,
 		                   0,
@@ -447,9 +452,23 @@ impl Renderer {
 		                   0,
 		                   0,
 		                   [eye_width as u32, eye_height as u32, 1],
-		                   1)?;
+		                   1)?*/;
 		
 		let command_buffer = builder.build()?;
+		
+		let mut builder2 = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
+		builder2.copy_image(self.eyes.resolved_image.clone(),
+		                    [0, 0, 0],
+		                    1,
+		                    0,
+		                    self.eyes.side_image.clone(),
+		                    [0, 0, 0],
+		                    0,
+		                    0,
+		                    [eye_width as u32, eye_height as u32, 1],
+		                    1)?;
+		let command_buffer2 = builder2.build()?;
+		
 		
 		let mut future = if let Some(previous_frame_end) = self.previous_frame_end.take() {
 			previous_frame_end.wait(None)?;
@@ -472,7 +491,7 @@ impl Renderer {
 			future = future.then_signal_semaphore().boxed();
 		}
 		
-		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
+		future = future.then_execute(self.queue.clone(), command_buffer)?.then_execute(self.queue.clone(), command_buffer2)?.boxed();
 		
 		// TODO: Move to another thread
 		if let Some(ref vr) = self.vr {

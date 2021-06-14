@@ -17,7 +17,8 @@ mod vert {
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/background/vert.glsl"
+		path: "src/renderer/pipelines/background/vert.glsl",
+		spirv_version: "1.3"
 	}
 }
 
@@ -26,7 +27,8 @@ mod frag {
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/background/frag.glsl"
+		path: "src/renderer/pipelines/background/frag.glsl",
+		spirv_version: "1.3"
 	}
 }
 

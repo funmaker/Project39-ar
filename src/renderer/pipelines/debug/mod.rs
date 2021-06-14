@@ -17,7 +17,8 @@ mod vert {
 	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/debug/vert.glsl"
+		path: "src/renderer/pipelines/debug/vert.glsl",
+		spirv_version: "1.3"
 	}
 }
 
@@ -26,7 +27,8 @@ mod frag {
 	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/debug/frag.glsl"
+		path: "src/renderer/pipelines/debug/frag.glsl",
+		spirv_version: "1.3"
 	}
 }
 
@@ -64,7 +66,8 @@ mod tex_vert {
 	const SOURCE: &'static str = include_str!("./tex_vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/debug/tex_vert.glsl"
+		path: "src/renderer/pipelines/debug/tex_vert.glsl",
+		spirv_version: "1.3"
 	}
 }
 
@@ -73,7 +76,8 @@ mod tex_frag {
 	const SOURCE: &'static str = include_str!("./tex_frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/debug/tex_frag.glsl"
+		path: "src/renderer/pipelines/debug/tex_frag.glsl",
+		spirv_version: "1.3"
 	}
 }
 

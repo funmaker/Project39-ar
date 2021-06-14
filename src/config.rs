@@ -8,9 +8,9 @@ use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
 
 use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
-use crate::math::{IVec2, Vec2, Vec4};
+use crate::math::{IVec2, Vec2, Vec4, Vec3};
 
-#[derive(Deserialize, Serialize, Debug, FromArgs)]
+#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct Config {
 	/// Prints this message.
 	#[serde(skip)] #[arg_short = "h"] pub help: bool,
@@ -32,13 +32,13 @@ pub struct Config {
 	pub novr: NovrConfig,
 }
 
-#[derive(Deserialize, Serialize, Debug, FromArgs)]
+#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct CameraConfig {
 	/// Select background API to use: escapi, opencv, openvr or dummy.
 	#[arg_short = "c"] #[arg_rename = ""] pub driver: CameraAPI,
 	/// Camera device index. Ignored if openvr is used.
 	pub id: usize,
-	/// Frame buffer.
+	/// Size of the whole frame buffer.
 	#[serde(skip)] #[arg_skip] pub frame_buffer_size: IVec2,
 	/// Left camera eye
 	pub left: CameraEyeConfig,
@@ -46,7 +46,7 @@ pub struct CameraConfig {
 	pub right: CameraEyeConfig,
 }
 
-#[derive(Deserialize, Serialize, Debug, FromArgs)]
+#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct CameraEyeConfig {
 	/// Frame offset on the frame buffer.
 	pub offset: IVec2,
@@ -54,13 +54,19 @@ pub struct CameraEyeConfig {
 	pub size: IVec2,
 	/// Focal length.
 	pub focal_length: Vec2,
-	/// Lens center.
+	/// Principal point.
 	pub center: Vec2,
 	/// Distortion coefficients.
 	pub coeffs: Vec4,
+	/// Position relative to HMD
+	pub position: Vec3,
+	/// Camera's right (X+)
+	pub right: Vec3,
+	/// Camera's back (Z+)
+	pub back: Vec3,
 }
 
-#[derive(Deserialize, Serialize, Debug, FromArgs)]
+#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct NovrConfig {
 	/// Enable Non VR mode. The program will not use OpenVR. Use Keyboard and mouse to move.
 	#[arg_rename = ""] pub enabled: bool,
@@ -72,7 +78,7 @@ pub struct NovrConfig {
 	pub fov: f32,
 }
 
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CameraAPI {
 	#[cfg(windows)] Escapi,
@@ -166,4 +172,12 @@ pub fn get() -> impl Deref<Target = Arc<Config>> + 'static {
 
 pub fn set(config: Config) {
 	CONFIG.store(Arc::new(config));
+}
+
+pub fn rcu(update: impl Fn(&mut Config)) {
+	CONFIG.rcu(|current| {
+		let mut new = (**current).clone();
+		update(&mut new);
+		new
+	});
 }
