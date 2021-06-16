@@ -79,28 +79,21 @@ impl Camera for OpenVR {
 			std::thread::sleep(cooldown);
 		}
 		
-		let mode: u8 = debug::get_flag("mode").unwrap_or_default();
-		
-		let mode = match mode {
-			0 => FrameType::Distorted,
-			1 => FrameType::Undistorted,
-			2 => FrameType::MaximumUndistorted,
-			_ => unreachable!(),
-		};
-		
 		let mut ret;
 		
-		ret = self.service.get_frame_buffer(mode)
+		ret = self.service.get_frame_buffer(FrameType::Distorted)
 		                  .map(|fb| fb.buffer.as_mut_slice())
 		                  .map_err(|err| match err.code {
 			                  sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
 			                  _ => CameraCaptureError::Other(err.into()),
 		                  });
 		
-		// TODO: probably can be ignored later
+		// TODO: ???
 		if let Ok(ref mut slice) = ret {
-			for pos in (3..slice.len()).step_by(4) {
-				slice[pos] = 255;
+			for pos in (0..slice.len()).step_by(4) {
+				let temp = slice[pos];
+				slice[pos] = slice[pos + 2];
+				slice[pos + 2] = temp;
 			}
 		}
 		

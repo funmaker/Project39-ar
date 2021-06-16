@@ -434,7 +434,7 @@ impl Renderer {
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
 		
-		self.background.render(&mut builder)?;
+		self.background.render(&mut builder, &hmd_pose)?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder)?;
