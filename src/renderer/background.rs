@@ -8,22 +8,21 @@ use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
-use vulkano::sync::GpuFuture;
 use vulkano::pipeline::GraphicsPipelineAbstract;
 use vulkano::{memory, sync, command_buffer, sampler};
 
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
 use super::model::FenceCheck;
-use crate::math::{Vec4, Vec2, Vec3, Rot3, Isometry3, Point3, Color};
-use crate::{config, debug};
+use crate::math::{Vec4, Vec2, Vec3, Mat3, Isometry3};
+use crate::config;
 use crate::renderer::eyes::Eyes;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 struct Intrinsics {
+	rawproj: [Vec4; 2],
 	focal: [Vec2; 2],
-	proj: [Vec4; 2],
 	coeffs: [Vec4; 2],
 	scale: [Vec2; 2],
 	center: [Vec2; 2],
@@ -32,11 +31,11 @@ struct Intrinsics {
 pub struct Background {
 	pipeline: Arc<BackgroundPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
+	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
 	fence: Arc<FenceCheck>,
-	shift: Vec3,
-	extrinsics: (Rot3, Rot3),
+	extrinsics: (Mat3, Mat3),
+	last_frame_pose: Isometry3,
 }
 
 impl Background {
@@ -58,13 +57,13 @@ impl Background {
 		                                                              queue.clone())?;
 		
 		let intrinsics = Intrinsics {
+			rawproj: [
+				eyes.raw_projection.0,
+				eyes.raw_projection.1,
+			],
 			focal: [
 				config.camera.left.focal_length.component_div(&config.camera.left.size.cast()),
 				config.camera.right.focal_length.component_div(&config.camera.right.size.cast()),
-			],
-			proj: [
-				eyes.raw_projection.0,
-				eyes.raw_projection.1,
 			],
 			coeffs: [
 				config.camera.left.coeffs.clone(),
@@ -107,68 +106,104 @@ impl Background {
 				.build()?
 		);
 		
-		let hmd_forwards = Rot3::face_towards(&-Vec3::z_axis(), &Vec3::y_axis());
+		let flip_xz = Vec3::new(-1.0, 1.0, -1.0);
+		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
 		
-		let left_forward = -config.camera.left.back;
-		let left_down = -config.camera.left.right.cross(&left_forward);
-		let left_extrinsics = hmd_forwards.rotation_to(&Rot3::face_towards(&left_forward, &left_down));
+		let left_extrinsics = Mat3::from_columns(&[
+			config.camera.left.right,
+			config.camera.left.back.cross(&config.camera.left.right),
+			config.camera.left.back,
+		]).component_mul(&flip_xz_m)
+		  .try_inverse()
+		  .expect("Unable to inverse left camera extrinsics");
 		
-		let right_forward = -config.camera.right.back;
-		let right_down = -config.camera.right.right.cross(&right_forward);
-		let right_extrinsics = hmd_forwards.rotation_to(&Rot3::face_towards(&right_forward, &right_down));
-		
-		println!("{:?}", left_extrinsics.euler_angles());
-		println!("{:?}", right_extrinsics.euler_angles());
+		let right_extrinsics = Mat3::from_columns(&[
+			config.camera.right.right,
+			config.camera.right.back.cross(&config.camera.right.right),
+			config.camera.right.back,
+		]).component_mul(&flip_xz_m)
+		  .try_inverse()
+		  .expect("Unable to inverse right camera extrinsics");
 		
 		let fence = Arc::new(FenceCheck::new(vertices_promise)?);
 		
 		Ok(Background {
 			pipeline,
 			vertices,
-			intrinsics,
+			// intrinsics,
 			set,
 			fence,
-			shift: Vec3::zeros(),
-			extrinsics: (left_extrinsics.inverse(), right_extrinsics.inverse()),
+			extrinsics: (left_extrinsics, right_extrinsics),
+			last_frame_pose: Isometry3::identity(),
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, hmd_pose: &Isometry3) -> Result<(), BackgroundRenderError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, hmd_pose: Isometry3) -> Result<(), BackgroundRenderError> {
 		if !self.fence.check() { return Ok(()); }
 		
-		if let Ok(mut intrinsics) = self.intrinsics.write() {
-			if debug::get_flag_or_default("KeyA") {
-				intrinsics.focal[0].x -= 0.0001;
-				intrinsics.focal[0].y -= 0.0001;
-				intrinsics.focal[1].x -= 0.0001;
-				intrinsics.focal[1].y -= 0.0001;
-			} else if debug::get_flag_or_default("KeyD") {
-				intrinsics.focal[0].x += 0.0001;
-				intrinsics.focal[0].y += 0.0001;
-				intrinsics.focal[1].x += 0.0001;
-				intrinsics.focal[1].y += 0.0001;
-			}
-		}
+		// if let Ok(mut intrinsics) = self.intrinsics.write() {
+		// 	if debug::get_flag_or_default("KeyA") {
+		// 		intrinsics.center[0].x -= 0.0001;
+		// 	} else if debug::get_flag_or_default("KeyD") {
+		// 		intrinsics.center[0].x += 0.0001;
+		// 	}
+		//
+		// 	if debug::get_flag_or_default("KeyW") {
+		// 		intrinsics.center[0].y -= 0.0001;
+		// 	} else if debug::get_flag_or_default("KeyS") {
+		// 		intrinsics.center[0].y += 0.0001;
+		// 	}
+		//
+		// 	if debug::get_flag_or_default("KeyH") {
+		// 		intrinsics.center[1].x -= 0.0001;
+		// 	} else if debug::get_flag_or_default("KeyK") {
+		// 		intrinsics.center[1].x += 0.0001;
+		// 	}
+		//
+		// 	if debug::get_flag_or_default("KeyU") {
+		// 		intrinsics.center[1].y -= 0.0001;
+		// 	} else if debug::get_flag_or_default("KeyJ") {
+		// 		intrinsics.center[1].y += 0.0001;
+		// 	}
+		// }
 		
-		{
-			let config = config::get();
+		let rotation = (hmd_pose.rotation.inverse() * hmd_pose.rotation / self.last_frame_pose.rotation * hmd_pose.rotation).to_rotation_matrix();
 		
-			let hmd_pose = Isometry3::identity();
-		
-			debug::draw_point(hmd_pose.transform_point(&Point3::from(Point3::new(0.0, 0.0, -0.5).coords)), 32.0, Color::red());
-		
-			let left_cam = hmd_pose.transform_point(&Point3::from(Point3::new(0.0, 0.0, -0.5).coords + config.camera.left.position));
-			debug::draw_point(&left_cam, 32.0, Color::green());
-			debug::draw_line(&left_cam, left_cam + hmd_pose.transform_vector(&config.camera.left.right) / 20.0, 4.0, Color::cyan());
-			debug::draw_line(&left_cam, left_cam + hmd_pose.transform_vector(&config.camera.left.back) / 20.0, 4.0, Color::dcyan());
-		
-			let right_cam = hmd_pose.transform_point(&Point3::from(Point3::new(0.0, 0.0, -0.5).coords + config.camera.right.position));
-			debug::draw_point(&right_cam, 32.0, Color::blue());
-			debug::draw_line(&right_cam, right_cam + hmd_pose.transform_vector(&config.camera.right.right) / 20.0, 4.0, Color::magenta());
-			debug::draw_line(&right_cam, right_cam + hmd_pose.transform_vector(&config.camera.right.back) / 20.0, 4.0, Color::dmagenta());
-		}
-		
-		let rotation = Rot3::from_euler_angles(-self.shift.y, self.shift.x, self.shift.z);
+		// {
+		// 	let config = config::get();
+		//
+		// 	debug::draw_point(Point3::new(0.0, 0.0, 0.0), 32.0, Color::red());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::x() / 20.0, 4.0, Color::dred());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::y() / 20.0, 4.0, Color::dgreen());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::z() / 20.0, 4.0, Color::dblue());
+		//
+		// 	debug::draw_point(Point3::new(0.0, 0.0, 0.0), 32.0, Color::red());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::x() / 20.0, 4.0, Color::red());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::y() / 20.0, 4.0, Color::green());
+		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::z() / 20.0, 4.0, Color::blue());
+		//
+		// 	let flip_xz = Vec3::new(-1.0, 1.0, -1.0);
+		//
+		// 	let mut left_cam: Point3 = config.camera.left.position.component_mul(&flip_xz).into();
+		// 	let left_ex_inv = self.extrinsics.0.try_inverse().unwrap();
+		// 	debug::draw_point(&left_cam, 32.0, Color::green());
+		// 	debug::draw_line(&left_cam, left_cam + config.camera.left.right.component_mul(&flip_xz) / 15.0, 2.0, Color::cyan());
+		// 	debug::draw_line(&left_cam, left_cam + config.camera.left.back.component_mul(&flip_xz) / 15.0, 2.0, Color::dcyan());
+		//
+		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::x() / 20.0, 4.0, Color::red());
+		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::y() / 20.0, 4.0, Color::green());
+		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::z() / 20.0, 4.0, Color::blue());
+		//
+		// 	let mut right_cam: Point3 = config.camera.right.position.component_mul(&flip_xz).into();
+		// 	let right_ex_inv = self.extrinsics.1.try_inverse().unwrap();
+		// 	debug::draw_point(&right_cam, 32.0, Color::blue());
+		// 	debug::draw_line(&right_cam, right_cam + config.camera.right.right.component_mul(&flip_xz) / 15.0, 2.0, Color::magenta());
+		// 	debug::draw_line(&right_cam, right_cam + config.camera.right.back.component_mul(&flip_xz) / 15.0, 2.0, Color::dmagenta());
+		//
+		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::x() / 20.0, 4.0, Color::red());
+		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::y() / 20.0, 4.0, Color::green());
+		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::z() / 20.0, 4.0, Color::blue());
+		// }
 		
 		let constants = (
 			(rotation * self.extrinsics.0).to_homogeneous(),
@@ -183,6 +218,10 @@ impl Background {
 		             None)?;
 		
 		Ok(())
+	}
+	
+	pub fn update_frame_pose(&mut self, pose: Isometry3) {
+		self.last_frame_pose = pose;
 	}
 }
 

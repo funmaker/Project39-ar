@@ -57,14 +57,14 @@ impl Application {
 		// 	Point3::new(0.0, -0.5, 0.0),
 		// 	Rot3::identity(),
 		// ));
-		//
-		// scene.push(Entity::new(
-		// 	"初音ミク",
-		// 	MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
-		// 	Point3::new(0.0, 0.0, 0.0),
-		// 	Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
-		// ));
-		//
+		
+		scene.push(Entity::new(
+			"初音ミク",
+			MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
+			Point3::new(0.0, 0.0, 0.0),
+			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
+		));
+		
 		// scene.push(Entity::new(
 		// 	"Test",
 		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),

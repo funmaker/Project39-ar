@@ -3,6 +3,7 @@
 use err_derive::Error;
 
 use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+use crate::math::Isometry3;
 
 pub const CAPTURE_INDEX: usize = 0;
 
@@ -23,9 +24,9 @@ impl Escapi {
 }
 
 impl Camera for Escapi {
-	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
 		match self.inner.capture() {
-			Ok(frame) => Ok(frame),
+			Ok(frame) => Ok((frame, None)),
 			Err(escapi::Error::CaptureTimeout) => Err(CameraCaptureError::Timeout),
 			Err(err) => Err(CameraCaptureError::Other(err.into())),
 		}

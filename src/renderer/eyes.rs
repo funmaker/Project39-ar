@@ -52,7 +52,7 @@ impl Eyes {
 		
 		let view = AMat4::identity();
 		let projection = clip() * Perspective3::new(aspect, fovy, 0.01, 100.01).as_projective();
-		let raw = Vec4::new(-fovx.tan(), fovx.tan() * 2.0, -fovy.tan(), fovy.tan() * 2.0);
+		let raw = Vec4::new((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
 		
 		Self::new(min_frame_buffer_size, (view, view), (projection, projection), (raw, raw), queue, render_pass)
 	}
@@ -68,10 +68,10 @@ impl Eyes {
 		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
 		
 		let raw_left  = vr.system.projection_raw(openvr::Eye::Left);
-		let raw_left = Vec4::new(raw_left.left, raw_left.right - raw_left.left, raw_left.top, raw_left.bottom - raw_left.top);
+		let raw_left = Vec4::new(-raw_left.left, raw_left.right, -raw_left.top, raw_left.bottom);
 		
 		let raw_right = vr.system.projection_raw(openvr::Eye::Right);
-		let raw_right = Vec4::new(raw_right.left, raw_right.right - raw_right.left, raw_right.top, raw_right.bottom - raw_right.top);
+		let raw_right = Vec4::new(-raw_right.left, raw_right.right, -raw_right.top, raw_right.bottom);
 		
 		Self::new(min_frame_buffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), queue, render_pass)
 	}

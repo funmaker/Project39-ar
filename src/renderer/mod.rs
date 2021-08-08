@@ -58,7 +58,7 @@ pub struct Renderer {
 	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
 	background: Background,
-	load_commands: mpsc::Receiver<PrimaryAutoCommandBuffer>,
+	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 	debug_renderer: DebugRenderer,
 	last_frame: Instant,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
@@ -386,16 +386,32 @@ impl Renderer {
 	}
 	
 	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
-		if let Some(ref mut previous_frame_end) = self.previous_frame_end {
-			previous_frame_end.cleanup_finished();
-		}
-		
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
 				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
 				Err(err) => return Err(err.into()),
 				Ok(_) => {}
 			}
+		}
+		
+		let mut future = if let Some(mut previous_frame_end) = self.previous_frame_end.take() {
+			previous_frame_end.cleanup_finished();
+			previous_frame_end.wait(None)?;
+			previous_frame_end.boxed()
+		} else {
+			sync::now(self.device.clone()).boxed()
+		};
+		
+		// TODO: Optimize Boxes
+		while let Ok((command, cam_pose)) = self.load_commands.try_recv() {
+			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
+				future = Box::new(future.then_signal_semaphore()
+				                        .then_execute(self.load_queue.clone(), command)?);
+			} else {
+				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
+			}
+			
+			self.background.update_frame_pose(cam_pose.unwrap_or(hmd_pose));
 		}
 		
 		let since_last_frame = self.last_frame.elapsed();
@@ -434,7 +450,7 @@ impl Renderer {
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
 		
-		self.background.render(&mut builder, &hmd_pose)?;
+		self.background.render(&mut builder, hmd_pose)?;
 		
 		for entity in scene.iter_mut() {
 			entity.render(&mut builder)?;
@@ -468,24 +484,6 @@ impl Renderer {
 		                    [eye_width as u32, eye_height as u32, 1],
 		                    1)?;
 		let command_buffer2 = builder2.build()?;
-		
-		
-		let mut future = if let Some(previous_frame_end) = self.previous_frame_end.take() {
-			previous_frame_end.wait(None)?;
-			previous_frame_end.boxed()
-		} else {
-			sync::now(self.device.clone()).boxed()
-		};
-		
-		// TODO: Optimize Boxes
-		while let Ok(command) = self.load_commands.try_recv() {
-			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
-				future = Box::new(future.then_signal_semaphore()
-				                           .then_execute(self.load_queue.clone(), command)?);
-			} else {
-				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
-			}
-		}
 		
 		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
 			future = future.then_signal_semaphore().boxed();

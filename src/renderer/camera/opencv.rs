@@ -3,6 +3,7 @@ use opencv::prelude::*;
 use opencv::{ videoio, imgproc, core };
 
 use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+use crate::math::Isometry3;
 
 pub const CAPTURE_INDEX: i32 = 0;
 
@@ -35,7 +36,7 @@ impl OpenCV {
 }
 
 impl Camera for OpenCV {
-	fn capture(&mut self) -> Result<&[u8], CameraCaptureError> {
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
 		if !self.inner.read(&mut self.frame)? {
 			return Err(CameraCaptureError::Timeout);
 		}
@@ -43,7 +44,7 @@ impl Camera for OpenCV {
 		imgproc::cvt_color(&self.frame, &mut self.frame_rgba, imgproc::COLOR_RGB2RGBA, 4)?;
 		let (_, slice, _) = unsafe { self.frame_rgba.data_typed::<core::Vec4b>()?.align_to() };
 		
-		return Ok(slice);
+		return Ok((slice, None));
 	}
 }
 

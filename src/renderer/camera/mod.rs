@@ -20,6 +20,7 @@ pub use self::opencv::{OpenCV, OpenCVCameraError};
 pub use self::openvr::{OpenVR, OpenVRCameraError};
 pub use self::dummy::Dummy;
 use crate::debug;
+use crate::math::Isometry3;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
@@ -27,10 +28,10 @@ pub const CAPTURE_FPS: u64 = 140;
 pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 
 pub trait Camera: Send + Sized + 'static {
-	fn capture(&mut self) -> Result<&[u8], CameraCaptureError>;
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError>;
 	
 	fn start(mut self, queue: Arc<Queue>)
-		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<PrimaryAutoCommandBuffer>), CameraStartError> {
+		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>), CameraStartError> {
 		let target = AttachmentImage::with_usage(queue.device().clone(),
 		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
 		                                         Format::B8G8R8A8Unorm,
@@ -52,7 +53,7 @@ pub trait Camera: Send + Sized + 'static {
 		Ok((ret, receiver))
 	}
 	
-	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage>, sender: mpsc::SyncSender<PrimaryAutoCommandBuffer>) -> Result<(), CaptureLoopError> {
+	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage>, sender: mpsc::SyncSender<(PrimaryAutoCommandBuffer, Option<Isometry3>)>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
 		let mut last_capture = Instant::now();
 		
@@ -67,7 +68,8 @@ pub trait Camera: Send + Sized + 'static {
 			last_capture = Instant::now();
 			
 			let sub_buffer = buffer.chunk(
-				frame.chunks_exact(CHUNK_SIZE)
+				frame.0
+				     .chunks_exact(CHUNK_SIZE)
 				     .map(|c| unsafe { *(c.as_ptr() as *const [u8; CHUNK_SIZE]) })
 			)?;
 			let sub_slice: BufferSlice<[u8], _> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
@@ -76,7 +78,7 @@ pub trait Camera: Send + Sized + 'static {
 			builder.copy_buffer_to_image(sub_slice, target.clone())?;
 			let command_buffer = builder.build()?;
 			
-			sender.send(command_buffer).or(Err(CaptureLoopError::Quitting))?;
+			sender.send((command_buffer, frame.1)).or(Err(CaptureLoopError::Quitting))?;
 		}
 	}
 }
