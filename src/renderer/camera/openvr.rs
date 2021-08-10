@@ -112,7 +112,7 @@ impl Camera for OpenVR {
 			fb.buffer.as_slice(),
 			AMat4::from_slice34(fb.standing_device_pose.device_to_absolute_tracking())
 				.to_subset()
-				.map(|pose: Isometry3| htc * pose) // TODO: Sure?
+				.map(|pose: Isometry3| pose * htc)
 		))
 	}
 }
