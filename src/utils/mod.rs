@@ -1,7 +1,8 @@
 use std::ffi::CString;
-use vulkano::instance::{Instance, PhysicalDevice};
+use vulkano::instance::Instance;
 use vulkano::{VulkanObject, SynchronizedVulkanObject, Handle};
 use vulkano::device::{Device, Queue};
+use vulkano::device::physical::PhysicalDevice;
 use vulkano::image::{AttachmentImage, ImageAccess, StorageImage, ImmutableImage};
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
 use image::DynamicImage;

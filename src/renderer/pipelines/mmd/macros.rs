@@ -22,44 +22,20 @@ macro_rules! mmd_pipelines {
 		}
 	)* ) => {
 		use std::sync::Arc;
-		use std::ops::Deref;
-		use derive_deref::Deref;
-		use vulkano::SafeDeref;
 		use vulkano::pipeline::GraphicsPipeline;
 		use vulkano::render_pass::{RenderPass, Subpass};
 		use vulkano::pipeline::viewport::Viewport;
 		use vulkano::device::DeviceOwned;
-		use vulkano::pipeline::vertex::SingleBufferDefinition;
 		
-		use $crate::renderer::pipelines::{Pipeline, PipelineError, pre_mul_alpha_blending};
-		
-		type MMDPipelineInner = GraphicsPipeline<SingleBufferDefinition<Vertex>>;
-		
-		#[derive(Clone)]
-		pub enum MMDPipelineAny {
-			$( $name(Arc<$name>), )*
-		}
-		
-		impl Deref for MMDPipelineAny {
-			type Target = MMDPipelineInner;
-			
-		    fn deref(&self) -> &Self::Target {
-		        match self {
-					$( MMDPipelineAny::$name(ref inner) => &inner.0, )*
-		        }
-		    }
-		}
-		
-		unsafe impl SafeDeref for MMDPipelineAny {}
+		use $crate::renderer::pipelines::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 		
 		$(
-			#[derive(Debug, Deref)]
-			$pub struct $name(MMDPipelineInner);
+			$pub struct $name;
 			
-			unsafe impl SafeDeref for $name {}
-			
-			impl Pipeline for $name {
-				fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
+			impl PipelineConstructor for $name {
+				type PipeType = GraphicsPipeline;
+				
+				fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 					use $vertex_shader as vertex_shader;
 					use $fragment_shader as fragment_shader;
 					
@@ -84,7 +60,7 @@ macro_rules! mmd_pipelines {
 					)*
 					
 					let $builder = GraphicsPipeline::start()
-						.vertex_input_single_buffer()
+						.vertex_input_single_buffer::<Vertex>()
 						.vertex_shader(vs.main_entry_point(), vs_consts)
 						.fragment_shader(fs.main_entry_point(), fs_consts)
 						.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
@@ -97,16 +73,10 @@ macro_rules! mmd_pipelines {
 							depth_range: 0.0..1.0,
 						}));
 					
-					Ok(Arc::new($name(
+					Ok(Arc::new(
 						$code.build(device.clone())?
-					)))
+					))
 				}
-			}
-			
-			impl From<Arc<$name>> for MMDPipelineAny {
-			    fn from(pipeline: Arc<$name>) -> Self {
-			        MMDPipelineAny::$name(pipeline)
-			    }
 			}
 		)*
 	}

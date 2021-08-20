@@ -64,19 +64,18 @@ mmd_pipelines!(
 
 pub const MORPH_GROUP_SIZE: usize = 32;
 
-#[derive(Debug, Deref)]
-pub struct MMDPipelineMorphs(ComputePipeline);
+pub struct MMDPipelineMorphs;
 
-unsafe impl SafeDeref for MMDPipelineMorphs {}
-
-impl Pipeline for MMDPipelineMorphs {
-	fn new(render_pass: &Arc<RenderPass>, _frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
+impl PipelineConstructor for MMDPipelineMorphs {
+	type PipeType = ComputePipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>, _frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device().clone();
 		let cs = morph_comp::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(MMDPipelineMorphs(
+		Ok(Arc::new(
 			ComputePipeline::new(device, &cs.main_entry_point(), &(), None)?
-		)))
+		))
 	}
 }
 

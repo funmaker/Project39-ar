@@ -1,15 +1,12 @@
 use std::sync::Arc;
-use derive_deref::Deref;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{RenderPass, Subpass};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
-use vulkano::SafeDeref;
 
 mod vertex;
 
-use super::{Pipeline, PipelineError};
+use super::{PipelineConstructor, PipelineError};
 pub use vertex::Vertex;
 
 mod vert {
@@ -32,20 +29,19 @@ mod frag {
 	}
 }
 
-#[derive(Debug, Deref)]
-pub struct BackgroundPipeline(GraphicsPipeline<SingleBufferDefinition<Vertex>>);
+pub struct BackgroundPipeline;
 
-unsafe impl SafeDeref for BackgroundPipeline {}
-
-impl Pipeline for BackgroundPipeline {
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
+impl PipelineConstructor for BackgroundPipeline {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(BackgroundPipeline(
+		Ok(Arc::new(
 			GraphicsPipeline::start()
-				.vertex_input_single_buffer()
+				.vertex_input_single_buffer::<Vertex>()
 				.vertex_shader(vs.main_entry_point(), ())
 				.viewports(Some(Viewport {
 					origin: [0.0, 0.0],
@@ -57,6 +53,6 @@ impl Pipeline for BackgroundPipeline {
 				.cull_mode_back()
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.build(device.clone())?
-		)))
+		))
 	}
 }

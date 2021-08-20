@@ -2,15 +2,14 @@ use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferSlice};
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::Sampler;
-use vulkano::descriptor::{DescriptorSet};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
+use vulkano::pipeline::GraphicsPipeline;
 
-use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline, MMDPipelineAny};
+use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
 use crate::renderer::model::{ModelError, VertexIndex};
-use vulkano::pipeline::GraphicsPipelineAbstract;
 
-pub type PipelineWithSet = (MMDPipelineAny, Arc<dyn DescriptorSet + Send + Sync>);
+pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<dyn DescriptorSet + Send + Sync>);
 
 #[derive(Debug, Copy, Clone)]
 pub struct MaterialInfo {
@@ -43,9 +42,9 @@ impl<VI: VertexIndex> SubMesh<VI> {
 	           -> Result<SubMesh<VI>, ModelError> {
 		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
 		
-		let main_pipeline: MMDPipelineAny = match no_cull {
-			false => renderer.pipelines.get::<MMDPipelineOpaque>()?.into(),
-			true  => renderer.pipelines.get::<MMDPipelineOpaqueNoCull>()?.into(),
+		let main_pipeline = match no_cull {
+			false => renderer.pipelines.get::<MMDPipelineOpaque>()?,
+			true  => renderer.pipelines.get::<MMDPipelineOpaqueNoCull>()?,
 		};
 		
 		let texture_view = ImageView::new(texture)?;
@@ -53,7 +52,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 		let sphere_map_view = ImageView::new(sphere_map)?;
 		
 		let main_set = Arc::new(
-			PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
 				.add_buffer(material_buffer.clone())?
 				.add_sampled_image(texture_view.clone(), sampler.clone())?
 				.add_sampled_image(toon_view.clone(), sampler.clone())?
@@ -71,13 +70,13 @@ impl<VI: VertexIndex> SubMesh<VI> {
 		};
 		
 		if !opaque {
-			let pipeline: MMDPipelineAny = match no_cull {
-				false => renderer.pipelines.get::<MMDPipelineTrans>()?.into(),
-				true  => renderer.pipelines.get::<MMDPipelineTransNoCull>()?.into(),
+			let pipeline = match no_cull {
+				false => renderer.pipelines.get::<MMDPipelineTrans>()?,
+				true  => renderer.pipelines.get::<MMDPipelineTransNoCull>()?,
 			};
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_buffer(material_buffer.clone())?
 					.add_sampled_image(texture_view.clone(), sampler.clone())?
 					.add_sampled_image(toon_view.clone(), sampler.clone())?
@@ -95,7 +94,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(1).ok_or(ModelError::NoLayout)?.clone())
+				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
 					.add_sampled_image(texture_view.clone(), sampler.clone())?
 					.build()?
 			);

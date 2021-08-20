@@ -1,15 +1,12 @@
 use std::sync::Arc;
-use derive_deref::Deref;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{RenderPass, Subpass};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
-use vulkano::SafeDeref;
 
 mod vertex;
 
-use super::{Pipeline, PipelineError, pre_mul_alpha_blending};
+use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::{Vertex, TexturedVertex};
 
 mod vert {
@@ -32,20 +29,19 @@ mod frag {
 	}
 }
 
-#[derive(Debug, Deref)]
-pub struct DebugPipeline(GraphicsPipeline<SingleBufferDefinition<Vertex>>);
+pub struct DebugPipeline;
 
-unsafe impl SafeDeref for DebugPipeline {}
-
-impl Pipeline for DebugPipeline {
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
+impl PipelineConstructor for DebugPipeline {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::Shader::load(device.clone()).unwrap();
 		let fs = frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(DebugPipeline(
+		Ok(Arc::new(
 			GraphicsPipeline::start()
-				.vertex_input_single_buffer()
+				.vertex_input_single_buffer::<Vertex>()
 				.vertex_shader(vs.main_entry_point(), ())
 				.viewports(Some(Viewport {
 					origin: [0.0, 0.0],
@@ -57,7 +53,7 @@ impl Pipeline for DebugPipeline {
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.cull_mode_back()
 				.build(device.clone())?
-		)))
+		))
 	}
 }
 
@@ -81,20 +77,19 @@ mod tex_frag {
 	}
 }
 
-#[derive(Debug, Deref)]
-pub struct DebugTexturedPipeline(GraphicsPipeline<SingleBufferDefinition<TexturedVertex>>);
+pub struct DebugTexturedPipeline;
 
-unsafe impl SafeDeref for DebugTexturedPipeline {}
-
-impl Pipeline for DebugTexturedPipeline {
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<dyn Pipeline>, PipelineError> {
+impl PipelineConstructor for DebugTexturedPipeline {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = tex_vert::Shader::load(device.clone()).unwrap();
 		let fs = tex_frag::Shader::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(DebugTexturedPipeline(
+		Ok(Arc::new(
 			GraphicsPipeline::start()
-				.vertex_input_single_buffer()
+				.vertex_input_single_buffer::<TexturedVertex>()
 				.vertex_shader(vs.main_entry_point(), ())
 				.viewports(Some(Viewport {
 					origin: [0.0, 0.0],
@@ -106,6 +101,6 @@ impl Pipeline for DebugTexturedPipeline {
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.cull_mode_back()
 				.build(device.clone())?
-		)))
+		))
 	}
 }

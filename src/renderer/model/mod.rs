@@ -1,7 +1,6 @@
 use std::ops::Range;
 use err_derive::Error;
-use vulkano::{memory, sync, command_buffer};
-use vulkano::descriptor::descriptor_set;
+use vulkano::{memory, sync, command_buffer, descriptor_set, DeviceSize};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::input_assembly::Index;
 
@@ -32,7 +31,7 @@ impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<i32
 #[derive(Debug, Error)]
 pub enum ModelError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
-	#[error(display = "Invalid indices range: {:?}, len: {}", _0, _1)] IndicesRangeError(Range<usize>, usize),
+	#[error(display = "Invalid indices range: {:?}, len: {}", _0, _1)] IndicesRangeError(Range<DeviceSize>, DeviceSize),
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),

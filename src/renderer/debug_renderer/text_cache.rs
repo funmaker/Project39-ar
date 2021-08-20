@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use err_derive::Error;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor::{descriptor_set, DescriptorSet};
+use vulkano::descriptor_set::{self, PersistentDescriptorSet, DescriptorSet};
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::device::Queue;
 use vulkano::sampler;
 use unifont::Glyph;
@@ -12,10 +12,9 @@ use unifont::Glyph;
 use crate::renderer::pipelines::debug::DebugTexturedPipeline;
 use crate::renderer::pipelines::Pipelines;
 use crate::renderer::pipelines::PipelineError;
-use vulkano::pipeline::GraphicsPipelineAbstract;
 
 pub struct TextCache {
-	pipeline: Arc<DebugTexturedPipeline>,
+	pipeline: Arc<GraphicsPipeline>,
 	queue: Arc<Queue>,
 	entries: HashMap<String, TextEntry>,
 }
@@ -27,7 +26,7 @@ const REPLACEMENT_GLYPH: Glyph = Glyph::HalfWidth([
 
 impl TextCache {
 	pub fn new(queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<Self, TextCacheError> {
-		let pipeline = pipelines.get()?;
+		let pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		
 		Ok(TextCache {
 			pipeline,
@@ -68,7 +67,7 @@ impl TextCache {
 			                           1.0)?;
 			
 			let set = Arc::new(
-				PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layout(0).unwrap().clone())
+				PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone())
 					.add_sampled_image(ImageView::new(image)?, sampler.clone())?
 					.build()?
 			);

@@ -1,14 +1,14 @@
 use std::sync::Arc;
 use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
-use vulkano::descriptor::DescriptorSet;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
+use vulkano::pipeline::GraphicsPipeline;
 use openvr::render_models;
 
 mod import;
@@ -20,11 +20,10 @@ use crate::utils::ImageEx;
 use crate::math::AMat4;
 use super::{Model, ModelError, ModelRenderError, VertexIndex, FenceCheck};
 pub use import::SimpleModelLoadError;
-use vulkano::pipeline::GraphicsPipelineAbstract;
 
 #[derive(Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
-	pipeline: Arc<DefaultPipeline>,
+	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
@@ -58,7 +57,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
 		
 		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(0).ok_or(ModelError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone())
 			                        .add_buffer(renderer.commons.clone())?
 			                        .add_sampled_image(view, sampler)?
 			                        .build()?
@@ -92,13 +91,17 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
-		builder.draw_indexed(self.pipeline.clone(),
+		builder.draw_indexed(self.indices.len() as u32,
+		                     1,
+		                     0,
+		                     0,
+		                     0,
+		                     self.pipeline.clone(),
 		                     &DynamicState::none(),
 		                     self.vertices.clone(),
 		                     self.indices.clone(),
 		                     self.set.clone(),
-		                     model_matrix.to_homogeneous(),
-		                     None)?;
+		                     model_matrix.to_homogeneous())?;
 		
 		Ok(())
 	}

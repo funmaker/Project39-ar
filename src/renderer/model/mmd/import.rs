@@ -2,12 +2,14 @@ use std::io::BufReader;
 use std::fs::File;
 use std::path::{PathBuf, Path};
 use std::ffi::{OsStr, OsString};
+use std::convert::TryInto;
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::morph::Offsets;
 use mmd::WeightDeform;
 use image::ImageFormat;
+use vulkano::DeviceSize;
 
 use crate::application::entity::{Bone, BoneConnection};
 use crate::renderer::model::{ModelError, VertexIndex};
@@ -15,7 +17,6 @@ use crate::renderer::Renderer;
 use crate::math::{Vec3, Color};
 use crate::debug;
 use super::{Vertex, shared::MMDModelShared, shared::SubMeshDesc};
-use std::convert::TryInto;
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
 	let mut root = PathBuf::from(path);
@@ -54,7 +55,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	}
 	
 	let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
-	let mut last_index = 0_usize;
+	let mut last_index: DeviceSize = 0;
 	
 	for material in materials_reader.iter::<i32>() {
 		let material = material?;
@@ -84,7 +85,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 		let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
 		
 		model.add_sub_mesh(SubMeshDesc {
-			range: last_index .. last_index + material.surface_count as usize,
+			range: last_index .. last_index + material.surface_count as DeviceSize,
 			texture: material.texture_index.try_into().ok(),
 			toon: toon_index.try_into().ok(),
 			sphere_map: material.environment_index.try_into().ok(),
@@ -98,7 +99,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 			edge
 		});
 		
-		last_index += material.surface_count as usize;
+		last_index += material.surface_count as DeviceSize;
 	}
 	
 	let mut bones_reader = mmd::BoneReader::new(materials_reader)?;

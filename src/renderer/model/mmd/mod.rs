@@ -4,9 +4,9 @@ use num_traits::Zero;
 use simba::scalar::SubsetOf;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
-use vulkano::descriptor::DescriptorSet;
+use vulkano::descriptor_set::{PersistentDescriptorSet, DescriptorSet};
 use vulkano::device::DeviceOwned;
+use vulkano::DeviceSize;
 
 pub mod test;
 mod sub_mesh;
@@ -22,7 +22,6 @@ use crate::renderer::pipelines::mmd::MORPH_GROUP_SIZE;
 pub use crate::renderer::pipelines::mmd::Vertex;
 pub use import::MMDModelLoadError;
 use shared::MMDModelShared;
-use vulkano::pipeline::ComputePipelineAbstract;
 
 pub struct MMDModel<VI: VertexIndex> {
 	shared: Arc<MMDModelShared<VI>>,
@@ -42,7 +41,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let bones_mats = Vec::with_capacity(bone_count);
 		let bones_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                         size_of::<AMat4>() * bone_count,
+		                                         (size_of::<AMat4>() * bone_count) as DeviceSize,
 		                                         BufferUsage {
 			                                         transfer_destination: true,
 			                                         storage_buffer: true,
@@ -52,7 +51,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let morphs_count = (shared.morphs_sizes.len() + 1) / 2;
 		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
-		                                          morphs_count,
+		                                          morphs_count as DeviceSize,
 		                                          BufferUsage {
 			                                          transfer_destination: true,
 			                                          storage_buffer: true,
@@ -71,9 +70,10 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		
 		let compute_layout = shared.morphs_pipeline
 		                           .layout()
-		                           .descriptor_set_layout(0)
+		                           .descriptor_set_layouts()
+		                           .get(0)
 		                           .ok_or(ModelError::NoLayout)?
-		                                   .clone();
+		                           .clone();
 		
 		let morphs_set = Arc::new(
 			PersistentDescriptorSet::start(compute_layout)
@@ -196,8 +196,7 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1],
 			                 self.shared.morphs_pipeline.clone(),
 			                 self.morphs_set.clone(),
-			                 self.shared.morphs_max_size as u32,
-			                 None)?;
+			                 self.shared.morphs_max_size as u32)?;
 		}
 		
 		Ok(())
@@ -218,13 +217,17 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;
 				let scale: f32 = pixel * sub_mesh.edge_scale;
 				
-				builder.draw_indexed(pipeline,
+				builder.draw_indexed(sub_mesh.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0,
+				                     pipeline,
 				                     &DynamicState::none(),
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.clone(), sub_mesh.edge_color, scale),
-				                     None)?;
+				                     (model_matrix.clone(), sub_mesh.edge_color, scale))?;
 			}
 		}
 		
@@ -232,25 +235,33 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			let (pipeline, mesh_set) = sub_mesh.main.clone();
 		
-			builder.draw_indexed(pipeline,
+			builder.draw_indexed(sub_mesh.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0,
+			                     pipeline,
 			                     &DynamicState::none(),
 			                     self.shared.vertices.clone(),
 			                     sub_mesh.indices.clone(),
 			                     (self.model_set.clone(), mesh_set),
-			                     (model_matrix.clone(), Vec4::zero(), 0.0),
-			                     None)?;
+			                     (model_matrix.clone(), Vec4::zero(), 0.0))?;
 		}
 		
 		// Transparent
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.transparent.clone() {
-				builder.draw_indexed(pipeline,
+				builder.draw_indexed(sub_mesh.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0,
+				                     pipeline,
 				                     &DynamicState::none(),
 				                     self.shared.vertices.clone(),
 				                     sub_mesh.indices.clone(),
 				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.clone(), Vec4::zero(), 0.0),
-				                     None)?;
+				                     (model_matrix.clone(), Vec4::zero(), 0.0))?;
 			}
 		}
 		

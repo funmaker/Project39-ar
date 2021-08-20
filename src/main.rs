@@ -7,6 +7,7 @@
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(drain_filter)]
+#![feature(llvm_asm)]
 #[macro_use] extern crate lazy_static;
 
 use std::fs;

@@ -3,16 +3,16 @@ use std::time::Instant;
 use std::ffi::CString;
 use std::convert::TryInto;
 use err_derive::Error;
-use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory, Version};
+use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory, Version, descriptor_set};
 use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
-use vulkano::instance::{Instance, InstanceExtensions, PhysicalDevice};
+use vulkano::instance::{Instance, InstanceExtensions};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::device::{Device, DeviceExtensions, Features, Queue};
+use vulkano::device::physical::PhysicalDevice;
 use vulkano::image::{SwapchainImage, ImageUsage, ImageLayout, SampleCount};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use vulkano::descriptor::descriptor_set;
 use vulkano::format::Format;
 use vulkano::sync::{GpuFuture, FenceSignalFuture};
 
@@ -198,17 +198,13 @@ impl Renderer {
 	}
 	
 	fn create_physical_device<'a>(instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
-		fn stringify<D: std::fmt::Display>(val: &Option<D>) -> String {
-			val.as_ref().map_or_else(|| "Unknown".to_string(), |val| val.to_string())
-		}
-		
 		dprintln!("Devices:");
 		for device in PhysicalDevice::enumerate(&instance) {
 			dprintln!("\t{}: {} api: {} driver: {}",
 			          device.index(),
-			          stringify(&device.properties().device_name),
-			          stringify(&device.properties().api_version),
-			          stringify(&device.properties().driver_version));
+			          device.properties().device_name,
+			          device.properties().api_version,
+			          device.properties().driver_version);
 		}
 		
 		let physical = vr.as_ref()
@@ -226,9 +222,9 @@ impl Renderer {
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
 		          physical.index(),
-		          stringify(&physical.properties().device_name),
-		          stringify(&physical.properties().api_version),
-		          stringify(&physical.properties().driver_version));
+		          physical.properties().device_name,
+		          physical.properties().api_version,
+		          physical.properties().driver_version);
 		
 		Ok(physical)
 	}
@@ -459,7 +455,7 @@ impl Renderer {
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
-			   /*.copy_image(self.eyes.resolved_image.clone(),
+			   .copy_image(self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   1,
 		                   0,
@@ -468,28 +464,15 @@ impl Renderer {
 		                   0,
 		                   0,
 		                   [eye_width as u32, eye_height as u32, 1],
-		                   1)?*/;
+		                   1)?;
 		
 		let command_buffer = builder.build()?;
-		
-		let mut builder2 = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
-		builder2.copy_image(self.eyes.resolved_image.clone(),
-		                    [0, 0, 0],
-		                    1,
-		                    0,
-		                    self.eyes.side_image.clone(),
-		                    [0, 0, 0],
-		                    0,
-		                    0,
-		                    [eye_width as u32, eye_height as u32, 1],
-		                    1)?;
-		let command_buffer2 = builder2.build()?;
 		
 		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
 			future = future.then_signal_semaphore().boxed();
 		}
 		
-		future = future.then_execute(self.queue.clone(), command_buffer)?.then_execute(self.queue.clone(), command_buffer2)?.boxed();
+		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
 		
 		// TODO: Move to another thread
 		if let Some(ref vr) = self.vr {

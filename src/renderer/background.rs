@@ -1,15 +1,14 @@
 use std::sync::Arc;
 use err_derive::Error;
+use vulkano::{memory, sync, command_buffer, sampler};
 use vulkano::image::AttachmentImage;
 use vulkano::device::Queue;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer};
-use vulkano::descriptor::{DescriptorSet, descriptor_set};
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
+use vulkano::descriptor_set::{self, DescriptorSet, PersistentDescriptorSet};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
-use vulkano::pipeline::GraphicsPipelineAbstract;
-use vulkano::{memory, sync, command_buffer, sampler};
+use vulkano::pipeline::GraphicsPipeline;
 
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
@@ -29,7 +28,7 @@ struct Intrinsics {
 }
 
 pub struct Background {
-	pipeline: Arc<BackgroundPipeline>,
+	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
@@ -41,7 +40,7 @@ pub struct Background {
 impl Background {
 	pub fn new(camera_image: Arc<AttachmentImage>, eyes: &Eyes, queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<Background, BackgroundError> {
 		let config = config::get();
-		let pipeline: Arc<BackgroundPipeline> = pipelines.get()?;
+		let pipeline = pipelines.get::<BackgroundPipeline>()?;
 		
 		let square = [
 			Vertex::new([-1.0, -1.0]),
@@ -100,7 +99,7 @@ impl Background {
 		)?;
 		
 		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layout(0).ok_or(BackgroundError::NoLayout)?.clone())
+			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone())
 				.add_buffer(intrinsics.clone())?
 				.add_sampled_image(view, sampler)?
 				.build()?
@@ -210,12 +209,15 @@ impl Background {
 			(rotation * self.extrinsics.1).to_homogeneous(),
 		);
 		
-		builder.draw(self.pipeline.clone(),
+		builder.draw(self.vertices.len() as u32,
+		             1,
+		             0,
+		             0,
+		             self.pipeline.clone(),
 		             &DynamicState::none(),
 		             self.vertices.clone(),
 		             self.set.clone(),
-		             constants,
-		             None)?;
+		             constants)?;
 		
 		Ok(())
 	}

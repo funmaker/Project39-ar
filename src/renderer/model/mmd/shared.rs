@@ -6,7 +6,9 @@ use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool, BufferAccess,
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
-use vulkano::descriptor::descriptor_set::UnsafeDescriptorSetLayout;
+use vulkano::descriptor_set::layout::DescriptorSetLayout;
+use vulkano::DeviceSize;
+use vulkano::pipeline::ComputePipeline;
 
 use crate::application::entity::Bone;
 use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
@@ -17,7 +19,6 @@ use crate::utils::VecFuture;
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::Vertex;
-use vulkano::pipeline::GraphicsPipelineAbstract;
 
 pub struct MMDModelShared<VI: VertexIndex> {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -28,7 +29,7 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub morphs_sizes: Vec<usize>,
 	pub morphs_max_size: usize,
 	pub morphs_pool: CpuBufferPool<IVec4>,
-	pub morphs_pipeline: Arc<MMDPipelineMorphs>,
+	pub morphs_pipeline: Arc<ComputePipeline>,
 	pub fence: FenceCheck,
 }
 
@@ -37,12 +38,12 @@ impl<VI: VertexIndex> MMDModelShared<VI> {
 		MMDModelSharedBuilder::new(vertices, indices)
 	}
 	
-	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<UnsafeDescriptorSetLayout>, ModelError> {
+	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<DescriptorSetLayout>, ModelError> {
 		self.sub_meshes.first()
 		               .map(|mesh| mesh.main.0.clone())
 		               .ok_or(ModelError::NoLayout)
 		               .or_else(|_| renderer.pipelines.get::<MMDPipelineOpaque>().map_err(Into::into).map(Into::into))
-		               .and_then(|pipeline| pipeline.layout().descriptor_set_layout(0).cloned().ok_or(ModelError::NoLayout))
+		               .and_then(|pipeline| pipeline.layout().descriptor_set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
 	}
 }
 
@@ -134,7 +135,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let mut sub_meshes = vec![];
 		
 		for desc in self.sub_meshes {
-			let indices = indices.clone()
+			let indicess = indices.clone()
 			                     .into_buffer_slice()
 			                     .slice(desc.range.clone())
 			                     .ok_or(ModelError::IndicesRangeError(desc.range, indices.len()))?;
@@ -163,7 +164,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			                                                                     BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
 			                                                                     renderer.load_queue.clone())?;
 			
-			let sub_mesh = SubMesh::new(indices, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
+			let sub_mesh = SubMesh::new(indicess, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
 			
 			buffer_promises.push(material_promise);
 			sub_meshes.push(sub_mesh);
@@ -197,7 +198,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let bones_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
 		let morphs_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
 		
-		let morphs_pipeline = renderer.pipelines.get()?;
+		let morphs_pipeline = renderer.pipelines.get::<MMDPipelineMorphs>()?;
 		
 		let fence = FenceCheck::new(image_promises.join(buffer_promises))?;
 		
@@ -217,7 +218,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 }
 
 pub struct SubMeshDesc {
-	pub range: Range<usize>,
+	pub range: Range<DeviceSize>,
 	pub texture: Option<usize>,
 	pub toon: Option<usize>,
 	pub sphere_map: Option<usize>,

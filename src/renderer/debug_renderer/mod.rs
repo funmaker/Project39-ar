@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use std::f32::consts::PI;
 use err_derive::Error;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
-use vulkano::buffer::{CpuBufferPool, BufferUsage};
-use vulkano::device::Queue;
-use vulkano::descriptor::DescriptorSet;
 use vulkano::{memory, command_buffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
+use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
+use vulkano::device::Queue;
+use vulkano::descriptor_set::DescriptorSet;
+use vulkano::pipeline::GraphicsPipeline;
+use nalgebra::Unit;
 
 mod text_cache;
 
@@ -15,11 +17,10 @@ use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, Text
 use super::pipelines::{Pipelines, PipelineError};
 use super::CommonsUBO;
 use text_cache::{TextCache, TextCacheError, TextCacheGetError};
-use nalgebra::Unit;
 
 pub struct DebugRenderer {
-	pipeline: Arc<DebugPipeline>,
-	text_pipeline: Arc<DebugTexturedPipeline>,
+	pipeline: Arc<GraphicsPipeline>,
+	text_pipeline: Arc<GraphicsPipeline>,
 	vertices_pool: CpuBufferPool<Vertex>,
 	text_vertices_pool: CpuBufferPool<TexturedVertex>,
 	indexes_pool: CpuBufferPool<u32>,
@@ -35,8 +36,8 @@ const RING_WIDTH: f32 = 0.9;
 impl DebugRenderer {
 	pub fn new(load_queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
 		let device = load_queue.device();
-		let pipeline = pipelines.get()?;
-		let text_pipeline = pipelines.get()?;
+		let pipeline = pipelines.get::<DebugPipeline>()?;
+		let text_pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		
 		let vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
 		let text_vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
@@ -90,13 +91,17 @@ impl DebugRenderer {
 			let vertex_buffer = self.vertices_pool.chunk(self.vertices.drain(..))?;
 			let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 			
-			builder.draw_indexed(self.pipeline.clone(),
+			builder.draw_indexed(index_buffer.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0,
+			                     self.pipeline.clone(),
 			                     &DynamicState::none(),
 			                     vertex_buffer,
 			                     index_buffer,
 			                     (),
-			                     (),
-			                     None)?;
+			                     ())?;
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
@@ -107,13 +112,17 @@ impl DebugRenderer {
 					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;
 					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 					
-					builder.draw_indexed(self.text_pipeline.clone(),
+					builder.draw_indexed(index_buffer.len() as u32,
+					                     1,
+					                     0,
+					                     0,
+					                     0,
+					                     self.text_pipeline.clone(),
 					                     &DynamicState::none(),
 					                     vertex_buffer,
 					                     index_buffer,
 					                     set,
-					                     (),
-					                     None)?;
+					                     ())?;
 				}
 			}
 			
