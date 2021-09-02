@@ -30,6 +30,8 @@ pub struct Config {
 	pub camera: CameraConfig,
 	/// Non VR mode
 	pub novr: NovrConfig,
+	/// Window max framerate (0 - unlimited, not recommended)
+	pub window_max_fps: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]

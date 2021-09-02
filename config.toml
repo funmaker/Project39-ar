@@ -3,6 +3,7 @@ validation = false
 gpu_id = 0
 ssaa = 1
 msaa = 2
+window_max_fps = 60
 
 [camera]
 driver = "openvr"

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::error::Error;
-use std::time::Duration;
+use std::time::{Instant, Duration};
 use std::fmt::{Debug, Formatter};
 use err_derive::Error;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
@@ -20,12 +20,13 @@ use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
 use crate::math::Vec2;
-use crate::debug;
+use crate::{debug, config};
 
 
 pub struct Window {
 	event_loop: EventLoop<()>,
 	surface: Arc<Surface<WinitWindow>>,
+	last_present: Instant,
 	pub swapchain: (Arc<Swapchain<WinitWindow>>, Vec<Arc<SwapchainImage<WinitWindow>>>),
 	pub swapchain_regen_required: bool,
 	pub render_required: bool,
@@ -65,6 +66,7 @@ impl Window {
 			event_loop,
 			surface,
 			swapchain,
+			last_present: Instant::now(),
 			swapchain_regen_required: false,
 			render_required: true,
 			quit_required: false,
@@ -95,7 +97,17 @@ impl Window {
 	              -> Result<Box<dyn GpuFuture>, WindowRenderError> {
 		let (ref mut swapchain, ref mut images) = self.swapchain;
 		
-		let timeout = (!self.render_required).then_some(Duration::new(0, 0));
+		let timeout = if !self.render_required {
+			let max_fps = config::get().window_max_fps;
+			
+			if max_fps != 0 && self.last_present.elapsed().as_secs_f32() < 1.0 / max_fps as f32 {
+				return Err(WindowRenderError::Later(future));
+			} else {
+				Some(Duration::new(0, 0))
+			}
+		} else {
+			None
+		};
 		
 		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), timeout) {
 			Err(AcquireError::OutOfDate) => {
@@ -147,6 +159,7 @@ impl Window {
 		let command_buffer = builder.build()?;
 		
 		self.render_required = false;
+		self.last_present = Instant::now();
 		
 		Ok(Box::new(future.join(acquire_future)
 		                  .then_execute(queue.clone(), command_buffer)?

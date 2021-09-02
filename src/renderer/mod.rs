@@ -484,10 +484,11 @@ impl Renderer {
 				      .then_signal_fence_and_flush()?
 				      .wait(None)?;
 				
-				debug::set_debug(false); // Hide internal OpenVR warnings
+				let debug = debug::debug();
+				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings
 				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(pose))?;
 				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(pose))?;
-				debug::set_debug(true);
+				if debug { debug::set_debug(true); }
 				
 				future = sync::now(self.device.clone())
 				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?
