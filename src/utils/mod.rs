@@ -9,8 +9,10 @@ use image::DynamicImage;
 
 mod vec_future;
 pub mod from_args;
+mod fps_counter;
 
 pub use vec_future::VecFuture;
+pub use fps_counter::FpsCounter;
 
 
 // Images

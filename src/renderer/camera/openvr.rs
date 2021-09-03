@@ -84,8 +84,10 @@ impl OpenVR {
 
 impl Camera for OpenVR {
 	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
+		let last_capture = self.last_capture;
+		self.last_capture = Instant::now();
 		
-		if let Some(cooldown) = Duration::from_millis(16).checked_sub(self.last_capture.elapsed()) {
+		if let Some(cooldown) = Duration::from_millis(16).checked_sub(last_capture.elapsed()) {
 			std::thread::sleep(cooldown);
 		}
 		
@@ -103,8 +105,6 @@ impl Camera for OpenVR {
 				fb.buffer[pos + 2] = temp;
 			}
 		}
-		
-		self.last_capture = Instant::now();
 		
 		let htc = self.headtocam;
 		

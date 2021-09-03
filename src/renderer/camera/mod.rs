@@ -21,6 +21,7 @@ pub use self::openvr::{OpenVR, OpenVRCameraError};
 pub use self::dummy::Dummy;
 use crate::debug;
 use crate::math::Isometry3;
+use crate::utils::FpsCounter;
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
@@ -55,7 +56,7 @@ pub trait Camera: Send + Sized + 'static {
 	
 	fn capture_loop(&mut self, queue: Arc<Queue>, target: Arc<AttachmentImage>, sender: mpsc::SyncSender<(PrimaryAutoCommandBuffer, Option<Isometry3>)>) -> Result<(), CaptureLoopError> {
 		let buffer = CpuBufferPool::upload(queue.device().clone());
-		let mut last_capture = Instant::now();
+		let mut fps_counter = FpsCounter::<20>::new();
 		
 		loop {
 			let frame = match self.capture() {
@@ -64,8 +65,8 @@ pub trait Camera: Send + Sized + 'static {
 				Err(err) => return Err(err.into()),
 			};
 			
-			debug::set_flag("CAMERA_FPS", 1.0 / last_capture.elapsed().as_secs_f32());
-			last_capture = Instant::now();
+			fps_counter.tick();
+			debug::set_flag("CAMERA_FPS", fps_counter.fps());
 			
 			let sub_buffer = buffer.chunk(
 				frame.0

@@ -60,7 +60,7 @@ pub struct Renderer {
 	background: Background,
 	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 	debug_renderer: DebugRenderer,
-	last_frame: Instant,
+	fps_counter: FpsCounter<20>,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
@@ -94,7 +94,7 @@ impl Renderer {
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
-		let last_frame = Instant::now();
+		let fps_counter = FpsCounter::new();
 		let previous_frame_end = None;
 		
 		Ok(Renderer {
@@ -111,7 +111,7 @@ impl Renderer {
 			background,
 			load_commands,
 			debug_renderer,
-			last_frame,
+			fps_counter,
 		})
 	}
 	
@@ -410,10 +410,9 @@ impl Renderer {
 			self.background.update_frame_pose(cam_pose.unwrap_or(hmd_pose));
 		}
 		
-		let since_last_frame = self.last_frame.elapsed();
-		self.last_frame = Instant::now();
+		self.fps_counter.tick();
 		
-		debug::draw_text(format!("FPS: {}", (1.0 / since_last_frame.as_secs_f32()).floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
+		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
 		let view_base = hmd_pose.inverse();
@@ -479,10 +478,9 @@ impl Renderer {
 			let pose = hmd_pose.to_matrix().to_slice34();
 			let vr = vr.lock().unwrap();
 			unsafe {
-				future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
-				      .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?
-				      .then_signal_fence_and_flush()?
-				      .wait(None)?;
+				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
+				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?;
+				f.flush()?;
 				
 				let debug = debug::debug();
 				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
@@ -490,10 +488,9 @@ impl Renderer {
 				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(pose))?;
 				if debug { debug::set_debug(true); }
 				
-				future = sync::now(self.device.clone())
-				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?
-				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.side_image.clone(),  self.device.clone(), self.queue.family())?)?
-				              .boxed()
+				future = f.then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?
+				          .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.side_image.clone(),  self.device.clone(), self.queue.family())?)?
+				          .boxed();
 			}
 		}
 		

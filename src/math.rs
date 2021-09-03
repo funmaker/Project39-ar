@@ -1,7 +1,7 @@
-use nalgebra::{Scalar, Transform, TCategory};
-use derive_deref::{Deref, DerefMut};
-use simba::scalar::{SubsetOf, SupersetOf};
 use std::any::Any;
+use std::ops::{Deref, DerefMut};
+use nalgebra::{Scalar, Transform, TCategory};
+use simba::scalar::{SubsetOf, SupersetOf};
 
 pub type Vec2 = nalgebra::Vector2<f32>;
 pub type Vec3 = nalgebra::Vector3<f32>;
@@ -100,7 +100,7 @@ impl<C: TCategory> VRSlice for Transform<f32, C, 3> {
 	}
 }
 
-#[derive(Deref, DerefMut, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 
 impl Color {
@@ -132,6 +132,20 @@ impl Color {
 			self.0.component_div(&Vec4::new(lightness, lightness, lightness, 1.0)) + Vec4::new(1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 0.0)
 		}
 	) }
+}
+
+impl Deref for Color {
+	type Target = Vec4;
+	
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl DerefMut for Color {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
 }
 
 
