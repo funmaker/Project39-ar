@@ -5,9 +5,9 @@ authors = ["Fun Maker <funmaker95@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano = { git = "https://github.com/funmaker/vulkano", rev = "a35790b363997bec93ba706006d1119664247069" }
-vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "a35790b363997bec93ba706006d1119664247069" }
-vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "a35790b363997bec93ba706006d1119664247069" }
+vulkano = { git = "https://github.com/funmaker/vulkano", rev = "16ebe752a213a268e348e23068c862645fb43d62" }
+vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "16ebe752a213a268e348e23068c862645fb43d62" }
+vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "16ebe752a213a268e348e23068c862645fb43d62" }
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
 #vulkano-win = { path = "../vulkano/vulkano-win" }

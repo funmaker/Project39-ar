@@ -7,8 +7,8 @@ use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBu
 use vulkano::descriptor_set::{self, DescriptorSet, PersistentDescriptorSet};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
-use vulkano::pipeline::GraphicsPipeline;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
+use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
@@ -98,12 +98,12 @@ impl Background {
 			1.0,
 		)?;
 		
-		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone())
-				.add_buffer(intrinsics.clone())?
-				.add_sampled_image(view, sampler)?
-				.build()?
-		);
+		let set = {
+			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone());
+			set_builder.add_buffer(intrinsics.clone())?
+			           .add_sampled_image(view, sampler)?;
+			Arc::new(set_builder.build()?)
+		};
 		
 		let flip_xz = Vec3::new(-1.0, 1.0, -1.0);
 		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
@@ -209,15 +209,19 @@ impl Background {
 			(rotation * self.extrinsics.1).to_homogeneous(),
 		);
 		
-		builder.draw(self.vertices.len() as u32,
+		builder.bind_pipeline_graphics(self.pipeline.clone())
+		       .bind_vertex_buffers(0, self.vertices.clone())
+		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+		                             self.pipeline.layout().clone(),
+		                             0,
+		                             self.set.clone())
+		       .push_constants(self.pipeline.layout().clone(),
+		                       0,
+		                       constants)
+		       .draw(self.vertices.len() as u32,
 		             1,
 		             0,
-		             0,
-		             self.pipeline.clone(),
-		             &DynamicState::none(),
-		             self.vertices.clone(),
-		             self.set.clone(),
-		             constants)?;
+		             0)?;
 		
 		Ok(())
 	}
@@ -237,8 +241,7 @@ pub enum BackgroundError {
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] DescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }
 

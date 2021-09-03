@@ -18,6 +18,7 @@ pub struct OpenVRCommandBuffer<P = StandardCommandPoolAlloc> {
 	#[allow(dead_code)] pool_alloc: P, // Safety: must be dropped after `inner`
 	in_use: AtomicBool,
 	image: Arc<AttachmentImage>,
+	image_initial_layout: ImageLayout,
 	image_final_layout: ImageLayout,
 	image_final_stages: PipelineStages,
 	image_final_access: AccessFlags,
@@ -86,6 +87,7 @@ impl OpenVRCommandBuffer<StandardCommandPoolAlloc> {
 			pool_alloc: pool_builder_alloc.into_alloc(),
 			in_use: AtomicBool::new(false),
 			image,
+			image_initial_layout: current_layout,
 			image_final_layout: new_layout,
 			image_final_stages: destination_stage,
 			image_final_access: destination_access,
@@ -110,20 +112,56 @@ unsafe impl<P> PrimaryCommandBuffer for OpenVRCommandBuffer<P> {
 			return Err(CommandBufferExecError::ExclusiveAlreadyInUse);
 		}
 		
-		let err = match self.inner.lock_submit(future, queue) {
-			Ok(()) => return Ok(()),
+		// Only lock when image leaves its preferred layout buffer
+		if self.image_initial_layout != self.image.final_layout_requirement() {
+			return Ok(());
+		}
+		
+		let prev_err = match future.check_image_access(
+			&self.image,
+			self.image_initial_layout,
+			true,
+			queue,
+		) {
+			Ok(_) => {
+				unsafe {
+					self.image.increase_gpu_lock();
+				}
+				return Ok(());
+			}
 			Err(err) => err,
 		};
 		
-		// If `self.inner.lock_submit()` failed, we revert action.
-		self.in_use.store(false, Ordering::SeqCst);
-		
-		Err(err)
+		match (
+			self.image.try_gpu_lock(
+				true,
+				false, // TODO: ???
+				self.image_initial_layout,
+			),
+			prev_err,
+		) {
+			(Ok(_), _) => return Ok(()),
+			(Err(err), AccessCheckError::Unknown)
+			| (_, AccessCheckError::Denied(err)) => {
+				
+				// Lock failed, we revert action.
+				self.in_use.store(false, Ordering::SeqCst);
+				
+				Err(CommandBufferExecError::AccessError {
+					error: err,
+					command_name: "OpenVRBarrier".into(),
+					command_param: "Image".into(),
+					command_offset: 0,
+				})
+			}
+		}
 	}
 	
 	unsafe fn unlock(&self) {
-		// Because of panic safety, we unlock the inner command buffer first.
-		self.inner.unlock();
+		// Only unlock on when image reverts to its preferred layout buffer
+		if self.image_final_layout == self.image.final_layout_requirement() {
+			self.image.unlock(None);
+		}
 		
 		let old_val = self.in_use.swap(false, Ordering::SeqCst);
 		debug_assert!(old_val);

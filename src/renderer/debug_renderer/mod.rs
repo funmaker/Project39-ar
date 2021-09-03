@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::f32::consts::PI;
 use err_derive::Error;
 use vulkano::{memory, command_buffer};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
 use vulkano::descriptor_set::DescriptorSet;
-use vulkano::pipeline::GraphicsPipeline;
+use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 use nalgebra::Unit;
 
 mod text_cache;
@@ -90,18 +90,16 @@ impl DebugRenderer {
 		if !self.vertices.is_empty() {
 			let vertex_buffer = self.vertices_pool.chunk(self.vertices.drain(..))?;
 			let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
+			let index_count = index_buffer.len();
 			
-			builder.draw_indexed(index_buffer.len() as u32,
+			builder.bind_pipeline_graphics(self.pipeline.clone())
+			       .bind_index_buffer(index_buffer)
+			       .bind_vertex_buffers(0, vertex_buffer)
+			       .draw_indexed(index_count as u32,
 			                     1,
 			                     0,
 			                     0,
-			                     0,
-			                     self.pipeline.clone(),
-			                     &DynamicState::none(),
-			                     vertex_buffer,
-			                     index_buffer,
-			                     (),
-			                     ())?;
+			                     0)?;
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
@@ -111,18 +109,20 @@ impl DebugRenderer {
 				} else if let Some(set) = self.draw_text(text, &viewproj, &pixel_scale)? {
 					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;
 					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
+					let index_count = index_buffer.len();
 					
-					builder.draw_indexed(index_buffer.len() as u32,
+					builder.bind_pipeline_graphics(self.text_pipeline.clone())
+					       .bind_index_buffer(index_buffer)
+					       .bind_vertex_buffers(0, vertex_buffer)
+					       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+					                             self.text_pipeline.layout().clone(),
+					                             0,
+					                             set)
+					       .draw_indexed(index_count as u32,
 					                     1,
 					                     0,
 					                     0,
-					                     0,
-					                     self.text_pipeline.clone(),
-					                     &DynamicState::none(),
-					                     vertex_buffer,
-					                     index_buffer,
-					                     set,
-					                     ())?;
+					                     0)?;
 				}
 			}
 			

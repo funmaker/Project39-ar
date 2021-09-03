@@ -51,7 +51,7 @@ impl TextCache {
 			let (image, image_promise) = ImmutableImage::from_iter(data,
 			                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                                                       MipmapsCount::One,
-			                                                       vulkano::format::Format::R8Unorm,
+			                                                       vulkano::format::Format::R8_UNORM,
 			                                                       self.queue.clone())?;
 			
 			let sampler = Sampler::new(self.queue.device().clone(),
@@ -66,11 +66,11 @@ impl TextCache {
 			                           0.0,
 			                           1.0)?;
 			
-			let set = Arc::new(
-				PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone())
-					.add_sampled_image(ImageView::new(image)?, sampler.clone())?
-					.build()?
-			);
+			let set = {
+				let mut set_builder = PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone());
+				set_builder.add_sampled_image(ImageView::new(image)?, sampler.clone())?;
+				Arc::new(set_builder.build()?)
+			};
 			
 			let entry = TextEntry {
 				size: (width, height),
@@ -162,7 +162,6 @@ pub enum TextCacheError {
 pub enum TextCacheGetError {
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }

@@ -51,14 +51,14 @@ impl<VI: VertexIndex> SubMesh<VI> {
 		let toon_view = ImageView::new(toon)?;
 		let sphere_map_view = ImageView::new(sphere_map)?;
 		
-		let main_set = Arc::new(
-			PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
-				.add_buffer(material_buffer.clone())?
-				.add_sampled_image(texture_view.clone(), sampler.clone())?
-				.add_sampled_image(toon_view.clone(), sampler.clone())?
-				.add_sampled_image(sphere_map_view.clone(), sampler.clone())?
-				.build()?
-		);
+		let main_set = {
+			let mut set_builder = PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
+			set_builder.add_buffer(material_buffer.clone())?
+			           .add_sampled_image(texture_view.clone(), sampler.clone())?
+			           .add_sampled_image(toon_view.clone(), sampler.clone())?
+			           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
+			Arc::new(set_builder.build()?)
+		};
 		
 		let mut sub_mesh = SubMesh {
 			indices,
@@ -75,14 +75,14 @@ impl<VI: VertexIndex> SubMesh<VI> {
 				true  => renderer.pipelines.get::<MMDPipelineTransNoCull>()?,
 			};
 			
-			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
-					.add_buffer(material_buffer.clone())?
-					.add_sampled_image(texture_view.clone(), sampler.clone())?
-					.add_sampled_image(toon_view.clone(), sampler.clone())?
-					.add_sampled_image(sphere_map_view.clone(), sampler.clone())?
-					.build()?
-			);
+			let set = {
+				let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
+				set_builder.add_buffer(material_buffer.clone())?
+				           .add_sampled_image(texture_view.clone(), sampler.clone())?
+				           .add_sampled_image(toon_view.clone(), sampler.clone())?
+				           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
+				Arc::new(set_builder.build()?)
+			};
 			
 			sub_mesh.transparent = Some((pipeline, set));
 		}
@@ -93,11 +93,11 @@ impl<VI: VertexIndex> SubMesh<VI> {
 			
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
-			let set = Arc::new(
-				PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone())
-					.add_sampled_image(texture_view.clone(), sampler.clone())?
-					.build()?
-			);
+			let set = {
+				let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
+				set_builder.add_sampled_image(texture_view.clone(), sampler.clone())?;
+				Arc::new(set_builder.build()?)
+			};
 			
 			sub_mesh.edge = Some((pipeline.into(), set));
 		}

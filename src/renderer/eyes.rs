@@ -14,8 +14,8 @@ use crate::application::VR;
 use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy, Vec4};
 use crate::config::NovrConfig;
 
-pub const IMAGE_FORMAT: Format = Format::R8G8B8A8Srgb;
-pub const DEPTH_FORMAT: Format = Format::D16Unorm;
+pub const IMAGE_FORMAT: Format = Format::R8G8B8A8_SRGB;
+pub const DEPTH_FORMAT: Format = Format::D16_UNORM;
 
 // Translates OpenGL projection matrix to Vulkan
 // Can't be const because Mat4::new is not const fn or something

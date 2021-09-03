@@ -5,10 +5,10 @@ use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
-use vulkano::pipeline::GraphicsPipeline;
+use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 use openvr::render_models;
 
 mod import;
@@ -50,18 +50,18 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
 		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 		                                                       MipmapsCount::Log2,
-		                                                       Format::R8G8B8A8Unorm,
+		                                                       Format::R8G8B8A8_UNORM,
 		                                                       queue.clone())?;
 		
 		let view = ImageView::new(image)?;
 		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
 		
-		let set = Arc::new(
-			PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone())
-			                        .add_buffer(renderer.commons.clone())?
-			                        .add_sampled_image(view, sampler)?
-			                        .build()?
-		);
+		let set = {
+			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone());
+			set_builder.add_buffer(renderer.commons.clone())?
+			           .add_sampled_image(view, sampler)?;
+			Arc::new(set_builder.build()?)
+		};
 		
 		let fence = Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?);
 		
@@ -91,17 +91,21 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
 		if !self.loaded() { return Ok(()) }
 		
-		builder.draw_indexed(self.indices.len() as u32,
+		builder.bind_pipeline_graphics(self.pipeline.clone())
+		       .bind_vertex_buffers(0, self.vertices.clone())
+		       .bind_index_buffer(self.indices.clone())
+		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+		                             self.pipeline.layout().clone(),
+		                             0,
+		                             self.set.clone())
+		       .push_constants(self.pipeline.layout().clone(),
+		                       0,
+		                       model_matrix.to_homogeneous())
+		       .draw_indexed(self.indices.len() as u32,
 		                     1,
 		                     0,
 		                     0,
-		                     0,
-		                     self.pipeline.clone(),
-		                     &DynamicState::none(),
-		                     self.vertices.clone(),
-		                     self.indices.clone(),
-		                     self.set.clone(),
-		                     model_matrix.to_homogeneous())?;
+		                     0)?;
 		
 		Ok(())
 	}

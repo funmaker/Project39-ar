@@ -350,7 +350,7 @@ impl Renderer {
 		let dimensions = caps.current_extent.unwrap_or(caps.min_image_extent);
 		let format = caps.supported_formats
 		                 .iter()
-		                 .find(|format| format.0 == Format::B8G8R8A8Unorm || format.0 == Format::R8G8B8A8Unorm)
+		                 .find(|format| format.0 == Format::B8G8R8A8_UNORM || format.0 == Format::R8G8B8A8_UNORM)
 		                 .expect("UNorm format not supported on the surface");
 		
 		let alpha_preference = [CompositeAlpha::PreMultiplied, CompositeAlpha::Opaque, CompositeAlpha::Inherit];
@@ -564,7 +564,6 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] CopyImageError(#[error(source)] command_buffer::CopyImageError),
 	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::PersistentDescriptorSetError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetBuildError(#[error(source)] descriptor_set::PersistentDescriptorSetBuildError),
+	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }

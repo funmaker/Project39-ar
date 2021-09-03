@@ -2,9 +2,10 @@ use std::sync::Arc;
 use std::mem::size_of;
 use num_traits::Zero;
 use simba::scalar::SubsetOf;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, DynamicState};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, DescriptorSet};
+use vulkano::pipeline::PipelineBindPoint;
 use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 
@@ -75,21 +76,21 @@ impl<VI: VertexIndex> MMDModel<VI> {
 		                           .ok_or(ModelError::NoLayout)?
 		                           .clone();
 		
-		let morphs_set = Arc::new(
-			PersistentDescriptorSet::start(compute_layout)
-				.add_buffer(morphs_ubo.clone())?
-				.add_buffer(shared.morphs_offsets.clone())?
-				.add_buffer(offsets_ubo.clone())?
-				.build()?
-		);
+		let morphs_set = {
+			let mut set_builder = PersistentDescriptorSet::start(compute_layout);
+			set_builder.add_buffer(morphs_ubo.clone())?
+			           .add_buffer(shared.morphs_offsets.clone())?
+			           .add_buffer(offsets_ubo.clone())?;
+			Arc::new(set_builder.build()?)
+		};
 		
-		let model_set = Arc::new(
-			PersistentDescriptorSet::start(shared.commons_layout(renderer)?)
-				.add_buffer(renderer.commons.clone())?
-				.add_buffer(bones_ubo.clone())?
-				.add_buffer(offsets_ubo.clone())?
-				.build()?
-		);
+		let model_set = {
+			let mut set_builder = PersistentDescriptorSet::start(shared.commons_layout(renderer)?);
+			set_builder.add_buffer(renderer.commons.clone())?
+			           .add_buffer(bones_ubo.clone())?
+			           .add_buffer(offsets_ubo.clone())?;
+			Arc::new(set_builder.build()?)
+		};
 		
 		Ok(MMDModel {
 			bones_mats,
@@ -193,10 +194,15 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 			
 			builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
 			       .fill_buffer(self.offsets_ubo.clone(), 0)?
-			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1],
-			                 self.shared.morphs_pipeline.clone(),
-			                 self.morphs_set.clone(),
-			                 self.shared.morphs_max_size as u32)?;
+			       .bind_pipeline_compute(self.shared.morphs_pipeline.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Compute,
+			                             self.shared.morphs_pipeline.layout().clone(),
+			                             0,
+			                             self.morphs_set.clone())
+			       .push_constants(self.shared.morphs_pipeline.layout().clone(),
+			                       0,
+			                       self.shared.morphs_max_size as u32)
+			       .dispatch([groups as u32, self.morphs_vec.len() as u32 * 2, 1])?;
 		}
 		
 		Ok(())
@@ -217,51 +223,63 @@ impl<VI: VertexIndex> Model for MMDModel<VI> {
 				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;
 				let scale: f32 = pixel * sub_mesh.edge_scale;
 				
-				builder.draw_indexed(sub_mesh.indices.len() as u32,
+				builder.bind_pipeline_graphics(pipeline.clone())
+				       .bind_vertex_buffers(0, self.shared.vertices.clone())
+				       .bind_index_buffer(sub_mesh.indices.clone())
+				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                             pipeline.layout().clone(),
+				                             0,
+				                             (self.model_set.clone(), mesh_set))
+				       .push_constants(pipeline.layout().clone(),
+				                       0,
+				                       (model_matrix.clone(), sub_mesh.edge_color, scale))
+				       .draw_indexed(sub_mesh.indices.len() as u32,
 				                     1,
 				                     0,
 				                     0,
-				                     0,
-				                     pipeline,
-				                     &DynamicState::none(),
-				                     self.shared.vertices.clone(),
-				                     sub_mesh.indices.clone(),
-				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.clone(), sub_mesh.edge_color, scale))?;
+				                     0)?;
 			}
 		}
 		
 		// Opaque
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			let (pipeline, mesh_set) = sub_mesh.main.clone();
-		
-			builder.draw_indexed(sub_mesh.indices.len() as u32,
+			
+			builder.bind_pipeline_graphics(pipeline.clone())
+			       .bind_vertex_buffers(0, self.shared.vertices.clone())
+			       .bind_index_buffer(sub_mesh.indices.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             pipeline.layout().clone(),
+			                             0,
+			                             (self.model_set.clone(), mesh_set))
+			       .push_constants(pipeline.layout().clone(),
+			                       0,
+			                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+			       .draw_indexed(sub_mesh.indices.len() as u32,
 			                     1,
 			                     0,
 			                     0,
-			                     0,
-			                     pipeline,
-			                     &DynamicState::none(),
-			                     self.shared.vertices.clone(),
-			                     sub_mesh.indices.clone(),
-			                     (self.model_set.clone(), mesh_set),
-			                     (model_matrix.clone(), Vec4::zero(), 0.0))?;
+			                     0)?;
 		}
 		
 		// Transparent
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.transparent.clone() {
-				builder.draw_indexed(sub_mesh.indices.len() as u32,
+				builder.bind_pipeline_graphics(pipeline.clone())
+				       .bind_vertex_buffers(0, self.shared.vertices.clone())
+				       .bind_index_buffer(sub_mesh.indices.clone())
+				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                             pipeline.layout().clone(),
+				                             0,
+				                             (self.model_set.clone(), mesh_set))
+				       .push_constants(pipeline.layout().clone(),
+				                       0,
+				                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+				       .draw_indexed(sub_mesh.indices.len() as u32,
 				                     1,
 				                     0,
 				                     0,
-				                     0,
-				                     pipeline,
-				                     &DynamicState::none(),
-				                     self.shared.vertices.clone(),
-				                     sub_mesh.indices.clone(),
-				                     (self.model_set.clone(), mesh_set),
-				                     (model_matrix.clone(), Vec4::zero(), 0.0))?;
+				                     0)?;
 			}
 		}
 		
