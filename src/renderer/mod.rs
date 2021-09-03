@@ -485,7 +485,7 @@ impl Renderer {
 				      .wait(None)?;
 				
 				let debug = debug::debug();
-				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings
+				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
 				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(pose))?;
 				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(pose))?;
 				if debug { debug::set_debug(true); }
