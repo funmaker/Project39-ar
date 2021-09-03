@@ -38,10 +38,18 @@ impl Window {
 	pub fn new(renderer: &Renderer) -> Result<Window, WindowCreationError> {
 		let event_loop = EventLoop::new();
 		
+		let mut inner_size = renderer.eyes.frame_buffer_size;
+		inner_size.0 *= 2;
+		
+		if inner_size.1 > 1080 {
+			inner_size.0 = (inner_size.0 as f32 * 1080.0 / inner_size.1 as f32) as u32;
+			inner_size.1 = 1080;
+		}
+		
 		let surface = WindowBuilder::new()
 		                            .with_transparent(true)
 		                            .with_resizable(true)
-		                            .with_inner_size(PhysicalSize::new(1920, 960)) // TODO: set from framebuffer size
+		                            .with_inner_size(PhysicalSize::new(inner_size.0, inner_size.1))
 		                            .with_title("Project 39")
 		                            .build_vk_surface(&event_loop, renderer.instance.clone())?;
 		

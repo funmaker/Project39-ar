@@ -135,7 +135,7 @@ unsafe impl<P> PrimaryCommandBuffer for OpenVRCommandBuffer<P> {
 		match (
 			self.image.try_gpu_lock(
 				true,
-				false, // TODO: ???
+				false,
 				self.image_initial_layout,
 			),
 			prev_err,

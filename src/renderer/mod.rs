@@ -473,7 +473,7 @@ impl Renderer {
 		
 		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
 		
-		// TODO: Move to another thread
+		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let pose = hmd_pose.to_matrix().to_slice34();
 			let vr = vr.lock().unwrap();
