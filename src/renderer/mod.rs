@@ -1,5 +1,4 @@
 use std::sync::{Arc, mpsc};
-use std::time::Instant;
 use std::ffi::CString;
 use std::convert::TryInto;
 use err_derive::Error;
@@ -366,7 +365,7 @@ impl Renderer {
 		};
 		
 		Ok(Swapchain::start(self.device.clone(), surface)
-		             .num_images(2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(2)))
+		             .num_images(2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(caps.min_image_count)))
 		             .format(format.0)
 		             .dimensions(dimensions)
 		             .layers(1)

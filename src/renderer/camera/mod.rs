@@ -1,6 +1,5 @@
 use std::thread;
 use std::sync::Arc;
-use std::time::Instant;
 use std::sync::mpsc;
 use err_derive::Error;
 use vulkano::{memory};
