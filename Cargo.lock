@@ -1695,10 +1695,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "spirv_headers"
-version = "1.5.0"
+name = "spirv"
+version = "0.2.0+1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f5b132530b1ac069df335577e3581765995cba5a13995cdbbdbc8fb057c532c"
+checksum = "246bfa38fe3db3f1dfc8ca5a2cdeb7348c78be2112740cc0ec8ef18b6d94f830"
 dependencies = [
  "bitflags",
  "num-traits",
@@ -1839,7 +1839,7 @@ dependencies = [
 [[package]]
 name = "vulkano"
 version = "0.25.0"
-source = "git+https://github.com/funmaker/vulkano?rev=80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc#80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc"
+source = "git+https://github.com/funmaker/vulkano?rev=ca0f55ced435acc0bb3e22926b18430023d0d0b1#ca0f55ced435acc0bb3e22926b18430023d0d0b1"
 dependencies = [
  "ash",
  "crossbeam-queue",
@@ -1860,20 +1860,20 @@ dependencies = [
 [[package]]
 name = "vulkano-shaders"
 version = "0.25.0"
-source = "git+https://github.com/funmaker/vulkano?rev=80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc#80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc"
+source = "git+https://github.com/funmaker/vulkano?rev=ca0f55ced435acc0bb3e22926b18430023d0d0b1#ca0f55ced435acc0bb3e22926b18430023d0d0b1"
 dependencies = [
  "num-traits",
  "proc-macro2",
  "quote",
  "shaderc",
- "spirv_headers",
+ "spirv",
  "syn",
 ]
 
 [[package]]
 name = "vulkano-win"
 version = "0.25.0"
-source = "git+https://github.com/funmaker/vulkano?rev=80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc#80a08bf13a8fd89aa45599a48c37ed96a2e3d2cc"
+source = "git+https://github.com/funmaker/vulkano?rev=ca0f55ced435acc0bb3e22926b18430023d0d0b1#ca0f55ced435acc0bb3e22926b18430023d0d0b1"
 dependencies = [
  "cocoa 0.20.2",
  "metal",

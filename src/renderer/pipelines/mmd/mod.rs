@@ -74,7 +74,7 @@ impl PipelineConstructor for MMDPipelineMorphs {
 		let cs = morph_comp::Shader::load(device.clone()).unwrap();
 		
 		Ok(Arc::new(
-			ComputePipeline::new(device, &cs.main_entry_point(), &(), None)?
+			ComputePipeline::new(device, &cs.main_entry_point(), &(), None, |_| {})?
 		))
 	}
 }
