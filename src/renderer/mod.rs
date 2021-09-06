@@ -478,8 +478,8 @@ impl Renderer {
 			let vr = vr.lock().unwrap();
 			unsafe {
 				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
-				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?
-				              .then_signal_semaphore_and_flush()?; // TODO: https://github.com/vulkano-rs/vulkano/issues/1294
+				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?;
+				f.flush()?;
 				
 				let debug = debug::debug();
 				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
