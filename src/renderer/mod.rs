@@ -1,21 +1,36 @@
-use std::sync::{Arc, mpsc};
-use std::ffi::CString;
+use std::collections::BTreeMap;
 use std::convert::TryInto;
+use std::ffi::CString;
+use std::sync::{Arc, mpsc};
+
 use err_derive::Error;
-use vulkano::{pipeline, device, instance, sync, command_buffer, swapchain, render_pass, memory, Version, descriptor_set};
-use vulkano::swapchain::{Swapchain, SurfaceTransform, PresentMode, FullscreenExclusive, Surface, CompositeAlpha};
-use vulkano::instance::{Instance, InstanceExtensions};
-use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::render_pass::{AttachmentDesc, LoadOp, StoreOp, RenderPass, SubpassDesc, RenderPassDesc, MultiviewDesc};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, SubpassContents, PrimaryAutoCommandBuffer, CommandBufferUsage};
+use vulkano::{command_buffer, descriptor_set, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
+use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SubpassContents};
 use vulkano::device::{Device, DeviceExtensions, Features, Queue};
 use vulkano::device::physical::PhysicalDevice;
-use vulkano::image::{SwapchainImage, ImageUsage, ImageLayout, SampleCount};
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::format::Format;
-use vulkano::sync::{GpuFuture, FenceSignalFuture};
+use vulkano::image::{ImageLayout, ImageUsage, SampleCount, SwapchainImage};
+use vulkano::instance::{Instance, InstanceExtensions};
+use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
+use vulkano::render_pass::{AttachmentDesc, LoadOp, MultiviewDesc, RenderPass, RenderPassDesc, StoreOp, SubpassDesc};
+use vulkano::swapchain::{CompositeAlpha, FullscreenExclusive, PresentMode, Surface, SurfaceTransform, Swapchain};
+use vulkano::sync::{FenceSignalFuture, GpuFuture};
 
-pub mod model;
+use background::{Background, BackgroundError, BackgroundRenderError};
+use camera::{Camera, CameraStartError};
+use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError};
+use eyes::{EyeCreationError, Eyes};
+use openvr_cb::OpenVRCommandBuffer;
+use pipelines::Pipelines;
+use window::{Window, WindowRenderError, WindowSwapchainRegenError};
+
+use crate::{config, debug};
+use crate::application::{Entity, VR};
+use crate::math::{AMat4, Color, Isometry3, PMat4, Point2, Vec2, Vec3, Vec4, VRSlice};
+use crate::component::ComponentError;
+use crate::utils::*;
+
 pub mod camera;
 pub mod eyes;
 pub mod window;
@@ -23,19 +38,6 @@ pub mod pipelines;
 mod debug_renderer;
 mod openvr_cb;
 mod background;
-
-use crate::utils::*;
-use crate::{debug, config};
-use crate::application::{VR, Entity};
-use crate::math::{Vec2, Vec3, Vec4, Isometry3, AMat4, VRSlice, PMat4, Color, Point2};
-use camera::{CameraStartError, Camera};
-use eyes::{Eyes, EyeCreationError};
-use window::{Window, WindowSwapchainRegenError, WindowRenderError};
-use pipelines::Pipelines;
-use debug_renderer::{DebugRendererError, DebugRenderer, DebugRendererRenderError};
-use model::ModelRenderError;
-use openvr_cb::OpenVRCommandBuffer;
-use background::{Background, BackgroundError, BackgroundRenderError};
 
 #[derive(Clone)]
 pub struct CommonsUBO {
@@ -47,13 +49,13 @@ pub struct CommonsUBO {
 
 pub struct Renderer {
 	pub instance: Arc<Instance>,
+	pub device: Arc<Device>,
+	pub load_queue: Arc<Queue>,
+	pub queue: Arc<Queue>,
+	pub pipelines: Pipelines,
 	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
 	
 	vr: Option<Arc<VR>>,
-	device: Arc<Device>,
-	queue: Arc<Queue>,
-	load_queue: Arc<Queue>,
-	pipelines: Pipelines,
 	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
 	background: Background,
@@ -380,7 +382,7 @@ impl Renderer {
 		             .build()?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: Isometry3, scene: &mut [Entity], window: &mut Window) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
 				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
@@ -406,7 +408,7 @@ impl Renderer {
 				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
 			}
 			
-			self.background.update_frame_pose(cam_pose.unwrap_or(hmd_pose));
+			self.background.update_frame_pose(cam_pose.unwrap_or(camera_pos));
 		}
 		
 		self.fps_counter.tick();
@@ -414,7 +416,7 @@ impl Renderer {
 		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
-		let view_base = hmd_pose.inverse();
+		let view_base = camera_pos.inverse();
 		let view_left = &self.eyes.view.0 * &view_base;
 		let view_right = &self.eyes.view.1 * &view_base;
 		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
@@ -436,7 +438,7 @@ impl Renderer {
 		builder.update_buffer(self.commons.clone(),
 		                      Arc::new(commons.clone()))?;
 		
-		for entity in scene.iter_mut() {
+		for entity in scene.values_mut() {
 			entity.pre_render(&mut builder)?;
 		}
 		
@@ -444,9 +446,9 @@ impl Renderer {
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
 		
-		self.background.render(&mut builder, hmd_pose)?;
+		self.background.render(&mut builder, camera_pos)?;
 		
-		for entity in scene.iter_mut() {
+		for entity in scene.values_mut() {
 			entity.render(&mut builder)?;
 		}
 		
@@ -474,7 +476,7 @@ impl Renderer {
 		
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
-			let pose = hmd_pose.to_matrix().to_slice34();
+			let pose = camera_pos.to_matrix().to_slice34();
 			let vr = vr.lock().unwrap();
 			unsafe {
 				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
@@ -548,7 +550,7 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
 	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
 	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
-	#[error(display = "{}", _0)] ModelRenderError(#[error(source)] ModelRenderError),
+	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
@@ -562,4 +564,10 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
+}
+
+impl From<ComponentError> for RendererRenderError {
+	fn from(err: ComponentError) -> Self {
+		RendererRenderError::ComponentError(err)
+	}
 }

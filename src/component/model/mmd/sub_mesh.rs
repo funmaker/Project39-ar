@@ -7,7 +7,7 @@ use vulkano::pipeline::GraphicsPipeline;
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
-use crate::renderer::model::{ModelError, VertexIndex};
+use crate::component::model::{ModelError, VertexIndex};
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<dyn DescriptorSet + Send + Sync>);
 

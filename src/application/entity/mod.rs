@@ -1,93 +1,151 @@
+use std::cell::{Ref, RefCell, RefMut, Cell};
+use std::collections::BTreeMap;
 use std::time::Duration;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use openvr::TrackedDevicePose;
-use simba::scalar::{SupersetOf, SubsetOf};
 
-mod bone;
-
-use crate::renderer::model::Model;
-use crate::renderer::RendererRenderError;
-use crate::math::{Vec3, Rot3, Point3, Isometry3, Color, AMat4, Similarity3, VRSlice};
 use crate::debug;
-pub use bone::{Bone, BoneConnection};
+use crate::math::{Color, Isometry3, PI, Point3, Rot3, Vec3};
+use crate::component::{ComponentRef, ComponentError};
+use crate::utils::{next_uid, IntoBoxed};
+use super::{Application, Component};
 
-pub struct Entity {
-	pub name: String,
+pub struct EntityState {
+	pub parent: Option<u64>,
 	pub position: Isometry3,
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
-	pub bones: Vec<Bone>,
-	pub morphs: Vec<f32>,
-	model: Box<dyn Model>,
-	hair_swing: f32,
+	pub hidden: bool,
+}
+
+pub struct Entity {
+	pub id: u64,
+	pub name: String,
+	state: RefCell<EntityState>,
+	removed: Cell<bool>,
+	components: BTreeMap<u64, Box<dyn Component>>,
+	new_components: RefCell<Vec<Box<dyn Component>>>,
 }
 
 impl Entity {
-	pub fn new(name: impl Into<String>, model: impl IntoBoxedModel, position: Point3, angle: Rot3) -> Self {
-		let model = model.into();
-		
-		Entity {
+	pub fn new(name: impl Into<String>, position: Point3, angle: Rot3, components: impl IntoIterator<Item = Box<dyn Component>>) -> Self {
+		let entity = Entity {
+			id: next_uid(),
 			name: name.into(),
-			position: Isometry3::from_parts(position.coords.into(), angle),
-			velocity: Vec3::zeros(),
-			angular_velocity: Vec3::zeros(),
-			bones: model.get_default_bones().to_vec(),
-			morphs: vec![0.0; model.morphs_count()],
-			model,
-			hair_swing: 0.0,
+			state: RefCell::new(EntityState {
+				position: Isometry3::from_parts(position.coords.into(), angle),
+				velocity: Vec3::zeros(),
+				angular_velocity: Vec3::zeros(),
+				parent: None,
+				hidden: false,
+			}),
+			removed: Cell::new(false),
+			components: BTreeMap::new(),
+			new_components: RefCell::new(Vec::new()),
+		};
+		
+		for component in components {
+			entity.add_component(component);
 		}
+		
+		entity
 	}
 	
-	pub fn tick(&mut self, delta_time: Duration) {
-		let ang_disp = &self.angular_velocity * delta_time.as_secs_f32();
-		let (pitch, yaw, roll) = (ang_disp.x, ang_disp.y, ang_disp.z);
-		
-		self.position.translation.vector += &self.velocity * delta_time.as_secs_f32();
-		self.position.rotation *= Rot3::from_euler_angles(roll, pitch, yaw);
-		
-		self.hair_swing += delta_time.as_secs_f32() * 3.0;
-		
-		for id in 0..self.bones.len() {
-			if self.bones[id].name.starts_with("Right H") || self.bones[id].name.starts_with("Left H") {
-				let swing = self.hair_swing.sin() / 30.0;
-				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
-			}
-			if self.bones[id].name == "Bend" {
-				let swing = (self.hair_swing / 3.0).sin() * std::f32::consts::PI / 2.0;
-				self.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
-			}
+	pub fn remove(&self) -> bool {
+		for component in self.components.values() {
+			component.remove();
 		}
 		
-		if self.name == "初音ミク" {
-			let presets = vec![
-				(1, &[0, 29, 66][..]),
-				(2, &[1, 45, 92]),
-				(3, &[24, 65]),
-				(4, &[39, 60]),
-				(5, &[47, 2, 61]),
-			];
-			
-			for morph in self.morphs.iter_mut() {
-				*morph = (*morph - 5.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
-			}
-			
-			let active = presets.iter().filter(|p| debug::get_flag_or_default(&format!("KeyKey{}", p.0))).flat_map(|p| p.1.iter());
-			
-			for &id in active {
-				self.morphs[id] = (self.morphs[id] + 10.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
-			}
-		}
+		!self.removed.replace(true)
 	}
 	
-	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), RendererRenderError> {
-		self.model.pre_render(builder, &self.position.to_superset(), &self.bones, &self.morphs)?;
+	pub fn is_being_removed(&self) -> bool {
+		self.removed.get()
+	}
+	
+	pub fn component<C: Sized + 'static>(&self, id: u64) -> Option<&C> {
+		self.components
+		    .get(&id)
+		    .and_then(|c| c.as_any().downcast_ref::<C>())
+	}
+	
+	// Safety note. These argument combination is not safe.
+	// Immutable reference to Application can be used to create immutable reference to Self while &mut Self exists.
+	// Do not use both at the same time.
+	pub fn setup_components(&mut self, application: &Application) -> Result<bool, ComponentError> {
+		let mut did_work = false;
+		
+		while let Some(mut component) = self.new_components.get_mut().pop() {
+			did_work = true;
+			
+			let component_id = component.id();
+			component.inner_mut().set_entity_id(self.id);
+			
+			let old = self.components.insert(component_id, component);
+			assert!(old.is_none(), "Component id {} already taken in entity {}!", component_id, self.id);
+			
+			self.components.get(&component_id).unwrap().start(&self, application)?;
+		}
+		
+		Ok(did_work)
+	}
+	
+	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
+		{
+			let mut state = self.state_mut();
+			
+			let ang_disp = &state.angular_velocity * delta_time.as_secs_f32();
+			let (pitch, yaw, roll) = (ang_disp.x, ang_disp.y, ang_disp.z);
+			
+			state.position.translation.vector = state.position.translation.vector + state.velocity * delta_time.as_secs_f32();
+			state.position.rotation *= Rot3::from_euler_angles(roll, pitch, yaw);
+			
+			if let Some(parent) = state.parent {
+				if let Some(parent) = application.entity(parent) {
+					state.position = parent.state().position * Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(), Rot3::from_euler_angles(PI * 0.25, PI, 0.0));
+				} else {
+					state.parent = None;
+				}
+			}
+		}
+		
+		for component in self.components.values() {
+			component.tick(&self, &application, delta_time)?;
+		}
+		
+		// if self.name == "ToolGun" {
+		// 	if state.parent.is_none() {
+		// 		let controller = application.find_entity(|entity| entity.name == "Controller" && (entity.state().position.translation.vector - state.position.translation.vector).magnitude() < 0.1);
+		//
+		// 		if let Some(controller) = controller {
+		// 			state.parent = Some(controller.id);
+		// 			controller.state_mut().hide = true;
+		// 		}
+		// 	}
+		// }
 		
 		Ok(())
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), RendererRenderError> {
-		let pos: Point3 = self.position.translation.vector.into();
-		let ang = &self.position.rotation;
+	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+		// let state = self.state.get_mut();
+		// self.model.pre_render(builder, &state.position.to_superset(), &state.bones, &state.morphs)?;
+		
+		for component in self.components.values() {
+			component.pre_render(&self, builder)?;
+		}
+		
+		Ok(())
+	}
+	
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+		let state = self.state.get_mut();
+		
+		if state.hidden {
+			return Ok(());
+		}
+		
+		let pos: Point3 = state.position.translation.vector.into();
+		let ang = &state.position.rotation;
 		
 		debug::draw_point(&pos, 32.0, Color::magenta());
 		debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
@@ -95,33 +153,86 @@ impl Entity {
 		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		
-		self.model.render(builder, &self.position.to_superset())?;
+		for component in self.components.values() {
+			component.render(&self, builder)?;
+		}
 		
 		Ok(())
 	}
 	
-	pub fn move_to_pose(&mut self, pose: TrackedDevicePose) {
-		let orientation = AMat4::from_slice34(pose.device_to_absolute_tracking());
-		let orientation: Similarity3 = orientation.to_subset().unwrap();
+	pub fn cleanup_components(&mut self, application: &Application) -> Result<bool, ComponentError> {
+		let mut did_work = false;
+		let mut clean = false;
 		
-		self.position = orientation.isometry;
-		self.velocity = pose.velocity().clone().into();
-		self.angular_velocity = pose.angular_velocity().clone().into();
+		while !clean {
+			clean = true;
+			
+			for component in self.components.values() {
+				if component.inner().is_being_removed() {
+					component.end(&self, application)?;
+					clean = false;
+					did_work = true;
+				}
+			}
+			
+			self.components.drain_filter(|_, component| component.inner().is_being_removed());
+		}
+		
+		Ok(did_work)
+	}
+	
+	pub fn add_component<C: IntoBoxed<dyn Component>>(&self, component: C) -> ComponentRef<C> {
+		let component = component.into();
+		let id = component.id();
+		
+		self.new_components.borrow_mut().push(component);
+		
+		ComponentRef::new(self.id, id)
+	}
+	
+	pub fn state(&self) -> Ref<EntityState> {
+		self.state.borrow()
+	}
+	
+	pub fn state_mut(&self) -> RefMut<EntityState> {
+		self.state.borrow_mut()
+	}
+	
+	pub fn try_state(&self) -> Option<Ref<EntityState>> {
+		self.state.try_borrow().ok()
+	}
+	
+	pub fn try_state_mut(&self) -> Option<RefMut<EntityState>> {
+		self.state.try_borrow_mut().ok()
 	}
 }
 
-pub trait IntoBoxedModel {
-	fn into(self) -> Box<dyn Model>;
+pub struct EntityRef {
+	inner: Cell<Option<u64>>,
 }
 
-impl IntoBoxedModel for Box<dyn Model> {
-	fn into(self) -> Box<dyn Model> {
-		self
+impl EntityRef {
+	pub fn new(eid: u64) -> Self {
+		EntityRef {
+			inner: Cell::new(Some(eid)),
+		}
 	}
-}
-
-impl<M: Model + 'static> IntoBoxedModel for M {
-	fn into(self) -> Box<dyn Model> {
-		Box::new(self)
+	
+	pub fn null() -> Self {
+		EntityRef {
+			inner: Cell::new(None),
+		}
+	}
+	
+	pub fn set(&self, other: Self) {
+		self.inner.swap(&other.inner);
+	}
+	
+	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
+		if let Some(eid) = self.inner.get() {
+			application.entity(eid)
+		} else {
+			None
+		}
 	}
 }

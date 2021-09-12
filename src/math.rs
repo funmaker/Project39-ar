@@ -3,6 +3,8 @@ use std::ops::{Deref, DerefMut};
 use nalgebra::{Scalar, Transform, TCategory};
 use simba::scalar::{SubsetOf, SupersetOf};
 
+pub use std::f32::consts::PI;
+
 pub type Vec2 = nalgebra::Vector2<f32>;
 pub type Vec3 = nalgebra::Vector3<f32>;
 pub type Vec4 = nalgebra::Vector4<f32>;

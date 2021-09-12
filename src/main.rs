@@ -8,15 +8,22 @@
 #![feature(negative_impls)]
 #![feature(drain_filter)]
 #![feature(llvm_asm)]
+#![feature(map_first_last)]
+#![feature(btree_drain_filter)]
 #[macro_use] extern crate lazy_static;
 
+use std::error::Error;
+use std::fmt::Debug;
 use std::fs;
 use std::panic;
-use std::fmt::Debug;
 use std::panic::PanicInfo;
-use std::error::Error;
+
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
+
+use application::{Application, ApplicationCreationError, ApplicationRunError};
+use config::Config;
+use utils::from_args::ArgsError;
 
 #[macro_use] #[allow(dead_code)] mod debug;
 #[allow(dead_code)] mod math;
@@ -24,11 +31,7 @@ mod renderer;
 mod application;
 mod utils;
 mod config;
-
-use application::{Application, ApplicationCreationError, ApplicationRunError};
-use utils::from_args::ArgsError;
-use config::Config;
-
+pub mod component;
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));

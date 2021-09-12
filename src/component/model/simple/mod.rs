@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
+use simba::scalar::SubsetOf;
+use openvr::render_models;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::sync::GpuFuture;
@@ -9,20 +11,22 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer
 use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
-use openvr::render_models;
 
 mod import;
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
-use crate::utils::ImageEx;
+use crate::utils::{ImageEx, FenceCheck};
 use crate::math::AMat4;
-use super::{Model, ModelError, ModelRenderError, VertexIndex, FenceCheck};
+use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::application::Entity;
+use super::{ModelError, VertexIndex};
 pub use import::SimpleModelLoadError;
 
-#[derive(Clone)]
+#[derive(ComponentBase)]
 pub struct SimpleModel<VI: VertexIndex> {
+	#[inner] inner: ComponentInner,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
@@ -66,6 +70,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let fence = Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?);
 		
 		Ok(SimpleModel {
+			inner: ComponentInner::new(),
 			pipeline,
 			vertices,
 			indices,
@@ -85,11 +90,17 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 	pub fn loaded(&self) -> bool {
 		self.fence.check()
 	}
+	
+	// pub fn try_clone(&self, _renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {
+	// 	Ok(Box::new(self.clone()))
+	// }
 }
 
-impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
-	fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, model_matrix: &AMat4) -> Result<(), ModelRenderError> {
+impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
+	fn render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
+		
+		let model_matrix: AMat4 = entity.state().position.to_superset();
 		
 		builder.bind_pipeline_graphics(self.pipeline.clone())
 		       .bind_vertex_buffers(0, self.vertices.clone())
@@ -108,10 +119,6 @@ impl<VI: VertexIndex + FromPrimitive> Model for SimpleModel<VI> {
 		                     0)?;
 		
 		Ok(())
-	}
-	
-	fn try_clone(&self, _renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {
-		Ok(Box::new(self.clone()))
 	}
 }
 

@@ -5,9 +5,8 @@ use image::ImageFormat;
 use vulkano::DeviceSize;
 
 use crate::renderer::Renderer;
-use crate::application::entity::{Bone, BoneConnection};
 use crate::math::{Color, Vec3};
-use super::{MMDModel, Vertex, shared::MMDModelShared, shared::SubMeshDesc};
+use super::{MMDModel, Vertex, Bone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
 
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {

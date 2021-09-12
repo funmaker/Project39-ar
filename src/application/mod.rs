@@ -1,33 +1,43 @@
-use std::collections::HashMap;
-use std::time::{Instant, Duration};
+use std::cell::{RefCell, Cell};
+use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Instant;
+
 use err_derive::Error;
-use openvr::{tracked_device_index, TrackedDeviceClass, TrackedControllerRole};
-use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
+use openvr::{tracked_device_index, TrackedControllerRole};
+use openvr::compositor::WaitPoses;
 use simba::scalar::SupersetOf;
+
+pub use entity::{Entity, EntityRef};
+pub use vr::{VR, VRError};
+
+pub use crate::component::Component;
+use crate::utils::default_wait_poses;
+use crate::config::{self, CameraAPI};
+use crate::debug;
+use crate::math::{AMat4, Isometry3, Point3, Rot3, VRSlice};
+use crate::renderer::{Renderer, RendererError, RendererRenderError};
+use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
+use crate::renderer::window::{Window, WindowCreationError};
+use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
+use crate::component::vr::VrSpawner;
+use crate::component::miku::Miku;
+use crate::component::ComponentError;
+use crate::component::pov::PoV;
+use crate::component::pc_controlled::PCControlled;
 
 pub mod vr;
 pub mod entity;
 
-use crate::renderer::{Renderer, RendererError, RendererRenderError};
-use crate::renderer::window::{Window, WindowCreationError};
-use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
-use crate::renderer::model::{ModelError, SimpleModel, MMDModel, mmd::MMDModelLoadError, simple::SimpleModelLoadError};
-use crate::math::{Vec3, Rot3, Isometry3, AMat4, Point3, Translation3, VRSlice};
-use crate::debug;
-use crate::config::{self, CameraAPI};
-pub use vr::{VR, VRError};
-pub use entity::Entity;
-
 pub struct Application {
-	vr: Option<Arc<VR>>,
-	renderer: Renderer,
+	pub vr: Option<Arc<VR>>,
+	pub renderer: RefCell<Renderer>,
+	pub vr_poses: WaitPoses,
+	pub camera_pos: Cell<Isometry3>,
 	window: Window,
-	scene: Vec<Entity>,
-	vr_devices: HashMap<u32, usize>,
+	entities: BTreeMap<u64, Entity>,
+	new_entities: RefCell<Vec<Entity>>,
 }
-
-type FakePose = (Translation3, (f32, f32));
 
 impl Application {
 	pub fn new() -> Result<Application, ApplicationCreationError> {
@@ -40,7 +50,7 @@ impl Application {
 			return Err(ApplicationCreationError::OpenVRCameraInNoVR);
 		}
 		
-		let mut renderer = match config.camera.driver {
+		let renderer = match config.camera.driver {
 			CameraAPI::OpenCV => Renderer::new(vr.clone(), camera::OpenCV::new()?)?,
 			CameraAPI::OpenVR => Renderer::new(vr.clone(), camera::OpenVR::new(vr.clone().unwrap())?)?,
 			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), camera::Escapi::new()?)?,
@@ -49,43 +59,63 @@ impl Application {
 		
 		let window = Window::new(&renderer)?;
 		
-		let mut scene: Vec<Entity> = Vec::new();
+		let vr_poses = default_wait_poses();
 		
-		// scene.push(Entity::new(
-		// 	"Cube",
-		// 	SimpleModel::<u16>::from_obj("models/cube/cube", &mut renderer)?,
-		// 	Point3::new(0.0, -0.5, 0.0),
-		// 	Rot3::identity(),
-		// ));
+		let mut application = Application {
+			vr,
+			renderer: RefCell::new(renderer),
+			vr_poses,
+			camera_pos: Cell::new(Isometry3::identity()),
+			window,
+			entities: BTreeMap::new(),
+			new_entities: RefCell::new(Vec::new()),
+		};
 		
-		scene.push(Entity::new(
-			"初音ミク",
-			MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut renderer)?,
-			Point3::new(0.0, 0.0, 0.0),
-			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
+		if application.vr.is_some() {
+			application.add_entity(Entity::new(
+				"System",
+				Point3::new(0.0, 0.0, -0.0),
+				Rot3::identity(),
+				Some(VrSpawner::new().boxed()),
+			));
+		} else {
+			application.add_entity(Entity::new(
+				"(You)",
+				Point3::new(0.0, 1.5, 1.5),
+				Rot3::identity(),
+				[PoV::new().boxed(), PCControlled::new().boxed()],
+			));
+		}
+		
+		let model = SimpleModel::<u16>::from_obj("models/ToolBlaster/ToolBlaster", application.renderer.get_mut())?.boxed();
+		application.add_entity(Entity::new(
+			"ToolGun",
+			Point3::new(0.0, 1.0, 1.0),
+			Rot3::identity(),
+			Some(model),
 		));
 		
-		// scene.push(Entity::new(
+		application.add_entity(Entity::new(
+			"初音ミク",
+			Point3::new(0.0, 0.0, 0.0),
+			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
+			Some(Miku::new().boxed()),
+		));
+		
+		// application.add_entity(
 		// 	"Test",
 		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
 		// 	Point3::new(2.0, 0.0, -1.5),
 		// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
-		// ));
+		// );
 		
-		Ok(Application {
-			vr,
-			renderer,
-			window,
-			scene,
-			vr_devices: HashMap::new(),
-		})
+		Ok(application)
 	}
 	
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
 		let mut vr_buttons = 0;
-		let mut fake_pose: FakePose = (Vec3::new(0.0, 1.5, 1.5).into(), (0.0, 0.0));
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -93,53 +123,96 @@ impl Application {
 			let delta_time = instant.elapsed();
 			instant = Instant::now();
 			
-			let pose = match self.vr {
-				Some(_) => self.handle_vr_poses(&mut vr_buttons)?,
-				None => self.handle_fake_pose(&mut fake_pose, delta_time),
-			};
-			
-			for entity in self.scene.iter_mut() {
-				entity.tick(delta_time);
+			if self.vr.is_some() {
+				self.handle_vr_poses(&mut vr_buttons)?;
 			}
 			
-			self.renderer.render(pose, &mut self.scene, &mut self.window)?;
+			self.setup_loop()?;
+			
+			for entity in self.entities.values() {
+				entity.tick(delta_time, &self)?;
+			}
+			
+			self.renderer.get_mut().render(self.camera_pos.get(), &mut self.entities, &mut self.window)?;
+			
+			self.cleanup_loop()?;
 		}
 		
 		Ok(())
 	}
 	
-	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<Isometry3, ApplicationRunError> {
-		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
+	#[allow(dead_code)]
+	pub fn add_entity(&self, entity: Entity) -> EntityRef {
+		let id = entity.id;
 		
-		let poses = vr.compositor.wait_get_poses()?;
+		self.new_entities.borrow_mut().push(entity);
 		
-		for i in 0..poses.render.len() as u32 {
-			if vr.system.tracked_device_class(i) != TrackedDeviceClass::Invalid && vr.system.tracked_device_class(i) != TrackedDeviceClass::HMD {
-				if let Some(&id) = self.vr_devices.get(&i) {
-					self.scene[id].move_to_pose(poses.render[i as usize]);
-				} else {
-					let model_name = vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_RenderModelName_String)?;
-					let model = vr.render_models.load_render_model(&vr.system.string_tracked_device_property(i, ETrackedDeviceProperty_Prop_RenderModelName_String)?);
-					if let Err(err) = model {
-						dprintln!("Failed to load model \"{}\": {}", model_name.to_string_lossy(), err);
-					} else if let Ok(Some(model)) = model {
-						if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
-							let mut entity = Entity::new(
-								format!("{:?}", vr.system.tracked_device_class(i)),
-								SimpleModel::<u16>::from_openvr(model, texture, &mut self.renderer)?,
-								Point3::origin(),
-								Rot3::identity(),
-							);
-							
-							entity.move_to_pose(poses.render[i as usize]);
-							self.vr_devices.insert(i, self.scene.len());
-							self.scene.push(entity);
-							println!("Loaded {:?}", vr.system.tracked_device_class(i));
-						} else { break }
-					} else { break }
+		EntityRef::new(id)
+	}
+	
+	#[allow(dead_code)]
+	pub fn entity(&self, id: u64) -> Option<&Entity> {
+		self.entities.get(&id)
+	}
+	
+	#[allow(dead_code)]
+	pub fn find_all_entities(&self, predicate: impl Fn(&Entity) -> bool) -> impl Iterator<Item = &Entity> {
+		self.entities
+		    .values()
+		    .filter(move |entity| entity.try_state().is_some() && predicate(entity))
+	}
+	
+	#[allow(dead_code)]
+	pub fn find_entity(&self, predicate: impl Fn(&Entity) -> bool) -> Option<&Entity> {
+		self.find_all_entities(predicate).next()
+	}
+	
+	fn setup_loop(&mut self) -> Result<(), ApplicationRunError> {
+		let mut clean = false;
+		while !clean {
+			clean = true;
+			
+			for entity in self.new_entities.get_mut().drain(..) {
+				let id = entity.id;
+				
+				let old = self.entities.insert(id, entity);
+				assert!(old.is_none(), "Entity id {} already taken!", id);
+			}
+			
+			let unsafe_ref = unsafe { &*(self as *const Self) }; // TODO: This is unsafe. Maybe split?
+			for entity in self.entities.values_mut() {
+				if entity.setup_components(unsafe_ref)? {
+					clean = false;
 				}
 			}
 		}
+		
+		Ok(())
+	}
+	
+	fn cleanup_loop(&mut self) -> Result<(), ComponentError> {
+		let mut clean = false;
+		while !clean {
+			clean = true;
+			
+			let unsafe_ref = unsafe { &*(self as *const Self) }; // TODO: This is unsafe. Maybe split?
+			
+			for entity in self.entities.values_mut() {
+				if entity.cleanup_components(unsafe_ref)? {
+					clean = false;
+				}
+			}
+		}
+		
+		self.entities.drain_filter(|_, entity| entity.is_being_removed());
+		
+		Ok(())
+	}
+	
+	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<(), ApplicationRunError> {
+		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
+		
+		self.vr_poses = vr.compositor.wait_get_poses()?;
 		
 		let buttons: u64 = [TrackedControllerRole::RightHand, TrackedControllerRole::LeftHand]
 			.iter()
@@ -160,33 +233,7 @@ impl Application {
 			}
 		}
 		
-		let orientation = AMat4::from_slice34(poses.render[tracked_device_index::HMD as usize].device_to_absolute_tracking());
-		Ok(orientation.to_subset().unwrap())
-	}
-	
-	fn handle_fake_pose(&self, fake_pose: &mut FakePose, delta_time: Duration) -> Isometry3 {
-		let (position, (pitch, yaw)) = fake_pose;
-		
-		fn get_key(key: &str) -> f32 {
-			debug::get_flag_or_default::<bool>(key) as i32 as f32
-		}
-		
-		let x = get_key("KeyD") - get_key("KeyA");
-		let y = get_key("KeySpace") - get_key("KeyCtrl");
-		let z = get_key("KeyS") - get_key("KeyW");
-		let dist = (0.5 + get_key("KeyLShift") * 1.0) * delta_time.as_secs_f32();
-		let mouse_move = debug::get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-		debug::set_flag("mouse_move", (0.0_f32, 0.0_f32));
-		
-		*yaw = *yaw + -mouse_move.0 * 0.01;
-		*pitch = (*pitch + -mouse_move.1 * 0.01).clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
-		
-		let rot = Rot3::from_euler_angles(*pitch, *yaw, 0.0);
-		let disp = rot * Vec3::new(x, 0.0, z) * dist + Vec3::y() * y * dist;
-		
-		position.vector += disp;
-		
-		Isometry3::from_parts(position.clone(), rot)
+		Ok(())
 	}
 }
 
@@ -209,6 +256,7 @@ pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] RendererRenderError(#[error(source)] RendererRenderError),
+	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),
@@ -216,3 +264,8 @@ pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
 }
 
+impl From<ComponentError> for ApplicationRunError {
+	fn from(err: ComponentError) -> Self {
+		ApplicationRunError::ComponentError(err)
+	}
+}

@@ -10,12 +10,12 @@ use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 
+use crate::math::{Vec4, Vec2, Vec3, Mat3, Isometry3};
+use crate::renderer::eyes::Eyes;
+use crate::utils::FenceCheck;
+use crate::config;
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
-use super::model::FenceCheck;
-use crate::math::{Vec4, Vec2, Vec3, Mat3, Isometry3};
-use crate::config;
-use crate::renderer::eyes::Eyes;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
@@ -137,7 +137,7 @@ impl Background {
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, hmd_pose: Isometry3) -> Result<(), BackgroundRenderError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, camera_pos: Isometry3) -> Result<(), BackgroundRenderError> {
 		if !self.fence.check() { return Ok(()); }
 		
 		// if let Ok(mut intrinsics) = self.intrinsics.write() {
@@ -166,7 +166,7 @@ impl Background {
 		// 	}
 		// }
 		
-		let rotation = (hmd_pose.rotation.inverse() * hmd_pose.rotation / self.last_frame_pose.rotation * hmd_pose.rotation).to_rotation_matrix();
+		let rotation = (camera_pos.rotation.inverse() * camera_pos.rotation / self.last_frame_pose.rotation * camera_pos.rotation).to_rotation_matrix();
 		
 		// {
 		// 	let config = config::get();

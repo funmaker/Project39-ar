@@ -10,15 +10,13 @@ use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::DeviceSize;
 use vulkano::pipeline::ComputePipeline;
 
-use crate::application::entity::Bone;
-use crate::renderer::model::{ModelError, VertexIndex, FenceCheck};
+use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
-use crate::utils::ImageEx;
-use crate::utils::VecFuture;
+use crate::utils::{VecFuture, ImageEx, FenceCheck};
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
-use super::Vertex;
+use super::{Vertex, Bone};
 
 pub struct MMDModelShared<VI: VertexIndex> {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -105,7 +103,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let mut images = vec![];
 		
 		let (default_tex, default_tex_promise) = {
-			let texture_reader = Cursor::new(&include_bytes!("./default_tex.png")[..]);
+			let texture_reader = Cursor::new(&include_bytes!("default_tex.png")[..]);
 			let image = image::load(texture_reader, ImageFormat::Png)?;
 			let width = image.width();
 			let height = image.height();

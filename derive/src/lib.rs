@@ -6,7 +6,7 @@ use quote::{quote, ToTokens};
 use syn::{self, Data, Meta};
 
 #[proc_macro_derive(FromArgs, attributes(arg_short, arg_rename, arg_skip))]
-pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn from_args_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     
     let data = match ast.data {
@@ -88,7 +88,6 @@ pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     
     let name = &ast.ident;
     let gen = quote! {
-        
         impl FromArgs for #name {
             fn usage_impl(&self, _short: &str, path: &str, doc: &str) -> String {
                 let mut ret = String::new();
@@ -115,6 +114,55 @@ pub fn config_part_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                 #apply_matches
                 
                 Ok(())
+            }
+        }
+    };
+    
+    gen.into()
+}
+
+
+#[proc_macro_derive(ComponentBase, attributes(inner))]
+pub fn component_base_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast: syn::DeriveInput = syn::parse(input).unwrap();
+    let name = &ast.ident;
+    let mut inner = None;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    
+    match ast.data {
+        Data::Struct(data) => {
+            for field in &data.fields {
+                for attr in &field.attrs {
+                    if attr.path
+                           .get_ident()
+                           .map_or(false, |i| i.to_string() == "inner") {
+                        let field_name = field.ident.clone().unwrap();
+                
+                        if let Some(_) = inner.replace(field_name) {
+                            panic!("Duplicate #[inner] attribute.");
+                        }
+                    }
+                }
+            }
+        },
+        Data::Enum(_) => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
+    };
+    
+    let inner = inner.expect("Missing #[inner] attribute.");
+    
+    let gen = quote! {
+        impl #impl_generics ComponentBase for #name #ty_generics #where_clause {
+            fn inner(&self) -> &ComponentInner {
+                &self.#inner
+            }
+            
+            fn inner_mut(&mut self) -> &mut ComponentInner {
+                &mut self.#inner
+            }
+            
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
             }
         }
     };

@@ -6,7 +6,7 @@ use obj::Obj;
 use openvr::render_models;
 use num_traits::FromPrimitive;
 
-use crate::renderer::model::{VertexIndex, ModelError};
+use crate::component::model::{VertexIndex, ModelError};
 use crate::renderer::Renderer;
 use super::{SimpleModel, Vertex};
 

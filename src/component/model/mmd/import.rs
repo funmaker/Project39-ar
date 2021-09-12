@@ -11,12 +11,11 @@ use mmd::WeightDeform;
 use image::ImageFormat;
 use vulkano::DeviceSize;
 
-use crate::application::entity::{Bone, BoneConnection};
-use crate::renderer::model::{ModelError, VertexIndex};
+use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::math::{Vec3, Color};
 use crate::debug;
-use super::{Vertex, shared::MMDModelShared, shared::SubMeshDesc};
+use super::{Vertex, Bone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
 
 pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, MMDModelLoadError> where VI: VertexIndex + mmd::VertexIndex {
 	let mut root = PathBuf::from(path);
