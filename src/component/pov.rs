@@ -18,7 +18,7 @@ impl PoV {
 
 impl Component for PoV {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
-		application.camera_pos.set(entity.state().position);
+		application.camera_entity.set(entity.as_ref());
 		
 		Ok(())
 	}

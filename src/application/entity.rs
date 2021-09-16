@@ -4,13 +4,12 @@ use std::time::Duration;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::debug;
-use crate::math::{Color, Isometry3, PI, Point3, Rot3, Vec3};
+use crate::math::{Color, Isometry3, Point3, Rot3, Vec3};
 use crate::component::{ComponentRef, ComponentError};
 use crate::utils::{next_uid, IntoBoxed};
 use super::{Application, Component};
 
 pub struct EntityState {
-	pub parent: Option<u64>,
 	pub position: Isometry3,
 	pub velocity: Vec3,
 	pub angular_velocity: Vec3,
@@ -35,7 +34,6 @@ impl Entity {
 				position: Isometry3::from_parts(position.coords.into(), angle),
 				velocity: Vec3::zeros(),
 				angular_velocity: Vec3::zeros(),
-				parent: None,
 				hidden: false,
 			}),
 			removed: Cell::new(false),
@@ -89,47 +87,25 @@ impl Entity {
 		Ok(did_work)
 	}
 	
-	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
-		{
-			let mut state = self.state_mut();
-			
-			let ang_disp = &state.angular_velocity * delta_time.as_secs_f32();
-			let (pitch, yaw, roll) = (ang_disp.x, ang_disp.y, ang_disp.z);
-			
-			state.position.translation.vector = state.position.translation.vector + state.velocity * delta_time.as_secs_f32();
-			state.position.rotation *= Rot3::from_euler_angles(roll, pitch, yaw);
-			
-			if let Some(parent) = state.parent {
-				if let Some(parent) = application.entity(parent) {
-					state.position = parent.state().position * Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(), Rot3::from_euler_angles(PI * 0.25, PI, 0.0));
-				} else {
-					state.parent = None;
-				}
-			}
-		}
+	pub fn do_physics(&self, delta_time: Duration) {
+		let mut state = self.state_mut();
 		
+		let ang_disp = &state.angular_velocity * delta_time.as_secs_f32();
+		let (pitch, yaw, roll) = (ang_disp.x, ang_disp.y, ang_disp.z);
+		
+		state.position.translation.vector = state.position.translation.vector + state.velocity * delta_time.as_secs_f32();
+		state.position.rotation *= Rot3::from_euler_angles(roll, pitch, yaw);
+	}
+	
+	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
 		for component in self.components.values() {
 			component.tick(&self, &application, delta_time)?;
 		}
-		
-		// if self.name == "ToolGun" {
-		// 	if state.parent.is_none() {
-		// 		let controller = application.find_entity(|entity| entity.name == "Controller" && (entity.state().position.translation.vector - state.position.translation.vector).magnitude() < 0.1);
-		//
-		// 		if let Some(controller) = controller {
-		// 			state.parent = Some(controller.id);
-		// 			controller.state_mut().hide = true;
-		// 		}
-		// 	}
-		// }
 		
 		Ok(())
 	}
 	
 	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
-		// let state = self.state.get_mut();
-		// self.model.pre_render(builder, &state.position.to_superset(), &state.bones, &state.morphs)?;
-		
 		for component in self.components.values() {
 			component.pre_render(&self, builder)?;
 		}
@@ -181,6 +157,10 @@ impl Entity {
 		Ok(did_work)
 	}
 	
+	pub fn as_ref(&self) -> EntityRef {
+		self.into()
+	}
+	
 	pub fn add_component<C: IntoBoxed<dyn Component>>(&self, component: C) -> ComponentRef<C> {
 		let component = component.into();
 		let id = component.id();
@@ -207,6 +187,7 @@ impl Entity {
 	}
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct EntityRef {
 	inner: Cell<Option<u64>>,
 }
@@ -230,9 +211,44 @@ impl EntityRef {
 	
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
 		if let Some(eid) = self.inner.get() {
-			application.entity(eid)
+			if let Some(entity) = application.entity(eid) {
+				Some(entity)
+			} else {
+				self.inner.set(None);
+				None
+			}
 		} else {
 			None
 		}
+	}
+}
+
+impl PartialEq<Self> for &Entity {
+	fn eq(&self, other: &Self) -> bool {
+		self.id == other.id
+	}
+}
+
+impl Eq for &Entity {}
+
+impl PartialEq<&EntityRef> for &Entity {
+	fn eq(&self, other: &&EntityRef) -> bool {
+		if let Some(id) = other.inner.get() {
+			self.id == id
+		} else {
+			false
+		}
+	}
+}
+
+impl From<&Entity> for EntityRef {
+	fn from(entity: &Entity) -> Self {
+		EntityRef::new(entity.id)
+	}
+}
+
+impl From<&EntityRef> for EntityRef {
+	fn from(entity_ref: &EntityRef) -> Self {
+		entity_ref.clone()
 	}
 }

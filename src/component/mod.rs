@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 pub use project39_ar_derive::ComponentBase;
 
-use crate::application::{Application, Entity};
+use crate::application::{Application, Entity, EntityRef};
 use crate::utils::{next_uid, IntoBoxed};
 
 pub mod model;
@@ -13,6 +13,8 @@ pub mod miku;
 pub mod vr;
 pub mod pov;
 pub mod pc_controlled;
+pub mod toolgun;
+pub mod parent;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -108,7 +110,13 @@ impl<C: 'static> ComponentRef<C> {
 	
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a C> {
 		if let Some((eid, cid)) = self.inner.get() {
-			application.entity(eid).and_then(|e| e.component(cid))
+			if let Some(component) = application.entity(eid)
+			                                    .and_then(|e| e.component(cid)) {
+				Some(component)
+			} else {
+				self.inner.set(None);
+				None
+			}
 		} else {
 			None
 		}
@@ -116,9 +124,21 @@ impl<C: 'static> ComponentRef<C> {
 	
 	pub fn using<'e>(&self, entity: &'e Entity) -> Option<&'e C> {
 		if let Some((_, cid)) = self.inner.get() {
-			entity.component(cid)
+			if let Some(component) = entity.component(cid) {
+				Some(component)
+			} else {
+				self.inner.set(None);
+				None
+			}
 		} else {
 			None
+		}
+	}
+	
+	pub fn entity(&self) -> EntityRef {
+		match self.inner.get() {
+			Some((eid, _)) => EntityRef::new(eid),
+			None => EntityRef::null(),
 		}
 	}
 }

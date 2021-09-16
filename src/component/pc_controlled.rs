@@ -22,7 +22,7 @@ impl PCControlled {
 }
 
 impl Component for PCControlled {
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, _application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
 		let mut entity = entity.state_mut();
 		let mut position = entity.position.translation.vector;
 		let (mut pitch, mut yaw) = self.rotation.get();
@@ -46,7 +46,6 @@ impl Component for PCControlled {
 		
 		self.rotation.set((pitch, yaw));
 		entity.position = Isometry3::from_parts(position.into(), rot);
-		application.camera_pos.set(entity.position);
 		
 		Ok(())
 	}

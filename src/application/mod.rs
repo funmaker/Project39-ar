@@ -1,21 +1,19 @@
-use std::cell::{RefCell, Cell};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
-
 use err_derive::Error;
-use openvr::{tracked_device_index, TrackedControllerRole};
+use openvr::TrackedControllerRole;
 use openvr::compositor::WaitPoses;
-use simba::scalar::SupersetOf;
 
 pub use entity::{Entity, EntityRef};
 pub use vr::{VR, VRError};
 
-pub use crate::component::Component;
+use crate::component::Component;
 use crate::utils::default_wait_poses;
 use crate::config::{self, CameraAPI};
 use crate::debug;
-use crate::math::{AMat4, Isometry3, Point3, Rot3, VRSlice};
+use crate::math::{Isometry3, Point3, Rot3, Vec3, PI};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
@@ -25,6 +23,8 @@ use crate::component::miku::Miku;
 use crate::component::ComponentError;
 use crate::component::pov::PoV;
 use crate::component::pc_controlled::PCControlled;
+use crate::component::toolgun::ToolGun;
+use crate::component::parent::Parent;
 
 pub mod vr;
 pub mod entity;
@@ -33,7 +33,7 @@ pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
 	pub vr_poses: WaitPoses,
-	pub camera_pos: Cell<Isometry3>,
+	pub camera_entity: EntityRef,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
@@ -65,25 +65,56 @@ impl Application {
 			vr,
 			renderer: RefCell::new(renderer),
 			vr_poses,
-			camera_pos: Cell::new(Isometry3::identity()),
+			camera_entity: EntityRef::null(),
 			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
 		};
 		
+		application.add_entity(Entity::new(
+			"ඞ",
+			Point3::new(0.0, 20.0, 2.0),
+			Rot3::identity(),
+			None,
+		));
+		
 		if application.vr.is_some() {
 			application.add_entity(Entity::new(
 				"System",
-				Point3::new(0.0, 0.0, -0.0),
+				Point3::new(0.0, 0.0, -1.0),
 				Rot3::identity(),
 				Some(VrSpawner::new().boxed()),
 			));
 		} else {
-			application.add_entity(Entity::new(
+			let pov = application.add_entity(Entity::new(
 				"(You)",
 				Point3::new(0.0, 1.5, 1.5),
 				Rot3::identity(),
 				[PoV::new().boxed(), PCControlled::new().boxed()],
+			));
+			
+			let model = SimpleModel::<u16>::from_obj("models/hand/hand_l", application.renderer.get_mut())?.boxed();
+			application.add_entity(Entity::new(
+				"Hand",
+				Point3::new(0.0, 0.0, 0.0),
+				Rot3::identity(),
+				[
+					model,
+					Parent::new(&pov, Isometry3::new(Vec3::new(-0.2, -0.2, -0.4),
+					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
+				],
+			));
+			
+			let model = SimpleModel::<u16>::from_obj("models/hand/hand_r", application.renderer.get_mut())?.boxed();
+			application.add_entity(Entity::new(
+				"Hand",
+				Point3::new(0.0, 0.0, 0.0),
+				Rot3::identity(),
+				[
+					model,
+					Parent::new(&pov, Isometry3::new(Vec3::new(0.2, -0.2, -0.4),
+					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
+				],
 			));
 		}
 		
@@ -92,7 +123,7 @@ impl Application {
 			"ToolGun",
 			Point3::new(0.0, 1.0, 1.0),
 			Rot3::identity(),
-			Some(model),
+			[model, ToolGun::new(Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(), Rot3::from_euler_angles(PI * 0.25, PI, 0.0))).boxed()],
 		));
 		
 		application.add_entity(Entity::new(
@@ -130,10 +161,17 @@ impl Application {
 			self.setup_loop()?;
 			
 			for entity in self.entities.values() {
+				entity.do_physics(delta_time);
+			}
+			
+			for entity in self.entities.values() {
 				entity.tick(delta_time, &self)?;
 			}
 			
-			self.renderer.get_mut().render(self.camera_pos.get(), &mut self.entities, &mut self.window)?;
+			let pov = self.camera_entity.get(&self).map(|e| e.state().position)
+			                            .unwrap_or(Isometry3::identity());
+			
+			self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
 			
 			self.cleanup_loop()?;
 		}
@@ -143,11 +181,11 @@ impl Application {
 	
 	#[allow(dead_code)]
 	pub fn add_entity(&self, entity: Entity) -> EntityRef {
-		let id = entity.id;
+		let entity_ref = entity.as_ref();
 		
 		self.new_entities.borrow_mut().push(entity);
 		
-		EntityRef::new(id)
+		entity_ref
 	}
 	
 	#[allow(dead_code)]
