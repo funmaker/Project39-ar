@@ -2,3 +2,5 @@
 **/*.rs.bk
 /.idea
 /dist
+/assets_overrides/*
+!/assets_overrides/.gitkeep

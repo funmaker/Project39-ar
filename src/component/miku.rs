@@ -35,7 +35,7 @@ impl Miku {
 
 impl Component for Miku {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		self.model.set(entity.add_component(MMDModel::<u16>::from_pmx("models/YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut *application.renderer.borrow_mut())?));
+		self.model.set(entity.add_component(MMDModel::<u16>::from_pmx("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut *application.renderer.borrow_mut())?));
 		
 		Ok(())
 	}

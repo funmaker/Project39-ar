@@ -93,7 +93,7 @@ impl Application {
 				[PoV::new().boxed(), PCControlled::new().boxed()],
 			));
 			
-			let model = SimpleModel::<u16>::from_obj("models/hand/hand_l", application.renderer.get_mut())?.boxed();
+			let model = SimpleModel::<u16>::from_obj("hand/hand_l", application.renderer.get_mut())?.boxed();
 			application.add_entity(Entity::new(
 				"Hand",
 				Point3::new(0.0, 0.0, 0.0),
@@ -105,7 +105,7 @@ impl Application {
 				],
 			));
 			
-			let model = SimpleModel::<u16>::from_obj("models/hand/hand_r", application.renderer.get_mut())?.boxed();
+			let model = SimpleModel::<u16>::from_obj("hand/hand_r", application.renderer.get_mut())?.boxed();
 			application.add_entity(Entity::new(
 				"Hand",
 				Point3::new(0.0, 0.0, 0.0),
@@ -118,7 +118,7 @@ impl Application {
 			));
 		}
 		
-		let model = SimpleModel::<u16>::from_obj("models/ToolBlaster/ToolBlaster", application.renderer.get_mut())?.boxed();
+		let model = SimpleModel::<u16>::from_obj("toolgun/toolgun", application.renderer.get_mut())?.boxed();
 		application.add_entity(Entity::new(
 			"ToolGun",
 			Point3::new(0.0, 1.0, 1.0),

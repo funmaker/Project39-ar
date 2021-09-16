@@ -1,7 +1,4 @@
-use std::io::BufReader;
-use std::fs::File;
 use std::path::{PathBuf, Path};
-use std::ffi::{OsStr, OsString};
 use std::convert::TryInto;
 use err_derive::Error;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
@@ -14,6 +11,7 @@ use vulkano::DeviceSize;
 use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::Renderer;
 use crate::math::{Vec3, Color};
+use crate::utils::{find_asset, AssetError, find_asset_path};
 use crate::debug;
 use super::{Vertex, Bone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
 
@@ -21,8 +19,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	let mut root = PathBuf::from(path);
 	root.pop();
 	
-	let model_reader = BufReader::new(File::open(path)?);
-	let header = mmd::HeaderReader::new(model_reader)?;
+	let header = mmd::HeaderReader::new(find_asset(path)?)?;
 	
 	// dprintln!("{}", header);
 	
@@ -42,11 +39,9 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	let mut textures_alpha = vec![];
 	
 	for texture_path in textures_reader.iter() {
-		let texture_path = texture_path?;
-		let os_path = lookup_windows_path(&root, &texture_path)?;
-		let texture_reader = BufReader::new(File::open(&os_path)?);
-		let format = find_image_format(&os_path)?;
-		let texture = image::load(texture_reader, format)?;
+		let path = root.join(texture_path?);
+		let format = find_image_format(find_asset_path(&path))?;
+		let texture = image::load(find_asset(&path)?, format)?;
 		let has_alpha = texture.color().has_alpha();
 		
 		model.add_texture(texture);
@@ -171,49 +166,6 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	Ok(model.build(renderer)?)
 }
 
-// Windows why
-fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, MMDModelLoadError> {
-	if cfg!(target_os = "windows") {
-		return Ok(root.join(orig_path));
-	}
-	
-	let mut path = PathBuf::from(orig_path.replace("\\", "/"));
-	let file_name = path.file_name().ok_or_else(|| MMDModelLoadError::PathError(orig_path.to_string()))?.to_owned();
-	path.pop();
-	
-	let mut cur_dir = root.clone();
-	
-	for component in path.components() {
-		cur_dir.push(lookup_component(&cur_dir, component.as_os_str(), true)?);
-	}
-	
-	cur_dir.push(lookup_component(&cur_dir, &file_name, false)?);
-	
-	Ok(cur_dir)
-}
-
-fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, MMDModelLoadError> {
-	let mut next_dir = None;
-	
-	for file in std::fs::read_dir(&cur_dir)? {
-		let file = file?;
-		
-		if (!dir && file.file_type()?.is_file()) || (dir && file.file_type()?.is_dir()) {
-			if file.file_name() == name {
-				next_dir = Some(name.to_owned());
-				break;
-			} else if file.file_name().to_ascii_lowercase() == name.to_ascii_lowercase() {
-				next_dir = Some(file.file_name());
-			}
-		}
-	}
-	
-	match next_dir {
-		Some(next_dir) => Ok(next_dir),
-		None => Err(MMDModelLoadError::FileNotFound(cur_dir.join(name).to_string_lossy().to_string())),
-	}
-}
-
 fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoadError> {
 	Ok(match imghdr::from_file(&path)? {
 		Some(imghdr::Type::Gif) => ImageFormat::Gif,
@@ -287,7 +239,8 @@ pub enum MMDModelLoadError {
 	#[error(display = "Failed to parse path {}", _0)] PathError(String),
 	#[error(display = "File not found: {}", _0)] FileNotFound(String),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
+	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
+	#[error(display = "{}", _0)] IoError(#[error(source)] std::io::Error),
 	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 }
