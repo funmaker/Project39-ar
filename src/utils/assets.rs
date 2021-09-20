@@ -5,49 +5,48 @@ use std::fs::File;
 use std::fmt::{Display, Formatter};
 use std::ffi::{OsStr, OsString};
 
-pub fn find_asset_path(path: impl AsRef<Path>) -> PathBuf {
-	let orig_path = Path::new("assets").join(path.as_ref());
-	let override_path = Path::new("assets_overrides").join(path.as_ref());
-	
-	if override_path.exists() {
-		override_path
-	} else {
-		orig_path
-	}
-}
-
 pub fn find_asset(path: impl AsRef<Path>) -> Result<impl BufRead + Seek, AssetError> {
-	let asset_path = find_asset_path(&path);
+	let asset_path = find_asset_path(&path)?;
 	
 	match File::open(asset_path) {
 		Ok(file) => Ok(BufReader::new(file)),
-		Err(err) => Err(AssetError::from_err(err, path.as_ref().to_string_lossy().to_string())),
+		Err(err) => Err(AssetError::from_err(err, path.as_ref().to_string_lossy())),
 	}
 }
 
-// TODO: Use this
+pub fn find_asset_path(path: impl AsRef<Path>) -> Result<PathBuf, AssetError> {
+	let orig_path = lookup_windows_path("assets", path.as_ref());
+	let override_path = lookup_windows_path("assets_overrides", path.as_ref());
+	
+	match (orig_path, override_path) {
+		(_, Ok(path)) if path.exists() => Ok(path),
+		(Ok(path), _) => Ok(path),
+		(Err(err), _) => Err(err),
+	}
+}
+
 // Windows why
-fn lookup_windows_path(root: &PathBuf, orig_path: &str) -> Result<PathBuf, AssetError> {
+fn lookup_windows_path(root: &str, orig_path: &Path) -> Result<PathBuf, AssetError> {
 	if cfg!(target_os = "windows") {
-		return Ok(root.join(orig_path));
+		return Ok(PathBuf::from(root).join(orig_path));
 	}
 	
-	let mut path = PathBuf::from(orig_path.replace("\\", "/"));
-	let file_name = path.file_name().ok_or_else(|| AssetError::new(orig_path.to_string()))?.to_owned();
+	let mut cur_dir = PathBuf::from(root);
+	let mut path = PathBuf::from(orig_path.to_string_lossy().replace("\\", "/"));
+	let full_path = cur_dir.join(&path);
+	let file_name = path.file_name().ok_or_else(|| AssetError::new(orig_path.to_string_lossy()))?.to_owned();
 	path.pop();
 	
-	let mut cur_dir = root.clone();
-	
 	for component in path.components() {
-		cur_dir.push(lookup_component(&cur_dir, component.as_os_str(), true)?);
+		cur_dir.push(lookup_component(&cur_dir, component.as_os_str(), &full_path, true)?);
 	}
 	
-	cur_dir.push(lookup_component(&cur_dir, &file_name, false)?);
+	cur_dir.push(lookup_component(&cur_dir, &file_name, &full_path, false)?);
 	
 	Ok(cur_dir)
 }
 
-fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsString, AssetError> {
+fn lookup_component(cur_dir: &PathBuf, name: &OsStr, full_path: &PathBuf, dir: bool) -> Result<OsString, AssetError> {
 	let mut next_dir = None;
 	
 	let result = try {
@@ -67,8 +66,8 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, dir: bool) -> Result<OsStri
 	
 	match (result, next_dir) {
 		(Ok(()), Some(next_dir)) => Ok(next_dir),
-		(Err(err), _) => Err(AssetError::from_err(err, cur_dir.join(name).to_string_lossy().to_string())),
-		_ => Err(AssetError::new(cur_dir.join(name).to_string_lossy().to_string())),
+		(Err(err), _) => Err(AssetError::from_err(err, full_path.to_string_lossy())),
+		_ => Err(AssetError::new(full_path.to_string_lossy())),
 	}
 }
 

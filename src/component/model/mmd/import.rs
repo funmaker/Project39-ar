@@ -40,7 +40,7 @@ pub fn from_pmx<VI>(path: &str, renderer: &mut Renderer) -> Result<MMDModelShare
 	
 	for texture_path in textures_reader.iter() {
 		let path = root.join(texture_path?);
-		let format = find_image_format(find_asset_path(&path))?;
+		let format = find_image_format(find_asset_path(&path)?)?;
 		let texture = image::load(find_asset(&path)?, format)?;
 		let has_alpha = texture.color().has_alpha();
 		
