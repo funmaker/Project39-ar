@@ -24,14 +24,14 @@ use crate::application::Entity;
 use super::{ModelError, VertexIndex};
 pub use import::SimpleModelLoadError;
 
-#[derive(ComponentBase)]
+#[derive(ComponentBase, Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
 	#[inner] inner: ComponentInner,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
-	fence: Arc<FenceCheck>,
+	fence: FenceCheck,
 }
 
 #[allow(dead_code)]
@@ -67,7 +67,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 			Arc::new(set_builder.build()?)
 		};
 		
-		let fence = Arc::new(FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?);
+		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?;
 		
 		Ok(SimpleModel {
 			inner: ComponentInner::new(),
@@ -97,7 +97,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 }
 
 impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
-	fn render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
 		
 		let model_matrix: AMat4 = entity.state().position.to_superset();

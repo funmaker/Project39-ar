@@ -7,6 +7,7 @@ pub use project39_ar_derive::ComponentBase;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::utils::{next_uid, IntoBoxed};
+use crate::renderer::Renderer;
 
 pub mod model;
 pub mod miku;
@@ -15,6 +16,7 @@ pub mod pov;
 pub mod pc_controlled;
 pub mod toolgun;
 pub mod parent;
+pub mod physics;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -36,8 +38,8 @@ pub trait ComponentBase: Any {
 pub trait Component: ComponentBase {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> { Ok(()) }
-	fn pre_render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
-	fn render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
+	fn pre_render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
+	fn render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
 	fn end(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
 	
 	fn boxed(self)
@@ -81,6 +83,13 @@ impl ComponentInner {
 	
 	pub fn is_being_removed(&self) -> bool {
 		self.removed.get()
+	}
+}
+
+// Cloning inner creates new unique inner. It's unintuitive, but necessary to allow Clone Deriving in Components
+impl Clone for ComponentInner {
+	fn clone(&self) -> Self {
+		Self::new()
 	}
 }
 

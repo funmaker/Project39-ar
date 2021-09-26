@@ -1,15 +1,17 @@
 use std::time::Duration;
 use std::collections::BTreeMap;
 use std::cell::RefCell;
+use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
+use rapier3d::prelude::ColliderBuilder;
 
 use crate::application::{Entity, EntityRef, Application};
-use crate::math::{Point3, Rot3};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::component::model::SimpleModel;
-use super::VrTracked;
 use crate::component::pov::PoV;
+use crate::math::Vec3;
+use super::VrTracked;
 
 #[derive(ComponentBase)]
 pub struct VrSpawner {
@@ -44,20 +46,37 @@ impl Component for VrSpawner {
 					} else if let Ok(Some(model)) = model {
 						if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
 							let class = vr.system.tracked_device_class(tracked_id);
-							let model = SimpleModel::<u16>::from_openvr(model, texture, &mut *application.renderer.borrow_mut())?;
-							let entity = Entity::new(
-								format!("{:?}", class),
-								Point3::origin(),
-								Rot3::identity(),
-								[model.boxed(), VrTracked::new(tracked_id).boxed()],
-							);
 							
-							if class == TrackedDeviceClass::HMD {
-								entity.state_mut().hidden = true;
-								entity.add_component(PoV::new());
+							let mut aabb = (Vec3::zeros(), Vec3::zeros());
+							
+							for vertex in model.vertices() {
+								let vertex = Vec3::from(vertex.position);
+								
+								if vertex.x < aabb.0.x { aabb.0.x = vertex.x; }
+								if vertex.y < aabb.0.y { aabb.0.y = vertex.y; }
+								if vertex.z < aabb.0.z { aabb.0.z = vertex.z; }
+								if vertex.x > aabb.1.x { aabb.1.x = vertex.x; }
+								if vertex.y > aabb.1.y { aabb.1.y = vertex.y; }
+								if vertex.z > aabb.1.z { aabb.1.z = vertex.z; }
 							}
 							
-							let entity = application.add_entity(entity);
+							let center = (aabb.1 + aabb.0) / 2.0;
+							let hsize = (aabb.1 - aabb.0) / 2.0;
+							
+							let mut entity = Entity::builder(format!("{:?}", class))
+								.rigid_body_type(RigidBodyType::KinematicPositionBased)
+								.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
+								                          .translation(center.into())
+								                          .build())
+								.component(SimpleModel::<u16>::from_openvr(model, texture, &mut *application.renderer.borrow_mut())?)
+								.component(VrTracked::new(tracked_id));
+							
+							if class == TrackedDeviceClass::HMD {
+								entity = entity.hidden(true)
+								               .component(PoV::new());
+							}
+							
+							let entity = application.add_entity(entity.build());
 							
 							entities.insert(tracked_id, entity);
 							

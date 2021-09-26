@@ -32,7 +32,7 @@ pub struct Background {
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
-	fence: Arc<FenceCheck>,
+	fence: FenceCheck,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
 }
@@ -124,7 +124,7 @@ impl Background {
 		  .try_inverse()
 		  .expect("Unable to inverse right camera extrinsics");
 		
-		let fence = Arc::new(FenceCheck::new(vertices_promise)?);
+		let fence = FenceCheck::new(vertices_promise)?;
 		
 		Ok(Background {
 			pipeline,

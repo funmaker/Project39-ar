@@ -1,13 +1,18 @@
 use std::cell::{Ref, RefCell, RefMut, Cell};
 use std::collections::BTreeMap;
 use std::time::Duration;
+use rapier3d::prelude::{RigidBody, RigidBodyHandle};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
+mod builder;
+
 use crate::debug;
-use crate::math::{Color, Isometry3, Point3, Rot3, Vec3};
+use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::component::{ComponentRef, ComponentError};
-use crate::utils::{next_uid, IntoBoxed};
-use super::{Application, Component};
+use crate::utils::IntoBoxed;
+use crate::renderer::Renderer;
+use super::{Application, Component, Physics};
+pub use builder::EntityBuilder;
 
 pub struct EntityState {
 	pub position: Isometry3,
@@ -19,6 +24,8 @@ pub struct EntityState {
 pub struct Entity {
 	pub id: u64,
 	pub name: String,
+	pub rigid_body: RigidBodyHandle,
+	rigid_body_template: RigidBody,
 	state: RefCell<EntityState>,
 	removed: Cell<bool>,
 	components: BTreeMap<u64, Box<dyn Component>>,
@@ -26,26 +33,8 @@ pub struct Entity {
 }
 
 impl Entity {
-	pub fn new(name: impl Into<String>, position: Point3, angle: Rot3, components: impl IntoIterator<Item = Box<dyn Component>>) -> Self {
-		let entity = Entity {
-			id: next_uid(),
-			name: name.into(),
-			state: RefCell::new(EntityState {
-				position: Isometry3::from_parts(position.coords.into(), angle),
-				velocity: Vec3::zeros(),
-				angular_velocity: Vec3::zeros(),
-				hidden: false,
-			}),
-			removed: Cell::new(false),
-			components: BTreeMap::new(),
-			new_components: RefCell::new(Vec::new()),
-		};
-		
-		for component in components {
-			entity.add_component(component);
-		}
-		
-		entity
+	pub fn builder(name: impl Into<String>) -> EntityBuilder {
+		EntityBuilder::new(name)
 	}
 	
 	pub fn remove(&self) -> bool {
@@ -64,6 +53,10 @@ impl Entity {
 		self.components
 		    .get(&id)
 		    .and_then(|c| c.as_any().downcast_ref::<C>())
+	}
+	
+	pub fn setup_physics(&mut self, physics: &mut Physics) {
+		self.rigid_body = physics.rigid_body_set.insert(self.rigid_body_template.clone());
 	}
 	
 	// Safety note. These argument combination is not safe.
@@ -87,14 +80,22 @@ impl Entity {
 		Ok(did_work)
 	}
 	
-	pub fn do_physics(&self, delta_time: Duration) {
+	pub fn before_physics(&self, physics: &mut Physics) {
+		let state = self.state();
+		let rigid_body = self.rigid_body_mut(physics);
+		
+		rigid_body.set_position(state.position, false);
+		rigid_body.set_linvel(state.velocity, false);
+		rigid_body.set_angvel(state.angular_velocity, false);
+	}
+	
+	pub fn after_physics(&self, physics: &mut Physics) {
 		let mut state = self.state_mut();
+		let rigid_body = self.rigid_body(physics);
 		
-		let ang_disp = &state.angular_velocity * delta_time.as_secs_f32();
-		let (pitch, yaw, roll) = (ang_disp.x, ang_disp.y, ang_disp.z);
-		
-		state.position.translation.vector = state.position.translation.vector + state.velocity * delta_time.as_secs_f32();
-		state.position.rotation *= Rot3::from_euler_angles(roll, pitch, yaw);
+		state.position = *rigid_body.position();
+		state.velocity = *rigid_body.linvel();
+		state.angular_velocity = *rigid_body.angvel();
 	}
 	
 	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
@@ -105,15 +106,15 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn pre_render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn pre_render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		for component in self.components.values() {
-			component.pre_render(&self, builder)?;
+			component.pre_render(&self, renderer, builder)?;
 		}
 		
 		Ok(())
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		let state = self.state.get_mut();
 		
 		if state.hidden {
@@ -130,7 +131,7 @@ impl Entity {
 		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		
 		for component in self.components.values() {
-			component.render(&self, builder)?;
+			component.render(&self, renderer, builder)?;
 		}
 		
 		Ok(())
@@ -155,6 +156,10 @@ impl Entity {
 		}
 		
 		Ok(did_work)
+	}
+	
+	pub fn cleanup_physics(&mut self, physics: &mut Physics) {
+		physics.rigid_body_set.remove(self.rigid_body, &mut physics.island_manager, &mut physics.collider_set, &mut physics.joint_set);
 	}
 	
 	pub fn as_ref(&self) -> EntityRef {
@@ -184,6 +189,14 @@ impl Entity {
 	
 	pub fn try_state_mut(&self) -> Option<RefMut<EntityState>> {
 		self.state.try_borrow_mut().ok()
+	}
+	
+	pub fn rigid_body<'p>(&self, physics: &'p Physics) -> &'p RigidBody {
+		physics.rigid_body_set.get(self.rigid_body).unwrap()
+	}
+	
+	pub fn rigid_body_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut RigidBody {
+		physics.rigid_body_set.get_mut(self.rigid_body).unwrap()
 	}
 }
 

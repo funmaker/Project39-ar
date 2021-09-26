@@ -163,7 +163,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 }
 
 impl<VI: VertexIndex> Component for MMDModel<VI> {
-	fn pre_render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn pre_render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {
@@ -234,7 +234,7 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
 		let model_matrix = entity.state().position.to_homogeneous();
 		

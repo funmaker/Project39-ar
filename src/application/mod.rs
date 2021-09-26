@@ -5,9 +5,11 @@ use std::time::Instant;
 use err_derive::Error;
 use openvr::TrackedControllerRole;
 use openvr::compositor::WaitPoses;
+use rapier3d::dynamics::RigidBodyType;
 
 pub use entity::{Entity, EntityRef};
 pub use vr::{VR, VRError};
+pub use physics::Physics;
 
 use crate::component::Component;
 use crate::utils::default_wait_poses;
@@ -23,15 +25,18 @@ use crate::component::miku::Miku;
 use crate::component::ComponentError;
 use crate::component::pov::PoV;
 use crate::component::pc_controlled::PCControlled;
-use crate::component::toolgun::ToolGun;
+use crate::component::toolgun::{ToolGun, ToolGunError};
 use crate::component::parent::Parent;
+use crate::component::physics::collider::ColliderComponent;
 
 pub mod vr;
 pub mod entity;
+pub mod physics;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
+	pub physics: RefCell<Physics>,
 	pub vr_poses: WaitPoses,
 	pub camera_entity: EntityRef,
 	window: Window,
@@ -59,86 +64,104 @@ impl Application {
 		
 		let window = Window::new(&renderer)?;
 		
-		let vr_poses = default_wait_poses();
-		
-		let mut application = Application {
+		let application = Application {
 			vr,
 			renderer: RefCell::new(renderer),
-			vr_poses,
+			physics: RefCell::new(Physics::new()),
+			vr_poses: default_wait_poses(),
 			camera_entity: EntityRef::null(),
 			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
 		};
 		
-		application.add_entity(Entity::new(
-			"ඞ",
-			Point3::new(0.0, 20.0, 2.0),
-			Rot3::identity(),
-			None,
-		));
-		
-		if application.vr.is_some() {
-			application.add_entity(Entity::new(
-				"System",
-				Point3::new(0.0, 0.0, -1.0),
-				Rot3::identity(),
-				Some(VrSpawner::new().boxed()),
-			));
-		} else {
-			let pov = application.add_entity(Entity::new(
-				"(You)",
-				Point3::new(0.0, 1.5, 1.5),
-				Rot3::identity(),
-				[PoV::new().boxed(), PCControlled::new().boxed()],
-			));
+		{
+			let renderer = &mut application.renderer.borrow_mut();
 			
-			let model = SimpleModel::<u16>::from_obj("hand/hand_l", application.renderer.get_mut())?.boxed();
-			application.add_entity(Entity::new(
-				"Hand",
-				Point3::new(0.0, 0.0, 0.0),
-				Rot3::identity(),
-				[
-					model,
-					Parent::new(&pov, Isometry3::new(Vec3::new(-0.2, -0.2, -0.4),
-					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
-				],
-			));
+			application.add_entity(
+				Entity::builder("ඞ")
+					.translation(Point3::new(0.0, 20.0, 2.0))
+					.build()
+			);
 			
-			let model = SimpleModel::<u16>::from_obj("hand/hand_r", application.renderer.get_mut())?.boxed();
-			application.add_entity(Entity::new(
-				"Hand",
-				Point3::new(0.0, 0.0, 0.0),
-				Rot3::identity(),
-				[
-					model,
-					Parent::new(&pov, Isometry3::new(Vec3::new(0.2, -0.2, -0.4),
-					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
-				],
-			));
+			if application.vr.is_some() {
+				application.add_entity(
+					Entity::builder("System")
+						.translation(Point3::new(0.0, 0.0, -1.0))
+						.component(VrSpawner::new())
+						.build()
+				);
+			} else {
+				let pov = application.add_entity(
+					Entity::builder("(You)")
+						.translation(Point3::new(0.0, 1.5, 1.5))
+						.component(PoV::new())
+						.component(PCControlled::new())
+						.build()
+				);
+				
+				application.add_entity(
+					Entity::builder("Hand")
+						.component(SimpleModel::<u16>::from_obj("hand/hand_l", renderer)?)
+						.component(Parent::new(&pov, Isometry3::new(Vec3::new(-0.2, -0.2, -0.4),
+						                                            Vec3::new(PI * 0.25, 0.0, 0.0))))
+						.build()
+				);
+				
+				application.add_entity(
+					Entity::builder("Hand")
+						.component(SimpleModel::<u16>::from_obj("hand/hand_r", renderer)?)
+						.component(Parent::new(&pov, Isometry3::new(Vec3::new(0.2, -0.2, -0.4),
+						                                            Vec3::new(PI * 0.25, 0.0, 0.0))))
+						.build()
+				);
+			}
+			
+			application.add_entity(
+				Entity::builder("ToolGun")
+					.translation(Point3::new(0.0, 1.0, 1.0))
+					.component(SimpleModel::<u16>::from_obj("toolgun/toolgun", renderer)?)
+					.component(ToolGun::new(Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(),
+					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
+					                        renderer)?)
+					.build()
+			);
+			
+			// application.add_entity(
+			// 	Entity::builder("初音ミク")
+			// 		.translation(Point3::new(0.0, 0.0, 0.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
+			// 		.component(Miku::new())
+			// 		.build()
+			// );
+			
+			application.add_entity(
+				Entity::builder("Floor")
+					.translation(Point3::new(0.0, -0.5, 0.0))
+					.component(ColliderComponent::cuboid(Vec3::new(10.0, 1.0, 10.0)))
+					.build()
+			);
+			
+			
+			let box_model = SimpleModel::<u16>::from_obj("cube/cube", renderer)?;
+			for id in 0..10 {
+				application.add_entity(
+					Entity::builder("Box")
+						.rigid_body_type(RigidBodyType::Dynamic)
+						.translation(Point3::new((id as f32).sin(), id as f32 * 1.5 + 0.5, (id as f32).cos()))
+						.component(box_model.clone())
+						.component(ColliderComponent::cuboid(Vec3::new(1.0, 1.0, 1.0)))
+						.build()
+				);
+			}
+			
+			// application.add_entity(
+			// 	"Test",
+			// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
+			// 	Point3::new(2.0, 0.0, -1.5),
+			// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
+			// );
 		}
-		
-		let model = SimpleModel::<u16>::from_obj("toolgun/toolgun", application.renderer.get_mut())?.boxed();
-		application.add_entity(Entity::new(
-			"ToolGun",
-			Point3::new(0.0, 1.0, 1.0),
-			Rot3::identity(),
-			[model, ToolGun::new(Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(), Rot3::from_euler_angles(PI * 0.25, PI, 0.0))).boxed()],
-		));
-		
-		application.add_entity(Entity::new(
-			"初音ミク",
-			Point3::new(0.0, 0.0, 0.0),
-			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
-			Some(Miku::new().boxed()),
-		));
-		
-		// application.add_entity(
-		// 	"Test",
-		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
-		// 	Point3::new(2.0, 0.0, -1.5),
-		// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
-		// );
 		
 		Ok(application)
 	}
@@ -160,8 +183,18 @@ impl Application {
 			
 			self.setup_loop()?;
 			
-			for entity in self.entities.values() {
-				entity.do_physics(delta_time);
+			{
+				let physics = self.physics.get_mut();
+				
+				for entity in self.entities.values() {
+					entity.before_physics(physics);
+				}
+				
+				physics.step(delta_time);
+				
+				for entity in self.entities.values() {
+					entity.after_physics(physics);
+				}
 			}
 			
 			for entity in self.entities.values() {
@@ -210,8 +243,10 @@ impl Application {
 		while !clean {
 			clean = true;
 			
-			for entity in self.new_entities.get_mut().drain(..) {
+			for mut entity in self.new_entities.get_mut().drain(..) {
 				let id = entity.id;
+				
+				entity.setup_physics(self.physics.get_mut());
 				
 				let old = self.entities.insert(id, entity);
 				assert!(old.is_none(), "Entity id {} already taken!", id);
@@ -242,7 +277,9 @@ impl Application {
 			}
 		}
 		
-		self.entities.drain_filter(|_, entity| entity.is_being_removed());
+		for (_, mut entity) in self.entities.drain_filter(|_, entity| entity.is_being_removed()) {
+			entity.cleanup_physics(self.physics.get_mut());
+		}
 		
 		Ok(())
 	}
@@ -282,6 +319,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
+	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
 	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),

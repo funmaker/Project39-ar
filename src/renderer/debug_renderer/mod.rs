@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::f32::consts::PI;
+use std::cell::RefCell;
 use err_derive::Error;
 use vulkano::{memory, command_buffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
@@ -16,9 +17,10 @@ use crate::math::{Vec2, Vec3, Rot2, PMat4};
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
 use super::CommonsUBO;
-use text_cache::{TextCache, TextCacheError, TextCacheGetError};
+pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
 
 pub struct DebugRenderer {
+	pub text_cache: RefCell<TextCache>,
 	pipeline: Arc<GraphicsPipeline>,
 	text_pipeline: Arc<GraphicsPipeline>,
 	vertices_pool: CpuBufferPool<Vertex>,
@@ -27,7 +29,6 @@ pub struct DebugRenderer {
 	vertices: Vec<Vertex>,
 	text_vertices: Vec<TexturedVertex>,
 	indexes: Vec<u32>,
-	text_cache: TextCache,
 }
 
 const RING_MIN: f32 = 5.0;
@@ -43,7 +44,7 @@ impl DebugRenderer {
 		let text_vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
 		let indexes_pool = CpuBufferPool::new(device.clone(), BufferUsage::index_buffer());
 		
-		let text_cache = TextCache::new(load_queue, pipelines)?;
+		let text_cache = RefCell::new(TextCache::new(load_queue, pipelines)?);
 		
 		Ok(DebugRenderer {
 			pipeline,
@@ -261,7 +262,7 @@ impl DebugRenderer {
 	}
 	
 	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRenderError> {
-		let entry = self.text_cache.get(&text.text)?;
+		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
 		let size_px = Vec2::new(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
 		let offset = text.offset.evaluate(size_px).coords.component_mul(&pixel_scale).to_homogeneous();

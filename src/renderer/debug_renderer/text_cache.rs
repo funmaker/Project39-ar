@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use err_derive::Error;
 use vulkano::descriptor_set::{self, PersistentDescriptorSet, DescriptorSet};
-use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
+use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode, BorderColor};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::device::Queue;
@@ -58,9 +58,9 @@ impl TextCache {
 			                           Filter::Nearest,
 			                           Filter::Linear,
 			                           MipmapMode::Nearest,
-			                           SamplerAddressMode::ClampToEdge,
-			                           SamplerAddressMode::ClampToEdge,
-			                           SamplerAddressMode::ClampToEdge,
+			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
+			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
+			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
 			                           0.0,
 			                           1.0,
 			                           0.0,

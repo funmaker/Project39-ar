@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::sync::{Arc, mpsc};
-
+use std::cell::RefMut;
 use err_derive::Error;
 use vulkano::{command_buffer, descriptor_set, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
@@ -19,7 +19,7 @@ use vulkano::sync::{FenceSignalFuture, GpuFuture};
 
 use background::{Background, BackgroundError, BackgroundRenderError};
 use camera::{Camera, CameraStartError};
-use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError};
+use debug_renderer::{DebugRenderer, TextCache, DebugRendererError, DebugRendererRenderError};
 use eyes::{EyeCreationError, Eyes};
 use openvr_cb::OpenVRCommandBuffer;
 use pipelines::Pipelines;
@@ -35,10 +35,11 @@ pub mod camera;
 pub mod eyes;
 pub mod window;
 pub mod pipelines;
-mod debug_renderer;
+pub mod debug_renderer;
 mod openvr_cb;
 mod background;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CommonsUBO {
 	projection: [PMat4; 2],
@@ -439,7 +440,7 @@ impl Renderer {
 		                      Arc::new(commons.clone()))?;
 		
 		for entity in scene.values_mut() {
-			entity.pre_render(&mut builder)?;
+			entity.pre_render(&self, &mut builder)?;
 		}
 		
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
@@ -449,7 +450,7 @@ impl Renderer {
 		self.background.render(&mut builder, camera_pos)?;
 		
 		for entity in scene.values_mut() {
-			entity.render(&mut builder)?;
+			entity.render(&self, &mut builder)?;
 		}
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
@@ -512,6 +513,10 @@ impl Renderer {
 		}
 		
 		Ok(())
+	}
+	
+	pub fn debug_text_cache(&self) -> RefMut<TextCache> {
+		self.debug_renderer.text_cache.borrow_mut()
 	}
 }
 
