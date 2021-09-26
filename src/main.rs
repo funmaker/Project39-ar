@@ -32,6 +32,7 @@ mod application;
 mod utils;
 mod config;
 pub mod component;
+pub mod steamvr_config;
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));

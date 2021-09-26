@@ -42,6 +42,8 @@ pub struct CameraConfig {
 	pub id: usize,
 	/// Size of the whole frame buffer.
 	#[serde(skip)] #[arg_skip] pub frame_buffer_size: IVec2,
+	/// Size of the whole frame buffer.
+	#[serde(skip)] #[arg_skip] pub device_serial_number: String,
 	/// Left camera eye
 	pub left: CameraEyeConfig,
 	/// Right camera eye
@@ -66,6 +68,9 @@ pub struct CameraEyeConfig {
 	pub right: Vec3,
 	/// Camera's back (Z+)
 	pub back: Vec3,
+	#[serde(skip)] #[arg_skip] pub cal_method: String,
+	#[serde(skip)] #[arg_skip] pub name: String,
+	#[serde(skip)] #[arg_skip] pub white_balance: Vec4,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
@@ -76,6 +81,10 @@ pub struct NovrConfig {
 	pub frame_buffer_width: u32,
 	/// Emulated output height.
 	pub frame_buffer_height: u32,
+	/// Raw Projection of the left eye (tangents left, right, top, bottom).
+	pub raw_projection_left: Vec4,
+	/// Raw Projection of the right eye (tangents left, right, top, bottom).
+	pub raw_projection_right: Vec4,
 	/// Emulated fov
 	pub fov: f32,
 }

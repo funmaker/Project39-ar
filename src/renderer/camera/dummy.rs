@@ -2,9 +2,12 @@
 
 use std::time::{Instant, Duration};
 use std::thread;
+use std::sync::Arc;
+use image::RgbaImage;
 
 use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 use crate::math::Isometry3;
+use crate::debug;
 
 lazy_static!(
 	static ref FRAME: Vec<u8> = [  0,   0,   0,  39].iter()
@@ -16,12 +19,14 @@ lazy_static!(
 
 pub struct Dummy {
 	last_frame: Instant,
+	camera_override: Option<Arc<RgbaImage>>,
 }
 
 impl Dummy {
 	pub fn new() -> Dummy {
 		Dummy {
 			last_frame: Instant::now(),
+			camera_override: None,
 		}
 	}
 }
@@ -36,6 +41,12 @@ impl Camera for Dummy {
 		
 		self.last_frame = Instant::now();
 		
-		Ok((FRAME.as_slice(), None))
+		self.camera_override = debug::get_flag("camera_override");
+		
+		if let Some(image) = self.camera_override.as_ref() {
+			Ok((image, None))
+		} else {
+			Ok((FRAME.as_slice(), None))
+		}
 	}
 }

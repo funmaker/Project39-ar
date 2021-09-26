@@ -52,9 +52,11 @@ impl Eyes {
 		
 		let view = AMat4::identity();
 		let projection = clip() * Perspective3::new(aspect, fovy, 0.01, 100.01).as_projective();
-		let raw = Vec4::new((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
 		
-		Self::new(min_frame_buffer_size, (view, view), (projection, projection), (raw, raw), queue, render_pass)
+		let raw_left = config.raw_projection_left; // TODO: Apply for FoV etc
+		let raw_right = config.raw_projection_right;
+		
+		Self::new(min_frame_buffer_size, (view, view), (projection, projection), (raw_left, raw_right), queue, render_pass)
 	}
 	
 	pub fn new_vr(vr: &VR, queue: &Arc<Queue>, render_pass: &Arc<RenderPass>) -> Result<Eyes, EyeCreationError> {

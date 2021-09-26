@@ -2,29 +2,30 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
+use std::fs::read_dir;
+use std::path::PathBuf;
 use err_derive::Error;
 use openvr::TrackedControllerRole;
 use openvr::compositor::WaitPoses;
+use chrono::{DateTime, Utc, NaiveDateTime};
+use image::{RgbaImage, DynamicImage};
 
 pub use entity::{Entity, EntityRef};
 pub use vr::{VR, VRError};
 
-use crate::component::Component;
+use crate::component::{Component, ComponentError, ComponentRef};
 use crate::utils::default_wait_poses;
-use crate::config::{self, CameraAPI};
+use crate::config::{self, CameraAPI, CameraConfig};
 use crate::debug;
-use crate::math::{Isometry3, Point3, Rot3, Vec3, PI};
-use crate::renderer::{Renderer, RendererError, RendererRenderError};
+use crate::math::{Isometry3, Point2, Color, Point3, Rot3};
+use crate::steamvr_config::{load_steamvr_config, CameraConfigLoadError};
+use crate::renderer::{Renderer, RendererError, RendererRenderError, RendererBackgroundError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
-use crate::component::vr::VrSpawner;
-use crate::component::miku::Miku;
-use crate::component::ComponentError;
-use crate::component::pov::PoV;
-use crate::component::pc_controlled::PCControlled;
-use crate::component::toolgun::ToolGun;
-use crate::component::parent::Parent;
+use crate::component::model::mmd::MMDModelLoadError;
+use crate::component::model::ModelError;
+use crate::component::model::simple::SimpleModelLoadError;
+use crate::component::mirror::Mirror;
 
 pub mod vr;
 pub mod entity;
@@ -37,6 +38,14 @@ pub struct Application {
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
+	mirror: ComponentRef<Mirror>,
+}
+
+pub struct Dump {
+	time: DateTime<Utc>,
+	camera: Arc<RgbaImage>,
+	mirror: Arc<DynamicImage>,
+	config: CameraConfig,
 }
 
 impl Application {
@@ -69,84 +78,66 @@ impl Application {
 			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
+			mirror: ComponentRef::null(),
 		};
 		
-		application.add_entity(Entity::new(
-			"ඞ",
-			Point3::new(0.0, 20.0, 2.0),
+		let mirror = Entity::new(
+			"Mirror",
+			Point3::new(0.0, 0.0, 100.0),
 			Rot3::identity(),
 			None,
-		));
+		);
 		
-		if application.vr.is_some() {
-			application.add_entity(Entity::new(
-				"System",
-				Point3::new(0.0, 0.0, -1.0),
-				Rot3::identity(),
-				Some(VrSpawner::new().boxed()),
-			));
-		} else {
-			let pov = application.add_entity(Entity::new(
-				"(You)",
-				Point3::new(0.0, 1.5, 1.5),
-				Rot3::identity(),
-				[PoV::new().boxed(), PCControlled::new().boxed()],
-			));
-			
-			let model = SimpleModel::<u16>::from_obj("hand/hand_l", application.renderer.get_mut())?.boxed();
-			application.add_entity(Entity::new(
-				"Hand",
-				Point3::new(0.0, 0.0, 0.0),
-				Rot3::identity(),
-				[
-					model,
-					Parent::new(&pov, Isometry3::new(Vec3::new(-0.2, -0.2, -0.4),
-					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
-				],
-			));
-			
-			let model = SimpleModel::<u16>::from_obj("hand/hand_r", application.renderer.get_mut())?.boxed();
-			application.add_entity(Entity::new(
-				"Hand",
-				Point3::new(0.0, 0.0, 0.0),
-				Rot3::identity(),
-				[
-					model,
-					Parent::new(&pov, Isometry3::new(Vec3::new(0.2, -0.2, -0.4),
-					                                 Vec3::new(PI * 0.25, 0.0, 0.0))).boxed(),
-				],
-			));
-		}
-		
-		let model = SimpleModel::<u16>::from_obj("toolgun/toolgun", application.renderer.get_mut())?.boxed();
-		application.add_entity(Entity::new(
-			"ToolGun",
-			Point3::new(0.0, 1.0, 1.0),
-			Rot3::identity(),
-			[model, ToolGun::new(Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(), Rot3::from_euler_angles(PI * 0.25, PI, 0.0))).boxed()],
-		));
-		
-		application.add_entity(Entity::new(
-			"初音ミク",
-			Point3::new(0.0, 0.0, 0.0),
-			Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0),
-			Some(Miku::new().boxed()),
-		));
-		
-		// application.add_entity(
-		// 	"Test",
-		// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
-		// 	Point3::new(2.0, 0.0, -1.5),
-		// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
-		// );
+		application.mirror = mirror.add_component(Mirror::new(application.renderer.get_mut()));
+		application.add_entity(mirror);
 		
 		Ok(application)
 	}
 	
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
-		
 		let mut vr_buttons = 0;
+		
+		let mut cur_dump = 0_usize;
+		let mut mirror = false;
+		let mut dumps = vec![];
+		let mut dump_changed = true;
+		let dumps_path = PathBuf::from("dumps");
+		let dumps_dir = read_dir(&dumps_path)?;
+		
+		for dump in dumps_dir {
+			let dump = dump?;
+			
+			let time = if let Ok(timestamp) = dump.file_name().to_string_lossy().parse() {
+				DateTime::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc)
+			} else {
+				continue;
+			};
+			
+			let path = dump.path();
+			let mut camera = image::open(path.join("camera.png"))?.into_rgba8();
+			let mut mirror = image::open(path.join("mirror.png"))?.into_rgba8();
+			let config = load_steamvr_config(path.join("config.json"))?;
+			
+			for pixel in mirror.pixels_mut() {
+				pixel.0[3] = 255;
+			}
+			
+			for pixel in camera.pixels_mut() {
+				pixel.0.swap(0, 2);
+			}
+			
+			dumps.push(Dump {
+				time,
+				camera: Arc::new(camera),
+				mirror: Arc::new(DynamicImage::ImageRgba8(mirror)),
+				config,
+			});
+		}
+		
+		if dumps.is_empty() {
+			panic!("No dumps to examine");
+		}
 		
 		while !self.window.quit_required {
 			self.window.pull_events();
@@ -168,8 +159,49 @@ impl Application {
 				entity.tick(delta_time, &self)?;
 			}
 			
+			if debug::get_flag_or_default("KeyA") {
+				cur_dump = cur_dump.checked_sub(1).unwrap_or(dumps.len() - 1);
+				debug::set_flag("KeyA", false);
+				dump_changed = true;
+			}
+			
+			if debug::get_flag_or_default("KeyD") {
+				cur_dump += 1;
+				if cur_dump >= dumps.len() {
+					cur_dump = 0;
+				}
+				debug::set_flag("KeyD", false);
+				dump_changed = true;
+			}
+			
+			if debug::get_flag_or_default("KeyE") {
+				mirror = !mirror;
+				
+				self.mirror.get(&self).unwrap().set_enabled(mirror);
+				debug::set_flag("KeyE", false);
+			}
+			
+			let dump = &dumps[cur_dump];
+			
+			if dump_changed {
+				debug::set_flag("camera_override", dump.camera.clone());
+				config::rcu(|config| config.camera = dump.config.clone());
+				self.renderer.get_mut().recreate_background()?;
+				self.mirror.get(&self).unwrap().set_image(dump.mirror.clone(), &*self.renderer.borrow());
+				
+				dump_changed = false;
+			}
+			
 			let pov = self.camera_entity.get(&self).map(|e| e.state().position)
 			                            .unwrap_or(Isometry3::identity());
+			
+			let text = format!("({}/{}) {}", cur_dump + 1, dumps.len(), dump.time.to_rfc2822());
+			debug::draw_text(text, Point2::new(-1.0, 1.0), debug::DebugOffset::top_right(16.0, -16.0), 64.0, Color::green());
+			if mirror {
+				debug::draw_text("Room View", Point2::new(-1.0, 1.0), debug::DebugOffset::top_right(16.0, -96.0), 64.0, Color::cyan());
+			} else {
+				debug::draw_text("Reconstruction", Point2::new(-1.0, 1.0), debug::DebugOffset::top_right(16.0, -96.0), 64.0, Color::green());
+			}
 			
 			self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
 			
@@ -295,11 +327,14 @@ pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] RendererRenderError(#[error(source)] RendererRenderError),
 	#[error(display = "{}", _0)] ComponentError(ComponentError),
+	#[error(display = "{}", _0)] CameraConfigLoadError(#[error(source)] CameraConfigLoadError),
+	#[error(display = "{}", _0)] RendererBackgroundError(#[error(source)] RendererBackgroundError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),
 	#[error(display = "{}", _0)] RenderModelError(#[error(source)] openvr::render_models::Error),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
+	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
 }
 
 impl From<ComponentError> for ApplicationRunError {

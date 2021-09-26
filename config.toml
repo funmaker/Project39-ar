@@ -1,4 +1,4 @@
-debug = false
+debug = true
 validation = false
 gpu_id = 0
 ssaa = 1
@@ -6,7 +6,7 @@ msaa = 2
 window_max_fps = 60
 
 [camera]
-driver = "openvr"
+driver = "dummy"
 id = 0
 frame_buffer_size = [1920, 960]
 
@@ -34,5 +34,7 @@ back = [0.070594123610073389, 0.01270423127530141, -0.9974241022502619]
 enabled = false
 frame_buffer_width = 960
 frame_buffer_height = 1080
+raw_projection_left = [1.5437634, 1.04756, 1.4057592, 1.4119784]
+raw_projection_right = [1.0550995, 1.5372379, 1.4070978, 1.4146304]
 fov = 90
 

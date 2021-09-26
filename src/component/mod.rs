@@ -15,6 +15,7 @@ pub mod pov;
 pub mod pc_controlled;
 pub mod toolgun;
 pub mod parent;
+pub mod mirror;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -42,7 +43,7 @@ pub trait Component: ComponentBase {
 	
 	fn boxed(self)
 	         -> Box<dyn Component>
-		where Self: Sized
+	         where Self: Sized
 	{ Box::new(self) }
 }
 
@@ -140,5 +141,11 @@ impl<C: 'static> ComponentRef<C> {
 			Some((eid, _)) => EntityRef::new(eid),
 			None => EntityRef::null(),
 		}
+	}
+}
+
+impl<C: Component> From<&C> for ComponentRef<C> {
+	fn from(component: &C) -> Self {
+		ComponentRef::new(component.inner().entity_id.expect("Trying to reference unmounted component"), component.inner().id)
 	}
 }

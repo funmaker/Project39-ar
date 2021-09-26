@@ -1,0 +1,49 @@
+CameraVideoStreamFrameHeader_t {
+    eFrameType: 0,
+    nWidth: 1920,
+    nHeight: 960,
+    nBytesPerPixel: 4,
+    nFrameSequence: 1,
+    standingTrackedDevicePose: TrackedDevicePose_t {
+        mDeviceToAbsoluteTracking: HmdMatrix34_t {
+            m: [
+                [
+                    -0.28655806,
+                    -0.25760943,
+                    -0.92277956,
+                    -0.7196915,
+                ],
+                [
+                    -0.099566445,
+                    0.9659642,
+                    -0.238746,
+                    0.19230127,
+                ],
+                [
+                    0.95287514,
+                    0.023463294,
+                    -0.302454,
+                    -0.5294354,
+                ],
+            ],
+        },
+        vVelocity: HmdVector3_t {
+            v: [
+                -2.6712031,
+                2.1568017,
+                -1.6483742,
+            ],
+        },
+        vAngularVelocity: HmdVector3_t {
+            v: [
+                -2.671713,
+                2.1570916,
+                -1.6479542,
+            ],
+        },
+        eTrackingResult: 200,
+        bPoseIsValid: true,
+        bDeviceIsConnected: true,
+    },
+    ulFrameExposureTime: 8064388233292,
+}

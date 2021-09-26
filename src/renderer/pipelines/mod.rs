@@ -10,6 +10,7 @@ pub mod default;
 pub mod background;
 pub mod mmd;
 pub mod debug;
+pub mod mirror;
 
 pub trait PipelineConstructor: 'static {
 	type PipeType: Any + Send + Sync;

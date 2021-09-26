@@ -130,7 +130,7 @@ macro_rules! args_terminals {
 
 pub(crate) use args_terminals;
 
-args_terminals! { f32 f64 u8 i8 u16 i16 u32 i32 u64 i64 usize isize }
+args_terminals! { f32 f64 u8 i8 u16 i16 u32 i32 u64 i64 usize isize String }
 
 #[derive(Debug, Error)]
 pub enum ArgsError {

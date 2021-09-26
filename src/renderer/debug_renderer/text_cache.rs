@@ -68,7 +68,7 @@ impl TextCache {
 			
 			let set = {
 				let mut set_builder = PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone());
-				set_builder.add_sampled_image(ImageView::new(image)?, sampler.clone())?;
+				set_builder.add_sampled_image(ImageView::new(image.clone())?, sampler.clone())?;
 				Arc::new(set_builder.build()?)
 			};
 			

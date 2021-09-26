@@ -10,7 +10,7 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, Prim
 use vulkano::device::{Device, DeviceExtensions, Features, Queue};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::Format;
-use vulkano::image::{ImageLayout, ImageUsage, SampleCount, SwapchainImage};
+use vulkano::image::{ImageLayout, ImageUsage, SampleCount, SwapchainImage, AttachmentImage};
 use vulkano::instance::{Instance, InstanceExtensions};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
 use vulkano::render_pass::{AttachmentDesc, LoadOp, MultiviewDesc, RenderPass, RenderPassDesc, StoreOp, SubpassDesc};
@@ -62,6 +62,7 @@ pub struct Renderer {
 	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 	debug_renderer: DebugRenderer,
 	fps_counter: FpsCounter<20>,
+	camera_image: Arc<AttachmentImage>,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
@@ -93,7 +94,7 @@ impl Renderer {
 		
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
+		let background = Background::new(camera_image.clone(), &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		let fps_counter = FpsCounter::new();
 		let previous_frame_end = None;
@@ -112,6 +113,7 @@ impl Renderer {
 			background,
 			load_commands,
 			debug_renderer,
+			camera_image,
 			fps_counter,
 		})
 	}
@@ -382,6 +384,12 @@ impl Renderer {
 		             .build()?)
 	}
 	
+	pub fn recreate_background(&mut self) -> Result<(), RendererBackgroundError> {
+		self.background = Background::new(self.camera_image.clone(), &self.eyes, &self.queue, &mut self.pipelines)?;
+		
+		Ok(())
+	}
+	
 	pub fn render(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
@@ -543,6 +551,8 @@ pub enum RendererSwapchainError {
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }
+
+pub type RendererBackgroundError = BackgroundError;
 
 #[derive(Debug, Error)]
 pub enum RendererRenderError {
