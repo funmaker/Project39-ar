@@ -17,6 +17,8 @@ use crate::renderer::Renderer;
 use crate::utils::FenceCheck;
 use crate::renderer::pipelines::toolgun_text::{Vertex, ToolGunTextPipeline};
 use crate::renderer::pipelines::PipelineError;
+use crate::component::tools::{Tool, get_all_tools};
+use crate::application::input::Hand;
 
 #[derive(ComponentBase)]
 pub struct ToolGun {
@@ -25,10 +27,11 @@ pub struct ToolGun {
 	offset: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	text: RefCell<String>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
 	fence: FenceCheck,
 	scroll: Cell<f32>,
+	tools: RefCell<Vec<Box<dyn Tool>>>,
+	tool_id: usize,
 }
 
 impl ToolGun {
@@ -62,10 +65,11 @@ impl ToolGun {
 			offset,
 			pipeline,
 			vertices,
-			text: RefCell::new("Cube".to_string()),
 			set,
 			fence,
 			scroll: Cell::new(0.0),
+			tools: RefCell::new(get_all_tools()),
+			tool_id: 0,
 		})
 	}
 }
@@ -85,19 +89,25 @@ impl Component for ToolGun {
 		
 		self.scroll.set(self.scroll.get() + delta_time.as_secs_f32());
 		
+		if application.input.fire(Hand::Right) {
+		
+		}
+		
 		Ok(())
 	}
 	
 	fn render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		if !self.fence.check() { return Ok(()); }
 		
-		let text_entry = renderer.debug_text_cache().get(&self.text.borrow())?;
+		let tools = self.tools.borrow();
+		let tool = tools.get(self.tool_id);
+		let text = tool.map_or("None", |t| t.name());
+		let text_entry = renderer.debug_text_cache().get(text)?;
 		let text_pos = entity.state().position * Similarity3::from_parts(Vec3::new(0.000671, 0.059217, -0.027263).into(),
 		                                                                 Rot3::from_euler_angles(0.781855066, 0.0, 0.0),
 		                                                                 0.02135);
 		let text_ratio = text_entry.size.0 as f32 / text_entry.size.1 as f32;
 		let model_matrix: AMat4 = text_pos.to_superset();
-		
 		
 		let uv_transform = Vec4::new(
 			2.0 / text_ratio,

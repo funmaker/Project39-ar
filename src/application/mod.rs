@@ -3,35 +3,38 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 use err_derive::Error;
-use openvr::TrackedControllerRole;
+use openvr::{TrackedControllerRole, MAX_TRACKED_DEVICE_COUNT, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use rapier3d::dynamics::RigidBodyType;
 
 pub use entity::{Entity, EntityRef};
 pub use vr::{VR, VRError};
 pub use physics::Physics;
+pub use input::{Input, Key, MouseButton};
 
 use crate::component::Component;
 use crate::utils::default_wait_poses;
 use crate::config::{self, CameraAPI};
-use crate::debug;
-use crate::math::{Isometry3, Point3, Rot3, Vec3, PI};
+use crate::math::{Isometry3, Point3, Rot3, Vec3, PI, Color, Point2};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
 use crate::component::vr::VrSpawner;
-use crate::component::miku::Miku;
+// use crate::component::miku::Miku;
 use crate::component::ComponentError;
 use crate::component::pov::PoV;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::toolgun::{ToolGun, ToolGunError};
 use crate::component::parent::Parent;
 use crate::component::physics::collider::ColliderComponent;
+use crate::application::input::Hand;
+use crate::debug;
 
 pub mod vr;
 pub mod entity;
 pub mod physics;
+pub mod input;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -39,6 +42,7 @@ pub struct Application {
 	pub physics: RefCell<Physics>,
 	pub vr_poses: WaitPoses,
 	pub camera_entity: EntityRef,
+	pub input: Input,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
@@ -70,6 +74,7 @@ impl Application {
 			physics: RefCell::new(Physics::new()),
 			vr_poses: default_wait_poses(),
 			camera_entity: EntityRef::null(),
+			input: Input::new(),
 			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
@@ -169,16 +174,20 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
-		let mut vr_buttons = 0;
-		
 		while !self.window.quit_required {
-			self.window.pull_events();
-			
 			let delta_time = instant.elapsed();
 			instant = Instant::now();
 			
+			self.input.reset();
+			self.window.pull_events(&mut self.input);
 			if self.vr.is_some() {
-				self.handle_vr_poses(&mut vr_buttons)?;
+				self.handle_vr_input()?;
+			}
+			self.set_debug_flags();
+			
+			let inputs = format!("{}", self.input);
+			for (id, line) in inputs.split("\n").enumerate() {
+				debug::draw_text(line, Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
 			}
 			
 			self.setup_loop()?;
@@ -284,31 +293,30 @@ impl Application {
 		Ok(())
 	}
 	
-	fn handle_vr_poses(&mut self, last_buttons: &mut u64) -> Result<(), ApplicationRunError> {
+	fn handle_vr_input(&mut self) -> Result<(), ApplicationRunError> {
 		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		
 		self.vr_poses = vr.compositor.wait_get_poses()?;
 		
-		let buttons: u64 = [TrackedControllerRole::RightHand, TrackedControllerRole::LeftHand]
-			.iter()
-			.filter_map(|&role| vr.system.tracked_device_index_for_controller_role(role))
-			.filter_map(|index| vr.system.controller_state(index))
-			.map(|state| state.button_pressed)
-			.fold(0, |a, b| a | b);
+		if let Some(id) = vr.system.tracked_device_index_for_controller_role(TrackedControllerRole::LeftHand) {
+			self.input.set_controller_id(Hand::Left, id);
+		}
 		
-		let pressed = buttons & !*last_buttons;
-		*last_buttons = buttons;
+		if let Some(id) = vr.system.tracked_device_index_for_controller_role(TrackedControllerRole::RightHand) {
+			self.input.set_controller_id(Hand::Right, id);
+		}
 		
-		for index in 0..64 {
-			if pressed & (1 << index) != 0 {
-				if index == 2 {
-					let mode: u8 = debug::get_flag_or_default("mode");
-					debug::set_flag("mode", (mode + 1) % 3);
-				}
+		for id in 0..(MAX_TRACKED_DEVICE_COUNT as TrackedDeviceIndex) {
+			if let Some(state) = vr.system.controller_state(id) {
+				self.input.update_controller(id, state);
 			}
 		}
 		
 		Ok(())
+	}
+	fn set_debug_flags(&self) {
+		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
+		debug::set_flag("DebugBoneDraw", self.input.keyboard.toggle(Key::B));
 	}
 }
 

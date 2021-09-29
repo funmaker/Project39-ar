@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
-use rapier3d::prelude::ColliderBuilder;
+use rapier3d::prelude::{ColliderBuilder, RigidBodyBuilder};
 
 use crate::application::{Entity, EntityRef, Application};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
@@ -68,6 +68,9 @@ impl Component for VrSpawner {
 								.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
 								                          .translation(center.into())
 								                          .build())
+								.rigid_body(RigidBodyBuilder::new(RigidBodyType::KinematicPositionBased)
+								                             .additional_mass(1000.0)
+								                             .build())
 								.component(SimpleModel::<u16>::from_openvr(model, texture, &mut *application.renderer.borrow_mut())?)
 								.component(VrTracked::new(tracked_id));
 							

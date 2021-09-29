@@ -10,6 +10,7 @@ mod images;
 mod id_gen;
 mod fence_check;
 mod assets;
+mod input;
 
 pub use vec_future::*;
 pub use fps_counter::*;
@@ -18,6 +19,7 @@ pub use images::*;
 pub use id_gen::*;
 pub use fence_check::*;
 pub use assets::*;
+pub use input::*;
 
 pub trait IntoBoxed<T: ?Sized>: 'static {
 	fn into(self) -> Box<T>;

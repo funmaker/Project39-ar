@@ -5,8 +5,8 @@ use crate::application::{Entity, Application};
 use crate::component::{ComponentRef, ComponentError};
 use crate::component::model::MMDModel;
 use crate::math::Rot3;
-use crate::debug;
 use super::{Component, ComponentBase, ComponentInner};
+use crate::utils::num_key;
 
 const MORPH_PRESETS: &[(usize, &[usize])] = &[
 	(1, &[0, 29, 66]),
@@ -40,7 +40,7 @@ impl Component for Miku {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, _application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
 		let mut model = self.model
 		                    .using(entity)
 		                    .unwrap()
@@ -65,7 +65,7 @@ impl Component for Miku {
 			*morph = (*morph - 5.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
 		}
 	
-		let active = MORPH_PRESETS.iter().filter(|p| debug::get_flag_or_default(&format!("KeyKey{}", p.0))).flat_map(|p| p.1.iter());
+		let active = MORPH_PRESETS.iter().filter(|p| application.input.keyboard.pressed(num_key(p.0))).flat_map(|p| p.1.iter());
 	
 		for &id in active {
 			model.morphs[id] = (model.morphs[id] + 10.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);

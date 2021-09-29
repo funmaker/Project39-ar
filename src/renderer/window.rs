@@ -19,8 +19,9 @@ use vulkano_win::{VkSurfaceBuild, CreationError};
 use winit::window::Window as WinitWindow;
 
 use super::{Renderer, RendererSwapchainError};
+use crate::config;
 use crate::math::Vec2;
-use crate::{debug, config};
+use crate::application::Input;
 
 
 pub struct Window {
@@ -174,7 +175,7 @@ impl Window {
 		                  .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)))
 	}
 	
-	pub fn pull_events(&mut self) {
+	pub fn pull_events(&mut self, input: &mut Input) {
 		let surface = &self.surface;
 		let new_swapchain_required = &mut self.swapchain_regen_required;
 		let render_required = &mut self.render_required;
@@ -203,40 +204,35 @@ impl Window {
 						event: WindowEvent::KeyboardInput {
 							input: KeyboardInput {
 								virtual_keycode: Some(code),
-								state: ElementState::Pressed, ..
+								state, ..
 							}, ..
 						}, ..
 					} if is_cursor_trapped => {
-						match code {
-							VirtualKeyCode::Q => {
-								*quit_required = true;
-								*control_flow = ControlFlow::Exit;
-							},
-							VirtualKeyCode::Escape => {
-								grab_cursor(false)?;
-							},
-							VirtualKeyCode::F => {
-								let window = surface.window();
-								
-								if let None = window.fullscreen() {
-									window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
-								} else {
-									window.set_fullscreen(None);
-								}
-							},
-							code => debug::set_flag(&format!("Key{:?}", code), true),
+						if state == ElementState::Pressed {
+							match code {
+								VirtualKeyCode::Q => {
+									*quit_required = true;
+									*control_flow = ControlFlow::Exit;
+								},
+								VirtualKeyCode::Escape => {
+									grab_cursor(false)?;
+								},
+								VirtualKeyCode::F => {
+									let window = surface.window();
+									
+									if let None = window.fullscreen() {
+										window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
+									} else {
+										window.set_fullscreen(None);
+									}
+								},
+								_ => {},
+							}
 						}
-					}
-					
-					Event::WindowEvent {
-						event: WindowEvent::KeyboardInput {
-							input: KeyboardInput {
-								virtual_keycode: Some(code),
-								state: ElementState::Released, ..
-							}, ..
-						}, ..
-					} if is_cursor_trapped => {
-						debug::set_flag(&format!("Key{:?}", code), false)
+						
+						if code != VirtualKeyCode::Escape {
+							input.keyboard.update_button(code, state == ElementState::Pressed);
+						}
 					}
 					
 					Event::WindowEvent {
@@ -244,7 +240,7 @@ impl Window {
 							button: MouseButton::Left,
 							state: ElementState::Pressed, ..
 						}, ..
-					} => {
+					} if !is_cursor_trapped => {
 						let window = surface.window();
 						let size = window.inner_size();
 						let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
@@ -253,17 +249,26 @@ impl Window {
 						window.set_cursor_position(center)?;
 					}
 					
+					Event::WindowEvent {
+						event: WindowEvent::MouseInput {
+							button,
+							state, ..
+						}, ..
+					} if is_cursor_trapped => {
+						input.mouse.update_button(button, state == ElementState::Pressed);
+					}
+					
 					Event::DeviceEvent {
-						event: DeviceEvent::MouseMotion {
-							delta
+						event: DeviceEvent::Motion {
+							axis,
+							value,
 						}, ..
 					} if is_cursor_trapped => {
 						let window = surface.window();
 						let size = window.inner_size();
 						let center = PhysicalPosition::new(size.width / 2, size.height / 2);
 						
-						let cur_move = debug::get_flag("mouse_move").unwrap_or((0.0_f32, 0.0_f32));
-						debug::set_flag("mouse_move", (cur_move.0 + delta.0 as f32, cur_move.1 + delta.1 as f32));
+						input.mouse.update_axis(axis as usize, value as f32);
 						
 						window.set_cursor_position(center)?;
 					}

@@ -17,6 +17,7 @@ pub mod pc_controlled;
 pub mod toolgun;
 pub mod parent;
 pub mod physics;
+pub mod tools;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 

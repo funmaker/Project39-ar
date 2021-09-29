@@ -5,6 +5,7 @@ use rapier3d::prelude::{RigidBody, RigidBodyHandle};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 mod builder;
+mod entity_ref;
 
 use crate::debug;
 use crate::math::{Color, Isometry3, Point3, Vec3};
@@ -13,6 +14,7 @@ use crate::utils::IntoBoxed;
 use crate::renderer::Renderer;
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
+pub use entity_ref::EntityRef;
 
 pub struct EntityState {
 	pub position: Isometry3,
@@ -124,11 +126,13 @@ impl Entity {
 		let pos: Point3 = state.position.translation.vector.into();
 		let ang = &state.position.rotation;
 		
-		debug::draw_point(&pos, 32.0, Color::magenta());
-		debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
-		debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
-		debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
-		debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+		if debug::get_flag_or_default("DebugEntityDraw") {
+			debug::draw_point(&pos, 32.0, Color::magenta());
+			debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
+			debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
+			debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
+			debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+		}
 		
 		for component in self.components.values() {
 			component.render(&self, renderer, builder)?;
@@ -197,71 +201,5 @@ impl Entity {
 	
 	pub fn rigid_body_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut RigidBody {
 		physics.rigid_body_set.get_mut(self.rigid_body).unwrap()
-	}
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct EntityRef {
-	inner: Cell<Option<u64>>,
-}
-
-impl EntityRef {
-	pub fn new(eid: u64) -> Self {
-		EntityRef {
-			inner: Cell::new(Some(eid)),
-		}
-	}
-	
-	pub fn null() -> Self {
-		EntityRef {
-			inner: Cell::new(None),
-		}
-	}
-	
-	pub fn set(&self, other: Self) {
-		self.inner.swap(&other.inner);
-	}
-	
-	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
-		if let Some(eid) = self.inner.get() {
-			if let Some(entity) = application.entity(eid) {
-				Some(entity)
-			} else {
-				self.inner.set(None);
-				None
-			}
-		} else {
-			None
-		}
-	}
-}
-
-impl PartialEq<Self> for &Entity {
-	fn eq(&self, other: &Self) -> bool {
-		self.id == other.id
-	}
-}
-
-impl Eq for &Entity {}
-
-impl PartialEq<&EntityRef> for &Entity {
-	fn eq(&self, other: &&EntityRef) -> bool {
-		if let Some(id) = other.inner.get() {
-			self.id == id
-		} else {
-			false
-		}
-	}
-}
-
-impl From<&Entity> for EntityRef {
-	fn from(entity: &Entity) -> Self {
-		EntityRef::new(entity.id)
-	}
-}
-
-impl From<&EntityRef> for EntityRef {
-	fn from(entity_ref: &EntityRef) -> Self {
-		entity_ref.clone()
 	}
 }

@@ -182,7 +182,7 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 			*mat = *mat * &state.bones[id].inv_model_transform;
 		}
 		
-		if debug::get_flag_or_default("KeyB") {
+		if debug::get_flag_or_default("DebugBonesDraw") {
 			self.draw_debug_bones(entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
