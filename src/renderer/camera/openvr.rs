@@ -10,7 +10,7 @@ use openvr::system::TrackedPropertyError;
 
 use super::{Camera, CameraCaptureError};
 use crate::application::vr::{VR, FrameType, TrackedCameraError, CameraService};
-use crate::math::{IVec2, VRSlice, Isometry3, AMat4};
+use crate::math::{VRSlice, Isometry3, AMat4};
 use crate::{debug, config};
 
 pub const CAPTURE_INDEX: u32 = 0;
@@ -64,7 +64,7 @@ impl OpenVR {
 			
 			let frame_size = tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted)?;
 			config::rcu(|config|
-				config.camera.frame_buffer_size = IVec2::new(frame_size.width as i32, frame_size.height as i32)
+				config.camera.frame_buffer_size = vector!(frame_size.width as i32, frame_size.height as i32)
 			);
 			
 			let camtohead: Isometry3 = AMat4::from_slice34(&vr.system.matrix34_tracked_device_property(index, property::CameraToHeadTransform_Matrix34)?).to_subset().unwrap();

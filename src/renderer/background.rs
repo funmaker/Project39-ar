@@ -10,7 +10,7 @@ use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 
-use crate::math::{Vec4, Vec2, Vec3, Mat3, Isometry3};
+use crate::math::{Vec4, Vec2, Mat3, Isometry3};
 use crate::renderer::eyes::Eyes;
 use crate::utils::FenceCheck;
 use crate::config;
@@ -105,7 +105,7 @@ impl Background {
 			Arc::new(set_builder.build()?)
 		};
 		
-		let flip_xz = Vec3::new(-1.0, 1.0, -1.0);
+		let flip_xz = vector!(-1.0, 1.0, -1.0);
 		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
 		
 		let left_extrinsics = Mat3::from_columns(&[
@@ -171,17 +171,17 @@ impl Background {
 		// {
 		// 	let config = config::get();
 		//
-		// 	debug::draw_point(Point3::new(0.0, 0.0, 0.0), 32.0, Color::red());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::x() / 20.0, 4.0, Color::dred());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::y() / 20.0, 4.0, Color::dgreen());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + rotation * Vec3::z() / 20.0, 4.0, Color::dblue());
+		// 	debug::draw_point(point!(0.0, 0.0, 0.0), 32.0, Color::red());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::x() / 20.0, 4.0, Color::dred());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::y() / 20.0, 4.0, Color::dgreen());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::z() / 20.0, 4.0, Color::dblue());
 		//
-		// 	debug::draw_point(Point3::new(0.0, 0.0, 0.0), 32.0, Color::red());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::x() / 20.0, 4.0, Color::red());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::y() / 20.0, 4.0, Color::green());
-		// 	debug::draw_line(Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0) + Vec3::z() / 20.0, 4.0, Color::blue());
+		// 	debug::draw_point(point!(0.0, 0.0, 0.0), 32.0, Color::red());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::x() / 20.0, 4.0, Color::red());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::y() / 20.0, 4.0, Color::green());
+		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::z() / 20.0, 4.0, Color::blue());
 		//
-		// 	let flip_xz = Vec3::new(-1.0, 1.0, -1.0);
+		// 	let flip_xz = vector!(-1.0, 1.0, -1.0);
 		//
 		// 	let mut left_cam: Point3 = config.camera.left.position.component_mul(&flip_xz).into();
 		// 	let left_ex_inv = self.extrinsics.0.try_inverse().unwrap();

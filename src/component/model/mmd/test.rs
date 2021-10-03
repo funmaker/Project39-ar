@@ -70,8 +70,8 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	model.add_bone(Bone::new("Root",
 	                         None,
 	                         Color::cyan(),
-	                         &Vec3::new(0.0, 0.0, 0.0),
-	                         &Vec3::new(0.0, 0.0, 0.0),
+	                         &vector!(0.0, 0.0, 0.0),
+	                         &vector!(0.0, 0.0, 0.0),
 	                         true,
 	                         BoneConnection::Bone(1)));
 	
@@ -79,8 +79,8 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 		model.add_bone(Bone::new("Bend",
 		                         Some(id - 1),
 		                         Color::cyan(),
-		                         &Vec3::new(0.0, height / (bones_num + 1) as f32 * id as f32, 0.0),
-		                         &Vec3::new(0.0, height / (bones_num + 1) as f32, 0.0),
+		                         &vector!(0.0, height / (bones_num + 1) as f32 * id as f32, 0.0),
+		                         &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
 		                         true,
 		                         BoneConnection::Bone(id + 1)));
 	}
@@ -88,8 +88,8 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	model.add_bone(Bone::new("Tip",
 	                         Some(bones_num),
 	                         Color::cyan(),
-	                         &Vec3::new(0.0, height, 0.0),
-	                         &Vec3::new(0.0, height / (bones_num + 1) as f32, 0.0),
+	                         &vector!(0.0, height, 0.0),
+	                         &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
 	                         true,
 	                         BoneConnection::None));
 	

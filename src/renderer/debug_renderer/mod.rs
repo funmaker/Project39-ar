@@ -13,7 +13,7 @@ use nalgebra::Unit;
 mod text_cache;
 
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
-use crate::math::{Vec2, Vec3, Rot2, PMat4};
+use crate::math::{Vec2, Rot2, PMat4};
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
 use super::CommonsUBO;
@@ -264,7 +264,7 @@ impl DebugRenderer {
 	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRenderError> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
-		let size_px = Vec2::new(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
+		let size_px = vector!(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
 		let offset = text.offset.evaluate(size_px).coords.component_mul(&pixel_scale).to_homogeneous();
 		let top_left = text.position.project(viewproj);
 		let top_left = (
@@ -288,20 +288,20 @@ impl DebugRenderer {
 			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			top_left.0 + Vec3::new(size.x, 0.0, 0.0),
-			top_left.1 + Vec3::new(size.x, 0.0, 0.0),
+			top_left.0 + vector!(size.x, 0.0, 0.0),
+			top_left.1 + vector!(size.x, 0.0, 0.0),
 			[1.0, 0.0],
 			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			top_left.0 + Vec3::new(size.x, size.y, 0.0),
-			top_left.1 + Vec3::new(size.x, size.y, 0.0),
+			top_left.0 + vector!(size.x, size.y, 0.0),
+			top_left.1 + vector!(size.x, size.y, 0.0),
 			[1.0, 1.0],
 			&text.color,
 		));
 		self.text_vertices.push(TexturedVertex::new(
-			top_left.0 + Vec3::new(0.0, size.y, 0.0),
-			top_left.1 + Vec3::new(0.0, size.y, 0.0),
+			top_left.0 + vector!(0.0, size.y, 0.0),
+			top_left.1 + vector!(0.0, size.y, 0.0),
 			[0.0, 1.0],
 			&text.color,
 		));

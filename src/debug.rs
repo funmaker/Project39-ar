@@ -137,15 +137,15 @@ impl DebugOffset {
 impl DebugOffset {
 	pub fn evaluate(&self, size: Vec2) -> Point2 {
 		match self {
-			DebugOffset::TopLeft(offset)     => offset * Point2::new(-size.x * 1.0, -size.y * 1.0),
-			DebugOffset::Top(offset)         => offset * Point2::new(-size.x * 0.5, -size.y * 1.0),
-			DebugOffset::TopRight(offset)    => offset * Point2::new(          0.0, -size.y * 1.0),
-			DebugOffset::Left(offset)        => offset * Point2::new(-size.x * 1.0, -size.y * 0.5),
-			DebugOffset::Center(offset)      => offset * Point2::new(-size.x * 0.5, -size.y * 0.5),
-			DebugOffset::Right(offset)       => offset * Point2::new(          0.0, -size.y * 0.5),
-			DebugOffset::BottomLeft(offset)  => offset * Point2::new(-size.x * 1.0,           0.0),
-			DebugOffset::Bottom(offset)      => offset * Point2::new(-size.x * 0.5,           0.0),
-			DebugOffset::BottomRight(offset) => offset * Point2::new(          0.0,           0.0),
+			DebugOffset::TopLeft(offset)     => offset * point!(-size.x * 1.0, -size.y * 1.0),
+			DebugOffset::Top(offset)         => offset * point!(-size.x * 0.5, -size.y * 1.0),
+			DebugOffset::TopRight(offset)    => offset * point!(          0.0, -size.y * 1.0),
+			DebugOffset::Left(offset)        => offset * point!(-size.x * 1.0, -size.y * 0.5),
+			DebugOffset::Center(offset)      => offset * point!(-size.x * 0.5, -size.y * 0.5),
+			DebugOffset::Right(offset)       => offset * point!(          0.0, -size.y * 0.5),
+			DebugOffset::BottomLeft(offset)  => offset * point!(-size.x * 1.0,           0.0),
+			DebugOffset::Bottom(offset)      => offset * point!(-size.x * 0.5,           0.0),
+			DebugOffset::BottomRight(offset) => offset * point!(          0.0,           0.0),
 		}
 	}
 }

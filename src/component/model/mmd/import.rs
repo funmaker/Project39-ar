@@ -215,7 +215,7 @@ trait FlipX {
 
 impl FlipX for Vec3 {
 	fn flip_x(self) -> Self {
-		Vec3::new(-self.x, self.y, self.z)
+		vector!(-self.x, self.y, self.z)
 	}
 }
 

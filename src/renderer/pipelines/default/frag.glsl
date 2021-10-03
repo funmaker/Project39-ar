@@ -18,6 +18,7 @@ layout(set = 0, binding = 1) uniform sampler2D tex;
 
 layout(push_constant) uniform Pc {
 	mat4 model;
+	vec4 color;
 } pc;
 
 void main() {
@@ -25,5 +26,5 @@ void main() {
 	float lambert = max(dot(-f_normal, light_direction), 0.0);
 	float light = lambert * (1.0 - commons.ambient) + commons.ambient;
 	
-	o_color = texture(tex, f_uv) * vec4(light, light, light, 1.0);
+	o_color = texture(tex, f_uv) * pc.color * vec4(light, light, light, 1.0);
 }

@@ -6,10 +6,12 @@ mod device;
 mod state;
 
 pub use device::InputDevice;
+pub use state::InputState;
 
 pub type Key = winit::event::VirtualKeyCode;
 pub type MouseButton = winit::event::MouseButton;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Hand {
 	Left,
 	Right,
@@ -50,21 +52,26 @@ impl Input {
 		self.controllers.values_mut().for_each(InputDevice::reset);
 	}
 	
-	pub fn fire(&self, hand: Hand) -> bool {
-		self.controller(hand).map(|c| c.down(33)).unwrap_or_default() ||
-			self.mouse.down(MouseButton::Left)
+	pub fn fire_btn(&self, hand: Hand) -> InputState {
+		self.controller(hand).map(|c| c.state(33)).unwrap_or_default() |
+		self.mouse.state(MouseButton::Left)
 	}
 	
-	pub fn use_btn(&self, hand: Hand) -> bool {
-		self.controller(hand).map(|c| c.down(2)).unwrap_or_default() ||
-			self.mouse.down(MouseButton::Right) ||
-			self.keyboard.down(Key::E)
+	pub fn use_btn(&self, hand: Hand) -> InputState {
+		self.controller(hand).map(|c| c.state(2)).unwrap_or_default() |
+		self.mouse.state(MouseButton::Right) |
+		self.keyboard.state(Key::E)
 	}
 	
-	pub fn drop_btn(&self, hand: Hand) -> bool {
-		self.controller(hand).map(|c| c.down(1)).unwrap_or_default() ||
-			self.mouse.down(MouseButton::Middle) ||
-			self.keyboard.down(Key::Q)
+	pub fn drop_btn(&self, hand: Hand) -> InputState {
+		self.controller(hand).map(|c| c.state(1)).unwrap_or_default() |
+		self.mouse.state(MouseButton::Middle) |
+		self.keyboard.state(Key::G)
+	}
+	
+	pub fn context_btn(&self, hand: Hand) -> InputState {
+		self.controller(hand).map(|c| c.state(32)).unwrap_or_default() |
+		self.keyboard.state(Key::Q)
 	}
 	
 	pub fn set_controller_id(&mut self, hand: Hand, idx: TrackedDeviceIndex) {

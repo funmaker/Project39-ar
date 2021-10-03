@@ -1,14 +1,15 @@
 use std::cell::{RefCell, Cell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::any::Any;
 use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::prelude::RigidBodyBuilder;
+use rapier3d::geometry::Collider;
 
 use crate::math::{Isometry3, Vec3, Point3, Rot3};
 use crate::component::Component;
 use super::Entity;
 use crate::utils::next_uid;
 use crate::application::entity::EntityState;
-use rapier3d::geometry::Collider;
 use crate::component::physics::collider::ColliderComponent;
 
 pub struct EntityBuilder {
@@ -19,6 +20,7 @@ pub struct EntityBuilder {
 	pub angular_velocity: Vec3,
 	pub hidden: bool,
 	pub components: Vec<Box<dyn Component>>,
+	pub tags: HashMap<String, Box<dyn Any>>,
 }
 
 impl EntityBuilder {
@@ -30,7 +32,8 @@ impl EntityBuilder {
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),
 			hidden: false,
-			components: vec![]
+			components: vec![],
+			tags: HashMap::new(),
 		}
 	}
 	
@@ -84,10 +87,16 @@ impl EntityBuilder {
 		self
 	}
 	
+	pub fn tag<T: 'static>(mut self, key: impl Into<String>, val: T) -> Self {
+		self.tags.insert(key.into(), Box::new(val));
+		self
+	}
+	
 	pub fn build(self) -> Entity {
 		let entity = Entity {
 			id: next_uid(),
 			name: self.name,
+			tags: RefCell::new(self.tags),
 			state: RefCell::new(EntityState {
 				position: self.position,
 				velocity: self.velocity,

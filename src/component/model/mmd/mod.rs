@@ -200,7 +200,7 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 						last.w = scale.to_bits() as i32;
 					}
 				} else {
-					state.morphs_vec.push(IVec4::new(id as i32, scale.to_bits() as i32, 0, 0));
+					state.morphs_vec.push(vector!(id as i32, scale.to_bits() as i32, 0, 0));
 				}
 				
 				packing = !packing;

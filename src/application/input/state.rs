@@ -1,4 +1,6 @@
-#[derive(Debug, Copy, Clone)]
+use std::ops::BitOr;
+
+#[derive(Debug, Copy, Clone, Default)]
 pub struct InputState {
 	pub down: bool,
 	pub up: bool,
@@ -34,5 +36,18 @@ impl InputState {
 		}
 		
 		self.pressed = pressed;
+	}
+}
+
+impl BitOr for InputState {
+	type Output = InputState;
+	
+	fn bitor(self, rhs: Self) -> Self::Output {
+		InputState {
+			down: self.down || rhs.down,
+			up: self.up || rhs.up,
+			pressed: self.pressed || rhs.pressed,
+			toggle: self.down ^ rhs.down
+		}
 	}
 }

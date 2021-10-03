@@ -27,8 +27,8 @@ use window::{Window, WindowRenderError, WindowSwapchainRegenError};
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
-use crate::math::{AMat4, Color, Isometry3, PMat4, Point2, Vec2, Vec3, Vec4, VRSlice};
-use crate::component::ComponentError;
+use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4, VRSlice};
+use crate::component::{ComponentError, RenderType};
 use crate::utils::*;
 
 pub mod camera;
@@ -414,14 +414,14 @@ impl Renderer {
 		
 		self.fps_counter.tick();
 		
-		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
-		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
+		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
+		debug::draw_text(format!("CAM FPS: {}", debug::get_flag::<f32>("CAMERA_FPS").unwrap_or_default().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
 		let view_base = camera_pos.inverse();
 		let view_left = &self.eyes.view.0 * &view_base;
 		let view_right = &self.eyes.view.1 * &view_base;
-		let light_source = Vec3::new(0.5, -0.5, -1.5).normalize();
-		let pixel_scale = Vec2::new(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
+		let light_source = vector!(0.5, -0.5, -1.5).normalize();
+		let pixel_scale = vector!(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
 		
 		let commons = CommonsUBO {
 			projection: [self.eyes.projection.0.clone(), self.eyes.projection.1.clone()],
@@ -439,8 +439,15 @@ impl Renderer {
 		builder.update_buffer(self.commons.clone(),
 		                      Arc::new(commons.clone()))?;
 		
+		// TODO: move to state
+		let mut transparent_registry = Vec::new();
+		
 		for entity in scene.values_mut() {
-			entity.pre_render(&self, &mut builder)?;
+			let transparent = entity.pre_render(&self, &mut builder)?;
+			
+			if transparent {
+				transparent_registry.push(((entity.state().position.translation.vector - camera_pos.translation.vector).magnitude(), entity.id));
+			}
 		}
 		
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
@@ -450,7 +457,13 @@ impl Renderer {
 		self.background.render(&mut builder, camera_pos)?;
 		
 		for entity in scene.values_mut() {
-			entity.render(&self, &mut builder)?;
+			entity.render(&self, RenderType::Opaque, &mut builder)?;
+		}
+		
+		transparent_registry.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+		
+		for (_, entity) in transparent_registry {
+			scene.get_mut(&entity).unwrap().render(&self, RenderType::Transparent, &mut builder)?;
 		}
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;

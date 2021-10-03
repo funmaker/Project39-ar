@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
-use simba::scalar::SubsetOf;
 use openvr::render_models;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
@@ -18,7 +17,7 @@ pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
 use crate::utils::{ImageEx, FenceCheck};
-use crate::math::AMat4;
+use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::application::Entity;
 use super::{ModelError, VertexIndex};
@@ -27,6 +26,7 @@ pub use import::SimpleModelLoadError;
 #[derive(ComponentBase, Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
 	#[inner] inner: ComponentInner,
+	aabb: AABB,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	indices: Arc<ImmutableBuffer<[VI]>>,
@@ -40,6 +40,8 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let width = source_image.width();
 		let height = source_image.height();
 		let queue = &renderer.load_queue;
+		
+		let aabb = aabb_from_points(vertices.iter().map(|v| Point3::from(v.pos)));
 		
 		let pipeline = renderer.pipelines.get::<DefaultPipeline>()?;
 		
@@ -71,6 +73,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		
 		Ok(SimpleModel {
 			inner: ComponentInner::new(),
+			aabb,
 			pipeline,
 			vertices,
 			indices,
@@ -79,8 +82,8 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		})
 	}
 	
-	pub fn from_obj(path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
-		import::from_obj(path, renderer)
+	pub fn from_obj(model_path: &str, texture_path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
+		import::from_obj(model_path, texture_path, renderer)
 	}
 	
 	pub fn from_openvr(model: render_models::Model, texture: render_models::Texture, renderer: &mut Renderer) -> Result<SimpleModel<u16>, SimpleModelLoadError> {
@@ -94,13 +97,13 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 	// pub fn try_clone(&self, _renderer: &mut Renderer) -> Result<Box<dyn Model>, ModelError> {
 	// 	Ok(Box::new(self.clone()))
 	// }
-}
-
-impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
-	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	
+	pub fn aabb(&self) -> AABB {
+		self.aabb
+	}
+	
+	pub fn render_impl(&self, transform: Similarity3, color: Color, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
-		
-		let model_matrix: AMat4 = entity.state().position.to_superset();
 		
 		builder.bind_pipeline_graphics(self.pipeline.clone())
 		       .bind_vertex_buffers(0, self.vertices.clone())
@@ -111,12 +114,20 @@ impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
 		                             self.set.clone())
 		       .push_constants(self.pipeline.layout().clone(),
 		                       0,
-		                       model_matrix.to_homogeneous())
+		                       (transform.to_homogeneous(), color))
 		       .draw_indexed(self.indices.len() as u32,
 		                     1,
 		                     0,
 		                     0,
 		                     0)?;
+		
+		Ok(())
+	}
+}
+
+impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
+	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+		self.render_impl(Similarity3::from_isometry(entity.state().position, 1.0), Color::full_white(), builder)?;
 		
 		Ok(())
 	}

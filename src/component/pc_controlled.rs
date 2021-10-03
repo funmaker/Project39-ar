@@ -39,7 +39,7 @@ impl Component for PCControlled {
 		pitch = (pitch + -mouse_y * 0.01).clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
 		
 		let rot = Rot3::from_euler_angles(pitch, yaw, 0.0);
-		position += rot * Vec3::new(x, 0.0, z) * dist + Vec3::y() * y * dist;
+		position += rot * vector!(x, 0.0, z) * dist + Vec3::y() * y * dist;
 		
 		self.rotation.set((pitch, yaw));
 		entity.position = Isometry3::from_parts(position.into(), rot);

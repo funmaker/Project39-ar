@@ -180,10 +180,10 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			
 			for (mid, morph) in self.morphs.into_iter().enumerate() {
 				for (oid, (index, offset)) in morph.into_iter().enumerate() {
-					offsets[mid * morphs_max_size + oid] = IVec4::new((offset.x * 1_000_000.0) as i32,
+					offsets[mid * morphs_max_size + oid] = vector!((offset.x * 1_000_000.0) as i32,
 					                                                  (offset.y * 1_000_000.0) as i32,
 					                                                  (offset.z * 1_000_000.0) as i32,
-					                                                  index.into());
+					                                                  Into::<u32>::into(index) as i32);
 				}
 			}
 			

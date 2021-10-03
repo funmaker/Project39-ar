@@ -2,9 +2,9 @@ use crate::math::IntoArray;
 
 #[derive(Default, Copy, Clone)]
 pub struct Vertex {
-	pos: [f32; 3],
-	normal: [f32; 3],
-	uv: [f32; 2],
+	pub pos: [f32; 3],
+	pub normal: [f32; 3],
+	pub uv: [f32; 2],
 }
 
 vulkano::impl_vertex!(Vertex, pos, normal, uv);

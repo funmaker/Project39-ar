@@ -39,6 +39,8 @@ pub type Mat3 = nalgebra::Matrix3<f32>;
 pub type Mat4 = nalgebra::Matrix4<f32>;
 pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
 
+pub type Ray = rapier3d::geometry::Ray;
+pub type AABB = rapier3d::geometry::AABB;
 
 pub trait VRSlice {
 	fn from_slice34(from: &[[f32; 4]; 3]) -> Self;
@@ -102,36 +104,60 @@ impl<C: TCategory> VRSlice for Transform<f32, C, 3> {
 	}
 }
 
+pub fn aabb_from_points<'a, I>(pts: I) -> AABB
+	where
+		I: IntoIterator<Item = Point3>,
+{
+	let mut it = pts.into_iter();
+	
+	let p0 = it.next().expect(
+		"Point cloud AABB construction: the input iterator should yield at least one point.",
+	);
+	let mut min = p0;
+	let mut max = p0;
+	
+	for pt in it {
+		min = min.inf(&pt);
+		max = max.sup(&pt);
+	}
+	
+	AABB::new(min, max)
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 
 impl Color {
-	pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self { Color(Vec4::new(r, g, b, a)) }
+	pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self { Color(vector!(r, g, b, a)) }
 	
-	pub fn dblack()   -> Self { Color(Vec4::new(0.0, 0.0, 0.0, 1.0)) }
-	pub fn dred()     -> Self { Color(Vec4::new(0.5, 0.0, 0.0, 1.0)) }
-	pub fn dgreen()   -> Self { Color(Vec4::new(0.0, 0.6, 0.0, 1.0)) }
-	pub fn dyellow()  -> Self { Color(Vec4::new(0.1, 0.5, 0.0, 1.0)) }
-	pub fn dblue()    -> Self { Color(Vec4::new(0.0, 0.0, 0.5, 1.0)) }
-	pub fn dmagenta() -> Self { Color(Vec4::new(0.6, 0.0, 0.6, 1.0)) }
-	pub fn dcyan()    -> Self { Color(Vec4::new(0.0, 0.6, 0.6, 1.0)) }
-	pub fn dwhite()   -> Self { Color(Vec4::new(0.8, 0.8, 0.8, 1.0)) }
+	pub fn dblack()   -> Self { Color(vector!(0.0, 0.0, 0.0, 1.0)) }
+	pub fn dred()     -> Self { Color(vector!(0.5, 0.0, 0.0, 1.0)) }
+	pub fn dgreen()   -> Self { Color(vector!(0.0, 0.6, 0.0, 1.0)) }
+	pub fn dyellow()  -> Self { Color(vector!(0.1, 0.5, 0.0, 1.0)) }
+	pub fn dblue()    -> Self { Color(vector!(0.0, 0.0, 0.5, 1.0)) }
+	pub fn dmagenta() -> Self { Color(vector!(0.6, 0.0, 0.6, 1.0)) }
+	pub fn dcyan()    -> Self { Color(vector!(0.0, 0.6, 0.6, 1.0)) }
+	pub fn dwhite()   -> Self { Color(vector!(0.8, 0.8, 0.8, 1.0)) }
 	
-	pub fn black()    -> Self { Color(Vec4::new(0.5, 0.5, 0.5, 1.0)) }
-	pub fn red()      -> Self { Color(Vec4::new(1.0, 0.0, 0.0, 1.0)) }
-	pub fn green()    -> Self { Color(Vec4::new(0.0, 1.0, 0.0, 1.0)) }
-	pub fn yellow()   -> Self { Color(Vec4::new(1.0, 1.0, 0.0, 1.0)) }
-	pub fn blue()     -> Self { Color(Vec4::new(0.0, 0.0, 1.0, 1.0)) }
-	pub fn magenta()  -> Self { Color(Vec4::new(1.0, 0.0, 1.0, 1.0)) }
-	pub fn cyan()     -> Self { Color(Vec4::new(0.0, 1.0, 1.0, 1.0)) }
-	pub fn white()    -> Self { Color(Vec4::new(1.0, 1.0, 1.0, 1.0)) }
+	pub fn black()    -> Self { Color(vector!(0.5, 0.5, 0.5, 1.0)) }
+	pub fn red()      -> Self { Color(vector!(1.0, 0.0, 0.0, 1.0)) }
+	pub fn green()    -> Self { Color(vector!(0.0, 1.0, 0.0, 1.0)) }
+	pub fn yellow()   -> Self { Color(vector!(1.0, 1.0, 0.0, 1.0)) }
+	pub fn blue()     -> Self { Color(vector!(0.0, 0.0, 1.0, 1.0)) }
+	pub fn magenta()  -> Self { Color(vector!(1.0, 0.0, 1.0, 1.0)) }
+	pub fn cyan()     -> Self { Color(vector!(0.0, 1.0, 1.0, 1.0)) }
+	pub fn white()    -> Self { Color(vector!(1.0, 1.0, 1.0, 1.0)) }
+	
+	pub fn full_black()  -> Self { Color(vector!(0.0, 0.0, 0.0, 1.0)) }
+	pub fn full_white()  -> Self { Color(vector!(1.0, 1.0, 1.0, 1.0)) }
+	pub fn transparent() -> Self { Color(vector!(0.0, 0.0, 0.0, 0.0)) }
 	
 	pub fn opactiy(self, opacity: f32) -> Self { Color(self.0 * opacity) }
 	pub fn lightness(self, lightness: f32) -> Self { Color(
 		if lightness < 1.0 {
-			self.0.component_mul(&Vec4::new(lightness, lightness, lightness, 1.0))
+			self.0.component_mul(&vector!(lightness, lightness, lightness, 1.0))
 		} else {
-			self.0.component_div(&Vec4::new(lightness, lightness, lightness, 1.0)) + Vec4::new(1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 0.0)
+			self.0.component_div(&vector!(lightness, lightness, lightness, 1.0)) + vector!(1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 1.0 - 1.0 / lightness, 0.0)
 		}
 	) }
 }
@@ -211,4 +237,3 @@ impl<N: Scalar> IntoArray<[N; 4]> for &nalgebra::Point4<N> { fn into_array(self)
 
 impl IntoArray<[f32; 4]> for  Color { fn into_array(self) -> [f32; 4] { [self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone()] } }
 impl IntoArray<[f32; 4]> for &Color { fn into_array(self) -> [f32; 4] { [self.x.clone(), self.y.clone(), self.z.clone(), self.w.clone()] } }
-

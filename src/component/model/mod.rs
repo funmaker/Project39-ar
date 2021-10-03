@@ -10,8 +10,8 @@ use crate::renderer::pipelines::PipelineError;
 pub use simple::SimpleModel;
 pub use self::mmd::MMDModel;
 
-pub trait VertexIndex: Index + Copy + Send + Sync + Sized + Into<i32> + 'static {}
-impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<i32> + 'static {}
+pub trait VertexIndex: Index + Copy + Send + Sync + Sized + Into<u32> + 'static {}
+impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<u32> + 'static {}
 
 #[derive(Debug, Error)]
 pub enum ModelError {

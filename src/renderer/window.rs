@@ -55,7 +55,7 @@ impl Window {
 		                            .build_vk_surface(&event_loop, renderer.instance.clone())?;
 		
 		fn into_vec(ps: PhysicalSize<u32>) -> Vec2 {
-			Vec2::new(ps.width as f32, ps.height as f32)
+			vector!(ps.width as f32, ps.height as f32)
 		}
 		
 		let window = surface.window();
@@ -210,10 +210,10 @@ impl Window {
 					} if is_cursor_trapped => {
 						if state == ElementState::Pressed {
 							match code {
-								VirtualKeyCode::Q => {
-									*quit_required = true;
-									*control_flow = ControlFlow::Exit;
-								},
+								// VirtualKeyCode::Q => {
+								// 	*quit_required = true;
+								// 	*control_flow = ControlFlow::Exit;
+								// },
 								VirtualKeyCode::Escape => {
 									grab_cursor(false)?;
 								},

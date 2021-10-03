@@ -2,11 +2,11 @@ use std::time::Duration;
 use std::collections::BTreeMap;
 use std::cell::RefCell;
 use rapier3d::dynamics::RigidBodyType;
-use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex};
+use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use rapier3d::prelude::{ColliderBuilder, RigidBodyBuilder};
 
-use crate::application::{Entity, EntityRef, Application};
+use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::component::model::SimpleModel;
 use crate::component::pov::PoV;
@@ -77,6 +77,12 @@ impl Component for VrSpawner {
 							if class == TrackedDeviceClass::HMD {
 								entity = entity.hidden(true)
 								               .component(PoV::new());
+							}
+							
+							match vr.system.get_controller_role_for_tracked_device_index(tracked_id) {
+								Some(TrackedControllerRole::LeftHand) => entity = entity.tag("Hand", Hand::Left),
+								Some(TrackedControllerRole::RightHand) => entity = entity.tag("Hand", Hand::Right),
+								_ => {}
 							}
 							
 							let entity = application.add_entity(entity.build());

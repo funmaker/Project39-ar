@@ -17,6 +17,7 @@ layout(set = 0, binding = 0) uniform Commons {
 
 layout(push_constant) uniform Pc {
 	mat4 model;
+	vec4 color;
 } pc;
 
 void main() {

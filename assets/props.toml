@@ -1,0 +1,16 @@
+
+[cube]
+model = "cube/cube.obj"
+texture = "cube/cube.png"
+
+[hand_l]
+model = "hand/hand_l.obj"
+texture = "hand/hand_l.png"
+
+[hand_r]
+model = "hand/hand_r.obj"
+texture = "hand/hand_r.png"
+
+[toolgun]
+model = "toolgun/toolgun.obj"
+texture = "toolgun/toolgun.png"

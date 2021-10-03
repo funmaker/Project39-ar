@@ -5,10 +5,6 @@ use std::marker::PhantomData;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 pub use project39_ar_derive::ComponentBase;
 
-use crate::application::{Application, Entity, EntityRef};
-use crate::utils::{next_uid, IntoBoxed};
-use crate::renderer::Renderer;
-
 pub mod model;
 pub mod miku;
 pub mod vr;
@@ -17,7 +13,10 @@ pub mod pc_controlled;
 pub mod toolgun;
 pub mod parent;
 pub mod physics;
-pub mod tools;
+
+use crate::application::{Application, Entity, EntityRef};
+use crate::utils::{next_uid, IntoBoxed};
+use crate::renderer::Renderer;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -32,6 +31,11 @@ pub trait ComponentBase: Any {
 	
 	fn remove(&self) -> bool {
 		!self.inner().removed.replace(true)
+	}
+	
+	fn entity<'a>(&self, application: &'a Application) -> &'a Entity {
+		let eid = self.inner().entity_id.expect("Attempted to get entity of unmounted component");
+		application.entity(eid).expect("Attempted to get entity of unmounted component")
 	}
 }
 
@@ -61,18 +65,31 @@ impl<M: Component + 'static> IntoBoxed<dyn Component> for M {
 	}
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum RenderType {
+	Opaque,
+	Transparent,
+	Both,
+}
+
 pub struct ComponentInner {
 	id: u64,
 	entity_id: Option<u64>,
 	removed: Cell<bool>,
+	render_type: RenderType,
 }
 
 impl ComponentInner {
 	pub fn new() -> Self {
+		ComponentInner::from_render_type(RenderType::Opaque)
+	}
+	
+	pub fn from_render_type(render_type: RenderType) -> Self {
 		ComponentInner {
 			id: next_uid(),
 			entity_id: None,
 			removed: Cell::new(false),
+			render_type,
 		}
 	}
 	
@@ -85,12 +102,28 @@ impl ComponentInner {
 	pub fn is_being_removed(&self) -> bool {
 		self.removed.get()
 	}
+	
+	pub fn is_opaque(&self) -> bool {
+		match self.render_type {
+			RenderType::Opaque => true,
+			RenderType::Transparent => false,
+			RenderType::Both => true,
+		}
+	}
+	
+	pub fn is_transparent(&self) -> bool {
+		match self.render_type {
+			RenderType::Opaque => false,
+			RenderType::Transparent => true,
+			RenderType::Both => true,
+		}
+	}
 }
 
 // Cloning inner creates new unique inner. It's unintuitive, but necessary to allow Clone Deriving in Components
 impl Clone for ComponentInner {
 	fn clone(&self) -> Self {
-		Self::new()
+		Self::from_render_type(self.render_type)
 	}
 }
 

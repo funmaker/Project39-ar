@@ -9,9 +9,9 @@ use crate::renderer::Renderer;
 use crate::utils::{find_asset, AssetError};
 use super::{SimpleModel, Vertex};
 
-pub fn from_obj<VI: VertexIndex + FromPrimitive>(path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
-	let model: Obj<obj::TexturedVertex, VI> = obj::load_obj(find_asset(format!("{}.obj", path))?)?;
-	let texture = image::load(find_asset(format!("{}.png", path))?, ImageFormat::Png)?;
+pub fn from_obj<VI: VertexIndex + FromPrimitive>(model_path: &str, texture_path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
+	let model: Obj<obj::TexturedVertex, VI> = obj::load_obj(find_asset(model_path)?)?;
+	let texture = image::load(find_asset(texture_path)?, ImageFormat::from_path(texture_path)?)?;
 	
 	Ok(SimpleModel::new(
 		&model.vertices.iter().map(Into::into).collect::<Vec<_>>(),

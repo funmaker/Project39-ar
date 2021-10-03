@@ -2,34 +2,34 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
+
 use err_derive::Error;
-use openvr::{TrackedControllerRole, MAX_TRACKED_DEVICE_COUNT, TrackedDeviceIndex};
+use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use rapier3d::dynamics::RigidBodyType;
 
 pub use entity::{Entity, EntityRef};
-pub use vr::{VR, VRError};
+pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
-pub use input::{Input, Key, MouseButton};
+pub use vr::{VR, VRError};
 
 use crate::component::Component;
-use crate::utils::default_wait_poses;
+// use crate::component::miku::Miku;
+use crate::component::ComponentError;
+use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
+use crate::component::parent::Parent;
+use crate::component::pc_controlled::PCControlled;
+use crate::component::physics::collider::ColliderComponent;
+use crate::component::pov::PoV;
+use crate::component::toolgun::{ToolGun, ToolGunError};
+use crate::component::vr::VrSpawner;
 use crate::config::{self, CameraAPI};
-use crate::math::{Isometry3, Point3, Rot3, Vec3, PI, Color, Point2};
+use crate::debug;
+use crate::math::{Color, Isometry3, PI, Rot3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
-use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
-use crate::component::vr::VrSpawner;
-// use crate::component::miku::Miku;
-use crate::component::ComponentError;
-use crate::component::pov::PoV;
-use crate::component::pc_controlled::PCControlled;
-use crate::component::toolgun::{ToolGun, ToolGunError};
-use crate::component::parent::Parent;
-use crate::component::physics::collider::ColliderComponent;
-use crate::application::input::Hand;
-use crate::debug;
+use crate::utils::default_wait_poses;
 
 pub mod vr;
 pub mod entity;
@@ -85,21 +85,21 @@ impl Application {
 			
 			application.add_entity(
 				Entity::builder("ඞ")
-					.translation(Point3::new(0.0, 20.0, 2.0))
+					.translation(point!(0.0, 20.0, 2.0))
 					.build()
 			);
 			
 			if application.vr.is_some() {
 				application.add_entity(
 					Entity::builder("System")
-						.translation(Point3::new(0.0, 0.0, -1.0))
+						.translation(point!(0.0, 0.0, -1.0))
 						.component(VrSpawner::new())
 						.build()
 				);
 			} else {
 				let pov = application.add_entity(
 					Entity::builder("(You)")
-						.translation(Point3::new(0.0, 1.5, 1.5))
+						.translation(point!(0.0, 1.5, 1.5))
 						.component(PoV::new())
 						.component(PCControlled::new())
 						.build()
@@ -107,26 +107,28 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(SimpleModel::<u16>::from_obj("hand/hand_l", renderer)?)
-						.component(Parent::new(&pov, Isometry3::new(Vec3::new(-0.2, -0.2, -0.4),
-						                                            Vec3::new(PI * 0.25, 0.0, 0.0))))
+						.component(SimpleModel::<u16>::from_obj("hand/hand_l.obj", "hand/hand_l.png", renderer)?)
+						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4),
+						                                            vector!(PI * 0.25, 0.0, 0.0))))
+						.tag("Hand", Hand::Left)
 						.build()
 				);
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(SimpleModel::<u16>::from_obj("hand/hand_r", renderer)?)
-						.component(Parent::new(&pov, Isometry3::new(Vec3::new(0.2, -0.2, -0.4),
-						                                            Vec3::new(PI * 0.25, 0.0, 0.0))))
+						.component(SimpleModel::<u16>::from_obj("hand/hand_r.obj", "hand/hand_r.png", renderer)?)
+						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4),
+						                                            vector!(PI * 0.25, 0.0, 0.0))))
+						.tag("Hand", Hand::Right)
 						.build()
 				);
 			}
 			
 			application.add_entity(
 				Entity::builder("ToolGun")
-					.translation(Point3::new(0.0, 1.0, 1.0))
-					.component(SimpleModel::<u16>::from_obj("toolgun/toolgun", renderer)?)
-					.component(ToolGun::new(Isometry3::from_parts(Vec3::new(0.0, -0.03, 0.03).into(),
+					.translation(point!(0.0, 1.0, 1.0))
+					.component(SimpleModel::<u16>::from_obj("toolgun/toolgun.obj", "toolgun/toolgun.png", renderer)?)
+					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
 					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
 					                        renderer)?)
 					.build()
@@ -134,7 +136,7 @@ impl Application {
 			
 			// application.add_entity(
 			// 	Entity::builder("初音ミク")
-			// 		.translation(Point3::new(0.0, 0.0, 0.0))
+			// 		.translation(point!(0.0, 0.0, 0.0))
 			// 		.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
 			// 		.component(Miku::new())
 			// 		.build()
@@ -142,20 +144,21 @@ impl Application {
 			
 			application.add_entity(
 				Entity::builder("Floor")
-					.translation(Point3::new(0.0, -0.5, 0.0))
-					.component(ColliderComponent::cuboid(Vec3::new(10.0, 1.0, 10.0)))
+					.translation(point!(0.0, -0.5, 0.0))
+					.component(ColliderComponent::cuboid(vector!(100.0, 1.0, 100.0)))
+					.tag("NoRemove", true)
 					.build()
 			);
 			
 			
-			let box_model = SimpleModel::<u16>::from_obj("cube/cube", renderer)?;
+			let box_model = SimpleModel::<u16>::from_obj("cube/cube.obj", "cube/cube.png", renderer)?;
 			for id in 0..10 {
 				application.add_entity(
 					Entity::builder("Box")
 						.rigid_body_type(RigidBodyType::Dynamic)
-						.translation(Point3::new((id as f32).sin(), id as f32 * 1.5 + 0.5, (id as f32).cos()))
+						.translation(point!((id as f32).sin(), id as f32 * 1.5 + 0.5, (id as f32).cos()))
 						.component(box_model.clone())
-						.component(ColliderComponent::cuboid(Vec3::new(1.0, 1.0, 1.0)))
+						.component(ColliderComponent::cuboid(vector!(1.0, 1.0, 1.0)))
 						.build()
 				);
 			}
@@ -163,7 +166,7 @@ impl Application {
 			// application.add_entity(
 			// 	"Test",
 			// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
-			// 	Point3::new(2.0, 0.0, -1.5),
+			// 	point!(2.0, 0.0, -1.5),
 			// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
 			// );
 		}
@@ -187,7 +190,7 @@ impl Application {
 			
 			let inputs = format!("{}", self.input);
 			for (id, line) in inputs.split("\n").enumerate() {
-				debug::draw_text(line, Point2::new(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
+				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
 			}
 			
 			self.setup_loop()?;

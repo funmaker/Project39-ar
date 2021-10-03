@@ -1,6 +1,7 @@
 use std::cell::{Ref, RefCell, RefMut, Cell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
+use std::any::Any;
 use rapier3d::prelude::{RigidBody, RigidBodyHandle};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
@@ -9,8 +10,8 @@ mod entity_ref;
 
 use crate::debug;
 use crate::math::{Color, Isometry3, Point3, Vec3};
-use crate::component::{ComponentRef, ComponentError};
-use crate::utils::IntoBoxed;
+use crate::component::{ComponentRef, ComponentError, RenderType};
+use crate::utils::{IntoBoxed, get_userdata};
 use crate::renderer::Renderer;
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
@@ -27,6 +28,7 @@ pub struct Entity {
 	pub id: u64,
 	pub name: String,
 	pub rigid_body: RigidBodyHandle,
+	pub tags: RefCell<HashMap<String, Box<dyn Any>>>,
 	rigid_body_template: RigidBody,
 	state: RefCell<EntityState>,
 	removed: Cell<bool>,
@@ -58,7 +60,9 @@ impl Entity {
 	}
 	
 	pub fn setup_physics(&mut self, physics: &mut Physics) {
-		self.rigid_body = physics.rigid_body_set.insert(self.rigid_body_template.clone());
+		let mut rb = self.rigid_body_template.clone();
+		rb.user_data = get_userdata(self.id, 0);
+		self.rigid_body = physics.rigid_body_set.insert(rb);
 	}
 	
 	// Safety note. These argument combination is not safe.
@@ -108,34 +112,43 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn pre_render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn pre_render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<bool, ComponentError> {
+		let mut is_transparent = false;
+		
 		for component in self.components.values() {
 			component.pre_render(&self, renderer, builder)?;
+			
+			is_transparent = is_transparent || component.inner().is_transparent();
 		}
 		
-		Ok(())
+		Ok(is_transparent)
 	}
 	
-	pub fn render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn render(&mut self, renderer: &Renderer, render_type: RenderType, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		let state = self.state.get_mut();
 		
 		if state.hidden {
 			return Ok(());
 		}
 		
-		let pos: Point3 = state.position.translation.vector.into();
-		let ang = &state.position.rotation;
-		
-		if debug::get_flag_or_default("DebugEntityDraw") {
-			debug::draw_point(&pos, 32.0, Color::magenta());
-			debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
-			debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
-			debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
-			debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+		if render_type == RenderType::Opaque {
+			let pos: Point3 = state.position.translation.vector.into();
+			let ang = &state.position.rotation;
+			
+			if debug::get_flag_or_default("DebugEntityDraw") {
+				debug::draw_point(&pos, 32.0, Color::magenta());
+				debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
+				debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
+				debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
+				debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+			}
 		}
 		
 		for component in self.components.values() {
-			component.render(&self, renderer, builder)?;
+			if (render_type == RenderType::Opaque && component.inner().is_opaque())
+			|| (render_type == RenderType::Transparent && component.inner().is_transparent()) {
+				component.render(&self, renderer, builder)?;
+			}
 		}
 		
 		Ok(())
@@ -201,5 +214,17 @@ impl Entity {
 	
 	pub fn rigid_body_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut RigidBody {
 		physics.rigid_body_set.get_mut(self.rigid_body).unwrap()
+	}
+	
+	pub fn tag<T: Clone + 'static>(&self, key: &str) -> Option<T> {
+		self.tags.borrow().get(key).and_then(|b| b.downcast_ref().cloned())
+	}
+	
+	pub fn set_tag<T: Clone + 'static>(&self, key: impl Into<String>, val: T) -> Option<Box<dyn Any>> {
+		self.tags.borrow_mut().insert(key.into(), Box::new(val))
+	}
+	
+	pub fn unset_tag(&self, key: &str) -> Option<Box<dyn Any>> {
+		self.tags.borrow_mut().remove(key)
 	}
 }

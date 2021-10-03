@@ -4,6 +4,7 @@ use rapier3d::prelude::*;
 use crate::application::{Entity, Application, Physics};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::Vec3;
+use crate::utils::get_userdata;
 
 #[derive(ComponentBase)]
 pub struct ColliderComponent {
@@ -38,7 +39,9 @@ impl Component for ColliderComponent {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
 		let physics = &mut *application.physics.borrow_mut();
 		
-		self.handle.set(physics.collider_set.insert_with_parent(self.template.clone(), entity.rigid_body, &mut physics.rigid_body_set));
+		let mut collider = self.template.clone();
+		collider.user_data = get_userdata(self.inner.entity_id.unwrap(), self.inner.id);
+		self.handle.set(physics.collider_set.insert_with_parent(collider, entity.rigid_body, &mut physics.rigid_body_set));
 		
 		Ok(())
 	}
