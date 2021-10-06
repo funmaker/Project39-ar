@@ -124,7 +124,20 @@ pub fn aabb_from_points<'a, I>(pts: I) -> AABB
 	AABB::new(min, max)
 }
 
-#[derive(Clone, Debug, PartialEq)]
+pub fn cast_ray_on_plane(plane: Isometry3, ray: Ray) -> Option<Point3> {
+	let norm = plane.transform_vector(&Vec3::z_axis());
+	let origin = plane.transform_point(&Point3::origin());
+	let toi = (origin - ray.origin).dot(&norm) / ray.dir.dot(&norm);
+	
+	if toi.is_nan() || toi < 0.0 {
+		None
+	} else {
+		let intersection = ray.point_at(toi);
+		Some(plane.inverse_transform_point(&intersection))
+	}
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 
 impl Color {

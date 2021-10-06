@@ -1,4 +1,6 @@
 use std::ops::Range;
+use std::hash::Hash;
+use std::fmt::Debug;
 use err_derive::Error;
 use vulkano::{descriptor_set, DeviceSize, memory, sync};
 use vulkano::pipeline::input_assembly::Index;
@@ -10,8 +12,8 @@ use crate::renderer::pipelines::PipelineError;
 pub use simple::SimpleModel;
 pub use self::mmd::MMDModel;
 
-pub trait VertexIndex: Index + Copy + Send + Sync + Sized + Into<u32> + 'static {}
-impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<u32> + 'static {}
+pub trait VertexIndex: Index + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}
+impl<T> VertexIndex for T where T: Index + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}
 
 #[derive(Debug, Error)]
 pub enum ModelError {

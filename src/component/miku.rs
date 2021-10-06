@@ -7,6 +7,7 @@ use crate::component::model::MMDModel;
 use crate::math::Rot3;
 use super::{Component, ComponentBase, ComponentInner};
 use crate::utils::num_key;
+use crate::renderer::assets_manager::pmx::PmxAsset;
 
 const MORPH_PRESETS: &[(usize, &[usize])] = &[
 	(1, &[0, 29, 66]),
@@ -35,7 +36,8 @@ impl Miku {
 
 impl Component for Miku {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		self.model.set(entity.add_component(MMDModel::<u16>::from_pmx("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx", &mut *application.renderer.borrow_mut())?));
+		let model = application.renderer.borrow_mut().load(PmxAsset::<u16>::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx"))?;
+		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
 		Ok(())
 	}

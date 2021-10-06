@@ -13,7 +13,6 @@ use vulkano::pipeline::PipelineBindPoint;
 pub mod test;
 mod bone;
 mod sub_mesh;
-mod import;
 mod shared;
 
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
@@ -24,8 +23,7 @@ use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4};
 use super::{ModelError, VertexIndex};
 pub use bone::{Bone, BoneConnection};
-pub use import::MMDModelLoadError;
-use shared::MMDModelShared;
+pub use shared::{MMDModelShared, SubMeshDesc};
 
 pub struct MMDModelState {
 	pub bones: Vec<Bone>,
@@ -122,12 +120,6 @@ impl<VI: VertexIndex> MMDModel<VI> {
 			offsets_ubo,
 			model_set,
 		})
-	}
-	
-	pub fn from_pmx(path: &str, renderer: &mut Renderer) -> Result<MMDModel<VI>, MMDModelLoadError> where VI: mmd::VertexIndex {
-		let shared = import::from_pmx(path, renderer)?;
-		
-		Ok(MMDModel::new(Arc::new(shared), renderer)?)
 	}
 	
 	pub fn loaded(&self) -> bool {

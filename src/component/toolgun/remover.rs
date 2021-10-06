@@ -26,17 +26,17 @@ impl Tool for Remover {
 		
 		toolgun.fire(application);
 		
-		{
+		let result = {
 			let physics = &*application.physics.borrow();
-			let result = physics.query_pipeline
-			                    .cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
-			                    .and_then(|(c, _)| physics.collider_set.get(c))
-			                    .map(|collider| collider.entity(application));
+			physics.query_pipeline
+			       .cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+			       .and_then(|(c, _)| physics.collider_set.get(c))
+			       .map(|collider| collider.entity(application))
+		};
 			
-			if let Some(target) = result {
-				if target.tag("NoRemove") != Some(true) {
-					target.remove();
-				}
+		if let Some(target) = result {
+			if target.tag("NoRemove") != Some(true) {
+				target.remove();
 			}
 		}
 		

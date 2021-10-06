@@ -1,28 +1,76 @@
-use std::error::Error;
+use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hasher, Hash};
+use std::any::{Any, TypeId};
 use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader, Seek};
+use std::io::{BufRead, Seek, BufReader};
 use std::fs::File;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Debug};
 use std::ffi::{OsStr, OsString};
+use std::error::Error;
 
-pub fn find_asset(path: impl AsRef<Path>) -> Result<impl BufRead + Seek, AssetError> {
-	let asset_path = find_asset_path(&path)?;
+pub mod texture;
+pub mod pmx;
+pub mod obj;
+pub mod toml;
+
+use crate::renderer::Renderer;
+
+pub struct AssetsManager {
+	cache: HashMap<u64, Box<dyn Any>>,
+}
+
+impl AssetsManager {
+	pub fn new() -> Self {
+		AssetsManager {
+			cache: HashMap::new(),
+		}
+	}
 	
-	match File::open(asset_path) {
-		Ok(file) => Ok(BufReader::new(file)),
-		Err(err) => Err(AssetError::from_err(err, path.as_ref().to_string_lossy())),
+	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key, renderer: &mut Renderer) -> Result<Key::Asset, Key::Error> {
+		let mut hasher = DefaultHasher::new();
+		TypeId::of::<Key>().hash(&mut hasher);
+		key.hash(&mut hasher);
+		let hash = hasher.finish();
+		
+		let asset = self.cache.get(&hash);
+		
+		if let Some(asset) = asset {
+			Ok(asset.downcast_ref::<Key::Asset>().unwrap().clone())
+		} else {
+			dprintln!("Loading {}", key);
+			let asset = key.load(self, renderer)?;
+			self.cache.insert(hash, Box::new(asset.clone()));
+			Ok(asset)
+		}
+	}
+	
+	pub fn find_asset(path: impl AsRef<Path>) -> Result<impl BufRead + Seek, AssetError> {
+		let asset_path = Self::find_asset_path(&path)?;
+		
+		match File::open(asset_path) {
+			Ok(file) => Ok(BufReader::new(file)),
+			Err(err) => Err(AssetError::from_err(err, path.as_ref().to_string_lossy())),
+		}
+	}
+	
+	pub fn find_asset_path(path: impl AsRef<Path>) -> Result<PathBuf, AssetError> {
+		let orig_path = lookup_windows_path("assets", path.as_ref());
+		let override_path = lookup_windows_path("assets_overrides", path.as_ref());
+		
+		match (orig_path, override_path) {
+			(_, Ok(path)) if path.exists() => Ok(path),
+			(Ok(path), _) => Ok(path),
+			(Err(err), _) => Err(err),
+		}
 	}
 }
 
-pub fn find_asset_path(path: impl AsRef<Path>) -> Result<PathBuf, AssetError> {
-	let orig_path = lookup_windows_path("assets", path.as_ref());
-	let override_path = lookup_windows_path("assets_overrides", path.as_ref());
+pub trait AssetKey: Hash + Display {
+	type Asset: Clone + 'static;
+	type Error: std::error::Error;
 	
-	match (orig_path, override_path) {
-		(_, Ok(path)) if path.exists() => Ok(path),
-		(Ok(path), _) => Ok(path),
-		(Err(err), _) => Err(err),
-	}
+	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error>;
 }
 
 // Windows why
@@ -71,6 +119,7 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, full_path: &PathBuf, dir: b
 	}
 }
 
+
 #[derive(Debug)]
 pub struct AssetError {
 	inner: Option<std::io::Error>,
@@ -103,3 +152,4 @@ impl Display for AssetError {
 }
 
 impl Error for AssetError {}
+

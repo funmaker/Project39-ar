@@ -15,7 +15,7 @@ use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy, Vec4
 use crate::config::NovrConfig;
 
 pub const IMAGE_FORMAT: Format = Format::R8G8B8A8_SRGB;
-pub const DEPTH_FORMAT: Format = Format::D16_UNORM;
+pub const DEPTH_FORMAT: Format = Format::D24_UNORM_S8_UINT;
 
 // Translates OpenGL projection matrix to Vulkan
 // Can't be const because Mat4::new is not const fn or something
@@ -51,7 +51,7 @@ impl Eyes {
 		let fovy = fovx / aspect;
 		
 		let view = AMat4::identity();
-		let projection = clip() * Perspective3::new(aspect, fovy, 0.01, 100.01).as_projective();
+		let projection = clip() * Perspective3::new(aspect, fovy, 0.1, 100.0).as_projective();
 		let raw = vector!((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
 		
 		Self::new(min_frame_buffer_size, (view, view), (projection, projection), (raw, raw), queue, render_pass)
@@ -64,8 +64,8 @@ impl Eyes {
 		let view_left  = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr.system.eye_to_head_transform(openvr::Eye::Left ))).inverse();
 		let view_right = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr.system.eye_to_head_transform(openvr::Eye::Right))).inverse();
 		
-		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.01, 100.01)));
-		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.01, 100.01)));
+		let proj_left  = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Left,  0.1, 100.0)));
+		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.1, 100.0)));
 		
 		let raw_left  = vr.system.projection_raw(openvr::Eye::Left);
 		let raw_left = vector!(-raw_left.left, raw_left.right, -raw_left.top, raw_left.bottom);
@@ -179,8 +179,13 @@ impl Eyes {
 			Arc::new(frame_buffer.build()?)
 		};
 		
-		let mut clear_values = vec![ ClearValue::None,
-		                             ClearValue::Depth(1.0) ];
+		let mut clear_values = vec![ ClearValue::None ];
+		
+		if DEPTH_FORMAT.type_stencil().is_some() {
+			clear_values.push(ClearValue::DepthStencil((1.0, 0)))
+		} else {
+			clear_values.push(ClearValue::Depth(1.0))
+		}
 		
 		if samples != SampleCount::Sample1 {
 			clear_values.push(ClearValue::None)

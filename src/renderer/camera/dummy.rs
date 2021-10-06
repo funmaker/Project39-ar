@@ -7,7 +7,7 @@ use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureErr
 use crate::math::Isometry3;
 
 lazy_static!(
-	static ref FRAME: Vec<u8> = [ 45,  45,  57, 255].iter()
+	static ref FRAME: Vec<u8> = [ 57,  45,  45, 255].iter()
 	                                                .copied()
 	                                                .cycle()
 	                                                .take((CAPTURE_WIDTH * CAPTURE_HEIGHT * 4) as usize)

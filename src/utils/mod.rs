@@ -9,7 +9,6 @@ mod vulkan;
 mod images;
 mod id_gen;
 mod fence_check;
-mod assets;
 mod input;
 mod rapier;
 
@@ -19,7 +18,6 @@ pub use vulkan::*;
 pub use images::*;
 pub use id_gen::*;
 pub use fence_check::*;
-pub use assets::*;
 pub use input::*;
 pub use rapier::*;
 

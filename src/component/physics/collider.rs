@@ -3,7 +3,6 @@ use rapier3d::prelude::*;
 
 use crate::application::{Entity, Application, Physics};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::math::Vec3;
 use crate::utils::get_userdata;
 
 #[derive(ComponentBase)]
@@ -20,10 +19,6 @@ impl ColliderComponent {
 			template: collider,
 			handle: Cell::new(ColliderHandle::invalid()),
 		}
-	}
-	
-	pub fn cuboid(size: Vec3) -> Self {
-		ColliderComponent::new(ColliderBuilder::cuboid(size.x / 2.0, size.y / 2.0, size.z / 2.0).build())
 	}
 	
 	pub fn inner<'p>(&self, physics: &'p Physics) -> &'p Collider {

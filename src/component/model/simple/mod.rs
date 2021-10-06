@@ -1,27 +1,21 @@
 use std::sync::Arc;
-use image::{DynamicImage, GenericImageView};
 use num_traits::FromPrimitive;
-use openvr::render_models;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
+use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::format::Format;
 use vulkano::sampler::Sampler;
 use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
-
-mod import;
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
-use crate::utils::{ImageEx, FenceCheck};
+use crate::utils::FenceCheck;
 use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::application::Entity;
 use super::{ModelError, VertexIndex};
-pub use import::SimpleModelLoadError;
 
 #[derive(ComponentBase, Clone)]
 pub struct SimpleModel<VI: VertexIndex> {
@@ -36,9 +30,7 @@ pub struct SimpleModel<VI: VertexIndex> {
 
 #[allow(dead_code)]
 impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
-	pub fn new(vertices: &[Vertex], indices: &[VI], source_image: DynamicImage, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
-		let width = source_image.width();
-		let height = source_image.height();
+	pub fn new(vertices: &[Vertex], indices: &[VI], image: Arc<ImmutableImage>, image_promise: impl GpuFuture + 'static, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
 		let queue = &renderer.load_queue;
 		
 		let aabb = aabb_from_points(vertices.iter().map(|v| Point3::from(v.pos)));
@@ -52,12 +44,6 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		let (indices, indices_promise) = ImmutableBuffer::from_iter(indices.iter().copied(),
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
 		                                                            queue.clone())?;
-		
-		let (image, image_promise) = ImmutableImage::from_iter(source_image.into_pre_mul_iter(),
-		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-		                                                       MipmapsCount::Log2,
-		                                                       Format::R8G8B8A8_UNORM,
-		                                                       queue.clone())?;
 		
 		let view = ImageView::new(image)?;
 		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
@@ -80,14 +66,6 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 			set,
 			fence,
 		})
-	}
-	
-	pub fn from_obj(model_path: &str, texture_path: &str, renderer: &mut Renderer) -> Result<SimpleModel<VI>, SimpleModelLoadError> {
-		import::from_obj(model_path, texture_path, renderer)
-	}
-	
-	pub fn from_openvr(model: render_models::Model, texture: render_models::Texture, renderer: &mut Renderer) -> Result<SimpleModel<u16>, SimpleModelLoadError> {
-		import::from_openvr(model, texture, renderer)
 	}
 	
 	pub fn loaded(&self) -> bool {

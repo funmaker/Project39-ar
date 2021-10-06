@@ -5,13 +5,17 @@ use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use rapier3d::prelude::{ColliderBuilder, RigidBodyBuilder};
+use image::{DynamicImage, ImageBuffer, GenericImageView};
+use openvr::render_models;
+use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
+use vulkano::format::Format;
 
 use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::component::model::SimpleModel;
+use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
-use crate::math::Vec3;
 use super::VrTracked;
+use crate::utils::ImageEx;
 
 #[derive(ComponentBase)]
 pub struct VrSpawner {
@@ -45,33 +49,41 @@ impl Component for VrSpawner {
 						dprintln!("Failed to load model \"{}\": {}", model_name.to_string_lossy(), err);
 					} else if let Ok(Some(model)) = model {
 						if let Some(texture) = vr.render_models.load_texture(model.diffuse_texture_id().unwrap())? {
+							let renderer = &mut *application.renderer.borrow_mut();
 							let class = vr.system.tracked_device_class(tracked_id);
+							let vertices: Vec<Vertex> = model.vertices().iter().map(Into::into).collect();
+							let indices: Vec<u16> = model.indices().iter().copied().map(Into::into).collect();
+							let size = texture.dimensions();
+							let source = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
+							let width = source.width();
+							let height = source.height();
 							
-							let mut aabb = (Vec3::zeros(), Vec3::zeros());
+							let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
+							                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
+							                                                       MipmapsCount::Log2,
+							                                                       Format::R8G8B8A8_UNORM,
+							                                                       renderer.load_queue.clone())?;
 							
-							for vertex in model.vertices() {
-								let vertex = Vec3::from(vertex.position);
-								
-								if vertex.x < aabb.0.x { aabb.0.x = vertex.x; }
-								if vertex.y < aabb.0.y { aabb.0.y = vertex.y; }
-								if vertex.z < aabb.0.z { aabb.0.z = vertex.z; }
-								if vertex.x > aabb.1.x { aabb.1.x = vertex.x; }
-								if vertex.y > aabb.1.y { aabb.1.y = vertex.y; }
-								if vertex.z > aabb.1.z { aabb.1.z = vertex.z; }
-							}
+							let model = SimpleModel::new(
+								&vertices,
+								&indices,
+								image,
+								image_promise,
+								renderer,
+							)?;
 							
-							let center = (aabb.1 + aabb.0) / 2.0;
-							let hsize = (aabb.1 - aabb.0) / 2.0;
+							let aabb = model.aabb();
+							let hsize = aabb.half_extents();
 							
 							let mut entity = Entity::builder(format!("{:?}", class))
 								.rigid_body_type(RigidBodyType::KinematicPositionBased)
 								.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
-								                          .translation(center.into())
+								                          .translation(aabb.center().coords)
 								                          .build())
 								.rigid_body(RigidBodyBuilder::new(RigidBodyType::KinematicPositionBased)
 								                             .additional_mass(1000.0)
 								                             .build())
-								.component(SimpleModel::<u16>::from_openvr(model, texture, &mut *application.renderer.borrow_mut())?)
+								.component(model)
 								.component(VrTracked::new(tracked_id));
 							
 							if class == TrackedDeviceClass::HMD {
@@ -97,5 +109,11 @@ impl Component for VrSpawner {
 		}
 		
 		Ok(())
+	}
+}
+
+impl From<&render_models::Vertex> for Vertex {
+	fn from(vertex: &render_models::Vertex) -> Self {
+		Vertex::new(vertex.position, vertex.normal, vertex.texture_coord)
 	}
 }

@@ -2,13 +2,21 @@ use rapier3d::geometry::InteractionGroups;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3};
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, PI, Point3};
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
+use crate::application::entity::EntityBuilder;
+use rapier3d::dynamics::RigidBodyType;
+use crate::debug;
+
+const MENU_SCALE: f32 = 0.2;
+const MENU_SPACING: f32 = 0.25;
+const MENU_DISTANCE: f32 = 0.25;
 
 pub struct Spawner {
 	menu_pos: Option<Isometry3>,
 	prop_idx: usize,
+	select_idx: Option<usize>,
 	ghost_pos: Option<Similarity3>,
 }
 
@@ -17,6 +25,7 @@ impl Spawner {
 		Spawner {
 			menu_pos: None,
 			prop_idx: 0,
+			select_idx: None,
 			ghost_pos: None,
 		}
 	}
@@ -28,55 +37,115 @@ impl Tool for Spawner {
 	}
 	
 	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
-		let physics = &*application.physics.borrow();
-		let result = physics.query_pipeline.cast_ray_and_get_normal(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None);
-		
 		self.ghost_pos = None;
-		
-		if let Some((_, intersection)) = result {
-			if let Some(_prop) = toolgun.prop_manager.props.get(self.prop_idx) {
-				self.ghost_pos = Some(Similarity3::from_parts(
-					ray.point_at(intersection.toi).into(),
-					Rot3::identity(),
-					1.0,
-				));
-			}
-		}
+		self.select_idx = None;
 		
 		if application.input.context_btn(hand).down {
 			if self.menu_pos.is_some() {
 				self.menu_pos = None;
 			} else {
-				self.menu_pos = Some(Isometry3::face_towards(&ray.point_at(0.5), &ray.origin, &Vec3::y_axis()));
+				self.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE), &ray.origin, &Vec3::y_axis()));
 			}
 		}
+		
+		if let Some(menu_pos) = self.menu_pos {
+			if let Some(select_pos) = cast_ray_on_plane(menu_pos, ray) {
+				let size = toolgun.prop_collection.props.len();
+				let row_size = (size as f32).sqrt().ceil();
+				let hsize = row_size / 2.0 - 0.5;
+				let x = (select_pos.x / MENU_SPACING + hsize).round();
+				let y = (hsize - select_pos.y / MENU_SPACING).round();
+				
+				if x >= 0.0 && x < row_size && y >= 0.0 && y < row_size {
+					let idx = (x + y * row_size) as usize;
+					self.select_idx = Some(idx);
+					
+					if application.input.fire_btn(hand).down {
+						self.prop_idx = idx;
+					}
+				}
+			}
+			
+			if application.input.fire_btn(hand).down {
+				self.menu_pos = None;
+			}
+		} else {
+			let result = {
+				let physics = &*application.physics.borrow();
+				physics.query_pipeline.cast_ray_and_get_normal(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+			};
+			
+			if let Some((_, intersection)) = result {
+				if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
+					let hit_point = ray.point_at(intersection.toi);
+					let offset = prop.model.aabb().mins.y;
+					
+					let rot = if intersection.normal == *Vec3::y_axis() {
+						Rot3::identity()
+					} else {
+						Rot3::face_towards(&intersection.normal, &Vec3::y_axis()) * Rot3::from_axis_angle(&Vec3::x_axis(), PI / 2.0)
+					};
+					
+					let position = Isometry3::from_parts(
+						(hit_point - intersection.normal * offset).into(),
+						rot,
+					);
+					
+					self.ghost_pos = Some(Similarity3::from_isometry(position, 1.0));
+					
+					if application.input.fire_btn(hand).down {
+						toolgun.fire(application);
+						
+						application.add_entity(
+							EntityBuilder::new(&prop.name)
+							              .rigid_body_type(RigidBodyType::Dynamic)
+							              .position(position)
+							              .component(prop.model.clone())
+							              .collider(prop.collider.clone())
+							              .build()
+						);
+					}
+				}
+			}
+		}
+		
 		
 		Ok(())
 	}
 	
 	fn render(&mut self, toolgun: &ToolGun, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
-			if let Some(prop) = toolgun.prop_manager.props.get(self.prop_idx) {
-				prop.render_impl(ghost_pos, Color::full_white().opactiy(0.25), builder)?;
+			if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
+				prop.model.render_impl(ghost_pos, Color::full_white().opactiy(0.25), builder)?;
 			}
 		}
 		
 		if let Some(menu_pos) = self.menu_pos {
-			let size = toolgun.prop_manager.props.len();
+			let size = toolgun.prop_collection.props.len();
 			let row_size = (size as f32).sqrt().ceil() as usize;
 			
-			for (id, model) in toolgun.prop_manager.props.iter().enumerate() {
+			for (id, prop) in toolgun.prop_collection.props.iter().enumerate() {
 				let x = (id % row_size) as f32;
 				let y = (id / row_size) as f32;
 				let hsize = row_size as f32 / 2.0 - 0.5;
-				let pos = vector!((x - hsize) * 0.25,
-				                  (hsize - y) * 0.25,
+				let pos = vector!((x - hsize) * MENU_SPACING,
+				                  (hsize - y) * MENU_SPACING,
 				                  0.0);
-				let size = 0.2 / model.aabb().extents().max();
+				let size = MENU_SCALE / prop.model.aabb().extents().max();
 				
 				let transform = menu_pos * Similarity3::from_parts(pos.into(), Rot3::from_euler_angles(0.0, 0.0, 0.0), size);
 				
-				model.render_impl(transform, Color::full_white().opactiy(1.0), builder)?;
+				let color = if self.select_idx == Some(id) {
+					Color::cyan()
+				} else {
+					Color::dwhite().opactiy(0.75)
+				};
+				
+				prop.model.render_impl(transform, color, builder)?;
+				
+				if let Some(tip) = &prop.tip {
+					debug::draw_text(tip, &transform.transform_point(&Point3::origin()), debug::DebugOffset::top(0.0, 8.0), 16.0, color);
+				}
 			}
 		}
 		

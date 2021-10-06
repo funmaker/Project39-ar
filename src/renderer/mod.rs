@@ -1,8 +1,8 @@
+use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::sync::{Arc, mpsc};
-use std::cell::RefMut;
 use err_derive::Error;
 use vulkano::{command_buffer, descriptor_set, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
@@ -17,27 +17,29 @@ use vulkano::render_pass::{AttachmentDesc, LoadOp, MultiviewDesc, RenderPass, Re
 use vulkano::swapchain::{CompositeAlpha, FullscreenExclusive, PresentMode, Surface, SurfaceTransform, Swapchain};
 use vulkano::sync::{FenceSignalFuture, GpuFuture};
 
-use background::{Background, BackgroundError, BackgroundRenderError};
-use camera::{Camera, CameraStartError};
-use debug_renderer::{DebugRenderer, TextCache, DebugRendererError, DebugRendererRenderError};
-use eyes::{EyeCreationError, Eyes};
-use openvr_cb::OpenVRCommandBuffer;
-use pipelines::Pipelines;
-use window::{Window, WindowRenderError, WindowSwapchainRegenError};
-
-use crate::{config, debug};
-use crate::application::{Entity, VR};
-use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4, VRSlice};
-use crate::component::{ComponentError, RenderType};
-use crate::utils::*;
-
 pub mod camera;
 pub mod eyes;
 pub mod window;
 pub mod pipelines;
 pub mod debug_renderer;
+pub mod assets_manager;
 mod openvr_cb;
 mod background;
+
+use crate::{config, debug};
+use crate::application::{Entity, VR};
+use crate::component::{ComponentError, RenderType};
+use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4, VRSlice};
+use crate::utils::*;
+use background::{Background, BackgroundError, BackgroundRenderError};
+use camera::{Camera, CameraStartError};
+use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError, TextCache};
+use eyes::{EyeCreationError, Eyes};
+use openvr_cb::OpenVRCommandBuffer;
+use pipelines::Pipelines;
+use window::{Window, WindowRenderError, WindowSwapchainRegenError};
+use assets_manager::{AssetsManager, AssetKey};
+
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -63,6 +65,7 @@ pub struct Renderer {
 	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 	debug_renderer: DebugRenderer,
 	fps_counter: FpsCounter<20>,
+	assets_manager: Option<AssetsManager>,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
@@ -97,7 +100,7 @@ impl Renderer {
 		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		let fps_counter = FpsCounter::new();
-		let previous_frame_end = None;
+		let assets_manager = Some(AssetsManager::new());
 		
 		Ok(Renderer {
 			instance,
@@ -109,11 +112,12 @@ impl Renderer {
 			load_queue,
 			pipelines,
 			eyes,
-			previous_frame_end,
+			previous_frame_end: None,
 			background,
 			load_commands,
 			debug_renderer,
 			fps_counter,
+			assets_manager
 		})
 	}
 	
@@ -530,6 +534,13 @@ impl Renderer {
 	
 	pub fn debug_text_cache(&self) -> RefMut<TextCache> {
 		self.debug_renderer.text_cache.borrow_mut()
+	}
+	
+	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset, Key::Error> {
+		let mut assets_manager = self.assets_manager.take().unwrap();
+		let result = assets_manager.load(key, self);
+		self.assets_manager = Some(assets_manager);
+		result
 	}
 }
 

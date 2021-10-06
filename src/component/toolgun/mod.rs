@@ -22,20 +22,24 @@ use crate::application::{Application, Entity};
 use crate::application::input::Hand;
 use crate::component::parent::Parent;
 use crate::debug;
-use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3};
+use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::pipelines::PipelineError;
 use crate::renderer::pipelines::toolgun_text::{ToolGunTextPipeline, Vertex};
 use crate::renderer::Renderer;
 use crate::utils::FenceCheck;
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef, RenderType};
-use prop_manager::{PropManager, PropManagerError};
+use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
+
+const MENU_SPACING: f32 = 0.1;
+const MENU_DISTANCE: f32 = 0.1;
 
 #[derive(Copy, Clone)]
 pub struct ToolGunAnim {
 	start: Instant,
 	origin: Point3,
 	target: Point3,
+	scale: f32,
 }
 
 pub struct ToolGunState {
@@ -43,7 +47,7 @@ pub struct ToolGunState {
 	tools: Vec<Box<dyn Tool>>,
 	tool_id: usize,
 	hand: Hand,
-	tool_select_pos: Option<Point3>,
+	menu_pos: Option<Isometry3>,
 	render_tool: bool,
 }
 
@@ -52,7 +56,7 @@ pub struct ToolGun {
 	#[inner] inner: ComponentInner,
 	state: RefCell<ToolGunState>,
 	anim: Cell<Option<ToolGunAnim>>,
-	prop_manager: PropManager,
+	prop_collection: PropCollection,
 	parent: ComponentRef<Parent>,
 	offset: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
@@ -86,14 +90,14 @@ impl ToolGun {
 		
 		let fence = FenceCheck::new(vertices_promise)?;
 		
-		let prop_manager = PropManager::new(renderer)?;
+		let prop_manager = PropCollection::new(renderer)?;
 		
 		let state = ToolGunState {
 			scroll: 0.0,
 			tools: get_all_tools(),
 			tool_id: 0,
 			hand: Hand::Right,
-			tool_select_pos: None,
+			menu_pos: None,
 			render_tool: false,
 		};
 		
@@ -102,7 +106,7 @@ impl ToolGun {
 			parent: ComponentRef::null(),
 			state: RefCell::new(state),
 			anim: Cell::new(None),
-			prop_manager,
+			prop_collection: prop_manager,
 			offset,
 			pipeline,
 			vertices,
@@ -122,16 +126,20 @@ impl ToolGun {
 	
 	pub fn fire(&self, application: &Application) {
 		let ray = self.ray(application);
-		let physics = &*application.physics.borrow();
-		let result = physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None);
 		
-		if let Some((_, intersection)) = result {
-			let hit = ray.point_at(intersection);
+		let result = {
+			let physics = &*application.physics.borrow();
+			physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+		};
+		
+		if let Some((_, toi)) = result {
+			let hit = ray.point_at(toi);
 			
 			self.anim.set(Some(ToolGunAnim {
 				start: Instant::now(),
 				origin: ray.origin,
 				target: hit,
+				scale: (2.0 / toi).clamp(0.1, 5.0),
 			}));
 		}
 	}
@@ -143,64 +151,64 @@ impl Component for ToolGun {
 		let cur_pos = entity.state().position.translation.vector;
 		let state = &mut *self.state.borrow_mut();
 		
-		{
+		let result = {
 			let physics = &*application.physics.borrow();
-			let result = physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None);
+			physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+		};
+		
+		if let Some((_, intersection)) = result {
+			let hit = ray.point_at(intersection);
 			
-			if let Some((_, intersection)) = result {
-				let hit = ray.point_at(intersection);
-				
-				debug::draw_point(hit, 32.0, Color::cyan());
-			}
+			debug::draw_point(hit, 32.0, Color::cyan());
 		}
 		
+		state.render_tool = false;
 		if let Some(parent) = self.parent.get(application) {
-			state.tools[state.tool_id].tick(self, state.hand, ray, application)?;
-			state.render_tool = true;
-			
 			if application.input.drop_btn(state.hand).down {
 				if let Some(controller) = parent.target.get(application) {
 					controller.state_mut().hidden = false;
 				}
 				
 				parent.remove();
-			}
-			
-			if let Some(select_pos) = state.tool_select_pos {
-				let mut n: Vec3 = ray.origin - select_pos;
-				n.y = 0.0;
-				n = n.normalize();
-				let d = (select_pos - ray.origin).dot(&n) / ray.dir.dot(&n);
-				let menu_hit = ray.origin + ray.dir * d;
-				
-				let select_id = state.tool_id as isize + ((select_pos.coords.y - menu_hit.y) / 0.1).round() as isize;
+				state.menu_pos = None;
+			} else if let Some(menu_pos) = state.menu_pos {
+				let select_id = cast_ray_on_plane(menu_pos, ray).map(|menu_hit|
+					state.tool_id as isize - (menu_hit.y / MENU_SPACING).round() as isize
+				);
 				
 				for (tool_id, tool) in state.tools.iter().enumerate() {
-					let text_box_pos = select_pos + vector!(0.0, (tool_id as f32 - state.tool_id as f32) * -0.1, 0.0);
+					let text_box_pos = menu_pos.transform_point(&point!(0.0, (state.tool_id as f32 - tool_id as f32) * MENU_SPACING, 0.0));
 					
-					let color = if tool_id as isize == select_id {
+					let color = if Some(tool_id as isize) == select_id {
 						Color::yellow()
 					} else {
 						Color::white()
 					};
 					
-					debug::draw_text(tool.name(), Point3::from(text_box_pos), debug::DebugOffset::center(0.0, 0.0), 128.0, color);
+					debug::draw_text(tool.name(), text_box_pos, debug::DebugOffset::center(0.0, 0.0), 128.0, color);
 				}
 				
-				if application.input.use_btn(state.hand).up {
-					state.tool_select_pos = None;
-					if select_id >= 0 && select_id < state.tools.len() as isize  {
-						state.tool_id = select_id as usize;
+				if let Some(select_id) = select_id {
+					if application.input.fire_btn(state.hand).down {
+						state.menu_pos = None;
+						if select_id >= 0 && select_id < state.tools.len() as isize  {
+							state.tool_id = select_id as usize;
+						}
 					}
 				}
-			} else {
+				
 				if application.input.use_btn(state.hand).down {
-					state.tool_select_pos = Some(ray.origin + ray.dir * 0.2);
+					state.menu_pos = None;
+				}
+			} else {
+				state.tools[state.tool_id].tick(self, state.hand, ray, application)?;
+				state.render_tool = true;
+				
+				if application.input.use_btn(state.hand).down {
+					state.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE), &ray.origin, &Vec3::y_axis()));
 				}
 			}
 		} else {
-			state.render_tool = false;
-			
 			let controller = application.find_entity(|target|
 				target != entity &&
 				target.tag::<Hand>("Hand").is_some() &&
@@ -222,7 +230,7 @@ impl Component for ToolGun {
 			let elapsed = anim.start.elapsed().as_secs_f32();
 			
 			debug::draw_line(anim.origin, anim.target, 10.0 - elapsed * 50.0, Color::cyan().opactiy(elapsed * 5.0));
-			debug::draw_point(anim.target, elapsed * 1000.0, Color::white().opactiy(1.0 - elapsed * 5.0));
+			debug::draw_point(anim.target, anim.scale * elapsed * 1000.0, Color::white().opactiy(1.0 - elapsed * 5.0));
 			
 			if elapsed > 2.0 {
 				self.anim.set(None);

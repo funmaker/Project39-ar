@@ -876,6 +876,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "linked-hash-map"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
+dependencies = [
+ "serde",
+ "serde_test",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1507,6 +1517,7 @@ dependencies = [
  "image",
  "imghdr",
  "lazy_static",
+ "linked-hash-map",
  "mmd",
  "nalgebra",
  "native-dialog",
@@ -1779,6 +1790,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_test"
+version = "1.0.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d82178225dbdeae2d5d190e8649287db6a3a32c6d24da22ae3146325aa353e4c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2036,6 +2056,7 @@ version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
 dependencies = [
+ "indexmap",
  "serde",
 ]
 

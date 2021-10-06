@@ -2,39 +2,37 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
-
 use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
-use rapier3d::dynamics::RigidBodyType;
-
-pub use entity::{Entity, EntityRef};
-pub use input::{Hand, Input, Key, MouseButton};
-pub use physics::Physics;
-pub use vr::{VR, VRError};
-
-use crate::component::Component;
-// use crate::component::miku::Miku;
-use crate::component::ComponentError;
-use crate::component::model::{mmd::MMDModelLoadError, ModelError, simple::SimpleModelLoadError, SimpleModel};
-use crate::component::parent::Parent;
-use crate::component::pc_controlled::PCControlled;
-use crate::component::physics::collider::ColliderComponent;
-use crate::component::pov::PoV;
-use crate::component::toolgun::{ToolGun, ToolGunError};
-use crate::component::vr::VrSpawner;
-use crate::config::{self, CameraAPI};
-use crate::debug;
-use crate::math::{Color, Isometry3, PI, Rot3};
-use crate::renderer::{Renderer, RendererError, RendererRenderError};
-use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
-use crate::renderer::window::{Window, WindowCreationError};
-use crate::utils::default_wait_poses;
+use rapier3d::prelude::ColliderBuilder;
 
 pub mod vr;
 pub mod entity;
 pub mod physics;
 pub mod input;
+
+use crate::component::Component;
+// use crate::component::miku::Miku;
+use crate::component::ComponentError;
+use crate::component::model::ModelError;
+use crate::component::parent::Parent;
+use crate::component::pc_controlled::PCControlled;
+use crate::component::pov::PoV;
+use crate::component::toolgun::{ToolGun, ToolGunError};
+use crate::component::vr::VrSpawner;
+use crate::config::{self, CameraAPI};
+use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
+use crate::renderer::{Renderer, RendererError, RendererRenderError};
+use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
+use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
+use crate::renderer::window::{Window, WindowCreationError};
+use crate::utils::default_wait_poses;
+use crate::debug;
+pub use entity::{Entity, EntityRef};
+pub use input::{Hand, Input, Key, MouseButton};
+pub use physics::Physics;
+pub use vr::{VR, VRError};
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -107,7 +105,7 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(SimpleModel::<u16>::from_obj("hand/hand_l.obj", "hand/hand_l.png", renderer)?)
+						.component(renderer.load(ObjAsset::<u16>::at("hand/hand_l.obj", "hand/hand_l.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.tag("Hand", Hand::Left)
@@ -116,7 +114,7 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(SimpleModel::<u16>::from_obj("hand/hand_r.obj", "hand/hand_r.png", renderer)?)
+						.component(renderer.load(ObjAsset::<u16>::at("hand/hand_r.obj", "hand/hand_r.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.tag("Hand", Hand::Right)
@@ -127,7 +125,7 @@ impl Application {
 			application.add_entity(
 				Entity::builder("ToolGun")
 					.translation(point!(0.0, 1.0, 1.0))
-					.component(SimpleModel::<u16>::from_obj("toolgun/toolgun.obj", "toolgun/toolgun.png", renderer)?)
+					.component(renderer.load(ObjAsset::<u16>::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
 					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
 					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
 					                        renderer)?)
@@ -144,24 +142,12 @@ impl Application {
 			
 			application.add_entity(
 				Entity::builder("Floor")
-					.translation(point!(0.0, -0.5, 0.0))
-					.component(ColliderComponent::cuboid(vector!(100.0, 1.0, 100.0)))
+					.translation(point!(0.0, 0.0, 0.0))
+					.component(renderer.load(ObjAsset::<u16>::at("shapes/floor.obj", "shapes/floor.png"))?)
+					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
 					.tag("NoRemove", true)
 					.build()
 			);
-			
-			
-			let box_model = SimpleModel::<u16>::from_obj("cube/cube.obj", "cube/cube.png", renderer)?;
-			for id in 0..10 {
-				application.add_entity(
-					Entity::builder("Box")
-						.rigid_body_type(RigidBodyType::Dynamic)
-						.translation(point!((id as f32).sin(), id as f32 * 1.5 + 0.5, (id as f32).cos()))
-						.component(box_model.clone())
-						.component(ColliderComponent::cuboid(vector!(1.0, 1.0, 1.0)))
-						.build()
-				);
-			}
 			
 			// application.add_entity(
 			// 	"Test",
@@ -317,6 +303,7 @@ impl Application {
 		
 		Ok(())
 	}
+	
 	fn set_debug_flags(&self) {
 		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
 		debug::set_flag("DebugBoneDraw", self.input.keyboard.toggle(Key::B));
@@ -328,10 +315,9 @@ pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr background with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
-	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
+	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
 	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
-	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
@@ -341,7 +327,6 @@ pub enum ApplicationCreationError {
 #[derive(Debug, Error)]
 pub enum ApplicationRunError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] SimpleModelLoadError(#[error(source)] SimpleModelLoadError),
 	#[error(display = "{}", _0)] RendererRenderError(#[error(source)] RendererRenderError),
 	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
