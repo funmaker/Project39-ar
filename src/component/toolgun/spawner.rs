@@ -1,12 +1,12 @@
 use rapier3d::geometry::InteractionGroups;
+use rapier3d::dynamics::RigidBodyType;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, PI, Point3};
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3, face_towards_lossy};
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
 use crate::application::entity::EntityBuilder;
-use rapier3d::dynamics::RigidBodyType;
 use crate::debug;
 
 const MENU_SCALE: f32 = 0.2;
@@ -17,7 +17,7 @@ pub struct Spawner {
 	menu_pos: Option<Isometry3>,
 	prop_idx: usize,
 	select_idx: Option<usize>,
-	ghost_pos: Option<Similarity3>,
+	ghost_pos: Option<Isometry3>,
 }
 
 impl Spawner {
@@ -80,10 +80,10 @@ impl Tool for Spawner {
 					let hit_point = ray.point_at(intersection.toi);
 					let offset = prop.model.aabb().mins.y;
 					
-					let rot = if intersection.normal == *Vec3::y_axis() {
+					let rot = if intersection.normal.cross(&-Vec3::y_axis()).magnitude_squared() < f32::EPSILON {
 						Rot3::identity()
 					} else {
-						Rot3::face_towards(&intersection.normal, &Vec3::y_axis()) * Rot3::from_axis_angle(&Vec3::x_axis(), PI / 2.0)
+						Rot3::face_towards(&intersection.normal.cross(&-Vec3::y_axis()).cross(&intersection.normal), &intersection.normal)
 					};
 					
 					let position = Isometry3::from_parts(
@@ -91,7 +91,7 @@ impl Tool for Spawner {
 						rot,
 					);
 					
-					self.ghost_pos = Some(Similarity3::from_isometry(position, 1.0));
+					self.ghost_pos = Some(position);
 					
 					if application.input.fire_btn(hand).down {
 						toolgun.fire(application);
@@ -116,7 +116,7 @@ impl Tool for Spawner {
 	fn render(&mut self, toolgun: &ToolGun, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
 			if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
-				prop.model.render_impl(ghost_pos, Color::full_white().opactiy(0.25), builder)?;
+				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), builder)?;
 			}
 		}
 		

@@ -35,7 +35,7 @@ impl Tool for Remover {
 		};
 			
 		if let Some(target) = result {
-			if target.tag("NoRemove") != Some(true) {
+			if target.tag("World") != Some(true) {
 				target.remove();
 			}
 		}

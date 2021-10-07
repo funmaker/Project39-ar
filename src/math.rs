@@ -137,6 +137,14 @@ pub fn cast_ray_on_plane(plane: Isometry3, ray: Ray) -> Option<Point3> {
 	}
 }
 
+pub fn face_towards_lossy(dir: Vec3) -> Rot3 {
+	if dir.cross(&Vec3::y_axis()).magnitude_squared() <= f32::EPSILON {
+		Rot3::face_towards(&dir, &Vec3::z_axis())
+	} else {
+		Rot3::face_towards(&dir, &Vec3::y_axis())
+	}
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 

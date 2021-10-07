@@ -1,4 +1,12 @@
 
+[dice]
+model = "cube/dice.obj"
+texture = "cube/dice.png"
+
+[dice2]
+model = "cube/dice2.obj"
+texture = "cube/dice.png"
+
 [cube]
 model = "cube/cube.obj"
 texture = "cube/cube.png"

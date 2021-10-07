@@ -17,6 +17,7 @@ mod ball_socket;
 mod weld;
 mod tool;
 mod prop_manager;
+mod any_model;
 
 use crate::application::{Application, Entity};
 use crate::application::input::Hand;

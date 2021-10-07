@@ -145,7 +145,7 @@ impl Application {
 					.translation(point!(0.0, 0.0, 0.0))
 					.component(renderer.load(ObjAsset::<u16>::at("shapes/floor.obj", "shapes/floor.png"))?)
 					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
-					.tag("NoRemove", true)
+					.tag("World", true)
 					.build()
 			);
 			

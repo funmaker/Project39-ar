@@ -37,6 +37,10 @@ pub trait ComponentBase: Any {
 		let eid = self.inner().entity_id.expect("Attempted to get entity of unmounted component");
 		application.entity(eid).expect("Attempted to get entity of unmounted component")
 	}
+	
+	fn as_ref(&self) -> ComponentRef<Self> where Self: Sized {
+		ComponentRef::new(self.inner().id, self.inner().entity_id.expect("Attempted to get reference of unmounted component"))
+	}
 }
 
 #[allow(unused_variables)]

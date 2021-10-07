@@ -49,16 +49,6 @@ impl Entity {
 		!self.removed.replace(true)
 	}
 	
-	pub fn is_being_removed(&self) -> bool {
-		self.removed.get()
-	}
-	
-	pub fn component<C: Sized + 'static>(&self, id: u64) -> Option<&C> {
-		self.components
-		    .get(&id)
-		    .and_then(|c| c.as_any().downcast_ref::<C>())
-	}
-	
 	pub fn setup_physics(&mut self, physics: &mut Physics) {
 		let mut rb = self.rigid_body_template.clone();
 		rb.user_data = get_userdata(self.id, 0);
@@ -90,9 +80,10 @@ impl Entity {
 		let state = self.state();
 		let rigid_body = self.rigid_body_mut(physics);
 		
-		rigid_body.set_position(state.position, false);
-		rigid_body.set_linvel(state.velocity, false);
-		rigid_body.set_angvel(state.angular_velocity, false);
+		// TODO: Optimize wakey wakey
+		rigid_body.set_position(state.position, true);
+		rigid_body.set_linvel(state.velocity, true);
+		rigid_body.set_angvel(state.angular_velocity, true);
 	}
 	
 	pub fn after_physics(&self, physics: &mut Physics) {
@@ -181,6 +172,23 @@ impl Entity {
 	
 	pub fn as_ref(&self) -> EntityRef {
 		self.into()
+	}
+	
+	pub fn is_being_removed(&self) -> bool {
+		self.removed.get()
+	}
+	
+	pub fn component<C: Sized + 'static>(&self, id: u64) -> Option<&C> {
+		self.components
+		    .get(&id)
+		    .and_then(|c| c.as_any().downcast_ref::<C>())
+	}
+	
+	pub fn find_component_by_type<C: Sized + 'static>(&self) -> Option<&C> {
+		self.components
+			.values()
+			.find(|c| c.as_any().is::<C>())
+			.and_then(|c| c.as_any().downcast_ref::<C>())
 	}
 	
 	pub fn add_component<C: IntoBoxed<dyn Component>>(&self, component: C) -> ComponentRef<C> {
