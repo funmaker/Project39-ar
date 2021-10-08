@@ -66,6 +66,7 @@ pub struct Renderer {
 	debug_renderer: DebugRenderer,
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
+	transparent_registry: Vec<(f32, u64)>,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
@@ -117,6 +118,7 @@ impl Renderer {
 			load_commands,
 			debug_renderer,
 			fps_counter,
+			transparent_registry: vec![],
 			assets_manager
 		})
 	}
@@ -443,14 +445,11 @@ impl Renderer {
 		builder.update_buffer(self.commons.clone(),
 		                      Arc::new(commons.clone()))?;
 		
-		// TODO: move to state
-		let mut transparent_registry = Vec::new();
-		
 		for entity in scene.values_mut() {
 			let transparent = entity.pre_render(&self, &mut builder)?;
 			
 			if transparent {
-				transparent_registry.push(((entity.state().position.translation.vector - camera_pos.translation.vector).magnitude(), entity.id));
+				self.transparent_registry.push(((entity.state().position.translation.vector - camera_pos.translation.vector).magnitude(), entity.id));
 			}
 		}
 		
@@ -464,16 +463,18 @@ impl Renderer {
 			entity.render(&self, RenderType::Opaque, &mut builder)?;
 		}
 		
-		transparent_registry.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+		self.transparent_registry.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
 		
-		for (_, entity) in transparent_registry {
+		for (_, entity) in self.transparent_registry.iter() {
 			scene.get_mut(&entity).unwrap().render(&self, RenderType::Transparent, &mut builder)?;
 		}
+		
+		self.transparent_registry.clear();
 		
 		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
-			   .copy_image(self.eyes.resolved_image.clone(),
+		       .copy_image(self.eyes.resolved_image.clone(),
 		                   [0, 0, 0],
 		                   1,
 		                   0,
@@ -518,6 +519,8 @@ impl Renderer {
 			Err(WindowRenderError::Later(future)) => future,
 			Err(err) => return Err(err.into()),
 		};
+		
+		self.debug_renderer.text_cache.borrow_mut().cleanup();
 		
 		match future.then_signal_fence_and_flush() {
 			Ok(future) => {

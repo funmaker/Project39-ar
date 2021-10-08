@@ -10,6 +10,7 @@
 #![feature(llvm_asm)]
 #![feature(map_first_last)]
 #![feature(btree_drain_filter)]
+#![feature(hash_drain_filter)]
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 

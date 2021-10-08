@@ -3,7 +3,7 @@ use rapier3d::dynamics::RigidBodyType;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3, face_towards_lossy};
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3};
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
 use crate::application::entity::EntityBuilder;

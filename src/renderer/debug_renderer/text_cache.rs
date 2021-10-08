@@ -17,7 +17,10 @@ pub struct TextCache {
 	pipeline: Arc<GraphicsPipeline>,
 	queue: Arc<Queue>,
 	entries: HashMap<String, TextEntry>,
+	max_stale: usize,
 }
+
+const TARGET_SIZE: usize = 512;
 
 // Unifont's U+FFFD � REPLACEMENT CHARACTER
 const REPLACEMENT_GLYPH: Glyph = Glyph::HalfWidth([
@@ -32,11 +35,13 @@ impl TextCache {
 			pipeline,
 			queue: queue.clone(),
 			entries: HashMap::new(),
+			max_stale: 1024,
 		})
 	}
 	
 	pub fn get(&mut self, text: &'_ str) -> Result<TextEntry, TextCacheGetError> {
-		if let Some(entry) = self.entries.get(text) {
+		if let Some(entry) = self.entries.get_mut(text) {
+			entry.stale = 0;
 			Ok(entry.clone())
 		} else {
 			let glyphs = text.chars()
@@ -74,7 +79,8 @@ impl TextCache {
 			
 			let entry = TextEntry {
 				size: (width, height),
-				set
+				set,
+				stale: 0,
 			};
 			
 			drop(image_promise);
@@ -82,6 +88,23 @@ impl TextCache {
 			self.entries.insert(text.to_string(), entry.clone());
 			
 			Ok(entry)
+		}
+	}
+	
+	pub fn cleanup(&mut self) {
+		for entry in self.entries.values_mut() {
+			entry.stale += 1;
+		}
+		
+		let max_stale = self.max_stale;
+		self.entries.drain_filter(|_, e| e.stale > max_stale);
+		
+		if self.entries.len() > TARGET_SIZE && self.max_stale > 2 {
+			self.max_stale /= 2;
+		}
+		
+		if self.entries.len() < TARGET_SIZE / 2 && self.max_stale < 1024 {
+			self.max_stale *= 2;
 		}
 	}
 }
@@ -151,6 +174,7 @@ impl ExactSizeIterator for Rasterizer {
 pub struct TextEntry {
 	pub size: (u32, u32),
 	pub set: Arc<dyn DescriptorSet + Send + Sync>,
+	pub stale: usize,
 }
 
 #[derive(Debug, Error)]

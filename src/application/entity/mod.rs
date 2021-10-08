@@ -132,6 +132,7 @@ impl Entity {
 				debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
 				debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 				debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+				debug::draw_text(&format!("{}", pos), &pos, debug::DebugOffset::bottom_right(32.0, 132.0), 128.0, Color::magenta());
 			}
 		}
 		
