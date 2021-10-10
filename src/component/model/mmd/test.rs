@@ -2,14 +2,13 @@ use std::io::BufReader;
 use std::fs::File;
 use std::sync::Arc;
 use image::ImageFormat;
-use vulkano::DeviceSize;
 
 use crate::renderer::Renderer;
 use crate::math::{Color, Vec3};
 use super::{MMDModel, Vertex, Bone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
 
 #[allow(dead_code)]
-pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
+pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 	let mut vertices = vec![];
 	let mut indices = vec![];
 	let bones_num = 1;
@@ -43,7 +42,7 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel<u16> {
 	make_wall([ 0.2, 0.0,  0.2].into(), [-0.2, height,  0.2].into(), [ 0.0, 0.0,  1.0].into(), 50, bones_num);
 	make_wall([ 0.2, 0.0, -0.2].into(), [ 0.2, height,  0.2].into(), [ 1.0, 0.0,  0.0].into(), 50, bones_num);
 	
-	let indices_range = 0 .. indices.len() as DeviceSize;
+	let indices_range = 0 .. indices.len() as u32;
 	
 	let mut model = MMDModelShared::new(vertices, indices);
 	

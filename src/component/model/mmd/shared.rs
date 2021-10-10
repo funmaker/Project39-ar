@@ -2,25 +2,25 @@ use std::sync::Arc;
 use std::ops::Range;
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, ImageFormat};
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool, BufferAccess, TypedBufferAccess};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 use vulkano::descriptor_set::layout::DescriptorSetLayout;
-use vulkano::DeviceSize;
 use vulkano::pipeline::ComputePipeline;
 
 use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
-use crate::utils::{VecFuture, ImageEx, FenceCheck};
+use crate::utils::{VecFuture, ImageEx, FenceCheck, ImmutableIndexBuffer};
 use crate::math::{AMat4, IVec4, Vec3};
 use super::sub_mesh::{SubMesh, MaterialInfo};
 use super::{Vertex, Bone};
 
-pub struct MMDModelShared<VI: VertexIndex> {
+pub struct MMDModelShared {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	pub sub_meshes: Vec<SubMesh<VI>>,
+	pub indices: ImmutableIndexBuffer,
+	pub sub_meshes: Vec<SubMesh>,
 	pub default_bones: Vec<Bone>,
 	pub bones_pool: CpuBufferPool<AMat4>,
 	pub morphs_offsets: Arc<ImmutableBuffer<[IVec4]>>,
@@ -31,8 +31,8 @@ pub struct MMDModelShared<VI: VertexIndex> {
 	pub fence: FenceCheck,
 }
 
-impl<VI: VertexIndex> MMDModelShared<VI> {
-	pub fn new(vertices: Vec<Vertex>, indices: Vec<VI>) -> MMDModelSharedBuilder<VI> {
+impl MMDModelShared {
+	pub fn new<VI: VertexIndex>(vertices: Vec<Vertex>, indices: Vec<VI>) -> MMDModelSharedBuilder<VI> {
 		MMDModelSharedBuilder::new(vertices, indices)
 	}
 	
@@ -86,7 +86,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn build(self, renderer: &mut Renderer) -> Result<MMDModelShared<VI>, ModelError> {
+	pub fn build(self, renderer: &mut Renderer) -> Result<MMDModelShared, ModelError> {
 		let mut image_promises = VecFuture::new(renderer.device.clone());
 		let mut buffer_promises = VecFuture::new(renderer.device.clone());
 		
@@ -133,11 +133,6 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let mut sub_meshes = vec![];
 		
 		for desc in self.sub_meshes {
-			let indicess = indices.clone()
-			                     .into_buffer_slice()
-			                     .slice(desc.range.clone())
-			                     .ok_or(ModelError::IndicesRangeError(desc.range, indices.len()))?;
-			
 			let texture = desc.texture.and_then(|id| images.get(id))
 			                  .cloned()
 			                  .unwrap_or_else(|| default_tex.clone());
@@ -162,7 +157,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			                                                                     BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
 			                                                                     renderer.load_queue.clone())?;
 			
-			let sub_mesh = SubMesh::new(indicess, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
+			let sub_mesh = SubMesh::new(desc.range, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
 			
 			buffer_promises.push(material_promise);
 			sub_meshes.push(sub_mesh);
@@ -202,6 +197,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		
 		Ok(MMDModelShared {
 			vertices,
+			indices: indices.into(),
 			sub_meshes,
 			default_bones,
 			bones_pool,
@@ -216,7 +212,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 }
 
 pub struct SubMeshDesc {
-	pub range: Range<DeviceSize>,
+	pub range: Range<u32>,
 	pub texture: Option<usize>,
 	pub toon: Option<usize>,
 	pub sphere_map: Option<usize>,

@@ -21,6 +21,7 @@ use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
 use crate::component::toolgun::{ToolGun, ToolGunError};
 use crate::component::vr::VrSpawner;
+use crate::component::miku::Miku;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
@@ -105,7 +106,7 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(renderer.load(ObjAsset::<u16>::at("hand/hand_l.obj", "hand/hand_l.png"))?)
+						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.tag("Hand", Hand::Left)
@@ -114,7 +115,7 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
-						.component(renderer.load(ObjAsset::<u16>::at("hand/hand_r.obj", "hand/hand_r.png"))?)
+						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.tag("Hand", Hand::Right)
@@ -125,25 +126,25 @@ impl Application {
 			application.add_entity(
 				Entity::builder("ToolGun")
 					.translation(point!(0.0, 1.0, 1.0))
-					.component(renderer.load(ObjAsset::<u16>::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
+					.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
 					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
 					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
 					                        renderer)?)
 					.build()
 			);
 			
-			// application.add_entity(
-			// 	Entity::builder("初音ミク")
-			// 		.translation(point!(0.0, 0.0, 0.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
-			// 		.component(Miku::new())
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("初音ミク")
+					.translation(point!(0.0, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
+					.component(Miku::new())
+					.build()
+			);
 			
 			application.add_entity(
 				Entity::builder("Floor")
 					.translation(point!(0.0, 0.0, 0.0))
-					.component(renderer.load(ObjAsset::<u16>::at("shapes/floor.obj", "shapes/floor.png"))?)
+					.component(renderer.load(ObjAsset::at("shapes/floor.obj", "shapes/floor.png"))?)
 					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
 					.tag("World", true)
 					.build()

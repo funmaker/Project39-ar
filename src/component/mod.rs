@@ -13,6 +13,7 @@ pub mod pc_controlled;
 pub mod toolgun;
 pub mod parent;
 pub mod physics;
+pub mod glow;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::utils::{next_uid, IntoBoxed};

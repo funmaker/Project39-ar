@@ -5,16 +5,16 @@ use rapier3d::prelude::RevoluteJoint;
 use crate::component::toolgun::ToolGun;
 use crate::application::{Hand, Application, EntityRef};
 use crate::math::{Ray, Isometry3, Color, Similarity3, Vec3, face_towards_lossy, PI, Point3};
+use crate::component::physics::joint::JointComponent;
 use crate::component::toolgun::tool::ToolError;
+use crate::component::model::SimpleModel;
 use crate::utils::ColliderEx;
 use super::tool::Tool;
-use super::any_model::AnyModel;
-use crate::component::physics::joint::JointComponent;
 
 pub struct Axis {
 	target: EntityRef,
 	target_local_pos: Isometry3,
-	ghost: Option<AnyModel>,
+	ghost: Option<SimpleModel>,
 	ghost_pos: Option<Isometry3>,
 }
 
@@ -73,9 +73,9 @@ impl Tool for Axis {
 						self.target = EntityRef::null();
 						self.ghost = None;
 					}
-				} else if let Some(ghost) = AnyModel::find(hit_ent) {
+				} else if let Some(ghost) = hit_ent.find_component_by_type::<SimpleModel>() {
 					if hit_ent.tag("World") != Some(true) {
-						self.ghost = Some(ghost);
+						self.ghost = Some(ghost.clone());
 						self.target = hit_ent.as_ref();
 						self.target_local_pos = local_pos * Isometry3::new(Vec3::new(0.0, 0.0, 0.02), Vec3::new(0.0, PI, 0.0));
 					}

@@ -18,10 +18,11 @@ mod shared;
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;
 use crate::application::Entity;
+use crate::utils::AutoCommandBufferBuilderEx;
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4};
-use super::{ModelError, VertexIndex};
+use super::ModelError;
 pub use bone::{Bone, BoneConnection};
 pub use shared::{MMDModelShared, SubMeshDesc};
 
@@ -34,10 +35,10 @@ pub struct MMDModelState {
 }
 
 #[derive(ComponentBase)]
-pub struct MMDModel<VI: VertexIndex> {
+pub struct MMDModel {
 	#[inner] inner: ComponentInner,
 	pub state: RefCell<MMDModelState>,
-	shared: Arc<MMDModelShared<VI>>,
+	shared: Arc<MMDModelShared>,
 	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
 	morphs_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
 	offsets_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
@@ -46,8 +47,8 @@ pub struct MMDModel<VI: VertexIndex> {
 }
 
 #[allow(dead_code)]
-impl<VI: VertexIndex> MMDModel<VI> {
-	pub fn new(shared: Arc<MMDModelShared<VI>>, renderer: &mut Renderer) -> Result<MMDModel<VI>, ModelError> {
+impl MMDModel {
+	pub fn new(shared: Arc<MMDModelShared>, renderer: &mut Renderer) -> Result<MMDModel, ModelError> {
 		let bone_count = shared.default_bones.len();
 		
 		let bones = shared.default_bones.clone();
@@ -154,7 +155,7 @@ impl<VI: VertexIndex> MMDModel<VI> {
 	// }
 }
 
-impl<VI: VertexIndex> Component for MMDModel<VI> {
+impl Component for MMDModel {
 	fn pre_render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		let state = &mut *self.state.borrow_mut();
 		
@@ -230,6 +231,9 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 		if !self.loaded() { return Ok(()) }
 		let model_matrix = entity.state().position.to_homogeneous();
 		
+		builder.bind_vertex_buffers(0, self.shared.vertices.clone())
+		       .bind_any_index_buffer(self.shared.indices.clone());
+		
 		// Outline
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
@@ -241,8 +245,6 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 				let scale: f32 = pixel * sub_mesh.edge_scale;
 				
 				builder.bind_pipeline_graphics(pipeline.clone())
-				       .bind_vertex_buffers(0, self.shared.vertices.clone())
-				       .bind_index_buffer(sub_mesh.indices.clone())
 				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 				                             pipeline.layout().clone(),
 				                             0,
@@ -250,9 +252,9 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 				       .push_constants(pipeline.layout().clone(),
 				                       0,
 				                       (model_matrix.clone(), sub_mesh.edge_color, scale))
-				       .draw_indexed(sub_mesh.indices.len() as u32,
+				       .draw_indexed(sub_mesh.range.len() as u32,
 				                     1,
-				                     0,
+				                     sub_mesh.range.start,
 				                     0,
 				                     0)?;
 			}
@@ -263,18 +265,16 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 			let (pipeline, mesh_set) = sub_mesh.main.clone();
 			
 			builder.bind_pipeline_graphics(pipeline.clone())
-			       .bind_vertex_buffers(0, self.shared.vertices.clone())
-			       .bind_index_buffer(sub_mesh.indices.clone())
 			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 			                             pipeline.layout().clone(),
 			                             0,
 			                             (self.model_set.clone(), mesh_set))
-			       .push_constants(pipeline.layout().clone(),
+			       .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
 			                       0,
 			                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
-			       .draw_indexed(sub_mesh.indices.len() as u32,
+			       .draw_indexed(sub_mesh.range.len() as u32,
 			                     1,
-			                     0,
+			                     sub_mesh.range.start,
 			                     0,
 			                     0)?;
 		}
@@ -283,18 +283,16 @@ impl<VI: VertexIndex> Component for MMDModel<VI> {
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.transparent.clone() {
 				builder.bind_pipeline_graphics(pipeline.clone())
-				       .bind_vertex_buffers(0, self.shared.vertices.clone())
-				       .bind_index_buffer(sub_mesh.indices.clone())
 				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 				                             pipeline.layout().clone(),
 				                             0,
 				                             (self.model_set.clone(), mesh_set))
-				       .push_constants(pipeline.layout().clone(),
+				       .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
 				                       0,
 				                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
-				       .draw_indexed(sub_mesh.indices.len() as u32,
+				       .draw_indexed(sub_mesh.range.len() as u32,
 				                     1,
-				                     0,
+				                     sub_mesh.range.start,
 				                     0,
 				                     0)?;
 			}

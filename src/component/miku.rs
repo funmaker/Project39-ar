@@ -20,7 +20,7 @@ const MORPH_PRESETS: &[(usize, &[usize])] = &[
 #[derive(ComponentBase)]
 pub struct Miku {
 	#[inner] inner: ComponentInner,
-	model: ComponentRef<MMDModel::<u16>>,
+	model: ComponentRef<MMDModel>,
 	hair_swing: Cell<f32>,
 }
 
@@ -36,7 +36,7 @@ impl Miku {
 
 impl Component for Miku {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		let model = application.renderer.borrow_mut().load(PmxAsset::<u16>::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx"))?;
+		let model = application.renderer.borrow_mut().load(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx"))?;
 		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
 		Ok(())

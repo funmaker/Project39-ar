@@ -1,6 +1,5 @@
 use std::sync::Arc;
-use num_traits::FromPrimitive;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, TypedBufferAccess};
+use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
@@ -11,26 +10,32 @@ use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
-use crate::utils::FenceCheck;
+use crate::utils::{FenceCheck, ImmutableIndexBuffer, AutoCommandBufferBuilderEx};
 use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::application::Entity;
 use super::{ModelError, VertexIndex};
 
 #[derive(ComponentBase, Clone)]
-pub struct SimpleModel<VI: VertexIndex> {
+pub struct SimpleModel {
 	#[inner] inner: ComponentInner,
 	aabb: AABB,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	indices: Arc<ImmutableBuffer<[VI]>>,
-	set: Arc<dyn DescriptorSet + Send + Sync>,
-	fence: FenceCheck,
+	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
+	pub indices: ImmutableIndexBuffer,
+	pub set: Arc<dyn DescriptorSet + Send + Sync>,
+	pub fence: FenceCheck,
 }
 
 #[allow(dead_code)]
-impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
-	pub fn new(vertices: &[Vertex], indices: &[VI], image: Arc<ImmutableImage>, image_promise: impl GpuFuture + 'static, renderer: &mut Renderer) -> Result<SimpleModel<VI>, ModelError> {
+impl SimpleModel {
+	pub fn new<VI>(vertices: &[Vertex],
+	               indices: &[VI],
+	               image: Arc<ImmutableImage>,
+	               image_promise: impl GpuFuture + 'static,
+	               renderer: &mut Renderer)
+	               -> Result<SimpleModel, ModelError>
+	               where VI: VertexIndex {
 		let queue = &renderer.load_queue;
 		
 		let aabb = aabb_from_points(vertices.iter().map(|v| Point3::from(v.pos)));
@@ -62,7 +67,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 			aabb,
 			pipeline,
 			vertices,
-			indices,
+			indices: indices.into(),
 			set,
 			fence,
 		})
@@ -85,7 +90,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 		
 		builder.bind_pipeline_graphics(self.pipeline.clone())
 		       .bind_vertex_buffers(0, self.vertices.clone())
-		       .bind_index_buffer(self.indices.clone())
+		       .bind_any_index_buffer(self.indices.clone())
 		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 		                             self.pipeline.layout().clone(),
 		                             0,
@@ -103,7 +108,7 @@ impl<VI: VertexIndex + FromPrimitive> SimpleModel<VI> {
 	}
 }
 
-impl<VI: VertexIndex + FromPrimitive> Component for SimpleModel<VI> {
+impl Component for SimpleModel {
 	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		self.render_impl(Similarity3::from_isometry(entity.state().position, 1.0), Color::full_white(), builder)?;
 		

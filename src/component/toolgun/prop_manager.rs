@@ -34,7 +34,7 @@ struct PropConfig {
 }
 
 pub struct Prop {
-	pub model: SimpleModel<u32>,
+	pub model: SimpleModel,
 	pub name: String,
 	pub collider: Collider,
 	pub tip: Option<String>,

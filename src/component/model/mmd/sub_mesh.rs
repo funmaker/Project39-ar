@@ -1,5 +1,6 @@
 use std::sync::Arc;
-use vulkano::buffer::{ImmutableBuffer, BufferSlice};
+use std::ops::Range;
+use vulkano::buffer::ImmutableBuffer;
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::Sampler;
 use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
@@ -7,7 +8,7 @@ use vulkano::pipeline::GraphicsPipeline;
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
-use crate::component::model::{ModelError, VertexIndex};
+use crate::component::model::ModelError;
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<dyn DescriptorSet + Send + Sync>);
 
@@ -20,8 +21,8 @@ pub struct MaterialInfo {
 	pub sphere_mode: u32,
 }
 
-pub struct SubMesh<VI: VertexIndex> {
-	pub indices: BufferSlice<[VI], Arc<ImmutableBuffer<[VI]>>>,
+pub struct SubMesh {
+	pub range: Range<u32>,
 	pub main: PipelineWithSet,
 	pub transparent: Option<PipelineWithSet>,
 	pub edge: Option<PipelineWithSet>,
@@ -29,8 +30,8 @@ pub struct SubMesh<VI: VertexIndex> {
 	pub edge_color: [f32; 4],
 }
 
-impl<VI: VertexIndex> SubMesh<VI> {
-	pub fn new(indices: BufferSlice<[VI], Arc<ImmutableBuffer<[VI]>>>,
+impl SubMesh {
+	pub fn new(range: Range<u32>,
 	           material_buffer: Arc<ImmutableBuffer<MaterialInfo>>,
 	           texture: Arc<ImmutableImage>,
 	           toon: Arc<ImmutableImage>,
@@ -39,7 +40,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 	           no_cull: bool,
 	           edge: Option<(f32, [f32; 4])>,
 	           renderer: &mut Renderer)
-	           -> Result<SubMesh<VI>, ModelError> {
+	           -> Result<SubMesh, ModelError> {
 		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
 		
 		let main_pipeline = match no_cull {
@@ -61,7 +62,7 @@ impl<VI: VertexIndex> SubMesh<VI> {
 		};
 		
 		let mut sub_mesh = SubMesh {
-			indices,
+			range,
 			main: (main_pipeline, main_set),
 			transparent: None,
 			edge: None,

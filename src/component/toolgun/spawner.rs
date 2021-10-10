@@ -4,10 +4,11 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer
 
 use crate::application::{Hand, Application};
 use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3};
-use super::tool::{Tool, ToolError};
-use super::ToolGun;
 use crate::application::entity::EntityBuilder;
 use crate::debug;
+use crate::component::glow::Glow;
+use super::tool::{Tool, ToolError};
+use super::ToolGun;
 
 const MENU_SCALE: f32 = 0.2;
 const MENU_SPACING: f32 = 0.25;

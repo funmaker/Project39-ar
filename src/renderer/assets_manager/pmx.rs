@@ -1,10 +1,8 @@
 use std::sync::Arc;
 use std::convert::TryInto;
 use std::path::{PathBuf, Path};
-use std::marker::PhantomData;
 use std::fmt::{Display, Formatter};
 use err_derive::Error;
-use vulkano::DeviceSize;
 use image::ImageFormat;
 use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
@@ -15,27 +13,25 @@ use crate::renderer::Renderer;
 use crate::component::model::mmd::{Vertex, MMDModelShared, BoneConnection, Bone, SubMeshDesc};
 use crate::debug;
 use crate::math::{Color, Vec3};
-use crate::component::model::{ModelError, VertexIndex};
+use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
 use super::{AssetKey, AssetsManager};
 
 #[derive(Clone, Hash, Debug)]
-pub struct PmxAsset<VI> {
+pub struct PmxAsset {
 	path: PathBuf,
-	phantom: PhantomData<VI>,
 }
 
-impl<VI> PmxAsset<VI> {
+impl PmxAsset {
 	pub fn at(model_path: impl AsRef<Path>) -> Self {
 		PmxAsset {
 			path: model_path.as_ref().to_path_buf(),
-			phantom: PhantomData,
 		}
 	}
 }
 
-impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
-	type Asset = Arc<MMDModelShared<VI>>;
+impl AssetKey for PmxAsset {
+	type Asset = Arc<MMDModelShared>;
 	type Error = MMDModelLoadError;
 	
 	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
@@ -53,7 +49,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 		
 		let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
 		let indices = surfaces_reader.iter()
-		                             .collect::<Result<Vec<[VI; 3]>, _>>()?
+		                             .collect::<Result<Vec<[u32; 3]>, _>>()?
 		                             .flatten();
 		
 		let mut model = MMDModelShared::new(vertices, indices);
@@ -72,7 +68,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 		}
 		
 		let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
-		let mut last_index: DeviceSize = 0;
+		let mut last_index: u32 = 0;
 		
 		for material in materials_reader.iter::<i32>() {
 			let material = material?;
@@ -102,7 +98,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 			let edge = material.draw_flags.contains(DrawingFlags::HasEdge).then_some((material.edge_scale, material.edge_color));
 			
 			model.add_sub_mesh(SubMeshDesc {
-				range: last_index .. last_index + material.surface_count as DeviceSize,
+				range: last_index .. last_index + material.surface_count as u32,
 				texture: material.texture_index.try_into().ok(),
 				toon: toon_index.try_into().ok(),
 				sphere_map: material.environment_index.try_into().ok(),
@@ -116,7 +112,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 				edge
 			});
 			
-			last_index += material.surface_count as DeviceSize;
+			last_index += material.surface_count as u32;
 		}
 		
 		let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
@@ -177,7 +173,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 		
 		let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
 		
-		for morph in morphs_reader.iter::<i32, VI, i32, i32, i32>() {
+		for morph in morphs_reader.iter::<i32, u32, i32, i32, i32>() {
 			let morph = morph?;
 			if let Offsets::Vertex(offsets) = morph.offsets {
 				model.add_morph(offsets.iter()
@@ -190,7 +186,7 @@ impl<VI: VertexIndex + mmd::VertexIndex> AssetKey for PmxAsset<VI> {
 	}
 }
 
-impl<VI> Display for PmxAsset<VI> {
+impl Display for PmxAsset {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(f, "PMX model {}", self.path.to_string_lossy())
 	}
