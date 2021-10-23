@@ -13,7 +13,6 @@ pub mod physics;
 pub mod input;
 
 use crate::component::Component;
-// use crate::component::miku::Miku;
 use crate::component::ComponentError;
 use crate::component::model::ModelError;
 use crate::component::parent::Parent;
@@ -34,6 +33,7 @@ pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
+use crate::component::hand::HandComponent;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -109,6 +109,7 @@ impl Application {
 						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
+						.component(HandComponent::new(Hand::Left))
 						.tag("Hand", Hand::Left)
 						.build()
 				);
@@ -118,6 +119,7 @@ impl Application {
 						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
 						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
+						.component(HandComponent::new(Hand::Right))
 						.tag("Hand", Hand::Right)
 						.build()
 				);
@@ -130,6 +132,7 @@ impl Application {
 					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
 					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
 					                        renderer)?)
+					.collider_from_aabb()
 					.build()
 			);
 			
@@ -147,6 +150,7 @@ impl Application {
 					.component(renderer.load(ObjAsset::at("shapes/floor.obj", "shapes/floor.png"))?)
 					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
 					.tag("World", true)
+					.hidden(config.camera.driver != CameraAPI::Dummy)
 					.build()
 			);
 			

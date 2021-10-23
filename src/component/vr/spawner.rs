@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
-use rapier3d::prelude::{ColliderBuilder, RigidBodyBuilder};
+use rapier3d::prelude::RigidBodyBuilder;
 use image::{DynamicImage, ImageBuffer, GenericImageView};
 use openvr::render_models;
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
@@ -16,6 +16,7 @@ use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
 use super::VrTracked;
 use crate::utils::ImageEx;
+use crate::component::hand::HandComponent;
 
 #[derive(ComponentBase)]
 pub struct VrSpawner {
@@ -72,28 +73,25 @@ impl Component for VrSpawner {
 								renderer,
 							)?;
 							
-							let aabb = model.aabb();
-							let hsize = aabb.half_extents();
-							
 							let mut entity = Entity::builder(format!("{:?}", class))
 								.rigid_body_type(RigidBodyType::KinematicPositionBased)
-								.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
-								                          .translation(aabb.center().coords)
-								                          .build())
 								.rigid_body(RigidBodyBuilder::new(RigidBodyType::KinematicPositionBased)
 								                             .additional_mass(1000.0)
 								                             .build())
 								.component(model)
-								.component(VrTracked::new(tracked_id));
+								.component(VrTracked::new(tracked_id))
+								.tag("NoGrab", true)
+								.collider_from_aabb();
 							
 							if class == TrackedDeviceClass::HMD {
 								entity = entity.hidden(true)
+								               .tag("NoGrab", false)
 								               .component(PoV::new());
 							}
 							
 							match vr.system.get_controller_role_for_tracked_device_index(tracked_id) {
-								Some(TrackedControllerRole::LeftHand) => entity = entity.tag("Hand", Hand::Left),
-								Some(TrackedControllerRole::RightHand) => entity = entity.tag("Hand", Hand::Right),
+								Some(TrackedControllerRole::LeftHand) => entity = entity.component(HandComponent::new(Hand::Left)),
+								Some(TrackedControllerRole::RightHand) => entity = entity.component(HandComponent::new(Hand::Right)),
 								_ => {}
 							}
 							

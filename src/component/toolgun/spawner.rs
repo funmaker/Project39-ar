@@ -6,7 +6,6 @@ use crate::application::{Hand, Application};
 use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3};
 use crate::application::entity::EntityBuilder;
 use crate::debug;
-use crate::component::glow::Glow;
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
 

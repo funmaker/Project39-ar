@@ -2,6 +2,7 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer
 
 use crate::application::{Application, Hand};
 use crate::math::Ray;
+use crate::component::toolgun::rope::RopeTool;
 use super::ToolGun;
 use super::weld::Weld;
 use super::ball_socket::BallSocket;
@@ -18,6 +19,7 @@ pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
 		Box::new(Axis::new()),
 		Box::new(BallSocket::new()),
 		Box::new(Weld::new()),
+		Box::new(RopeTool::new()),
 	]
 }
 

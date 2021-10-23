@@ -2,6 +2,7 @@ use std::any::Any;
 use std::cell::Cell;
 use std::time::Duration;
 use std::marker::PhantomData;
+use std::fmt::{Formatter, Debug};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 pub use project39_ar_derive::ComponentBase;
 
@@ -14,6 +15,7 @@ pub mod toolgun;
 pub mod parent;
 pub mod physics;
 pub mod glow;
+pub mod hand;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::utils::{next_uid, IntoBoxed};
@@ -39,8 +41,8 @@ pub trait ComponentBase: Any {
 		application.entity(eid).expect("Attempted to get entity of unmounted component")
 	}
 	
-	fn as_ref(&self) -> ComponentRef<Self> where Self: Sized {
-		ComponentRef::new(self.inner().id, self.inner().entity_id.expect("Attempted to get reference of unmounted component"))
+	fn as_cref(&self) -> ComponentRef<Self> where Self: Sized {
+		ComponentRef::new(self.inner().entity_id.expect("Attempted to get reference of unmounted component"), self.inner().id)
 	}
 }
 
@@ -77,6 +79,7 @@ pub enum RenderType {
 	Both,
 }
 
+#[derive(Debug)]
 pub struct ComponentInner {
 	id: u64,
 	entity_id: Option<u64>,
@@ -187,6 +190,31 @@ impl<C: 'static> ComponentRef<C> {
 		match self.inner.get() {
 			Some((eid, _)) => EntityRef::new(eid),
 			None => EntityRef::null(),
+		}
+	}
+}
+
+impl<C, D> PartialEq<ComponentRef<D>> for ComponentRef<C> {
+	fn eq(&self, other: &ComponentRef<D>) -> bool {
+		self.inner.eq(&other.inner)
+	}
+}
+
+impl<C> Debug for ComponentRef<C> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		if let Some((eid, cid)) = self.inner.get() {
+			write!(f, "ref {}({}-{})", std::any::type_name::<C>(), eid, cid)
+		} else {
+			write!(f, "ref {}(null)", std::any::type_name::<C>())
+		}
+	}
+}
+
+impl<C> Clone for ComponentRef<C> {
+	fn clone(&self) -> Self {
+		ComponentRef {
+			inner: self.inner.clone(),
+			phantom: PhantomData,
 		}
 	}
 }

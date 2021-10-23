@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::any::Any;
 use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::prelude::RigidBodyBuilder;
-use rapier3d::geometry::Collider;
+use rapier3d::geometry::{Collider, ColliderBuilder};
 
 use crate::math::{Isometry3, Vec3, Point3, Rot3};
 use crate::component::Component;
@@ -11,6 +11,7 @@ use super::Entity;
 use crate::utils::next_uid;
 use crate::application::entity::EntityState;
 use crate::component::physics::collider::ColliderComponent;
+use crate::component::model::SimpleModel;
 
 pub struct EntityBuilder {
 	pub name: String,
@@ -84,6 +85,23 @@ impl EntityBuilder {
 	
 	pub fn collider(mut self, collider: Collider) -> Self {
 		self.components.push(ColliderComponent::new(collider).boxed());
+		self
+	}
+	
+	pub fn collider_from_aabb(self) -> Self {
+		for component in &self.components {
+			if let Some(model) = component.as_any().downcast_ref::<SimpleModel>() {
+				let aabb = model.aabb();
+				let hsize = aabb.half_extents();
+				
+				return self.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
+				           .translation(aabb.center().coords)
+				           .build());
+			}
+		}
+		
+		eprintln!("Unable to create collider from aabb without SimpleModel component! ({})", self.name);
+		
 		self
 	}
 	

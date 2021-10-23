@@ -25,6 +25,10 @@ impl EntityRef {
 		self.inner.swap(&other.inner);
 	}
 	
+	pub fn set_null(&self) {
+		self.inner.set(None);
+	}
+	
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
 		if let Some(eid) = self.inner.get() {
 			if let Some(entity) = application.entity(eid) {
@@ -39,21 +43,31 @@ impl EntityRef {
 	}
 }
 
-impl PartialEq<Self> for &Entity {
-	fn eq(&self, other: &Self) -> bool {
-		self.id == other.id
-	}
-}
-
-impl Eq for &Entity {}
-
-impl PartialEq<&EntityRef> for &Entity {
-	fn eq(&self, other: &&EntityRef) -> bool {
+impl PartialEq<EntityRef> for Entity {
+	fn eq(&self, other: &EntityRef) -> bool {
 		if let Some(id) = other.inner.get() {
 			self.id == id
 		} else {
 			false
 		}
+	}
+}
+
+impl PartialEq<EntityRef> for &Entity {
+	fn eq(&self, other: &EntityRef) -> bool {
+		(*self).eq(other)
+	}
+}
+
+impl PartialEq<Entity> for EntityRef {
+	fn eq(&self, other: &Entity) -> bool {
+		other.eq(self)
+	}
+}
+
+impl PartialEq<&Entity> for EntityRef {
+	fn eq(&self, other: &&Entity) -> bool {
+		(*other).eq(self)
 	}
 }
 

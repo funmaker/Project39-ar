@@ -17,9 +17,9 @@ mod ball_socket;
 mod weld;
 mod tool;
 mod prop_manager;
+mod rope;
 
 use crate::application::{Application, Entity};
-use crate::application::input::Hand;
 use crate::component::parent::Parent;
 use crate::debug;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
@@ -30,6 +30,7 @@ use crate::utils::FenceCheck;
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef, RenderType};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
+use crate::component::hand::HandComponent;
 
 const MENU_SPACING: f32 = 0.1;
 const MENU_DISTANCE: f32 = 0.1;
@@ -46,7 +47,6 @@ pub struct ToolGunState {
 	scroll: f32,
 	tools: Vec<Box<dyn Tool>>,
 	tool_id: usize,
-	hand: Hand,
 	menu_pos: Option<Isometry3>,
 	render_tool: bool,
 }
@@ -58,7 +58,7 @@ pub struct ToolGun {
 	anim: Cell<Option<ToolGunAnim>>,
 	prop_collection: PropCollection,
 	parent: ComponentRef<Parent>,
-	offset: Isometry3,
+	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
@@ -66,7 +66,7 @@ pub struct ToolGun {
 }
 
 impl ToolGun {
-	pub fn new(offset: Isometry3, renderer: &mut Renderer) -> Result<Self, ToolGunError> {
+	pub fn new(grab_pos: Isometry3, renderer: &mut Renderer) -> Result<Self, ToolGunError> {
 		let pipeline = renderer.pipelines.get::<ToolGunTextPipeline>()?;
 		
 		let square = [
@@ -96,7 +96,6 @@ impl ToolGun {
 			scroll: 0.0,
 			tools: get_all_tools(),
 			tool_id: 0,
-			hand: Hand::Right,
 			menu_pos: None,
 			render_tool: false,
 		};
@@ -107,7 +106,7 @@ impl ToolGun {
 			state: RefCell::new(state),
 			anim: Cell::new(None),
 			prop_collection: prop_manager,
-			offset,
+			grab_pos,
 			pipeline,
 			vertices,
 			set,
@@ -146,9 +145,15 @@ impl ToolGun {
 }
 
 impl Component for ToolGun {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+		entity.set_tag("GrabSticky", true);
+		entity.set_tag("GrabPos", self.grab_pos);
+		
+		Ok(())
+	}
+	
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
 		let ray = self.ray(application);
-		let cur_pos = entity.state().position.translation.vector;
 		let state = &mut *self.state.borrow_mut();
 		
 		let result = {
@@ -163,13 +168,12 @@ impl Component for ToolGun {
 		}
 		
 		state.render_tool = false;
-		if let Some(parent) = self.parent.get(application) {
-			if application.input.drop_btn(state.hand).down {
-				if let Some(controller) = parent.target.get(application) {
-					controller.state_mut().hidden = false;
-				}
-				
-				parent.remove();
+		if let Some(hand_comp) = entity.tag("Grabbed")
+		                               .and_then(|c: ComponentRef<HandComponent>| c.get(application)) {
+			let hand = hand_comp.hand;
+			
+			if application.input.drop_btn(hand).down {
+				entity.unset_tag("Grabbed");
 				state.menu_pos = None;
 			} else if let Some(menu_pos) = state.menu_pos {
 				let select_id = cast_ray_on_plane(menu_pos, ray).map(|menu_hit|
@@ -189,7 +193,7 @@ impl Component for ToolGun {
 				}
 				
 				if let Some(select_id) = select_id {
-					if application.input.fire_btn(state.hand).down {
+					if application.input.fire_btn(hand).down {
 						state.menu_pos = None;
 						if select_id >= 0 && select_id < state.tools.len() as isize  {
 							state.tool_id = select_id as usize;
@@ -197,31 +201,15 @@ impl Component for ToolGun {
 					}
 				}
 				
-				if application.input.use_btn(state.hand).down {
+				if application.input.use_btn(hand).down {
 					state.menu_pos = None;
 				}
 			} else {
-				state.tools[state.tool_id].tick(self, state.hand, ray, application)?;
+				state.tools[state.tool_id].tick(self, hand, ray, application)?;
 				state.render_tool = true;
 				
-				if application.input.use_btn(state.hand).down {
+				if application.input.use_btn(hand).down {
 					state.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE), &ray.origin, &Vec3::y_axis()));
-				}
-			}
-		} else {
-			let controller = application.find_entity(|target|
-				target != entity &&
-				target.tag::<Hand>("Hand").is_some() &&
-				(target.state().position.translation.vector - cur_pos).magnitude() < 0.1
-			);
-			
-			if let Some(controller) = controller {
-				let hand: Hand = controller.tag("Hand").unwrap();
-				
-				if !application.input.drop_btn(hand).pressed {
-					self.parent.set(entity.add_component(Parent::new(controller, self.offset)));
-					state.hand = hand;
-					controller.state_mut().hidden = true;
 				}
 			}
 		}

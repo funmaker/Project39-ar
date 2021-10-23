@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::application::{Entity, Application, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::math::Isometry3;
+use crate::math::{Isometry3, Vec3};
 
 #[derive(ComponentBase)]
 pub struct Parent {
@@ -24,7 +24,10 @@ impl Parent {
 impl Component for Parent {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		if let Some(parent) = self.target.get(application) {
-			entity.state_mut().position = parent.state().position * self.offset;
+			let mut state = entity.state_mut();
+			state.position = parent.state().position * self.offset;
+			state.velocity = Vec3::zeros();
+			state.angular_velocity = Vec3::zeros();
 		} else {
 			self.remove();
 		}

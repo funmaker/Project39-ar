@@ -8,6 +8,10 @@ use crate::component::ComponentRef;
 pub trait ColliderEx {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent>;
 	
+	fn entity_ref(&self) -> EntityRef {
+		self.component_ref().entity()
+	}
+	
 	fn component<'a>(&self, application: &'a Application) -> &'a ColliderComponent {
 		self.component_ref().get(application).unwrap()
 	}

@@ -2,6 +2,7 @@ use std::cell::{Ref, RefCell, RefMut, Cell};
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 use std::any::Any;
+use std::fmt::{Display, Formatter};
 use rapier3d::prelude::{RigidBody, RigidBodyHandle};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
@@ -132,7 +133,6 @@ impl Entity {
 				debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
 				debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 				debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
-				debug::draw_text(&format!("{}", pos), &pos, debug::DebugOffset::bottom_right(32.0, 132.0), 128.0, Color::magenta());
 			}
 		}
 		
@@ -235,5 +235,19 @@ impl Entity {
 	
 	pub fn unset_tag(&self, key: &str) -> Option<Box<dyn Any>> {
 		self.tags.borrow_mut().remove(key)
+	}
+}
+
+impl PartialEq<Self> for &Entity {
+	fn eq(&self, other: &Self) -> bool {
+		self.id == other.id
+	}
+}
+
+impl Eq for &Entity {}
+
+impl Display for Entity {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}({})", self.name, self.id)
 	}
 }
