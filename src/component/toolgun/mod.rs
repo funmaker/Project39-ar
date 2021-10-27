@@ -36,7 +36,7 @@ const MENU_SPACING: f32 = 0.1;
 const MENU_DISTANCE: f32 = 0.1;
 
 #[derive(Copy, Clone)]
-pub struct ToolGunAnim {
+struct ToolGunAnim {
 	start: Instant,
 	origin: Point3,
 	target: Point3,
@@ -172,7 +172,7 @@ impl Component for ToolGun {
 		                               .and_then(|c: ComponentRef<HandComponent>| c.get(application)) {
 			let hand = hand_comp.hand;
 			
-			if application.input.drop_btn(hand).down {
+			if application.input.use3_btn(hand).down {
 				entity.unset_tag("Grabbed");
 				state.menu_pos = None;
 			} else if let Some(menu_pos) = state.menu_pos {

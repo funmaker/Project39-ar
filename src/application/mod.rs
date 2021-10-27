@@ -136,13 +136,13 @@ impl Application {
 					.build()
 			);
 			
-			application.add_entity(
-				Entity::builder("初音ミク")
-					.translation(point!(0.0, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
-					.component(Miku::new())
-					.build()
-			);
+			// application.add_entity(
+			// 	Entity::builder("初音ミク")
+			// 		.translation(point!(0.0, 0.0, 0.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
+			// 		.component(Miku::new())
+			// 		.build()
+			// );
 			
 			application.add_entity(
 				Entity::builder("Floor")

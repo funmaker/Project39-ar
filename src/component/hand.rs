@@ -1,5 +1,6 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::cell::Cell;
+use std::ops::DerefMut;
 use rapier3d::prelude::{InteractionGroups, ColliderHandle};
 use rapier3d::geometry::Ball;
 
@@ -7,8 +8,17 @@ use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::parent::Parent;
 use crate::utils::ColliderEx;
+use crate::math::{Point3, Color};
+use crate::debug;
 
 const GRAB_DIST: f32 = 0.1;
+
+#[derive(Debug, Copy, Clone)]
+struct FreezeAnim {
+	start: Instant,
+	origin: Point3,
+	dir: f32,
+}
 
 #[derive(ComponentBase, Debug)]
 pub struct HandComponent {
@@ -16,6 +26,7 @@ pub struct HandComponent {
 	pub hand: Hand,
 	target_parent: ComponentRef<Parent>,
 	sticky: Cell<bool>,
+	freeze_anim: Cell<Option<FreezeAnim>>,
 }
 
 impl HandComponent {
@@ -25,19 +36,41 @@ impl HandComponent {
 			target_parent: ComponentRef::null(),
 			hand,
 			sticky: Cell::new(false),
+			freeze_anim: Cell::new(None),
 		}
 	}
 }
 
 impl Component for HandComponent {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+		if application.input.use2_btn(self.hand).down {
+			self.freeze_anim.set(Some(FreezeAnim {
+				start: Instant::now(),
+				origin: entity.state().position.transform_point(&Point3::origin()),
+				dir: -1.0,
+			}));
+		}
+		
 		if let Some(item_parent) = self.target_parent.get(application) {
-			if item_parent.entity(application).tag::<ComponentRef<HandComponent>>("Grabbed") != Some(self.as_cref())
+			let item = item_parent.entity(application);
+			
+			if application.input.use3_btn(self.hand).down {
+				item.freeze(application.physics.borrow_mut().deref_mut());
+				item.unset_tag("Grabbed");
+				
+				self.freeze_anim.set(Some(FreezeAnim {
+					start: Instant::now(),
+					origin: item.state().position.transform_point(&Point3::origin()),
+					dir: -1.0,
+				}));
+			}
+			
+			if item.tag::<ComponentRef<HandComponent>>("Grabbed") != Some(self.as_cref())
 			|| (!self.sticky.get() && application.input.use_btn(self.hand).up) {
 				item_parent.remove();
 				entity.state_mut().hidden = false;
 			}
-		} else if application.input.use_btn(self.hand).down {
+		} else if application.input.use_btn(self.hand).down || application.input.use3_btn(self.hand).down {
 			let mut target = None;
 			
 			{
@@ -67,12 +100,34 @@ impl Component for HandComponent {
 			}
 			
 			if let Some(target) = target {
-				let grab_pos = target.tag("GrabPos").unwrap_or(entity.state().position.inverse() * target.state().position);
+				if target.unfreeze(application.physics.borrow_mut().deref_mut()) {
+					self.freeze_anim.set(Some(FreezeAnim {
+						start: Instant::now(),
+						origin: target.state().position.transform_point(&Point3::origin()),
+						dir: 1.0,
+					}));
+				}
 				
-				target.set_tag("Grabbed", self.as_cref());
-				self.sticky.set(target.tag("GrabSticky").unwrap_or_default());
-				self.target_parent.set(target.add_component(Parent::new(entity, grab_pos)));
-				entity.state_mut().hidden = true;
+				if application.input.use_btn(self.hand).down {
+					let grab_pos = target.tag("GrabPos").unwrap_or(entity.state().position.inverse() * target.state().position);
+					
+					target.set_tag("Grabbed", self.as_cref());
+					self.sticky.set(target.tag("GrabSticky").unwrap_or_default());
+					self.target_parent.set(target.add_component(Parent::new(entity, grab_pos)));
+					entity.state_mut().hidden = true;
+				}
+			}
+		}
+		
+		if let Some(anim) = self.freeze_anim.get() {
+			let elapsed = anim.start.elapsed().as_secs_f32();
+			
+			let prog = (elapsed * anim.dir * 4.0).rem_euclid(1.0);
+			
+			if (elapsed * anim.dir * 4.0).abs() > 1.0 {
+				self.freeze_anim.set(None);
+			} else {
+				debug::draw_point(anim.origin, prog * 200.0, Color::cyan().opactiy(1.0 - prog));
 			}
 		}
 		

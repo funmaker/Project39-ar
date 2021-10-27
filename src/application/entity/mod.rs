@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 use std::any::Any;
 use std::fmt::{Display, Formatter};
-use rapier3d::prelude::{RigidBody, RigidBodyHandle};
+use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 mod builder;
@@ -33,6 +33,7 @@ pub struct Entity {
 	rigid_body_template: RigidBody,
 	state: RefCell<EntityState>,
 	removed: Cell<bool>,
+	frozen: Cell<bool>,
 	components: BTreeMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
 }
@@ -235,6 +236,28 @@ impl Entity {
 	
 	pub fn unset_tag(&self, key: &str) -> Option<Box<dyn Any>> {
 		self.tags.borrow_mut().remove(key)
+	}
+	
+	pub fn has_tag(&self, key: &str) -> bool {
+		self.tags.borrow_mut().contains_key(key)
+	}
+	
+	pub fn freeze(&self, physics: &mut Physics) -> bool {
+		let rb = self.rigid_body_mut(physics);
+		
+		if rb.body_type() == RigidBodyType::Dynamic {
+			rb.set_body_type(RigidBodyType::Static);
+			self.frozen.set(true);
+			true
+		} else { false }
+	}
+	
+	pub fn unfreeze(&self, physics: &mut Physics) -> bool {
+		if self.frozen.replace(false) {
+			self.rigid_body_mut(physics)
+			    .set_body_type(RigidBodyType::Dynamic);
+			true
+		} else { false }
 	}
 }
 

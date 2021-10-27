@@ -122,6 +122,7 @@ impl EntityBuilder {
 				hidden: self.hidden,
 			}),
 			removed: Cell::new(false),
+			frozen: Cell::new(false),
 			components: BTreeMap::new(),
 			new_components: RefCell::new(self.components),
 			rigid_body: RigidBodyHandle::invalid(),

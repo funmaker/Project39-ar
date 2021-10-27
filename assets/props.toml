@@ -31,418 +31,418 @@ texture = "shapes/props/gray.png"
 model = "shapes/props/suzanne.obj"
 texture = "shapes/props/gray.png"
 
-#[sphere1]
-#model = "shapes/sphere/sphere1.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "1"
-#collider = "Sphere"
-#
-#[sphere2]
-#model = "shapes/sphere/sphere2.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "2"
-#collider = "Sphere"
-#
-#[sphere4]
-#model = "shapes/sphere/sphere4.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "4"
-#collider = "Sphere"
-#
-#[sphere8]
-#model = "shapes/sphere/sphere8.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "8"
-#collider = "Sphere"
-#
-#
-#[cylinder1x1]
-#model = "shapes/cylinder/cylinder1x1.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "1x1"
-#collider = "CylinderY"
-#
-#[cylinder1x2]
-#model = "shapes/cylinder/cylinder1x2.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "1x2"
-#collider = "CylinderY"
-#
-#[cylinder1x4]
-#model = "shapes/cylinder/cylinder1x4.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "1x4"
-#collider = "CylinderY"
-#
-#[cylinder2x1]
-#model = "shapes/cylinder/cylinder1x1.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "1x1"
-#collider = "CylinderY"
-#
-#[cylinder2x2]
-#model = "shapes/cylinder/cylinder2x2.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "2x2"
-#collider = "CylinderY"
-#
-#[cylinder2x4]
-#model = "shapes/cylinder/cylinder1x4.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "2x4"
-#collider = "CylinderY"
-#
-#[cylinder4x1]
-#model = "shapes/cylinder/cylinder4x1.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "4x1"
-#collider = "CylinderY"
-#
-#[cylinder4x2]
-#model = "shapes/cylinder/cylinder4x2.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "4x2"
-#collider = "CylinderY"
-#
-#[cylinder4x4]
-#model = "shapes/cylinder/cylinder4x4.obj"
-#texture = "shapes/textures/cylinder.png"
-#tip = "4x4"
-#collider = "CylinderY"
-#
-#
-#[cone1x1]
-#model = "shapes/cone/cone1x1.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "1x1"
-#collider = "ConePY"
-#
-#[cone2x1]
-#model = "shapes/cone/cone2x1.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "2x1"
-#collider = "ConePY"
-#
-#[cone2x2]
-#model = "shapes/cone/cone2x2.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "2x2"
-#collider = "ConePY"
-#
-#[cone4x2]
-#model = "shapes/cone/cone4x2.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "4x2"
-#collider = "ConePY"
-#
-#[cone4x4]
-#model = "shapes/cone/cone4x4.obj"
-#texture = "shapes/textures/sphere.png"
-#tip = "4x4"
-#collider = "ConePY"
-#
-#[box1x1x1]
-#model = "shapes/box/box_1x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "1x1x1"
-#
-#[box2x1x1]
-#model = "shapes/box/box_2x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "2x1x1"
-#
-#[box2x2x1]
-#model = "shapes/box/box_2x2x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "2x2x1"
-#
-#[box2x2x2]
-#model = "shapes/box/box_2x2x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "2x2x2"
-#
-#[box3x1x1]
-#model = "shapes/box/box_3x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "3x1x1"
-#
-#[box4x1x1]
-#model = "shapes/box/box_4x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x1x1"
-#
-#[box4x2x1]
-#model = "shapes/box/box_4x2x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x2x1"
-#
-#[box4x2x2]
-#model = "shapes/box/box_4x2x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x2x2"
-#
-#[box4x4x1]
-#model = "shapes/box/box_4x4x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x4x1"
-#
-#[box4x4x2]
-#model = "shapes/box/box_4x4x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x4x2"
-#
-#[box4x4x4]
-#model = "shapes/box/box_4x4x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x4x4"
-#
-#[box6x1x1]
-#model = "shapes/box/box_6x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "6x1x1"
-#
-#[box6x2x1]
-#model = "shapes/box/box_6x2x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "6x2x1"
-#
-#[box6x2x2]
-#model = "shapes/box/box_6x2x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "6x2x2"
-#
-#[box8x1x1]
-#model = "shapes/box/box_8x1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x1x1"
-#
-#[box8x2x1]
-#model = "shapes/box/box_8x2x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x2x1"
-#
-#[box8x2x2]
-#model = "shapes/box/box_8x2x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x2x2"
-#
-#[box8x4x1]
-#model = "shapes/box/box_8x4x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x4x1"
-#
-#[box8x4x2]
-#model = "shapes/box/box_8x4x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x4x2"
-#
-#[box8x4x4]
-#model = "shapes/box/box_8x4x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x4x4"
-#
-#[box8x8x1]
-#model = "shapes/box/box_8x8x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x8x1"
-#
-#[box8x8x2]
-#model = "shapes/box/box_8x8x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x8x2"
-#
-#[box8x8x4]
-#model = "shapes/box/box_8x8x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x8x4"
-#
-#[box12x4x1]
-#model = "shapes/box/box_12x4x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x4x1"
-#
-#[box12x4x2]
-#model = "shapes/box/box_12x4x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x4x2"
-#
-#[box12x4x4]
-#model = "shapes/box/box_12x4x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x4x4"
-#
-#[box12x8x1]
-#model = "shapes/box/box_12x8x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x8x1"
-#
-#[box12x8x2]
-#model = "shapes/box/box_12x8x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x8x2"
-#
-#[box12x8x4]
-#model = "shapes/box/box_12x8x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x8x4"
-#
-#[box12x12x1]
-#model = "shapes/box/box_12x12x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x12x1"
-#
-#[box12x12x2]
-#model = "shapes/box/box_12x12x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x12x2"
-#
-#[box12x12x4]
-#model = "shapes/box/box_12x12x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x12x4"
-#
-#[box16x12x1]
-#model = "shapes/box/box_16x12x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x12x1"
-#
-#[box16x12x2]
-#model = "shapes/box/box_16x12x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x12x2"
-#
-#[box16x12x4]
-#model = "shapes/box/box_16x12x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x12x4"
-#
-#[box16x16x1]
-#model = "shapes/box/box_16x16x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x16x1"
-#
-#[box16x16x2]
-#model = "shapes/box/box_16x16x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x16x2"
-#
-#[box16x16x4]
-#model = "shapes/box/box_16x16x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x16x4"
-#
-#[box16x4x1]
-#model = "shapes/box/box_16x4x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x4x1"
-#
-#[box16x4x2]
-#model = "shapes/box/box_16x4x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x4x2"
-#
-#[box16x4x4]
-#model = "shapes/box/box_16x4x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x4x4"
-#
-#[box16x8x1]
-#model = "shapes/box/box_16x8x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x8x1"
-#
-#[box16x8x2]
-#model = "shapes/box/box_16x8x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x8x2"
-#
-#[box16x8x4]
-#model = "shapes/box/box_16x8x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x8x4"
-#
-#[plate1x1]
-#model = "shapes/plate/plate_1x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "1x1"
-#
-#[plate2x1]
-#model = "shapes/plate/plate_2x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "2x1"
-#
-#[plate2x2]
-#model = "shapes/plate/plate_2x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "2x2"
-#
-#[plate3x1]
-#model = "shapes/plate/plate_3x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "3x1"
-#
-#[plate4x1]
-#model = "shapes/plate/plate_4x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x1"
-#
-#[plate4x2]
-#model = "shapes/plate/plate_4x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x2"
-#
-#[plate4x4]
-#model = "shapes/plate/plate_4x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "4x4"
-#
-#[plate6x1]
-#model = "shapes/plate/plate_6x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "6x1"
-#
-#[plate6x2]
-#model = "shapes/plate/plate_6x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "6x2"
-#
-#[plate8x1]
-#model = "shapes/plate/plate_8x1.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x1"
-#
-#[plate8x2]
-#model = "shapes/plate/plate_8x2.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x2"
-#
-#[plate8x4]
-#model = "shapes/plate/plate_8x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "8x4"
-#
-#[plate12x4]
-#model = "shapes/plate/plate_12x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x4"
-#
-#[plate12x12]
-#model = "shapes/plate/plate_12x12.obj"
-#texture = "shapes/textures/box.png"
-#tip = "12x12"
-#
-#[plate16x4]
-#model = "shapes/plate/plate_16x4.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x4"
-#
-#[plate16x12]
-#model = "shapes/plate/plate_16x12.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x12"
-#
-#[plate16x16]
-#model = "shapes/plate/plate_16x16.obj"
-#texture = "shapes/textures/box.png"
-#tip = "16x16"
+[sphere1]
+model = "shapes/sphere/sphere1.obj"
+texture = "shapes/textures/sphere.png"
+tip = "1"
+collider = "Sphere"
+
+[sphere2]
+model = "shapes/sphere/sphere2.obj"
+texture = "shapes/textures/sphere.png"
+tip = "2"
+collider = "Sphere"
+
+[sphere4]
+model = "shapes/sphere/sphere4.obj"
+texture = "shapes/textures/sphere.png"
+tip = "4"
+collider = "Sphere"
+
+[sphere8]
+model = "shapes/sphere/sphere8.obj"
+texture = "shapes/textures/sphere.png"
+tip = "8"
+collider = "Sphere"
+
+
+[cylinder1x1]
+model = "shapes/cylinder/cylinder1x1.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "1x1"
+collider = "CylinderY"
+
+[cylinder1x2]
+model = "shapes/cylinder/cylinder1x2.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "1x2"
+collider = "CylinderY"
+
+[cylinder1x4]
+model = "shapes/cylinder/cylinder1x4.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "1x4"
+collider = "CylinderY"
+
+[cylinder2x1]
+model = "shapes/cylinder/cylinder1x1.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "1x1"
+collider = "CylinderY"
+
+[cylinder2x2]
+model = "shapes/cylinder/cylinder2x2.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "2x2"
+collider = "CylinderY"
+
+[cylinder2x4]
+model = "shapes/cylinder/cylinder1x4.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "2x4"
+collider = "CylinderY"
+
+[cylinder4x1]
+model = "shapes/cylinder/cylinder4x1.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "4x1"
+collider = "CylinderY"
+
+[cylinder4x2]
+model = "shapes/cylinder/cylinder4x2.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "4x2"
+collider = "CylinderY"
+
+[cylinder4x4]
+model = "shapes/cylinder/cylinder4x4.obj"
+texture = "shapes/textures/cylinder.png"
+tip = "4x4"
+collider = "CylinderY"
+
+
+[cone1x1]
+model = "shapes/cone/cone1x1.obj"
+texture = "shapes/textures/sphere.png"
+tip = "1x1"
+collider = "ConePY"
+
+[cone2x1]
+model = "shapes/cone/cone2x1.obj"
+texture = "shapes/textures/sphere.png"
+tip = "2x1"
+collider = "ConePY"
+
+[cone2x2]
+model = "shapes/cone/cone2x2.obj"
+texture = "shapes/textures/sphere.png"
+tip = "2x2"
+collider = "ConePY"
+
+[cone4x2]
+model = "shapes/cone/cone4x2.obj"
+texture = "shapes/textures/sphere.png"
+tip = "4x2"
+collider = "ConePY"
+
+[cone4x4]
+model = "shapes/cone/cone4x4.obj"
+texture = "shapes/textures/sphere.png"
+tip = "4x4"
+collider = "ConePY"
+
+[box1x1x1]
+model = "shapes/box/box_1x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "1x1x1"
+
+[box2x1x1]
+model = "shapes/box/box_2x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "2x1x1"
+
+[box2x2x1]
+model = "shapes/box/box_2x2x1.obj"
+texture = "shapes/textures/box.png"
+tip = "2x2x1"
+
+[box2x2x2]
+model = "shapes/box/box_2x2x2.obj"
+texture = "shapes/textures/box.png"
+tip = "2x2x2"
+
+[box3x1x1]
+model = "shapes/box/box_3x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "3x1x1"
+
+[box4x1x1]
+model = "shapes/box/box_4x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "4x1x1"
+
+[box4x2x1]
+model = "shapes/box/box_4x2x1.obj"
+texture = "shapes/textures/box.png"
+tip = "4x2x1"
+
+[box4x2x2]
+model = "shapes/box/box_4x2x2.obj"
+texture = "shapes/textures/box.png"
+tip = "4x2x2"
+
+[box4x4x1]
+model = "shapes/box/box_4x4x1.obj"
+texture = "shapes/textures/box.png"
+tip = "4x4x1"
+
+[box4x4x2]
+model = "shapes/box/box_4x4x2.obj"
+texture = "shapes/textures/box.png"
+tip = "4x4x2"
+
+[box4x4x4]
+model = "shapes/box/box_4x4x4.obj"
+texture = "shapes/textures/box.png"
+tip = "4x4x4"
+
+[box6x1x1]
+model = "shapes/box/box_6x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "6x1x1"
+
+[box6x2x1]
+model = "shapes/box/box_6x2x1.obj"
+texture = "shapes/textures/box.png"
+tip = "6x2x1"
+
+[box6x2x2]
+model = "shapes/box/box_6x2x2.obj"
+texture = "shapes/textures/box.png"
+tip = "6x2x2"
+
+[box8x1x1]
+model = "shapes/box/box_8x1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "8x1x1"
+
+[box8x2x1]
+model = "shapes/box/box_8x2x1.obj"
+texture = "shapes/textures/box.png"
+tip = "8x2x1"
+
+[box8x2x2]
+model = "shapes/box/box_8x2x2.obj"
+texture = "shapes/textures/box.png"
+tip = "8x2x2"
+
+[box8x4x1]
+model = "shapes/box/box_8x4x1.obj"
+texture = "shapes/textures/box.png"
+tip = "8x4x1"
+
+[box8x4x2]
+model = "shapes/box/box_8x4x2.obj"
+texture = "shapes/textures/box.png"
+tip = "8x4x2"
+
+[box8x4x4]
+model = "shapes/box/box_8x4x4.obj"
+texture = "shapes/textures/box.png"
+tip = "8x4x4"
+
+[box8x8x1]
+model = "shapes/box/box_8x8x1.obj"
+texture = "shapes/textures/box.png"
+tip = "8x8x1"
+
+[box8x8x2]
+model = "shapes/box/box_8x8x2.obj"
+texture = "shapes/textures/box.png"
+tip = "8x8x2"
+
+[box8x8x4]
+model = "shapes/box/box_8x8x4.obj"
+texture = "shapes/textures/box.png"
+tip = "8x8x4"
+
+[box12x4x1]
+model = "shapes/box/box_12x4x1.obj"
+texture = "shapes/textures/box.png"
+tip = "12x4x1"
+
+[box12x4x2]
+model = "shapes/box/box_12x4x2.obj"
+texture = "shapes/textures/box.png"
+tip = "12x4x2"
+
+[box12x4x4]
+model = "shapes/box/box_12x4x4.obj"
+texture = "shapes/textures/box.png"
+tip = "12x4x4"
+
+[box12x8x1]
+model = "shapes/box/box_12x8x1.obj"
+texture = "shapes/textures/box.png"
+tip = "12x8x1"
+
+[box12x8x2]
+model = "shapes/box/box_12x8x2.obj"
+texture = "shapes/textures/box.png"
+tip = "12x8x2"
+
+[box12x8x4]
+model = "shapes/box/box_12x8x4.obj"
+texture = "shapes/textures/box.png"
+tip = "12x8x4"
+
+[box12x12x1]
+model = "shapes/box/box_12x12x1.obj"
+texture = "shapes/textures/box.png"
+tip = "12x12x1"
+
+[box12x12x2]
+model = "shapes/box/box_12x12x2.obj"
+texture = "shapes/textures/box.png"
+tip = "12x12x2"
+
+[box12x12x4]
+model = "shapes/box/box_12x12x4.obj"
+texture = "shapes/textures/box.png"
+tip = "12x12x4"
+
+[box16x12x1]
+model = "shapes/box/box_16x12x1.obj"
+texture = "shapes/textures/box.png"
+tip = "16x12x1"
+
+[box16x12x2]
+model = "shapes/box/box_16x12x2.obj"
+texture = "shapes/textures/box.png"
+tip = "16x12x2"
+
+[box16x12x4]
+model = "shapes/box/box_16x12x4.obj"
+texture = "shapes/textures/box.png"
+tip = "16x12x4"
+
+[box16x16x1]
+model = "shapes/box/box_16x16x1.obj"
+texture = "shapes/textures/box.png"
+tip = "16x16x1"
+
+[box16x16x2]
+model = "shapes/box/box_16x16x2.obj"
+texture = "shapes/textures/box.png"
+tip = "16x16x2"
+
+[box16x16x4]
+model = "shapes/box/box_16x16x4.obj"
+texture = "shapes/textures/box.png"
+tip = "16x16x4"
+
+[box16x4x1]
+model = "shapes/box/box_16x4x1.obj"
+texture = "shapes/textures/box.png"
+tip = "16x4x1"
+
+[box16x4x2]
+model = "shapes/box/box_16x4x2.obj"
+texture = "shapes/textures/box.png"
+tip = "16x4x2"
+
+[box16x4x4]
+model = "shapes/box/box_16x4x4.obj"
+texture = "shapes/textures/box.png"
+tip = "16x4x4"
+
+[box16x8x1]
+model = "shapes/box/box_16x8x1.obj"
+texture = "shapes/textures/box.png"
+tip = "16x8x1"
+
+[box16x8x2]
+model = "shapes/box/box_16x8x2.obj"
+texture = "shapes/textures/box.png"
+tip = "16x8x2"
+
+[box16x8x4]
+model = "shapes/box/box_16x8x4.obj"
+texture = "shapes/textures/box.png"
+tip = "16x8x4"
+
+[plate1x1]
+model = "shapes/plate/plate_1x1.obj"
+texture = "shapes/textures/box.png"
+tip = "1x1"
+
+[plate2x1]
+model = "shapes/plate/plate_2x1.obj"
+texture = "shapes/textures/box.png"
+tip = "2x1"
+
+[plate2x2]
+model = "shapes/plate/plate_2x2.obj"
+texture = "shapes/textures/box.png"
+tip = "2x2"
+
+[plate3x1]
+model = "shapes/plate/plate_3x1.obj"
+texture = "shapes/textures/box.png"
+tip = "3x1"
+
+[plate4x1]
+model = "shapes/plate/plate_4x1.obj"
+texture = "shapes/textures/box.png"
+tip = "4x1"
+
+[plate4x2]
+model = "shapes/plate/plate_4x2.obj"
+texture = "shapes/textures/box.png"
+tip = "4x2"
+
+[plate4x4]
+model = "shapes/plate/plate_4x4.obj"
+texture = "shapes/textures/box.png"
+tip = "4x4"
+
+[plate6x1]
+model = "shapes/plate/plate_6x1.obj"
+texture = "shapes/textures/box.png"
+tip = "6x1"
+
+[plate6x2]
+model = "shapes/plate/plate_6x2.obj"
+texture = "shapes/textures/box.png"
+tip = "6x2"
+
+[plate8x1]
+model = "shapes/plate/plate_8x1.obj"
+texture = "shapes/textures/box.png"
+tip = "8x1"
+
+[plate8x2]
+model = "shapes/plate/plate_8x2.obj"
+texture = "shapes/textures/box.png"
+tip = "8x2"
+
+[plate8x4]
+model = "shapes/plate/plate_8x4.obj"
+texture = "shapes/textures/box.png"
+tip = "8x4"
+
+[plate12x4]
+model = "shapes/plate/plate_12x4.obj"
+texture = "shapes/textures/box.png"
+tip = "12x4"
+
+[plate12x12]
+model = "shapes/plate/plate_12x12.obj"
+texture = "shapes/textures/box.png"
+tip = "12x12"
+
+[plate16x4]
+model = "shapes/plate/plate_16x4.obj"
+texture = "shapes/textures/box.png"
+tip = "16x4"
+
+[plate16x12]
+model = "shapes/plate/plate_16x12.obj"
+texture = "shapes/textures/box.png"
+tip = "16x12"
+
+[plate16x16]
+model = "shapes/plate/plate_16x16.obj"
+texture = "shapes/textures/box.png"
+tip = "16x16"
 

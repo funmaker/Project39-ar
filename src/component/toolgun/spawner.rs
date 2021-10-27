@@ -40,7 +40,7 @@ impl Tool for Spawner {
 		self.ghost_pos = None;
 		self.select_idx = None;
 		
-		if application.input.context_btn(hand).down {
+		if application.input.use2_btn(hand).down {
 			if self.menu_pos.is_some() {
 				self.menu_pos = None;
 			} else {

@@ -63,15 +63,15 @@ impl Input {
 		self.keyboard.state(Key::E)
 	}
 	
-	pub fn drop_btn(&self, hand: Hand) -> InputState {
+	pub fn use2_btn(&self, hand: Hand) -> InputState {
+		self.controller(hand).map(|c| c.state(32)).unwrap_or_default() |
+		self.keyboard.state(Key::Q)
+	}
+	
+	pub fn use3_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(1)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Middle) |
 		self.keyboard.state(Key::G)
-	}
-	
-	pub fn context_btn(&self, hand: Hand) -> InputState {
-		self.controller(hand).map(|c| c.state(32)).unwrap_or_default() |
-		self.keyboard.state(Key::Q)
 	}
 	
 	pub fn set_controller_id(&mut self, hand: Hand, idx: TrackedDeviceIndex) {
