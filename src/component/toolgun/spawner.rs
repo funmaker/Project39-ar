@@ -8,6 +8,7 @@ use crate::application::entity::EntityBuilder;
 use crate::debug;
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
+use crate::component::seat::Seat;
 
 const MENU_SCALE: f32 = 0.2;
 const MENU_SPACING: f32 = 0.25;
@@ -96,14 +97,17 @@ impl Tool for Spawner {
 					if application.input.fire_btn(hand).down {
 						toolgun.fire(application);
 						
-						application.add_entity(
-							EntityBuilder::new(&prop.name)
-							              .rigid_body_type(RigidBodyType::Dynamic)
-							              .position(position)
-							              .component(prop.model.clone())
-							              .collider(prop.collider.clone())
-							              .build()
-						);
+						let mut builder = EntityBuilder::new(&prop.name)
+							.rigid_body_type(RigidBodyType::Dynamic)
+							.position(position)
+							.component(prop.model.clone())
+							.collider(prop.collider.clone());
+						
+						if let Some(seat) = prop.seat {
+							builder = builder.component(Seat::new(seat));
+						}
+						
+						application.add_entity(builder.build());
 					}
 				}
 			}

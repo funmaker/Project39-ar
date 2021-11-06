@@ -1,15 +1,21 @@
 
-[dice]
-model = "cube/dice.obj"
-texture = "cube/dice.png"
-
 [dice2]
 model = "cube/dice2.obj"
+texture = "cube/dice.png"
+
+[dice]
+model = "cube/dice.obj"
 texture = "cube/dice.png"
 
 [cube]
 model = "cube/cube.obj"
 texture = "cube/cube.png"
+
+[seat]
+model = "shapes/seat.obj"
+texture = "shapes/seat.png"
+seat = [-0.4, -0.4, -0.4, 0.4, 1.4, 0.4]
+box_size = [-0.3, -0.28, -0.3, 0.3, -0.13, 0.3]
 
 [hand_l]
 model = "hand/hand_l.obj"
@@ -30,6 +36,7 @@ texture = "shapes/props/gray.png"
 [suzanne]
 model = "shapes/props/suzanne.obj"
 texture = "shapes/props/gray.png"
+
 
 [sphere1]
 model = "shapes/sphere/sphere1.obj"

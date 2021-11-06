@@ -19,8 +19,8 @@ use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
 use crate::component::toolgun::{ToolGun, ToolGunError};
-use crate::component::vr::VrSpawner;
-use crate::component::miku::Miku;
+use crate::component::vr::VrRoot;
+// use crate::component::miku::Miku;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
@@ -34,6 +34,7 @@ pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
 use crate::component::hand::HandComponent;
+use openvr::tracked_device_index::HMD;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -90,9 +91,8 @@ impl Application {
 			
 			if application.vr.is_some() {
 				application.add_entity(
-					Entity::builder("System")
-						.translation(point!(0.0, 0.0, -1.0))
-						.component(VrSpawner::new())
+					Entity::builder("VR Root")
+						.component(VrRoot::new())
 						.build()
 				);
 			} else {
@@ -101,6 +101,7 @@ impl Application {
 						.translation(point!(0.0, 1.5, 1.5))
 						.component(PoV::new())
 						.component(PCControlled::new())
+						.tag("Head", true)
 						.build()
 				);
 				
@@ -207,7 +208,9 @@ impl Application {
 			let pov = self.camera_entity.get(&self).map(|e| e.state().position)
 			                            .unwrap_or(Isometry3::identity());
 			
-			self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
+			let hmd_pose = self.vr_poses.render[HMD as usize].device_to_absolute_tracking().clone();
+			
+			self.renderer.get_mut().render(hmd_pose, pov, &mut self.entities, &mut self.window)?;
 			
 			self.cleanup_loop()?;
 		}

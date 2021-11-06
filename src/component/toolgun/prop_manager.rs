@@ -5,11 +5,11 @@ use linked_hash_map::LinkedHashMap;
 
 use crate::component::model::SimpleModel;
 use crate::renderer::Renderer;
-use crate::math::{PI, Vec3};
+use crate::math::{PI, Vec3, AABB};
 use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
 use crate::renderer::assets_manager::toml::{TomlAsset, TomlLoadError};
 
-#[derive(Deserialize, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Copy, Clone, PartialEq)]
 enum PropCollider {
 	Box,
 	Sphere,
@@ -31,6 +31,8 @@ struct PropConfig {
 	texture: String,
 	#[serde(default)] collider: PropCollider,
 	tip: Option<String>,
+	seat: Option<[f32; 6]>,
+	box_size: Option<[f32; 6]>,
 }
 
 pub struct Prop {
@@ -38,6 +40,7 @@ pub struct Prop {
 	pub name: String,
 	pub collider: Collider,
 	pub tip: Option<String>,
+	pub seat: Option<AABB>,
 }
 
 pub struct PropCollection {
@@ -52,7 +55,11 @@ impl PropCollection {
 		
 		for (name, pconf) in config {
 			let model = renderer.load(ObjAsset::at(&pconf.model, &pconf.texture))?;
-			let aabb = model.aabb();
+			let aabb = if let Some([x1, y1, z1, x2, y2, z2]) = pconf.box_size {
+				AABB::new(point!(x1, y1, z1), point!(x2, y2, z2))
+			} else {
+				model.aabb()
+			};
 			let extents = aabb.extents();
 			let center = aabb.center();
 			
@@ -88,11 +95,14 @@ impl PropCollection {
 				},
 			};
 			
+			let seat = pconf.seat.map(|[x1, y1, z1, x2, y2, z2]| AABB::new(point!(x1, y1, z1), point!(x2, y2, z2)));
+			
 			props.push(Prop {
 				model,
 				name,
 				collider,
 				tip: pconf.tip,
+				seat,
 			});
 		}
 		

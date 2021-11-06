@@ -29,7 +29,7 @@ mod background;
 use crate::{config, debug};
 use crate::application::{Entity, VR};
 use crate::component::{ComponentError, RenderType};
-use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4, VRSlice};
+use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
 use background::{Background, BackgroundError, BackgroundRenderError};
 use camera::{Camera, CameraStartError};
@@ -389,7 +389,7 @@ impl Renderer {
 		             .build()?)
 	}
 	
-	pub fn render(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, hmd_pose: [[f32; 4]; 3], camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
 				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
@@ -495,7 +495,6 @@ impl Renderer {
 		
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
-			let pose = camera_pos.to_matrix().to_slice34();
 			let vr = vr.lock().unwrap();
 			unsafe {
 				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
@@ -504,8 +503,8 @@ impl Renderer {
 				
 				let debug = debug::debug();
 				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
-				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(pose))?;
-				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(pose))?;
+				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(hmd_pose))?;
+				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(hmd_pose))?;
 				if debug { debug::set_debug(true); }
 				
 				future = f.then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?

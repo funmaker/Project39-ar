@@ -8,10 +8,12 @@ use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::parent::Parent;
 use crate::utils::ColliderEx;
-use crate::math::{Point3, Color};
+use crate::math::{Point3, Color, Translation3};
 use crate::debug;
+use crate::component::vr::VrTracked;
 
 const GRAB_DIST: f32 = 0.1;
+const WALK_SPEED: f32 = 1.5;
 
 #[derive(Debug, Copy, Clone)]
 struct FreezeAnim {
@@ -42,15 +44,7 @@ impl HandComponent {
 }
 
 impl Component for HandComponent {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
-		if application.input.use2_btn(self.hand).down {
-			self.freeze_anim.set(Some(FreezeAnim {
-				start: Instant::now(),
-				origin: entity.state().position.transform_point(&Point3::origin()),
-				dir: -1.0,
-			}));
-		}
-		
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
 		if let Some(item_parent) = self.target_parent.get(application) {
 			let item = item_parent.entity(application);
 			
@@ -116,6 +110,14 @@ impl Component for HandComponent {
 					self.target_parent.set(target.add_component(Parent::new(entity, grab_pos)));
 					entity.state_mut().hidden = true;
 				}
+			}
+		} else if let Some(root) = entity.find_component_by_type::<VrTracked>()
+		                                 .and_then(|tracked| tracked.root.entity().get(application)) {
+			if let Some(input) = application.input.controller(self.hand) {
+				let dir = vector!(input.axis(0), 0.0, -input.axis(1)) * WALK_SPEED * delta_time.as_secs_f32();
+				let dir = entity.state().position * dir;
+				
+				root.state_mut().position.append_translation_mut(&Translation3::new(dir.x, 0.0, dir.z));
 			}
 		}
 		

@@ -19,21 +19,21 @@ use crate::utils::ImageEx;
 use crate::component::hand::HandComponent;
 
 #[derive(ComponentBase)]
-pub struct VrSpawner {
+pub struct VrRoot {
 	#[inner] inner: ComponentInner,
 	entities: RefCell<BTreeMap<TrackedDeviceIndex, EntityRef>>,
 }
 
-impl VrSpawner {
+impl VrRoot {
 	pub fn new() -> Self {
-		VrSpawner {
+		VrRoot {
 			inner: ComponentInner::new(),
 			entities: RefCell::new(BTreeMap::new()),
 		}
 	}
 }
 
-impl Component for VrSpawner {
+impl Component for VrRoot {
 	fn tick(&self, _entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		let vr = application.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		let mut entities = self.entities.borrow_mut();
@@ -79,13 +79,14 @@ impl Component for VrSpawner {
 								                             .additional_mass(1000.0)
 								                             .build())
 								.component(model)
-								.component(VrTracked::new(tracked_id))
+								.component(VrTracked::new(tracked_id, self.as_cref()))
 								.tag("NoGrab", true)
 								.collider_from_aabb();
 							
 							if class == TrackedDeviceClass::HMD {
 								entity = entity.hidden(true)
 								               .tag("NoGrab", false)
+								               .tag("Head", true)
 								               .component(PoV::new());
 							}
 							
