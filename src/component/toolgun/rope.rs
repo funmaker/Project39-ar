@@ -55,7 +55,7 @@ impl Tool for RopeTool {
 					selected.as_ref(),
 					self.selected_local_offset,
 					(hit_pos - selected_hit_pos).magnitude(),
-					1.0,
+					100.0,
 				));
 				
 				self.selected.set_null();
