@@ -7,7 +7,6 @@ use vulkano::pipeline::blend::{AttachmentBlend, BlendOp, BlendFactor};
 use vulkano::render_pass::RenderPass;
 
 pub mod default;
-pub mod background;
 pub mod mmd;
 pub mod debug;
 pub mod toolgun_text;

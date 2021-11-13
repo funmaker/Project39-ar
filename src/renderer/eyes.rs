@@ -179,7 +179,7 @@ impl Eyes {
 			Arc::new(frame_buffer.build()?)
 		};
 		
-		let mut clear_values = vec![ ClearValue::None ];
+		let mut clear_values = vec![ ClearValue::Float([0.17,  0.17,  0.22, 1.0]) ];
 		
 		if DEPTH_FORMAT.type_stencil().is_some() {
 			clear_values.push(ClearValue::DepthStencil((1.0, 0)))

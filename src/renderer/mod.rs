@@ -2,11 +2,11 @@ use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::ffi::CString;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 use err_derive::Error;
 use vulkano::{command_buffer, descriptor_set, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents};
 use vulkano::device::{Device, DeviceExtensions, Features, Queue};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::Format;
@@ -17,22 +17,18 @@ use vulkano::render_pass::{AttachmentDesc, LoadOp, MultiviewDesc, RenderPass, Re
 use vulkano::swapchain::{CompositeAlpha, FullscreenExclusive, PresentMode, Surface, SurfaceTransform, Swapchain};
 use vulkano::sync::{FenceSignalFuture, GpuFuture};
 
-pub mod camera;
 pub mod eyes;
 pub mod window;
 pub mod pipelines;
 pub mod debug_renderer;
 pub mod assets_manager;
 mod openvr_cb;
-mod background;
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
 use crate::component::{ComponentError, RenderType};
 use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
-use background::{Background, BackgroundError, BackgroundRenderError};
-use camera::{Camera, CameraStartError};
 use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError, TextCache};
 use eyes::{EyeCreationError, Eyes};
 use openvr_cb::OpenVRCommandBuffer;
@@ -61,8 +57,6 @@ pub struct Renderer {
 	vr: Option<Arc<VR>>,
 	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
-	background: Background,
-	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 	debug_renderer: DebugRenderer,
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
@@ -71,9 +65,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-	pub fn new<C>(vr: Option<Arc<VR>>, camera: C)
-	             -> Result<Renderer, RendererError>
-	             where C: Camera {
+	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer, RendererError> {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
 		let debug_callback = config::get()
 		                            .validation
@@ -97,8 +89,6 @@ impl Renderer {
 		                                     Some(queue.family()))?;
 		
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
-		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
 		let fps_counter = FpsCounter::new();
 		let assets_manager = Some(AssetsManager::new());
@@ -114,8 +104,6 @@ impl Renderer {
 			pipelines,
 			eyes,
 			previous_frame_end: None,
-			background,
-			load_commands,
 			debug_renderer,
 			fps_counter,
 			transparent_registry: vec![],
@@ -289,7 +277,7 @@ impl Renderer {
 			AttachmentDesc {
 				format: eyes::IMAGE_FORMAT,
 				samples,
-				load: LoadOp::DontCare,
+				load: LoadOp::Clear,
 				store: StoreOp::Store,
 				stencil_load: LoadOp::DontCare,
 				stencil_store: StoreOp::DontCare,
@@ -406,18 +394,6 @@ impl Renderer {
 			sync::now(self.device.clone()).boxed()
 		};
 		
-		// TODO: Optimize Boxes
-		while let Ok((command, cam_pose)) = self.load_commands.try_recv() {
-			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
-				future = Box::new(future.then_signal_semaphore()
-				                        .then_execute(self.load_queue.clone(), command)?);
-			} else {
-				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
-			}
-			
-			self.background.update_frame_pose(cam_pose.unwrap_or(camera_pos));
-		}
-		
 		self.fps_counter.tick();
 		
 		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
@@ -456,8 +432,6 @@ impl Renderer {
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
-		
-		self.background.render(&mut builder, camera_pos)?;
 		
 		for entity in scene.values_mut() {
 			entity.render(&self, RenderType::Opaque, &mut builder)?;
@@ -554,9 +528,7 @@ pub enum RendererError {
 	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
 	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
-	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
-	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DebugCallbackCreationError(#[error(source)] instance::debug::DebugCallbackCreationError),
@@ -580,7 +552,6 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
 	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
-	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
 	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),

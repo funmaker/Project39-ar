@@ -1,4 +1,4 @@
-# Project39-ar
+# Project39-ar - Sandbox demo
 Project39 - AR Character Experience Simulator The Game
 
 ## Requirements
@@ -7,11 +7,7 @@ Project39 - AR Character Experience Simulator The Game
 - LLVM
 - CMake
 - Python 3
-- Ninja
-- OpenCV
 - SteamVR
-
-Setup OpenCV env vars: https://github.com/twistedfall/opencv-rust#environment-variables
 
 Work in progress, might be incomplete...
 

@@ -1,14 +1,11 @@
 use std::ops::Deref;
 use std::sync::Arc;
-use std::str::FromStr;
-use std::fmt::{Display, Formatter};
 use std::env;
 use serde_derive::{Deserialize, Serialize};
 use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
 
-use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
-use crate::math::{IVec2, Vec2, Vec4, Vec3};
+use crate::utils::from_args::{FromArgs, ArgsError};
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct Config {
@@ -26,46 +23,10 @@ pub struct Config {
 	pub ssaa: f32,
 	/// Multi-Sampling Anti-Aliasing factor.
 	pub msaa: u32,
-	/// Camera configuration
-	pub camera: CameraConfig,
 	/// Non VR mode
 	pub novr: NovrConfig,
 	/// Window max framerate (0 - unlimited, not recommended)
 	pub window_max_fps: u32,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
-pub struct CameraConfig {
-	/// Select background API to use: escapi, opencv, openvr or dummy.
-	#[arg_short = "c"] #[arg_rename = ""] pub driver: CameraAPI,
-	/// Camera device index. Ignored if openvr is used.
-	pub id: usize,
-	/// Size of the whole frame buffer.
-	#[serde(skip)] #[arg_skip] pub frame_buffer_size: IVec2,
-	/// Left camera eye
-	pub left: CameraEyeConfig,
-	/// Right camera eye
-	pub right: CameraEyeConfig,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
-pub struct CameraEyeConfig {
-	/// Frame offset on the frame buffer.
-	pub offset: IVec2,
-	/// Per eye frame size.
-	pub size: IVec2,
-	/// Focal length.
-	pub focal_length: Vec2,
-	/// Principal point.
-	pub center: Vec2,
-	/// Distortion coefficients.
-	pub coeffs: Vec4,
-	/// Position relative to HMD
-	pub position: Vec3,
-	/// Camera's right (X+)
-	pub right: Vec3,
-	/// Camera's back (Z+)
-	pub back: Vec3,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
@@ -78,15 +39,6 @@ pub struct NovrConfig {
 	pub frame_buffer_height: u32,
 	/// Emulated fov
 	pub fov: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum CameraAPI {
-	#[cfg(windows)] Escapi,
-	OpenCV,
-	OpenVR,
-	Dummy,
 }
 
 impl Config {
@@ -148,22 +100,6 @@ impl Default for Config {
 	}
 }
 
-args_terminals! { CameraAPI }
-
-impl FromStr for CameraAPI {
-	type Err = toml::de::Error;
-	fn from_str(s: &str) -> Result<Self, Self::Err> { toml::from_str(&format!("\"{}\"", s)) }
-}
-
-impl Display for CameraAPI {
-	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		let str = toml::to_string(self).map_err(|_| std::fmt::Error)?;
-		f.write_str(&str).map_err(|_| std::fmt::Error)?;
-		
-		Ok(())
-	}
-}
-
 lazy_static!(
 	static ref CONFIG: ArcSwap<Config> = ArcSwap::default();
 );
@@ -176,6 +112,7 @@ pub fn set(config: Config) {
 	CONFIG.store(Arc::new(config));
 }
 
+#[allow(dead_code)]
 pub fn rcu(update: impl Fn(&mut Config)) {
 	CONFIG.rcu(|current| {
 		let mut new = (**current).clone();
