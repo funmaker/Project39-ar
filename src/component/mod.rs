@@ -17,6 +17,7 @@ pub mod physics;
 pub mod glow;
 pub mod hand;
 pub mod seat;
+pub mod thruster;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::utils::{next_uid, IntoBoxed};

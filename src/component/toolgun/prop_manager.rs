@@ -32,7 +32,7 @@ struct PropConfig {
 	#[serde(default)] collider: PropCollider,
 	tip: Option<String>,
 	seat: Option<[f32; 6]>,
-	box_size: Option<[f32; 6]>,
+	phys_aabb: Option<[f32; 6]>,
 }
 
 pub struct Prop {
@@ -55,7 +55,7 @@ impl PropCollection {
 		
 		for (name, pconf) in config {
 			let model = renderer.load(ObjAsset::at(&pconf.model, &pconf.texture))?;
-			let aabb = if let Some([x1, y1, z1, x2, y2, z2]) = pconf.box_size {
+			let aabb = if let Some([x1, y1, z1, x2, y2, z2]) = pconf.phys_aabb {
 				AABB::new(point!(x1, y1, z1), point!(x2, y2, z2))
 			} else {
 				model.aabb()
@@ -64,17 +64,17 @@ impl PropCollection {
 			let center = aabb.center();
 			
 			let collider = match pconf.collider {
-				PropCollider::Box       => ColliderBuilder::new(ColliderShape::cuboid(extents.x / 2.0, extents.y / 2.0, extents.z / 2.0)).translation(center.coords).build(),
-				PropCollider::Sphere    => ColliderBuilder::new(ColliderShape::ball(extents.max() / 2.0)).translation(center.coords).build(),
-				PropCollider::CylinderX => ColliderBuilder::new(ColliderShape::cylinder(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI / 2.0)).build(),
-				PropCollider::CylinderY => ColliderBuilder::new(ColliderShape::cylinder(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords).build(),
-				PropCollider::CylinderZ => ColliderBuilder::new(ColliderShape::cylinder(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(PI / 2.0, 0.0, 0.0)).build(),
-				PropCollider::ConePX    => ColliderBuilder::new(ColliderShape::cone(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI / 2.0)).build(),
-				PropCollider::ConePY    => ColliderBuilder::new(ColliderShape::cone(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords).build(),
-				PropCollider::ConePZ    => ColliderBuilder::new(ColliderShape::cone(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(PI / 2.0, 0.0, 0.0)).build(),
-				PropCollider::ConeNX    => ColliderBuilder::new(ColliderShape::cone(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, -PI / 2.0)).build(),
-				PropCollider::ConeNY    => ColliderBuilder::new(ColliderShape::cone(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI)).build(),
-				PropCollider::ConeNZ    => ColliderBuilder::new(ColliderShape::cone(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(-PI / 2.0, 0.0, 0.0)).build(),
+				PropCollider::Box       => ColliderBuilder::new(ColliderShape::cuboid(extents.x / 2.0, extents.y / 2.0, extents.z / 2.0)).translation(center.coords),
+				PropCollider::Sphere    => ColliderBuilder::new(ColliderShape::ball(extents.max() / 2.0)).translation(center.coords),
+				PropCollider::CylinderX => ColliderBuilder::new(ColliderShape::cylinder(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI / 2.0)),
+				PropCollider::CylinderY => ColliderBuilder::new(ColliderShape::cylinder(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords),
+				PropCollider::CylinderZ => ColliderBuilder::new(ColliderShape::cylinder(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(PI / 2.0, 0.0, 0.0)),
+				PropCollider::ConePX    => ColliderBuilder::new(ColliderShape::cone(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI / 2.0)),
+				PropCollider::ConePY    => ColliderBuilder::new(ColliderShape::cone(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords),
+				PropCollider::ConePZ    => ColliderBuilder::new(ColliderShape::cone(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(PI / 2.0, 0.0, 0.0)),
+				PropCollider::ConeNX    => ColliderBuilder::new(ColliderShape::cone(extents.x / 2.0, extents.yz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, -PI / 2.0)),
+				PropCollider::ConeNY    => ColliderBuilder::new(ColliderShape::cone(extents.y / 2.0, extents.xz().max() / 2.0)).translation(center.coords).rotation(vector!(0.0, 0.0, PI)),
+				PropCollider::ConeNZ    => ColliderBuilder::new(ColliderShape::cone(extents.z / 2.0, extents.xy().max() / 2.0)).translation(center.coords).rotation(vector!(-PI / 2.0, 0.0, 0.0)),
 				PropCollider::Capsule   => {
 					let max = extents.max();
 					let radius;
@@ -91,16 +91,18 @@ impl PropCollection {
 						offset = *Vec3::z_axis() * (extents.z - radius) / 2.0;
 					}
 					
-					ColliderBuilder::new(ColliderShape::capsule(center - offset, center + offset, radius)).build()
+					ColliderBuilder::new(ColliderShape::capsule(center - offset, center + offset, radius))
 				},
 			};
+			
+			let collider = collider.density(100.0);
 			
 			let seat = pconf.seat.map(|[x1, y1, z1, x2, y2, z2]| AABB::new(point!(x1, y1, z1), point!(x2, y2, z2)));
 			
 			props.push(Prop {
 				model,
 				name,
-				collider,
+				collider: collider.build(),
 				tip: pconf.tip,
 				seat,
 			});

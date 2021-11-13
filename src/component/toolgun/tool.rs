@@ -3,21 +3,22 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer
 use crate::application::{Application, Hand};
 use crate::math::Ray;
 use crate::component::toolgun::rope::RopeTool;
+use crate::renderer::Renderer;
 use super::ToolGun;
 use super::weld::Weld;
-use super::ball_socket::BallSocket;
+use super::thruster::ThrusterTool;
 use super::axis::Axis;
 use super::remover::Remover;
 use super::spawner::Spawner;
 
 pub type ToolError = Box<dyn std::error::Error>;
 
-pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
+pub fn get_all_tools(renderer: &mut Renderer) -> Vec<Box<dyn Tool>> {
 	vec![
 		Box::new(Spawner::new()),
 		Box::new(Remover::new()),
 		Box::new(Axis::new()),
-		Box::new(BallSocket::new()),
+		Box::new(ThrusterTool::new(renderer)),
 		Box::new(Weld::new()),
 		Box::new(RopeTool::new()),
 	]

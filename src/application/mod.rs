@@ -108,7 +108,7 @@ impl Application {
 				application.add_entity(
 					Entity::builder("Hand")
 						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
-						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4),
+						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Left))
 						.tag("Hand", Hand::Left)
@@ -118,7 +118,7 @@ impl Application {
 				application.add_entity(
 					Entity::builder("Hand")
 						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
-						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4),
+						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Right))
 						.tag("Hand", Hand::Right)

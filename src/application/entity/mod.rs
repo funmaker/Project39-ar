@@ -36,6 +36,7 @@ pub struct Entity {
 	frozen: Cell<bool>,
 	components: BTreeMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
+	mass: Cell<f32>,
 }
 
 impl Entity {
@@ -102,6 +103,8 @@ impl Entity {
 			component.tick(&self, &application, delta_time)?;
 		}
 		
+		self.mass.set(application.physics.borrow_mut().rigid_body_set.get(self.rigid_body).unwrap().mass());
+		
 		Ok(())
 	}
 	
@@ -134,6 +137,7 @@ impl Entity {
 				debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
 				debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
 				debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+				debug::draw_text(&format!("{}", self.mass.get()), &pos, debug::DebugOffset::bottom_right(32.0, 160.0), 128.0, Color::magenta());
 			}
 		}
 		

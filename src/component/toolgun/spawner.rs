@@ -3,7 +3,7 @@ use rapier3d::dynamics::RigidBodyType;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3};
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3, face_upwards_lossy};
 use crate::application::entity::EntityBuilder;
 use crate::debug;
 use super::tool::{Tool, ToolError};
@@ -81,15 +81,9 @@ impl Tool for Spawner {
 					let hit_point = ray.point_at(intersection.toi);
 					let offset = prop.model.aabb().mins.y;
 					
-					let rot = if intersection.normal.cross(&-Vec3::y_axis()).magnitude_squared() < f32::EPSILON {
-						Rot3::identity()
-					} else {
-						Rot3::face_towards(&intersection.normal.cross(&-Vec3::y_axis()).cross(&intersection.normal), &intersection.normal)
-					};
-					
 					let position = Isometry3::from_parts(
 						(hit_point - intersection.normal * offset).into(),
-						rot,
+						face_upwards_lossy(intersection.normal),
 					);
 					
 					self.ghost_pos = Some(position);
@@ -148,7 +142,7 @@ impl Tool for Spawner {
 				prop.model.render_impl(transform, color, builder)?;
 				
 				if let Some(tip) = &prop.tip {
-					debug::draw_text(tip, &transform.transform_point(&Point3::origin()), debug::DebugOffset::top(0.0, 8.0), 16.0, color);
+					debug::draw_text(tip, &transform.transform_point(&Point3::origin()), debug::DebugOffset::top(0.0, 8.0), 32.0, color);
 				}
 			}
 		}

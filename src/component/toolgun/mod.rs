@@ -13,7 +13,7 @@ use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 mod spawner;
 mod remover;
 mod axis;
-mod ball_socket;
+mod thruster;
 mod weld;
 mod tool;
 mod prop_manager;
@@ -94,7 +94,7 @@ impl ToolGun {
 		
 		let state = ToolGunState {
 			scroll: 0.0,
-			tools: get_all_tools(),
+			tools: get_all_tools(renderer),
 			tool_id: 0,
 			menu_pos: None,
 			render_tool: false,

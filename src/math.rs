@@ -145,6 +145,14 @@ pub fn face_towards_lossy(dir: Vec3) -> Rot3 {
 	}
 }
 
+pub fn face_upwards_lossy(dir: Vec3) -> Rot3 {
+	if dir.cross(&-Vec3::y_axis()).magnitude_squared() < f32::EPSILON {
+		Rot3::identity()
+	} else {
+		Rot3::face_towards(&dir.cross(&-Vec3::y_axis()).cross(&dir), &dir)
+	}
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 

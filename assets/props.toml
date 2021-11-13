@@ -15,7 +15,7 @@ texture = "cube/cube.png"
 model = "shapes/seat.obj"
 texture = "shapes/seat.png"
 seat = [-0.4, -0.4, -0.4, 0.4, 1.4, 0.4]
-box_size = [-0.3, -0.28, -0.3, 0.3, -0.13, 0.3]
+phys_aabb = [-0.3, -0.28, -0.3, 0.3, -0.13, 0.3]
 
 [hand_l]
 model = "hand/hand_l.obj"
