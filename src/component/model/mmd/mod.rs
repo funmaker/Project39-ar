@@ -10,21 +10,26 @@ use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 use vulkano::pipeline::PipelineBindPoint;
 
+pub mod asset;
 pub mod test;
 mod bone;
 mod sub_mesh;
 mod shared;
+mod rigid_body;
+mod joint;
 
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;
 use crate::application::Entity;
 use crate::utils::AutoCommandBufferBuilderEx;
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4};
 use super::ModelError;
 pub use bone::{Bone, BoneConnection};
 pub use shared::{MMDModelShared, SubMeshDesc};
+pub use rigid_body::RigidBodyDesc;
+pub use joint::JointDesc;
 
 pub struct MMDModelState {
 	pub bones: Vec<Bone>,

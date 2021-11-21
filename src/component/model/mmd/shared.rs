@@ -13,9 +13,9 @@ use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
 use crate::utils::{VecFuture, ImageEx, FenceCheck, ImmutableIndexBuffer};
-use crate::math::{AMat4, IVec4, Vec3};
+use crate::math::{AMat4, IVec4, Vec3, Vec4};
 use super::sub_mesh::{SubMesh, MaterialInfo};
-use super::{Vertex, Bone};
+use super::{Vertex, Bone, RigidBodyDesc, JointDesc};
 
 pub struct MMDModelShared {
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
@@ -52,6 +52,8 @@ pub struct MMDModelSharedBuilder<VI: VertexIndex> {
 	sub_meshes: Vec<SubMeshDesc>,
 	bones: Vec<Bone>,
 	morphs: Vec<Vec<(VI, Vec3)>>,
+	rigid_bodies: Vec<RigidBodyDesc>,
+	joints: Vec<JointDesc>,
 }
 
 impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
@@ -62,7 +64,9 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			textures: vec![],
 			sub_meshes: vec![],
 			bones: vec![],
-			morphs: vec![]
+			morphs: vec![],
+			rigid_bodies: vec![],
+			joints: vec![],
 		}
 	}
 	
@@ -83,6 +87,16 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 	
 	pub fn add_morph(&mut self, offsets: Vec<(VI, Vec3)>) -> &mut Self {
 		self.morphs.push(offsets);
+		self
+	}
+	
+	pub fn add_rigid_body(&mut self, desc: RigidBodyDesc) -> &mut Self {
+		self.rigid_bodies.push(desc);
+		self
+	}
+	
+	pub fn add_joint(&mut self, desc: JointDesc) -> &mut Self {
+		self.joints.push(desc);
 		self
 	}
 	
@@ -216,13 +230,13 @@ pub struct SubMeshDesc {
 	pub texture: Option<usize>,
 	pub toon: Option<usize>,
 	pub sphere_map: Option<usize>,
-	pub color: [f32; 4],
-	pub specular: [f32; 3],
+	pub color: Vec4,
+	pub specular: Vec3,
 	pub specularity: f32,
-	pub ambient: [f32; 3],
+	pub ambient: Vec3,
 	pub sphere_mode: u32,
 	pub no_cull: bool,
 	pub opaque: bool,
-	pub edge: Option<(f32, [f32; 4])>,
+	pub edge: Option<(f32, Vec4)>,
 }
 

@@ -9,15 +9,16 @@ use vulkano::pipeline::GraphicsPipeline;
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
 use crate::component::model::ModelError;
+use crate::math::{Vec3, Vec4};
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<dyn DescriptorSet + Send + Sync>);
 
 #[derive(Debug, Copy, Clone)]
 pub struct MaterialInfo {
-	pub color: [f32; 4],
-	pub specular: [f32; 3],
+	pub color: Vec4,
+	pub specular: Vec3,
 	pub specularity: f32,
-	pub ambient: [f32; 3],
+	pub ambient: Vec3,
 	pub sphere_mode: u32,
 }
 
@@ -27,7 +28,7 @@ pub struct SubMesh {
 	pub transparent: Option<PipelineWithSet>,
 	pub edge: Option<PipelineWithSet>,
 	pub edge_scale: f32,
-	pub edge_color: [f32; 4],
+	pub edge_color: Vec4,
 }
 
 impl SubMesh {
@@ -38,7 +39,7 @@ impl SubMesh {
 	           sphere_map: Arc<ImmutableImage>,
 	           opaque: bool,
 	           no_cull: bool,
-	           edge: Option<(f32, [f32; 4])>,
+	           edge: Option<(f32, Vec4)>,
 	           renderer: &mut Renderer)
 	           -> Result<SubMesh, ModelError> {
 		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
@@ -67,7 +68,7 @@ impl SubMesh {
 			transparent: None,
 			edge: None,
 			edge_scale: 0.0,
-			edge_color: [0.0, 0.0, 0.0, 0.0],
+			edge_color: vector![0.0, 0.0, 0.0, 0.0],
 		};
 		
 		if !opaque {

@@ -95,6 +95,8 @@ impl Window {
 			                     err => err.into(),
 		                     })?;
 		
+		self.swapchain_regen_required = false;
+		
 		Ok(())
 	}
 	

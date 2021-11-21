@@ -5,6 +5,7 @@ use std::time::Instant;
 use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
+use openvr::tracked_device_index::HMD;
 use rapier3d::prelude::ColliderBuilder;
 
 pub mod vr;
@@ -20,7 +21,8 @@ use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
 use crate::component::toolgun::{ToolGun, ToolGunError};
 use crate::component::vr::VrRoot;
-// use crate::component::miku::Miku;
+use crate::component::miku::Miku;
+use crate::component::hand::HandComponent;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
@@ -33,8 +35,6 @@ pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
-use crate::component::hand::HandComponent;
-use openvr::tracked_device_index::HMD;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -137,13 +137,13 @@ impl Application {
 					.build()
 			);
 			
-			// application.add_entity(
-			// 	Entity::builder("初音ミク")
-			// 		.translation(point!(0.0, 0.0, 0.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
-			// 		.component(Miku::new())
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("初音ミク")
+					.translation(point!(0.0, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
+					.component(Miku::new())
+					.build()
+			);
 			
 			application.add_entity(
 				Entity::builder("Floor")
@@ -314,7 +314,7 @@ impl Application {
 	
 	fn set_debug_flags(&self) {
 		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
-		debug::set_flag("DebugBoneDraw", self.input.keyboard.toggle(Key::B));
+		debug::set_flag("DebugBonesDraw", self.input.keyboard.toggle(Key::B));
 	}
 }
 

@@ -25,7 +25,7 @@ opencv = { version = "0.54.0" }
 num-traits = "0.2.14"
 lazy_static = "1.4.0"
 winit = "0.25.0"
-mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "9edb771b6e29da7a320acc94e8d293a4b8b0a289" }
+mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "cebbbe812593909a0989eb1d86ee609b15c2b51f" }
 #mmd = { path = "../mmd-rs" }
 native-dialog = "0.5.2"
 unifont = "0.1.0"

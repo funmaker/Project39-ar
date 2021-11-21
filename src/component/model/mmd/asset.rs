@@ -8,14 +8,32 @@ use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::WeightDeform;
+use rapier3d::geometry::{ColliderBuilder, ColliderShape};
 
 use crate::renderer::Renderer;
-use crate::component::model::mmd::{Vertex, MMDModelShared, BoneConnection, Bone, SubMeshDesc};
 use crate::debug;
-use crate::math::{Color, Vec3};
+use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
-use super::{AssetKey, AssetsManager};
+use crate::renderer::assets_manager::{AssetKey, AssetsManager};
+use super::{Vertex, MMDModelShared, BoneConnection, Bone, SubMeshDesc, JointDesc, RigidBodyDesc};
+
+type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
+
+pub struct MMDConfig;
+
+impl mmd::Config for MMDConfig {
+	type VertexIndex = u32;
+	type TextureIndex = i32;
+	type MaterialIndex = i32;
+	type BoneIndex = i32;
+	type MorphIndex = i32;
+	type RigidbodyIndex = i32;
+	type Vec2 = Vec2;
+	type Vec3 = Vec3;
+	type Vec4 = Vec4;
+	type AdditionalVec4s = Vec<Vec4>;
+}
 
 #[derive(Clone, Hash, Debug)]
 pub struct PmxAsset {
@@ -43,12 +61,12 @@ impl AssetKey for PmxAsset {
 		// dprintln!("{}", header);
 		
 		let mut vertices_reader = mmd::VertexReader::new(header)?;
-		let vertices = vertices_reader.iter::<i16>()
+		let vertices = vertices_reader.iter::<MMDConfig>()
 		                              .map(|v| v.map(Into::into))
 		                              .collect::<Result<Vec<Vertex>, _>>()?;
 		
 		let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
-		let indices = surfaces_reader.iter()
+		let indices = surfaces_reader.iter::<MMDConfig>()
 		                             .collect::<Result<Vec<[u32; 3]>, _>>()?
 		                             .flatten();
 		
@@ -70,7 +88,7 @@ impl AssetKey for PmxAsset {
 		let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
 		let mut last_index: u32 = 0;
 		
-		for material in materials_reader.iter::<i32>() {
+		for material in materials_reader.iter::<MMDConfig>() {
 			let material = material?;
 			
 			let toon_index = match material.toon {
@@ -117,7 +135,7 @@ impl AssetKey for PmxAsset {
 		
 		let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
 		let bone_defs = bones_reader.iter()
-		                            .collect::<Result<Vec<mmd::Bone<i32>>, _>>()?;
+		                            .collect::<Result<Vec<mmd::Bone<MMDConfig>>, _>>()?;
 		
 		for def in bone_defs.iter() {
 			let name = if def.universal_name.len() > 0 {
@@ -173,14 +191,109 @@ impl AssetKey for PmxAsset {
 		
 		let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
 		
-		for morph in morphs_reader.iter::<i32, u32, i32, i32, i32>() {
+		for morph in morphs_reader.iter::<MMDConfig>() {
 			let morph = morph?;
+			
 			if let Offsets::Vertex(offsets) = morph.offsets {
 				model.add_morph(offsets.iter()
 				                       .map(|offset| (offset.vertex, Vec3::from(offset.offset).flip_x() * MMD_UNIT_SIZE))
 				                       .collect());
 			}
 		}
+		
+		let display_reader = mmd::DisplayReader::new(morphs_reader)?;
+		
+		let mut rigid_body_reader = mmd::RigidBodyReader::new(display_reader)?;
+		
+		for rigid_body in rigid_body_reader.iter::<MMDConfig>() {
+			let rigid_body = rigid_body?;
+			
+			let name = if rigid_body.universal_name.len() > 0 {
+				&rigid_body.universal_name
+			} else if let Some(translated) = debug::translate(&rigid_body.local_name) {
+				translated
+			} else {
+				&rigid_body.local_name
+			};
+			
+			let translation = (rigid_body.shape_position - bone_defs[rigid_body.bone_index as usize].position).flip_x() * MMD_UNIT_SIZE;
+			let position = Isometry3::from_parts(translation.into(),
+			                                     Rot3::from_euler_angles(rigid_body.shape_rotation.x,
+			                                                             rigid_body.shape_rotation.y,
+			                                                             rigid_body.shape_rotation.z));
+			
+			let collider = match rigid_body.shape {
+				MMDShapeType::Sphere => {
+					let volume = 4.0 / 3.0 * PI * rigid_body.shape_size.x;
+					
+					ColliderBuilder::new(ColliderShape::ball(rigid_body.shape_size.x * MMD_UNIT_SIZE))
+					                .position(position)
+					                .density(rigid_body.mass / volume)
+					                .build()
+				},
+				MMDShapeType::Box => {
+					let volume = rigid_body.shape_size.x / rigid_body.shape_size.y / rigid_body.shape_size.z;
+					
+					ColliderBuilder::new(ColliderShape::cuboid(rigid_body.shape_size.x * MMD_UNIT_SIZE / 2.0,
+					                                           rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0,
+					                                           rigid_body.shape_size.z * MMD_UNIT_SIZE / 2.0))
+					                .position(position)
+					                .density(rigid_body.mass / volume)
+					                .build()
+				},
+				MMDShapeType::Capsule => {
+					let volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
+					           + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
+					
+					ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.x / 2.0, 0.0], point![0.0, rigid_body.shape_size.x / 2.0, 0.0], rigid_body.shape_size.y))
+					                .position(position)
+					                .density(rigid_body.mass / volume)
+					                .build()
+				},
+			};
+			
+			model.add_rigid_body(RigidBodyDesc::new(name,
+			                                        rigid_body.bone_index as usize,
+			                                        collider,
+			                                        rigid_body.move_attenuation,
+			                                        rigid_body.rotation_damping,
+			                                        rigid_body.repulsion,
+			                                        rigid_body.fiction,
+			                                        rigid_body.physics_mode));
+		}
+		
+		let mut joints_reader = mmd::JointReader::new(rigid_body_reader)?;
+		
+		for joint in joints_reader.iter::<MMDConfig>() {
+			let joint = joint?;
+			
+			let name = if joint.universal_name.len() > 0 {
+				&joint.universal_name
+			} else if let Some(translated) = debug::translate(&joint.local_name) {
+				translated
+			} else {
+				&joint.local_name
+			};
+			
+			let translation = (joint.position).flip_x() * MMD_UNIT_SIZE;
+			let position = Isometry3::from_parts(translation.into(),
+			                                     Rot3::from_euler_angles(joint.rotation.x,
+			                                                             joint.rotation.y,
+			                                                             joint.rotation.z));
+			
+			model.add_joint(JointDesc::new(name,
+			                               joint.joint_type,
+			                               joint.rigid_body_a as usize,
+			                               joint.rigid_body_b as usize,
+			                               position,
+			                               joint.position_min,
+			                               joint.position_max,
+			                               joint.rotation_min,
+			                               joint.rotation_max,
+			                               joint.position_spring,
+			                               joint.rotation_spring));
+		}
+		
 		
 		Ok(Arc::new(model.build(renderer)?))
 	}
@@ -206,23 +319,23 @@ fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoa
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
-impl<I: Into<i32>> From<mmd::Vertex<I>> for Vertex {
-	fn from(vertex: mmd::Vertex<I>) -> Self {
+impl From<mmd::Vertex<MMDConfig>> for Vertex {
+	fn from(vertex: mmd::Vertex<MMDConfig>) -> Self {
 		let (bones, bones_weights) = match vertex.weight_deform {
-			WeightDeform::Bdef1(bdef) => ([bdef.bone_index.into(), 0, 0, 0],
+			WeightDeform::Bdef1(bdef) => ([bdef.bone_index, 0, 0, 0],
 			                              [1.0, 0.0, 0.0, 0.0]),
-			WeightDeform::Bdef2(bdef) => ([bdef.bone_1_index.into(), bdef.bone_2_index.into(), 0, 0],
+			WeightDeform::Bdef2(bdef) => ([bdef.bone_1_index, bdef.bone_2_index, 0, 0],
 			                              [bdef.bone_1_weight, 1.0-bdef.bone_1_weight, 0.0, 0.0]),
-			WeightDeform::Bdef4(bdef) => ([bdef.bone_1_index.into(), bdef.bone_2_index.into(), bdef.bone_3_index.into(), bdef.bone_4_index.into()],
+			WeightDeform::Bdef4(bdef) => ([bdef.bone_1_index, bdef.bone_2_index, bdef.bone_3_index, bdef.bone_4_index],
 			                              [bdef.bone_1_weight, bdef.bone_2_weight, bdef.bone_3_weight, bdef.bone_4_weight]),
-			WeightDeform::Sdef(sdef) => ([sdef.bone_1_index.into(), sdef.bone_2_index.into(), 0, 0], // TODO: Proper SDEF support
+			WeightDeform::Sdef(sdef) => ([sdef.bone_1_index, sdef.bone_2_index, 0, 0], // TODO: Proper SDEF support
 			                             [sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0]),
 			WeightDeform::Qdef(_) => unimplemented!("QDEF weight deforms are not supported."),
 		};
 		
 		let bones_indices = [bones[0].max(0) as u32, bones[1].max(0) as u32, bones[2].max(0) as u32, bones[3].max(0) as u32];
-		let pos = Vec3::from(vertex.position).flip_x() * MMD_UNIT_SIZE;
-		let normal = Vec3::from(vertex.normal).flip_x();
+		let pos = vertex.position.flip_x() * MMD_UNIT_SIZE;
+		let normal = vertex.normal.flip_x();
 		
 		Vertex::new(
 			pos,

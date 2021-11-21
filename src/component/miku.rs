@@ -2,12 +2,11 @@ use std::time::Duration;
 use std::cell::Cell;
 
 use crate::application::{Entity, Application};
-use crate::component::{ComponentRef, ComponentError};
+use crate::component::model::mmd::asset::PmxAsset;
 use crate::component::model::MMDModel;
 use crate::math::Rot3;
-use super::{Component, ComponentBase, ComponentInner};
 use crate::utils::num_key;
-use crate::renderer::assets_manager::pmx::PmxAsset;
+use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
 
 const MORPH_PRESETS: &[(usize, &[usize])] = &[
 	(1, &[0, 29, 66]),

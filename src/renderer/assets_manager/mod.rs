@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hasher, Hash};
+use std::hash::{Hash, Hasher};
 use std::any::{Any, TypeId};
 use std::path::{Path, PathBuf};
-use std::io::{BufRead, Seek, BufReader};
+use std::io::{BufRead, BufReader, Seek};
 use std::fs::File;
-use std::fmt::{Display, Formatter, Debug};
+use std::fmt::{Debug, Display, Formatter};
 use std::ffi::{OsStr, OsString};
 use std::error::Error;
 
 pub mod texture;
-pub mod pmx;
 pub mod obj;
 pub mod toml;
 
