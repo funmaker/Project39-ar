@@ -4,7 +4,7 @@ use std::sync::RwLock;
 use std::cell::RefCell;
 use std::any::Any;
 
-use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4};
+use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4, Isometry3, Vec3};
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
@@ -158,10 +158,35 @@ pub struct DebugText {
 	pub color: Color,
 }
 
+pub struct DebugBox {
+	pub position: Isometry3,
+	pub size: Vec3,
+	pub color: Color,
+	pub edge: Color,
+}
+
+pub struct DebugSphere {
+	pub position: Isometry3,
+	pub radius: f32,
+	pub color: Color,
+	pub edge: Color,
+}
+
+pub struct DebugCapsule {
+	pub point_a: Point3,
+	pub point_b: Point3,
+	pub radius: f32,
+	pub color: Color,
+	pub edge: Color,
+}
+
 thread_local! {
     pub static DEBUG_POINTS: RefCell<Vec<DebugPoint>> = RefCell::new(vec![]);
     pub static DEBUG_LINES: RefCell<Vec<DebugLine>> = RefCell::new(vec![]);
     pub static DEBUG_TEXTS: RefCell<Vec<DebugText>> = RefCell::new(vec![]);
+    pub static DEBUG_BOXES: RefCell<Vec<DebugBox>> = RefCell::new(vec![]);
+    pub static DEBUG_SPHERES: RefCell<Vec<DebugSphere>> = RefCell::new(vec![]);
+    pub static DEBUG_CAPSULES: RefCell<Vec<DebugCapsule>> = RefCell::new(vec![]);
 }
 
 pub fn draw_point(position: impl Into<DebugPosition>, radius: f32, color: Color) {
@@ -179,6 +204,24 @@ pub fn draw_line(from: impl Into<DebugPosition>, to: impl Into<DebugPosition>, w
 pub fn draw_text(text: impl Into<String>, position: impl Into<DebugPosition>, offset: DebugOffset, size: f32, color: Color) {
 	DEBUG_TEXTS.with(|texts| {
 		texts.borrow_mut().push(DebugText{ text: text.into(), position: position.into(), offset, size, color });
+	})
+}
+
+pub fn draw_box(position: Isometry3, size: Vec3, color: Color, edge: Color) {
+	DEBUG_BOXES.with(|boxes| {
+		boxes.borrow_mut().push(DebugBox{ position, size, color, edge });
+	})
+}
+
+pub fn draw_sphere(position: Isometry3, radius: f32, color: Color, edge: Color) {
+	DEBUG_SPHERES.with(|spheres| {
+		spheres.borrow_mut().push(DebugSphere{ position, radius, color, edge });
+	})
+}
+
+pub fn draw_capsule(point_a: Point3, point_b: Point3, radius: f32, color: Color, edge: Color) {
+	DEBUG_CAPSULES.with(|capsules| {
+		capsules.borrow_mut().push(DebugCapsule{ point_a, point_b, radius, color, edge });
 	})
 }
 

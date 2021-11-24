@@ -33,7 +33,7 @@ use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
 use background::{Background, BackgroundError, BackgroundRenderError};
 use camera::{Camera, CameraStartError};
-use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError, TextCache};
+use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError, TextCache, DebugRendererPreRenderError};
 use eyes::{EyeCreationError, Eyes};
 use openvr_cb::OpenVRCommandBuffer;
 use pipelines::Pipelines;
@@ -63,7 +63,7 @@ pub struct Renderer {
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
 	background: Background,
 	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
-	debug_renderer: DebugRenderer,
+	debug_renderer: Option<DebugRenderer>,
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
 	transparent_registry: Vec<(f32, u64)>,
@@ -99,9 +99,9 @@ impl Renderer {
 		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
 		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
 		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
-		let debug_renderer = DebugRenderer::new(&load_queue, &mut pipelines)?;
-		let fps_counter = FpsCounter::new();
+		let debug_renderer = Some(DebugRenderer::new(&load_queue, &mut pipelines)?);
 		let assets_manager = Some(AssetsManager::new());
+		let fps_counter = FpsCounter::new();
 		
 		Ok(Renderer {
 			instance,
@@ -453,6 +453,12 @@ impl Renderer {
 			}
 		}
 		
+		{
+			let mut debug_renderer = self.debug_renderer.take().unwrap();
+			debug_renderer.pre_render(self)?;
+			self.debug_renderer = Some(debug_renderer);
+		}
+		
 		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
@@ -471,7 +477,7 @@ impl Renderer {
 		
 		self.transparent_registry.clear();
 		
-		self.debug_renderer.render(&mut builder, &commons, pixel_scale)?;
+		self.debug_renderer.as_mut().unwrap().render(&mut builder, &commons, pixel_scale)?;
 		
 		builder.end_render_pass()?
 		       .copy_image(self.eyes.resolved_image.clone(),
@@ -519,7 +525,7 @@ impl Renderer {
 			Err(err) => return Err(err.into()),
 		};
 		
-		self.debug_renderer.text_cache.borrow_mut().cleanup();
+		self.debug_renderer.as_mut().unwrap().text_cache.borrow_mut().cleanup();
 		
 		match future.then_signal_fence_and_flush() {
 			Ok(future) => {
@@ -535,7 +541,7 @@ impl Renderer {
 	}
 	
 	pub fn debug_text_cache(&self) -> RefMut<TextCache> {
-		self.debug_renderer.text_cache.borrow_mut()
+		self.debug_renderer.as_ref().unwrap().text_cache.borrow_mut()
 	}
 	
 	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset, Key::Error> {
@@ -579,6 +585,7 @@ pub enum RendererSwapchainError {
 pub enum RendererRenderError {
 	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
 	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
+	#[error(display = "{}", _0)] DebugRendererPreRenderError(#[error(source)] DebugRendererPreRenderError),
 	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
 	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
 	#[error(display = "{}", _0)] ComponentError(ComponentError),

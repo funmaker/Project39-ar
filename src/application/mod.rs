@@ -19,7 +19,7 @@ use crate::component::model::ModelError;
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
-use crate::component::toolgun::{ToolGun, ToolGunError};
+use crate::component::toolgun::{ToolGunError};
 use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
@@ -126,16 +126,16 @@ impl Application {
 				);
 			}
 			
-			application.add_entity(
-				Entity::builder("ToolGun")
-					.translation(point!(0.0, 1.0, 1.0))
-					.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
-					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
-					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
-					                        renderer)?)
-					.collider_from_aabb()
-					.build()
-			);
+			// application.add_entity(
+			// 	Entity::builder("ToolGun")
+			// 		.translation(point!(0.0, 1.0, 1.0))
+			// 		.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
+			// 		.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
+			// 		                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
+			// 		                        renderer)?)
+			// 		.collider_from_aabb()
+			// 		.build()
+			// );
 			
 			application.add_entity(
 				Entity::builder("初音ミク")
@@ -169,6 +169,8 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
+		let mut rot = 0.0;
+		
 		while !self.window.quit_required {
 			let delta_time = instant.elapsed();
 			instant = Instant::now();
@@ -184,6 +186,8 @@ impl Application {
 			for (id, line) in inputs.split("\n").enumerate() {
 				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
 			}
+			
+			rot += delta_time.as_secs_f32();
 			
 			self.setup_loop()?;
 			

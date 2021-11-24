@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::f32::consts::PI;
 use std::cell::RefCell;
 use err_derive::Error;
-use vulkano::{memory, command_buffer};
+use vulkano::{memory, command_buffer, descriptor_set};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
@@ -12,23 +12,35 @@ use nalgebra::Unit;
 
 mod text_cache;
 
-use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText};
-use crate::math::{Vec2, Rot2, PMat4};
-use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, Vertex, TexturedVertex};
+use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
+use crate::utils::AutoCommandBufferBuilderEx;
+use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy};
+use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
+use crate::component::model::SimpleModel;
+use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
-use super::CommonsUBO;
+use super::{Renderer, CommonsUBO};
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
 
 pub struct DebugRenderer {
 	pub text_cache: RefCell<TextCache>,
 	pipeline: Arc<GraphicsPipeline>,
 	text_pipeline: Arc<GraphicsPipeline>,
+	shape_pipeline: Arc<GraphicsPipeline>,
 	vertices_pool: CpuBufferPool<Vertex>,
 	text_vertices_pool: CpuBufferPool<TexturedVertex>,
 	indexes_pool: CpuBufferPool<u32>,
 	vertices: Vec<Vertex>,
 	text_vertices: Vec<TexturedVertex>,
 	indexes: Vec<u32>,
+	models: Option<DebugModels>,
+}
+
+pub struct DebugModels {
+	dbox: SimpleModel,
+	sphere: SimpleModel,
+	cbody: SimpleModel,
+	ccap: SimpleModel,
 }
 
 const RING_MIN: f32 = 5.0;
@@ -39,6 +51,7 @@ impl DebugRenderer {
 		let device = load_queue.device();
 		let pipeline = pipelines.get::<DebugPipeline>()?;
 		let text_pipeline = pipelines.get::<DebugTexturedPipeline>()?;
+		let shape_pipeline = pipelines.get::<DebugShapePipeline>()?;
 		
 		let vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
 		let text_vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
@@ -49,6 +62,7 @@ impl DebugRenderer {
 		Ok(DebugRenderer {
 			pipeline,
 			text_pipeline,
+			shape_pipeline,
 			vertices_pool,
 			text_vertices_pool,
 			indexes_pool,
@@ -56,7 +70,28 @@ impl DebugRenderer {
 			text_vertices: vec![],
 			indexes: vec![],
 			text_cache,
+			models: None,
 		})
+	}
+	
+	pub fn pre_render(&mut self, renderer: &mut Renderer) -> Result<(), DebugRendererPreRenderError> {
+		if self.models.is_none() {
+			let mut load_models = false;
+			DEBUG_BOXES.with(|boxes| load_models |= !boxes.borrow().is_empty());
+			DEBUG_SPHERES.with(|spheres| load_models |= !spheres.borrow().is_empty());
+			DEBUG_CAPSULES.with(|capsules| load_models |= !capsules.borrow().is_empty());
+			
+			if load_models {
+				self.models = Some(DebugModels {
+					dbox: renderer.load(ObjAsset::at("debug/box.obj", "debug/tex.png"))?,
+					sphere: renderer.load(ObjAsset::at("debug/sphere.obj", "debug/tex.png"))?,
+					cbody: renderer.load(ObjAsset::at("debug/cbody.obj", "debug/tex.png"))?,
+					ccap: renderer.load(ObjAsset::at("debug/ccap.obj", "debug/tex.png"))?,
+				});
+			}
+		}
+		
+		Ok(())
 	}
 	
 	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2) -> Result<(), DebugRendererRenderError> {
@@ -64,7 +99,6 @@ impl DebugRenderer {
 			commons.projection[0] * commons.view[0],
 			commons.projection[1] * commons.view[1],
 		);
-		
 		
 		DEBUG_LINES.with(|lines| {
 			for line in lines.borrow_mut().drain(..) {
@@ -104,7 +138,13 @@ impl DebugRenderer {
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
-			for text in texts.borrow_mut().drain(..) {
+			let mut texts = texts.borrow_mut();
+			
+			if !texts.is_empty() {
+				builder.bind_pipeline_graphics(self.text_pipeline.clone());
+			}
+			
+			for text in texts.drain(..) {
 				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
 				} else if let Some(set) = self.draw_text(text, &viewproj, &pixel_scale)? {
@@ -112,8 +152,7 @@ impl DebugRenderer {
 					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 					let index_count = index_buffer.len();
 					
-					builder.bind_pipeline_graphics(self.text_pipeline.clone())
-					       .bind_index_buffer(index_buffer)
+					builder.bind_index_buffer(index_buffer)
 					       .bind_vertex_buffers(0, vertex_buffer)
 					       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 					                             self.text_pipeline.layout().clone(),
@@ -129,6 +168,10 @@ impl DebugRenderer {
 			
 			Ok::<_, DebugRendererRenderError>(())
 		})?;
+		
+		DEBUG_BOXES.with(|boxes| self.draw_boxes(&mut *boxes.borrow_mut(), builder))?;
+		DEBUG_SPHERES.with(|spheres| self.draw_spheres(&mut *spheres.borrow_mut(), builder))?;
+		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), builder))?;
 		
 		Ok(())
 	}
@@ -308,6 +351,148 @@ impl DebugRenderer {
 		
 		Ok(Some(entry.set.clone()))
 	}
+	
+	fn draw_boxes(&self, boxes: &mut Vec<DebugBox>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+		let models = match self.models.as_ref() {
+			Some(models) if models.dbox.loaded() => { models }
+			_ => {
+				boxes.drain(..);
+				return Ok(());
+			}
+		};
+		
+		if !boxes.is_empty() {
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
+			       .bind_vertex_buffers(0, models.dbox.vertices.clone())
+			       .bind_any_index_buffer(models.dbox.indices.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.shape_pipeline.layout().clone(),
+			                             0,
+			                             models.dbox.set.clone());
+		}
+		
+		for dbox in boxes.drain(..) {
+			let transform = dbox.position.to_homogeneous().prepend_nonuniform_scaling(&dbox.size);
+			
+			builder.push_constants(self.shape_pipeline.layout().clone(),
+			                       0,
+			                       (transform, dbox.color, dbox.edge))
+			       .draw_indexed(models.dbox.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0)?;
+		}
+		
+		Ok(())
+	}
+	
+	fn draw_spheres(&self, spheres: &mut Vec<DebugSphere>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+		let models = match self.models.as_ref() {
+			Some(models) if models.sphere.loaded() => { models }
+			_ => {
+				spheres.drain(..);
+				return Ok(());
+			}
+		};
+		
+		if !spheres.is_empty() {
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
+			       .bind_vertex_buffers(0, models.sphere.vertices.clone())
+			       .bind_any_index_buffer(models.sphere.indices.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.shape_pipeline.layout().clone(),
+			                             0,
+			                             models.sphere.set.clone());
+		}
+		
+		for sphere in spheres.drain(..) {
+			let transform = Similarity3::from_isometry(sphere.position, sphere.radius * 2.0).to_homogeneous();
+			
+			builder.push_constants(self.shape_pipeline.layout().clone(),
+			                       0,
+			                       (transform, sphere.color, sphere.edge))
+			       .draw_indexed(models.sphere.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0)?;
+		}
+		
+		Ok(())
+	}
+	
+	fn draw_capsules(&self, capsules: &mut Vec<DebugCapsule>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+		let models = match self.models.as_ref() {
+			Some(models) if models.ccap.loaded()
+			             && models.cbody.loaded() => { models }
+			_ => {
+				capsules.drain(..);
+				return Ok(());
+			}
+		};
+		
+		if !capsules.is_empty() {
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
+			       .bind_vertex_buffers(0, models.ccap.vertices.clone())
+			       .bind_any_index_buffer(models.ccap.indices.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.shape_pipeline.layout().clone(),
+			                             0,
+			                             models.ccap.set.clone());
+		}
+		
+		for capsule in capsules.iter() {
+			let dir = capsule.point_b - capsule.point_a;
+			let transform_a = Similarity3::from_parts(capsule.point_a.coords.into(), face_upwards_lossy(-dir), capsule.radius * 2.0).to_homogeneous();
+			let transform_b = Similarity3::from_parts(capsule.point_b.coords.into(), face_upwards_lossy(dir), capsule.radius * 2.0).to_homogeneous();
+			
+			builder.push_constants(self.shape_pipeline.layout().clone(),
+			                       0,
+			                       (transform_a, capsule.color, capsule.edge))
+			       .draw_indexed(models.ccap.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0)?
+			       .push_constants(self.shape_pipeline.layout().clone(),
+			                       0,
+			                       (transform_b, capsule.color, capsule.edge))
+			       .draw_indexed(models.ccap.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0)?;
+		}
+		
+		if !capsules.is_empty() {
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
+			       .bind_vertex_buffers(0, models.cbody.vertices.clone())
+			       .bind_any_index_buffer(models.cbody.indices.clone())
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.shape_pipeline.layout().clone(),
+			                             0,
+			                             models.cbody.set.clone());
+		}
+		
+		for capsule in capsules.drain(..) {
+			let dir = capsule.point_b - capsule.point_a;
+			let transform = Isometry3::from_parts((capsule.point_a.coords + dir / 2.0).into(), face_upwards_lossy(dir))
+			                          .to_homogeneous()
+			                          .prepend_nonuniform_scaling(&vector!(capsule.radius * 2.0, dir.magnitude(), capsule.radius * 2.0));
+			
+			builder.push_constants(self.shape_pipeline.layout().clone(),
+			                       0,
+			                       (transform, capsule.color, capsule.edge))
+			       .draw_indexed(models.cbody.indices.len() as u32,
+			                     1,
+			                     0,
+			                     0,
+			                     0)?;
+		}
+		
+		Ok(())
+	}
 }
 
 
@@ -322,4 +507,11 @@ pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
+}
+
+#[derive(Debug, Error)]
+pub enum DebugRendererPreRenderError {
+	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
+	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] DescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 }
