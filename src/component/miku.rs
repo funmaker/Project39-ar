@@ -53,12 +53,12 @@ impl Component for Miku {
 		
 		for id in 0..model.bones.len() {
 			if model.bones[id].name.starts_with("Right H") || model.bones[id].name.starts_with("Left H") {
-				let swing = hair_swing.sin() / 30.0;
-				model.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
+				// let swing = hair_swing.sin() / 30.0;
+				// model.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 			if model.bones[id].name == "Bend" {
-				let swing = (hair_swing / 3.0).sin() * std::f32::consts::PI / 2.0;
-				model.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
+				// let swing = (hair_swing / 3.0).sin() * std::f32::consts::PI / 2.0;
+				// model.bones[id].anim_transform.isometry.rotation = Rot3::from_euler_angles(0.0, 0.0, swing);
 			}
 		}
 	

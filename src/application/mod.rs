@@ -111,6 +111,7 @@ impl Application {
 						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Left))
+						.collider_from_aabb()
 						.tag("Hand", Hand::Left)
 						.build()
 				);
@@ -121,6 +122,7 @@ impl Application {
 						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Right))
+						.collider_from_aabb()
 						.tag("Hand", Hand::Right)
 						.build()
 				);
@@ -169,8 +171,6 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
-		let mut rot = 0.0;
-		
 		while !self.window.quit_required {
 			let delta_time = instant.elapsed();
 			instant = Instant::now();
@@ -187,8 +187,6 @@ impl Application {
 				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
 			}
 			
-			rot += delta_time.as_secs_f32();
-			
 			self.setup_loop()?;
 			
 			{
@@ -202,6 +200,10 @@ impl Application {
 				
 				for entity in self.entities.values() {
 					entity.after_physics(physics);
+				}
+				
+				if debug::get_flag("DebugCollidersDraw").unwrap_or_default() {
+					physics.debug_draw_colliders();
 				}
 			}
 			
@@ -319,6 +321,7 @@ impl Application {
 	fn set_debug_flags(&self) {
 		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
 		debug::set_flag("DebugBonesDraw", self.input.keyboard.toggle(Key::B));
+		debug::set_flag("DebugCollidersDraw", !self.input.keyboard.toggle(Key::C));
 	}
 }
 

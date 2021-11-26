@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::mem::size_of;
 use std::sync::Arc;
 use num_traits::Zero;
+use rapier3d::geometry::Collider;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
@@ -20,7 +21,7 @@ mod joint;
 
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;
-use crate::application::Entity;
+use crate::application::{Application, Entity};
 use crate::utils::AutoCommandBufferBuilderEx;
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::debug;
@@ -30,6 +31,7 @@ pub use bone::{Bone, BoneConnection};
 pub use shared::{MMDModelShared, SubMeshDesc};
 pub use rigid_body::RigidBodyDesc;
 pub use joint::JointDesc;
+use crate::component::physics::collider::ColliderComponent;
 
 pub struct MMDModelState {
 	pub bones: Vec<Bone>,
@@ -161,6 +163,16 @@ impl MMDModel {
 }
 
 impl Component for MMDModel {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+		for rb in self.shared.rigid_bodies.iter() {
+			let mut collider: Collider = rb.collider.clone();
+			collider.set_position(self.state.borrow().bones[rb.bone].inv_model_transform.inverse() * collider.position());
+			entity.add_component(ColliderComponent::new(collider));
+		}
+		
+		Ok(())
+	}
+	
 	fn pre_render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
 		let state = &mut *self.state.borrow_mut();
 		

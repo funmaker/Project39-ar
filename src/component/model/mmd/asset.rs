@@ -218,9 +218,9 @@ impl AssetKey for PmxAsset {
 			
 			let translation = (rigid_body.shape_position - bone_defs[rigid_body.bone_index as usize].position).flip_x() * MMD_UNIT_SIZE;
 			let position = Isometry3::from_parts(translation.into(),
-			                                     Rot3::from_euler_angles(rigid_body.shape_rotation.x,
-			                                                             rigid_body.shape_rotation.y,
-			                                                             rigid_body.shape_rotation.z));
+			                                     Rot3::from_euler_angles( rigid_body.shape_rotation.x,
+			                                                             -rigid_body.shape_rotation.y,
+			                                                             -rigid_body.shape_rotation.z));
 			
 			let collider = match rigid_body.shape {
 				MMDShapeType::Sphere => {
@@ -234,9 +234,9 @@ impl AssetKey for PmxAsset {
 				MMDShapeType::Box => {
 					let volume = rigid_body.shape_size.x / rigid_body.shape_size.y / rigid_body.shape_size.z;
 					
-					ColliderBuilder::new(ColliderShape::cuboid(rigid_body.shape_size.x * MMD_UNIT_SIZE / 2.0,
-					                                           rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0,
-					                                           rigid_body.shape_size.z * MMD_UNIT_SIZE / 2.0))
+					ColliderBuilder::new(ColliderShape::cuboid(-rigid_body.shape_size.x * MMD_UNIT_SIZE,
+					                                            rigid_body.shape_size.y * MMD_UNIT_SIZE,
+					                                            rigid_body.shape_size.z * MMD_UNIT_SIZE))
 					                .position(position)
 					                .density(rigid_body.mass / volume)
 					                .build()
@@ -245,7 +245,9 @@ impl AssetKey for PmxAsset {
 					let volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
 					           + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
 					
-					ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.x / 2.0, 0.0], point![0.0, rigid_body.shape_size.x / 2.0, 0.0], rigid_body.shape_size.y))
+					ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
+					                                            point![0.0, rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
+					                                            rigid_body.shape_size.x * MMD_UNIT_SIZE))
 					                .position(position)
 					                .density(rigid_body.mass / volume)
 					                .build()

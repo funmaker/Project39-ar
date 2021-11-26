@@ -148,7 +148,7 @@ impl PipelineConstructor for DebugShapePipeline {
 					depth_range: 0.0..1.0,
 				}))
 				.fragment_shader(fs.main_entry_point(), ())
-				.depth_stencil_simple_depth()
+				.depth_stencil_disabled()
 				.cull_mode_back()
 				.blend_collective(pre_mul_alpha_blending())
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())

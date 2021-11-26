@@ -1,7 +1,8 @@
 use std::time::Duration;
 use rapier3d::prelude::*;
+use crate::debug;
 
-use crate::math::Vec3;
+use crate::math::{Color, Vec3};
 
 pub struct Physics {
 	pub rigid_body_set: RigidBodySet,
@@ -57,5 +58,25 @@ impl Physics {
 		self.query_pipeline.update(&self.island_manager,
 		                           &self.rigid_body_set,
 		                           &self.collider_set);
+	}
+	
+	pub fn debug_draw_colliders(&self) {
+		for (_, collider) in self.collider_set.iter() {
+			match collider.shape().as_typed_shape() {
+				TypedShape::Ball(ball) => {
+					debug::draw_sphere(*collider.position(), ball.radius, Color::black().opactiy(0.25), Color::magenta());
+				},
+				TypedShape::Cuboid(cuboid) => {
+					debug::draw_box(*collider.position(), cuboid.half_extents * 2.0, Color::black().opactiy(0.25), Color::magenta());
+				},
+				TypedShape::Capsule(capsule) => {
+					debug::draw_capsule(collider.position().transform_point(&capsule.segment.a),
+					                    collider.position().transform_point(&capsule.segment.b),
+					                    capsule.radius,
+					                    Color::black().opactiy(0.25), Color::magenta());
+				},
+				_ => {},
+			}
+		}
 	}
 }

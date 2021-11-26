@@ -29,6 +29,8 @@ pub struct MMDModelShared {
 	pub morphs_pool: CpuBufferPool<IVec4>,
 	pub morphs_pipeline: Arc<ComputePipeline>,
 	pub fence: FenceCheck,
+	pub rigid_bodies: Vec<RigidBodyDesc>,
+	pub joints: Vec<JointDesc>,
 }
 
 impl MMDModelShared {
@@ -221,6 +223,8 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			morphs_pool,
 			morphs_pipeline,
 			fence,
+			rigid_bodies: self.rigid_bodies,
+			joints: self.joints,
 		})
 	}
 }
