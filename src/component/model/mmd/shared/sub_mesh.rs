@@ -108,3 +108,17 @@ impl SubMesh {
 	}
 }
 
+pub struct SubMeshDesc {
+	pub range: Range<u32>,
+	pub texture: Option<usize>,
+	pub toon: Option<usize>,
+	pub sphere_map: Option<usize>,
+	pub color: Vec4,
+	pub specular: Vec3,
+	pub specularity: f32,
+	pub ambient: Vec3,
+	pub sphere_mode: u32,
+	pub no_cull: bool,
+	pub opaque: bool,
+	pub edge: Option<(f32, Vec4)>,
+}

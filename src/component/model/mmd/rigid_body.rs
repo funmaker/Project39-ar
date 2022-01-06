@@ -1,37 +1,25 @@
-use rapier3d::geometry::Collider;
+use rapier3d::prelude::{ColliderHandle, JointHandle, RigidBodyHandle};
 
-pub type PhysicsMode = mmd::pmx::rigid_body::PhysicsMode;
+use crate::math::Isometry3;
 
-#[derive(Clone)]
-pub struct RigidBodyDesc {
-	pub name: String,
+pub struct MMDRigidBody {
+	pub parent: Option<usize>,
 	pub bone: usize,
-	pub collider: Collider,
-	pub move_attenuation: f32,
-	pub rotation_damping: f32,
-	pub repulsion: f32,
-	pub fiction: f32,
-	pub physics_mode: PhysicsMode,
+	pub handle: RigidBodyHandle,
+	pub colliders: Vec<ColliderHandle>,
+	pub joint: JointHandle,
+	pub rest_pos: Isometry3,
 }
 
-impl RigidBodyDesc {
-	pub fn new(name: impl Into<String>,
-	           bone: usize,
-	           collider: Collider,
-	           move_attenuation: f32,
-	           rotation_damping: f32,
-	           repulsion: f32,
-	           fiction: f32,
-	           physics_mode: PhysicsMode) -> Self {
-		RigidBodyDesc {
-			name: name.into(),
+impl MMDRigidBody {
+	pub fn new(handle: RigidBodyHandle, bone: usize, rest_pos: Isometry3) -> Self {
+		MMDRigidBody {
+			parent: None,
 			bone,
-			collider,
-			move_attenuation,
-			rotation_damping,
-			repulsion,
-			fiction,
-			physics_mode,
+			handle,
+			colliders: Vec::new(),
+			joint: JointHandle::invalid(),
+			rest_pos,
 		}
 	}
 }

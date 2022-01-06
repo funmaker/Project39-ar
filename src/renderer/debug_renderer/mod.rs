@@ -21,6 +21,7 @@ use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePi
 use super::pipelines::{Pipelines, PipelineError};
 use super::{Renderer, CommonsUBO};
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
+use crate::renderer::assets_manager::texture::TextureAsset;
 
 pub struct DebugRenderer {
 	pub text_cache: RefCell<TextCache>,
@@ -83,10 +84,10 @@ impl DebugRenderer {
 			
 			if load_models {
 				self.models = Some(DebugModels {
-					dbox: renderer.load(ObjAsset::at("debug/box.obj", "debug/tex.png"))?,
-					sphere: renderer.load(ObjAsset::at("debug/sphere.obj", "debug/tex.png"))?,
-					cbody: renderer.load(ObjAsset::at("debug/cbody.obj", "debug/tex.png"))?,
-					ccap: renderer.load(ObjAsset::at("debug/ccap.obj", "debug/tex.png"))?,
+					dbox: renderer.load(ObjAsset::at("debug/box.obj", TextureAsset::at("debug/tex.png").nearest().no_mipmaps()))?,
+					sphere: renderer.load(ObjAsset::at("debug/sphere.obj", TextureAsset::at("debug/tex.png").nearest().no_mipmaps()))?,
+					cbody: renderer.load(ObjAsset::at("debug/cbody.obj", TextureAsset::at("debug/tex.png").nearest().no_mipmaps()))?,
+					ccap: renderer.load(ObjAsset::at("debug/ccap.obj", TextureAsset::at("debug/tex.png").nearest().no_mipmaps()))?,
 				});
 			}
 		}
@@ -169,9 +170,9 @@ impl DebugRenderer {
 			Ok::<_, DebugRendererRenderError>(())
 		})?;
 		
+		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), builder))?;
 		DEBUG_BOXES.with(|boxes| self.draw_boxes(&mut *boxes.borrow_mut(), builder))?;
 		DEBUG_SPHERES.with(|spheres| self.draw_spheres(&mut *spheres.borrow_mut(), builder))?;
-		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), builder))?;
 		
 		Ok(())
 	}

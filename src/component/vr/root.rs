@@ -5,18 +5,16 @@ use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use rapier3d::prelude::RigidBodyBuilder;
-use image::{DynamicImage, ImageBuffer, GenericImageView};
+use image::{DynamicImage, ImageBuffer};
 use openvr::render_models;
-use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
-use vulkano::format::Format;
 
 use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
 use super::VrTracked;
-use crate::utils::ImageEx;
 use crate::component::hand::HandComponent;
+use crate::renderer::assets_manager::texture::TextureBundle;
 
 #[derive(ComponentBase)]
 pub struct VrRoot {
@@ -55,21 +53,13 @@ impl Component for VrRoot {
 							let vertices: Vec<Vertex> = model.vertices().iter().map(Into::into).collect();
 							let indices: Vec<u16> = model.indices().iter().copied().map(Into::into).collect();
 							let size = texture.dimensions();
-							let source = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
-							let width = source.width();
-							let height = source.height();
-							
-							let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
-							                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-							                                                       MipmapsCount::Log2,
-							                                                       Format::R8G8B8A8_UNORM,
-							                                                       renderer.load_queue.clone())?;
+							let image = DynamicImage::ImageRgba8(ImageBuffer::from_raw(size.0 as u32, size.1 as u32, texture.data().into()).unwrap());
+							let texture = TextureBundle::from_raw_simple(image, renderer)?;
 							
 							let model = SimpleModel::new(
 								&vertices,
 								&indices,
-								image,
-								image_promise,
+								texture,
 								renderer,
 							)?;
 							
@@ -81,7 +71,7 @@ impl Component for VrRoot {
 								.component(model)
 								.component(VrTracked::new(tracked_id, self.as_cref()))
 								.tag("NoGrab", true)
-								.collider_from_aabb();
+								.collider_from_aabb(1000.0);
 							
 							if class == TrackedDeviceClass::HMD {
 								entity = entity.hidden(true)

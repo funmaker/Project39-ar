@@ -62,7 +62,6 @@ impl Tool for RopeTool {
 			} else {
 				self.selected = hit_ent.as_ref();
 				self.selected_local_offset = hit_ent.state().position.inverse_transform_point(&hit_pos);
-				println!("{}", self.selected_local_offset);
 			}
 		}
 		

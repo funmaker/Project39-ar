@@ -134,10 +134,10 @@
 左足ＩＫ先,Left toe IK tip
 右足ＩＫ先,Right foot IK tip
 センター先,Center tip
-スカート_0_0,Skirt_0_0
-スカート_0_1,Skirt_0_1
-スカート_0_2,Skirt_0_2
-スカート_0_3,Skirt_0_3
+スカート_0_0,skirt_0_0
+スカート_0_1,skirt_0_1
+スカート_0_2,skirt_0_2
+スカート_0_3,skirt_0_3
 スカート_0_4,skirt_0_4
 スカート_0_5,skirt_0_5
 スカート_0_6,skirt_0_6
@@ -153,11 +153,11 @@
 スカート_1_0,skirt_1_0
 スカート_1_1,skirt_1_1
 スカート_1_2,skirt_1_2
-スカート_1_3,Skirt_1_3
-スカート_1_4,Skirt_1_4
-スカート_1_5,Skirt_1_5
-スカート_1_6,Skirt_1_6
-スカート_1_7,Skirt_1_7
+スカート_1_3,skirt_1_3
+スカート_1_4,skirt_1_4
+スカート_1_5,skirt_1_5
+スカート_1_6,skirt_1_6
+スカート_1_7,skirt_1_7
 スカート_1_8,skirt_1_8
 スカート_1_9,skirt_1_9
 スカート_1_10,skirt_1_10
@@ -379,3 +379,225 @@ Tpose2,Tpose2
 eye暗い,Eye dark
 Hair shadow消え,Hair shadow off
 TDApose,TDApose
+前髪1,Bangs 1
+右前髪,Right forelock
+右前髪1,Right forelock 1
+左前髪,Left bangs
+左前髪1,Left forelock1
+左r,left r
+右r,right r
+ﾈｸﾀｲ1,Necktie 1
+ﾈｸﾀｲ2,Necktie 2
+ﾈｸﾀｲ3,Necktie 3
+ﾈｸﾀｲ4,Necktie 4
+スカート_0_0,skirt_0_0
+スカート_0_1,skirt_0_1
+スカート_0_2,skirt_0_2
+スカート_0_3,skirt_0_3
+スカート_0_4,skirt_0_4
+スカート_0_5,skirt_0_5
+スカート_0_6,skirt_0_6
+スカート_0_7,skirt_0_7
+スカート_0_8,skirt_0_8
+スカート_0_9,skirt_0_9
+スカート_0_10,skirt_0_10
+スカート_0_11,skirt_0_11
+スカート_0_12,skirt_0_12
+スカート_0_13,skirt_0_13
+スカート_0_14,skirt_0_14
+スカート_0_15,skirt_0_15
+スカート横_0_0,skirt_0_0 beside
+スカート横_0_1,skirt_0_1 beside skirt
+スカート横_0_2,skirt_0_2 beside
+スカート横_0_3,skirt_0_3 beside
+スカート横_0_4,skirt_0_4 beside skirt
+スカート横_0_5,next to skirt_0_5
+スカート横_0_6,next to skirt_0_6
+スカート横_0_7,next to skirt_0_7
+スカート横_0_8,skirt side_0_8
+スカート横_0_9,next to skirt_0_9
+スカート横_0_10,next to skirt_0_10
+スカート横_0_11,next to skirt_0_11
+スカート横_0_12,beside skirt_0_12
+スカート横_0_13,beside skirt_0_13
+スカート横_0_14,beside skirt_0_14
+スカート横_0_15,skirt_0_15 beside_the_skirt
+右Y,Right Y
+左Y,Left Y
+右H2,Right H2
+右H3,Right H3
+右H4,Right H4
+右H5,Right H5
+右H6,Right H6
+右H7,Right H7
+右H8,Right H8
+右H9,Right H9
+右H10,Right H10
+右H11,Right H11
+右H12,Right H12
+右H13,Right H13
+右H14,Right H14
+右H15,Right H15
+右H16,Right H16
+右H17,Right H17
+右H18,Right H18
+右H19,Right H19
+右H20,Right H20
+右H2 1,Right H2 1
+右H2 2,Right H2 2
+右H2 3,Right H2 3
+右H2 4,Right H2 4
+右H2 5,Right H2 5
+右H3 1,Right H3 1
+右H3 2,Right H3 2
+右H4 1,Right H4 1
+右H5 1,Right H5 1
+右H5 2,Right H5 2
+右H5 3,Right H5 3
+左H2,Left H2
+左H3,Left H3
+左H4,Left H4
+左H5,Left H5
+左H6,Left H6
+左H7,Left H7
+左H8,Left H8
+左H9,Left H9
+左H10,Left H10
+左H11,Left H11
+左H12,Left H12
+左H13,Left H13
+左H14,Left H14
+左H15,Left H15
+左H16,Left H16
+左H17,Left H17
+左H18,Left H18
+左H19,Left H19
+左H20,Left H20
+左H2 1,Left H2 1
+左H2 2,Left H2 2
+左H2 3,Left H2 3
+左H2 4,Left H2 4
+左H2 5,Left H2 5
+左H3 1,Left H3 1
+左H3 2,Left H3 2
+左H4 1,Left H4 1
+左H5 1,Left H5 1
+左H5 2,Left H5 2
+左H5 3,Left H5 3
+上半身,Upper body
+上半身-2,Upper body-2
+上半身2,Upper body-2
+首,Neck
+頭,Head
+頭2,Head 2
+頭3,Head 3
+前髪1,Forelock1
+右前髪,Right forelock
+右前髪1,Right forelock1
+左前髪,Left forelock
+左前髪1,Left forelock1
+左r,left r
+右r,Right r
+下半身2,Lower half body2
+下半身,lower half of body
+左肩,Left shoulder
+右肩,Right shoulder
+左腕,Left arm
+右腕,Right arm
+左ひじ,Left elbow
+右ひじ,Right elbow
+左手首,Left wrist
+右手首,Right wrist
+左足,Left thigh
+右足,Right thigh
+右足辅,Right top tip
+左足辅,Left top tip
+左ひざ,Left leg
+右ひざ,right leg
+左足首,Left feet
+右足首,right feet
+頭1,head1
+ﾈｸﾀｲ1,Necktie 1
+ﾈｸﾀｲ2,Necktie 2
+ﾈｸﾀｲ3,Necktie 3
+ﾈｸﾀｲ4,Necktie 4
+スカート_0_0,skirt_0_0
+スカート_0_1,skirt_0_1
+スカート_0_2,skirt_0_2
+スカート_0_3,skirt_0_3
+スカート_0_4,skirt_0_4
+スカート_0_5,skirt_0_5
+スカート_0_6,skirt_0_6
+スカート_0_7,skirt_0_7
+スカート_0_8,skirt_0_8
+スカート_0_9,skirt_0_9
+スカート_0_10,skirt_0_10
+スカート_0_11,skirt_0_11
+スカート_0_12,skirt_0_12
+スカート_0_13,skirt_0_13
+スカート_0_14,skirt_0_14
+スカート_0_15,skirt_0_15
+右Y,Right Y
+左Y,Left Y
+右H1,Right H1
+右H2,Right H2
+右H3,Right H3
+右H4,Right H4
+右H5,Right H5
+右H6,Right H6
+右H7,Right H7
+右H8,Right H8
+右H9,Right H9
+右H10,Right H10
+右H11,Right H11
+右H12,Right H12
+右H13,Right H13
+右H14,Right H14
+右H15,Right H15
+右H16,Right H16
+右H17,Right H17
+右H18,Right H18
+右H19,Right H19
+右H20,Right H20
+右H2 1,Right H2 1
+右H2 2,Right H2 2
+‬右H2 3,Right H2 3
+右H2 4,Right H2 4
+右H2 5,Right H2 5
+右H3 1,Right H3 1
+右H3 2,Right H3 2
+右H4 1,Right H4 1
+右H5 1,Right H5 1
+右H5 2,Right H5 2
+右H5 3,Right H5 3
+左H1,Left H1
+左H2,Left H2
+左H3,Left H3
+左H4,Left H4
+左H5,Left H5
+左H6,Left H6
+左H7,Left H7
+左H8,Left H8
+左H9,Left H9
+左H10,Left H10
+左H11,Left H11
+左H12,Left H12
+左H13,Left H13
+左H14,Left H14
+左H15,Left H15
+左H16,Left H16
+左H17,Left H17
+左H18,Left H18
+左H19,Left H19
+左H20,Left H20
+左H2 1,Left H2 1
+左H2 2,Left H2 2
+左H2 3,Left H2 3
+左H2 4,Left H2 4
+左H2 5,Left H2 5
+左H3 1,Left H3 1
+左H3 2,Left H3 2
+左H4 1,Left H4 1
+左H5 1,Left H5 1
+左H5 2,Left H5 2
+左H5 3,Left H5 3

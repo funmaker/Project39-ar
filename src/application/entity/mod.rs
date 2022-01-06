@@ -127,18 +127,16 @@ impl Entity {
 			return Ok(());
 		}
 		
-		if render_type == RenderType::Opaque {
+		if debug::get_flag_or_default("DebugEntityDraw") && render_type == RenderType::Opaque {
 			let pos: Point3 = state.position.translation.vector.into();
 			let ang = &state.position.rotation;
 			
-			if debug::get_flag_or_default("DebugEntityDraw") {
-				debug::draw_point(&pos, 32.0, Color::magenta());
-				debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
-				debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
-				debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
-				debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
-				debug::draw_text(&format!("{}", self.mass.get()), &pos, debug::DebugOffset::bottom_right(32.0, 160.0), 128.0, Color::magenta());
-			}
+			debug::draw_point(&pos, 32.0, Color::magenta());
+			debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
+			debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
+			debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
+			debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+			debug::draw_text(&format!("{}", self.mass.get()), &pos, debug::DebugOffset::bottom_right(32.0, 160.0), 128.0, Color::magenta());
 		}
 		
 		for component in self.components.values() {

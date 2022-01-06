@@ -35,7 +35,7 @@ impl Component for ColliderComponent {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		let mut collider = self.template.clone();
-		collider.user_data = get_userdata(self.inner.entity_id.unwrap(), self.inner.id);
+		collider.user_data = get_userdata(entity.id, self.id());
 		self.handle.set(physics.collider_set.insert_with_parent(collider, entity.rigid_body, &mut physics.rigid_body_set));
 		
 		Ok(())

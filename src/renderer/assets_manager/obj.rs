@@ -16,10 +16,10 @@ pub struct ObjAsset {
 }
 
 impl ObjAsset {
-	pub fn at(model_path: impl AsRef<Path>, texture_path: impl AsRef<Path>) -> Self {
+	pub fn at(model_path: impl AsRef<Path>, texture: impl Into<TextureAsset>) -> Self {
 		ObjAsset {
 			model: model_path.as_ref().to_path_buf(),
-			texture: TextureAsset::at(texture_path),
+			texture: texture.into(),
 		}
 	}
 }
@@ -29,14 +29,13 @@ impl AssetKey for ObjAsset {
 	type Error = ObjLoadError;
 	
 	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
+		let texture = assets_manager.load(self.texture.clone(), renderer)?;
 		let model: Obj<obj::TexturedVertex, u32> = obj::load_obj(AssetsManager::find_asset(&self.model)?)?;
-		let (texture, fence_check) = assets_manager.load(self.texture.clone(), renderer)?;
 		
 		Ok(SimpleModel::new(
 			&model.vertices.iter().map(Into::into).collect::<Vec<_>>(),
 			&model.indices,
 			texture,
-			fence_check.future(),
 			renderer,
 		)?)
 	}
@@ -64,6 +63,5 @@ pub enum ObjLoadError {
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] vulkano::sync::FlushError),
 }

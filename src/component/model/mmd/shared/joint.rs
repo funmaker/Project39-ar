@@ -5,8 +5,8 @@ pub type JointType = mmd::pmx::joint::JointType;
 pub struct JointDesc {
 	pub name: String,
 	pub joint_type: JointType,
-	pub rigid_body_a: usize,
-	pub rigid_body_b: usize,
+	pub collider_a: usize,
+	pub collider_b: usize,
 	pub position: Isometry3,
 	pub position_min: Vec3,
 	pub position_max: Vec3,
@@ -19,8 +19,8 @@ pub struct JointDesc {
 impl JointDesc {
 	pub fn new(name: impl Into<String>,
 	           joint_type: JointType,
-	           rigid_body_a: usize,
-	           rigid_body_b: usize,
+	           collider_a: usize,
+	           collider_b: usize,
 	           position: Isometry3,
 	           position_min: Vec3,
 	           position_max: Vec3,
@@ -31,8 +31,8 @@ impl JointDesc {
 		JointDesc {
 			name: name.into(),
 			joint_type,
-			rigid_body_a,
-			rigid_body_b,
+			collider_a,
+			collider_b,
 			position,
 			position_min,
 			position_max,

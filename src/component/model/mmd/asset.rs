@@ -8,7 +8,7 @@ use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::WeightDeform;
-use rapier3d::geometry::{ColliderBuilder, ColliderShape};
+use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
 
 use crate::renderer::Renderer;
 use crate::debug;
@@ -16,7 +16,8 @@ use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager};
-use super::{Vertex, MMDModelShared, BoneConnection, Bone, SubMeshDesc, JointDesc, RigidBodyDesc};
+use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
+use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
 
@@ -180,13 +181,13 @@ impl AssetKey for PmxAsset {
 				model_pos - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE
 			};
 			
-			model.add_bone(Bone::new(name,
-			                         parent,
-			                         color,
-			                         &model_pos,
-			                         &local_pos,
-			                         display,
-			                         connection));
+			model.add_bone(MMDBone::new(name,
+			                            parent,
+			                            color,
+			                            &model_pos,
+			                            &local_pos,
+			                            display,
+			                            connection));
 		}
 		
 		let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
@@ -222,46 +223,41 @@ impl AssetKey for PmxAsset {
 			                                                             -rigid_body.shape_rotation.y,
 			                                                             -rigid_body.shape_rotation.z));
 			
-			let collider = match rigid_body.shape {
+			let volume;
+			let collider;
+			match rigid_body.shape {
 				MMDShapeType::Sphere => {
-					let volume = 4.0 / 3.0 * PI * rigid_body.shape_size.x;
-					
-					ColliderBuilder::new(ColliderShape::ball(rigid_body.shape_size.x * MMD_UNIT_SIZE))
-					                .position(position)
-					                .density(rigid_body.mass / volume)
-					                .build()
+					volume = 4.0 / 3.0 * PI * rigid_body.shape_size.x;
+					collider = ColliderBuilder::new(ColliderShape::ball(rigid_body.shape_size.x * MMD_UNIT_SIZE))
 				},
 				MMDShapeType::Box => {
-					let volume = rigid_body.shape_size.x / rigid_body.shape_size.y / rigid_body.shape_size.z;
-					
-					ColliderBuilder::new(ColliderShape::cuboid(-rigid_body.shape_size.x * MMD_UNIT_SIZE,
-					                                            rigid_body.shape_size.y * MMD_UNIT_SIZE,
-					                                            rigid_body.shape_size.z * MMD_UNIT_SIZE))
-					                .position(position)
-					                .density(rigid_body.mass / volume)
-					                .build()
+					volume = rigid_body.shape_size.x / rigid_body.shape_size.y / rigid_body.shape_size.z;
+					collider = ColliderBuilder::new(ColliderShape::cuboid(rigid_body.shape_size.x * MMD_UNIT_SIZE,
+					                                                      rigid_body.shape_size.y * MMD_UNIT_SIZE,
+					                                                      rigid_body.shape_size.z * MMD_UNIT_SIZE))
 				},
 				MMDShapeType::Capsule => {
-					let volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
-					           + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
-					
-					ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
-					                                            point![0.0, rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
-					                                            rigid_body.shape_size.x * MMD_UNIT_SIZE))
-					                .position(position)
-					                .density(rigid_body.mass / volume)
-					                .build()
+					volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
+					       + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
+					collider = ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
+					                                                       point![0.0,  rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
+					                                                       rigid_body.shape_size.x * MMD_UNIT_SIZE))
 				},
 			};
 			
-			model.add_rigid_body(RigidBodyDesc::new(name,
-			                                        rigid_body.bone_index as usize,
-			                                        collider,
-			                                        rigid_body.move_attenuation,
-			                                        rigid_body.rotation_damping,
-			                                        rigid_body.repulsion,
-			                                        rigid_body.fiction,
-			                                        rigid_body.physics_mode));
+			let collider = collider.position(position)
+			                       .collision_groups(InteractionGroups::new(1 << rigid_body.group_id, 0xFFFF0000 | rigid_body.non_collision_mask as u32))
+			                       .density(rigid_body.mass / volume)
+			                       .build();
+			
+			model.add_collider(ColliderDesc::new(name,
+			                                     rigid_body.bone_index as usize,
+			                                     collider,
+			                                     rigid_body.move_attenuation,
+			                                     rigid_body.rotation_damping,
+			                                     rigid_body.repulsion,
+			                                     rigid_body.fiction,
+			                                     rigid_body.physics_mode));
 		}
 		
 		let mut joints_reader = mmd::JointReader::new(rigid_body_reader)?;
@@ -280,8 +276,8 @@ impl AssetKey for PmxAsset {
 			let translation = (joint.position).flip_x() * MMD_UNIT_SIZE;
 			let position = Isometry3::from_parts(translation.into(),
 			                                     Rot3::from_euler_angles(joint.rotation.x,
-			                                                             joint.rotation.y,
-			                                                             joint.rotation.z));
+			                                                            -joint.rotation.y,
+			                                                            -joint.rotation.z));
 			
 			model.add_joint(JointDesc::new(name,
 			                               joint.joint_type,

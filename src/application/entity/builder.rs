@@ -88,7 +88,7 @@ impl EntityBuilder {
 		self
 	}
 	
-	pub fn collider_from_aabb(self) -> Self {
+	pub fn collider_from_aabb(self, density: f32) -> Self {
 		for component in &self.components {
 			if let Some(model) = component.as_any().downcast_ref::<SimpleModel>() {
 				let aabb = model.aabb();
@@ -96,6 +96,7 @@ impl EntityBuilder {
 				
 				return self.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
 				           .translation(aabb.center().coords)
+				           .density(density)
 				           .build());
 			}
 		}

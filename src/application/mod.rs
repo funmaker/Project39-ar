@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
@@ -111,7 +111,7 @@ impl Application {
 						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Left))
-						.collider_from_aabb()
+						.collider_from_aabb(1000.0)
 						.tag("Hand", Hand::Left)
 						.build()
 				);
@@ -122,7 +122,7 @@ impl Application {
 						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4).into(),
 						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Right))
-						.collider_from_aabb()
+						.collider_from_aabb(1000.0)
 						.tag("Hand", Hand::Right)
 						.build()
 				);
@@ -141,8 +141,8 @@ impl Application {
 			
 			application.add_entity(
 				Entity::builder("初音ミク")
-					.translation(point!(0.0, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI, 0.0))
+					.translation(point!(1.0, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * 0.6, 0.0))
 					.component(Miku::new())
 					.build()
 			);
@@ -157,11 +157,31 @@ impl Application {
 					.build()
 			);
 			
+			// let box1 = application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+			// 		.collider_from_aabb(1000.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
+			// 		.build()
+			// );
+			//
+			// let mut joint = BallJoint::new(
+			// 	Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)),
+			// 	Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)),
+			// );
+			// joint.limits_enabled = true;
+			// joint.limits_swing_angle = 30.0 / 180.0 * PI;
+			// joint.limits_twist_angle = 30.0 / 180.0 * PI;
+			//
 			// application.add_entity(
-			// 	"Test",
-			// 	crate::renderer::model::mmd::test::test_model(&mut renderer),
-			// 	point!(2.0, 0.0, -1.5),
-			// 	Rot3::from_euler_angles(0.0, 0.0, 0.0),
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+			// 		.component(JointComponent::new(joint, box1))
+			// 		.collider_from_aabb(1000000.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
+			// 		.build()
 			// );
 		}
 		
@@ -172,8 +192,13 @@ impl Application {
 		let mut instant = Instant::now();
 		
 		while !self.window.quit_required {
-			let delta_time = instant.elapsed();
+			let mut delta_time = instant.elapsed();
 			instant = Instant::now();
+			
+			if delta_time.as_millis() > 250 {
+				println!("Can't keep up! Delta time: {:.2}s", delta_time.as_secs_f32());
+				delta_time = Duration::from_millis(250);
+			}
 			
 			self.input.reset();
 			self.window.pull_events(&mut self.input);
@@ -202,9 +227,7 @@ impl Application {
 					entity.after_physics(physics);
 				}
 				
-				if debug::get_flag("DebugCollidersDraw").unwrap_or_default() {
-					physics.debug_draw_colliders();
-				}
+				physics.debug_draw();
 			}
 			
 			for entity in self.entities.values() {
@@ -321,7 +344,9 @@ impl Application {
 	fn set_debug_flags(&self) {
 		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
 		debug::set_flag("DebugBonesDraw", self.input.keyboard.toggle(Key::B));
-		debug::set_flag("DebugCollidersDraw", !self.input.keyboard.toggle(Key::C));
+		debug::set_flag("DebugCollidersDraw", self.input.keyboard.toggle(Key::C));
+		debug::set_flag("DebugJointsDraw", self.input.keyboard.toggle(Key::J));
+		debug::set_flag("DebugRigidBodiesDraw", self.input.keyboard.toggle(Key::M));
 	}
 }
 

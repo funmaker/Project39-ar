@@ -1,60 +1,25 @@
-use std::sync::Arc;
-use std::ops::Range;
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
-use vulkano::descriptor_set::layout::DescriptorSetLayout;
-use vulkano::pipeline::ComputePipeline;
 
 use crate::component::model::{ModelError, VertexIndex};
-use crate::renderer::pipelines::mmd::{MMDPipelineOpaque, MMDPipelineMorphs, MORPH_GROUP_SIZE};
+use crate::renderer::pipelines::mmd::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
-use crate::utils::{VecFuture, ImageEx, FenceCheck, ImmutableIndexBuffer};
-use crate::math::{AMat4, IVec4, Vec3, Vec4};
-use super::sub_mesh::{SubMesh, MaterialInfo};
-use super::{Vertex, Bone, RigidBodyDesc, JointDesc};
-
-pub struct MMDModelShared {
-	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	pub indices: ImmutableIndexBuffer,
-	pub sub_meshes: Vec<SubMesh>,
-	pub default_bones: Vec<Bone>,
-	pub bones_pool: CpuBufferPool<AMat4>,
-	pub morphs_offsets: Arc<ImmutableBuffer<[IVec4]>>,
-	pub morphs_sizes: Vec<usize>,
-	pub morphs_max_size: usize,
-	pub morphs_pool: CpuBufferPool<IVec4>,
-	pub morphs_pipeline: Arc<ComputePipeline>,
-	pub fence: FenceCheck,
-	pub rigid_bodies: Vec<RigidBodyDesc>,
-	pub joints: Vec<JointDesc>,
-}
-
-impl MMDModelShared {
-	pub fn new<VI: VertexIndex>(vertices: Vec<Vertex>, indices: Vec<VI>) -> MMDModelSharedBuilder<VI> {
-		MMDModelSharedBuilder::new(vertices, indices)
-	}
-	
-	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<DescriptorSetLayout>, ModelError> {
-		self.sub_meshes.first()
-		               .map(|mesh| mesh.main.0.clone())
-		               .ok_or(ModelError::NoLayout)
-		               .or_else(|_| renderer.pipelines.get::<MMDPipelineOpaque>().map_err(Into::into).map(Into::into))
-		               .and_then(|pipeline| pipeline.layout().descriptor_set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
-	}
-}
+use crate::utils::{VecFuture, ImageEx, FenceCheck};
+use crate::math::{IVec4, Vec3};
+use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
 pub struct MMDModelSharedBuilder<VI: VertexIndex> {
 	vertices: Vec<Vertex>,
 	indices: Vec<VI>,
 	textures: Vec<DynamicImage>,
 	sub_meshes: Vec<SubMeshDesc>,
-	bones: Vec<Bone>,
+	bones: Vec<MMDBone>,
 	morphs: Vec<Vec<(VI, Vec3)>>,
-	rigid_bodies: Vec<RigidBodyDesc>,
+	colliders: Vec<ColliderDesc>,
 	joints: Vec<JointDesc>,
 }
 
@@ -67,7 +32,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			sub_meshes: vec![],
 			bones: vec![],
 			morphs: vec![],
-			rigid_bodies: vec![],
+			colliders: vec![],
 			joints: vec![],
 		}
 	}
@@ -82,7 +47,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn add_bone(&mut self, bone: Bone) -> &mut Self {
+	pub fn add_bone(&mut self, bone: MMDBone) -> &mut Self {
 		self.bones.push(bone);
 		self
 	}
@@ -92,8 +57,8 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn add_rigid_body(&mut self, desc: RigidBodyDesc) -> &mut Self {
-		self.rigid_bodies.push(desc);
+	pub fn add_collider(&mut self, desc: ColliderDesc) -> &mut Self {
+		self.colliders.push(desc);
 		self
 	}
 	
@@ -119,7 +84,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let mut images = vec![];
 		
 		let (default_tex, default_tex_promise) = {
-			let texture_reader = Cursor::new(&include_bytes!("default_tex.png")[..]);
+			let texture_reader = Cursor::new(&include_bytes!("../default_tex.png")[..]);
 			let image = image::load(texture_reader, ImageFormat::Png)?;
 			let width = image.width();
 			let height = image.height();
@@ -181,8 +146,8 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		
 		let default_bones = self.bones;
 		let morphs_sizes = self.morphs.iter()
-		                              .map(|v| v.len())
-		                              .collect::<Vec<_>>();
+		                       .map(|v| v.len())
+		                       .collect::<Vec<_>>();
 		let morphs_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
 		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
@@ -223,24 +188,8 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			morphs_pool,
 			morphs_pipeline,
 			fence,
-			rigid_bodies: self.rigid_bodies,
+			colliders: self.colliders,
 			joints: self.joints,
 		})
 	}
 }
-
-pub struct SubMeshDesc {
-	pub range: Range<u32>,
-	pub texture: Option<usize>,
-	pub toon: Option<usize>,
-	pub sphere_map: Option<usize>,
-	pub color: Vec4,
-	pub specular: Vec3,
-	pub specularity: f32,
-	pub ambient: Vec3,
-	pub sphere_mode: u32,
-	pub no_cull: bool,
-	pub opaque: bool,
-	pub edge: Option<(f32, Vec4)>,
-}
-

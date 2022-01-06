@@ -5,7 +5,7 @@ use image::ImageFormat;
 
 use crate::renderer::Renderer;
 use crate::math::{Color, Vec3};
-use super::{MMDModel, Vertex, Bone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
+use super::{MMDModel, Vertex, MMDBone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
 
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel {
@@ -66,31 +66,31 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 		edge: None
 	});
 	
-	model.add_bone(Bone::new("Root",
-	                         None,
-	                         Color::cyan(),
-	                         &vector!(0.0, 0.0, 0.0),
-	                         &vector!(0.0, 0.0, 0.0),
-	                         true,
-	                         BoneConnection::Bone(1)));
+	model.add_bone(MMDBone::new("Root",
+	                            None,
+	                            Color::cyan(),
+	                            &vector!(0.0, 0.0, 0.0),
+	                            &vector!(0.0, 0.0, 0.0),
+	                            true,
+	                            BoneConnection::Bone(1)));
 	
 	for id in 1..=bones_num {
-		model.add_bone(Bone::new("Bend",
-		                         Some(id - 1),
-		                         Color::cyan(),
-		                         &vector!(0.0, height / (bones_num + 1) as f32 * id as f32, 0.0),
-		                         &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
-		                         true,
-		                         BoneConnection::Bone(id + 1)));
+		model.add_bone(MMDBone::new("Bend",
+		                            Some(id - 1),
+		                            Color::cyan(),
+		                            &vector!(0.0, height / (bones_num + 1) as f32 * id as f32, 0.0),
+		                            &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
+		                            true,
+		                            BoneConnection::Bone(id + 1)));
 	}
 	
-	model.add_bone(Bone::new("Tip",
-	                         Some(bones_num),
-	                         Color::cyan(),
-	                         &vector!(0.0, height, 0.0),
-	                         &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
-	                         true,
-	                         BoneConnection::None));
+	model.add_bone(MMDBone::new("Tip",
+	                            Some(bones_num),
+	                            Color::cyan(),
+	                            &vector!(0.0, height, 0.0),
+	                            &vector!(0.0, height / (bones_num + 1) as f32, 0.0),
+	                            true,
+	                            BoneConnection::None));
 	
 	let model = model.build(renderer).unwrap();
 	

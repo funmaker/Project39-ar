@@ -1,10 +1,8 @@
 use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
-use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::sampler::Sampler;
 use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
 
 pub use crate::renderer::pipelines::default::Vertex;
@@ -14,6 +12,7 @@ use crate::utils::{FenceCheck, ImmutableIndexBuffer, AutoCommandBufferBuilderEx}
 use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::application::Entity;
+use crate::renderer::assets_manager::texture::TextureBundle;
 use super::{ModelError, VertexIndex};
 
 #[derive(ComponentBase, Clone)]
@@ -31,36 +30,29 @@ pub struct SimpleModel {
 impl SimpleModel {
 	pub fn new<VI>(vertices: &[Vertex],
 	               indices: &[VI],
-	               image: Arc<ImmutableImage>,
-	               image_promise: impl GpuFuture + 'static,
+	               texture: TextureBundle,
 	               renderer: &mut Renderer)
 	               -> Result<SimpleModel, ModelError>
 	               where VI: VertexIndex {
-		let queue = &renderer.load_queue;
-		
 		let aabb = aabb_from_points(vertices.iter().map(|v| Point3::from(v.pos)));
-		
 		let pipeline = renderer.pipelines.get::<DefaultPipeline>()?;
 		
 		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(vertices.iter().cloned(),
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
-		                                                              queue.clone())?;
+		                                                              renderer.load_queue.clone())?;
 		
 		let (indices, indices_promise) = ImmutableBuffer::from_iter(indices.iter().copied(),
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
-		                                                            queue.clone())?;
-		
-		let view = ImageView::new(image)?;
-		let sampler = Sampler::simple_repeat_linear(queue.device().clone());
+		                                                            renderer.load_queue.clone())?;
 		
 		let set = {
 			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone());
 			set_builder.add_buffer(renderer.commons.clone())?
-			           .add_sampled_image(view, sampler)?;
+			           .add_sampled_image(texture.view.clone(), texture.sampler.clone())?;
 			Arc::new(set_builder.build()?)
 		};
 		
-		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(image_promise))?;
+		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(texture.fence.future()))?;
 		
 		Ok(SimpleModel {
 			inner: ComponentInner::new(),
