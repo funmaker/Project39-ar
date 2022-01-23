@@ -29,7 +29,7 @@ mod background;
 use crate::{config, debug};
 use crate::application::{Entity, VR};
 use crate::component::{ComponentError, RenderType};
-use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
+use crate::math::{AMat4, Color, Isometry3, PI, PMat4, Vec4};
 use crate::utils::*;
 use background::{Background, BackgroundError, BackgroundRenderError};
 use camera::{Camera, CameraStartError};
@@ -57,9 +57,9 @@ pub struct Renderer {
 	pub queue: Arc<Queue>,
 	pub pipelines: Pipelines,
 	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
+	pub eyes: Eyes,
 	
 	vr: Option<Arc<VR>>,
-	eyes: Eyes,
 	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
 	background: Background,
 	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
@@ -389,7 +389,7 @@ impl Renderer {
 		             .build()?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: [[f32; 4]; 3], camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
+	pub fn render(&mut self, hmd_pose: [[f32; 4]; 3], camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window, fov_scale: f32) -> Result<(), RendererRenderError> {
 		if window.swapchain_regen_required {
 			match window.regen_swapchain() {
 				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
@@ -422,6 +422,9 @@ impl Renderer {
 		
 		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
+		let mut fov = debug::get_flag("FOV").unwrap_or(130.0 / 180.0 * PI);
+		fov = ((fov / 2.0).tan() * fov_scale).atan() * 2.0 * 180.0 / PI;
+		debug::draw_text(format!("FOV: {:.0}", fov), point!(1.0, -1.0), debug::DebugOffset::bottom_left(-16.0, 16.0), 64.0, Color::green());
 		
 		let view_base = camera_pos.inverse();
 		let view_left = &self.eyes.view.0 * &view_base;
@@ -429,8 +432,17 @@ impl Renderer {
 		let light_source = vector!(0.5, -0.5, -1.5).normalize();
 		let pixel_scale = vector!(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
 		
+		let mut left_proj = self.eyes.projection.0.clone();
+		let mut right_proj = self.eyes.projection.1.clone();
+		
+		left_proj.matrix_mut_unchecked()[(0, 0)] /= fov_scale;
+		left_proj.matrix_mut_unchecked()[(1, 1)] /= fov_scale;
+		
+		right_proj.matrix_mut_unchecked()[(0, 0)] /= fov_scale;
+		right_proj.matrix_mut_unchecked()[(1, 1)] /= fov_scale;
+		
 		let commons = CommonsUBO {
-			projection: [self.eyes.projection.0.clone(), self.eyes.projection.1.clone()],
+			projection: [left_proj, right_proj],
 			view: [view_left, view_right],
 			light_direction: [
 				(view_left * light_source).to_homogeneous(),
@@ -463,7 +475,7 @@ impl Renderer {
 		                          SubpassContents::Inline,
 		                          self.eyes.clear_values.iter().copied())?;
 		
-		self.background.render(&mut builder, camera_pos)?;
+		self.background.render(&mut builder, camera_pos, fov_scale)?;
 		
 		for entity in scene.values_mut() {
 			entity.render(&self, RenderType::Opaque, &mut builder)?;

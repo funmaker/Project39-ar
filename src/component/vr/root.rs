@@ -14,6 +14,7 @@ use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
 use super::VrTracked;
 use crate::component::hand::HandComponent;
+use crate::component::suit_zoom::SuitZoom;
 use crate::renderer::assets_manager::texture::TextureBundle;
 
 #[derive(ComponentBase)]
@@ -77,7 +78,8 @@ impl Component for VrRoot {
 								entity = entity.hidden(true)
 								               .tag("NoGrab", false)
 								               .tag("Head", true)
-								               .component(PoV::new());
+								               .component(PoV::new())
+								               .component(SuitZoom::new());
 							}
 							
 							match vr.system.get_controller_role_for_tracked_device_index(tracked_id) {

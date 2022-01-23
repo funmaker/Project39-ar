@@ -8,7 +8,7 @@ use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
 use openvr::compositor::Texture;
 
-use crate::config;
+use crate::{config, debug};
 use crate::utils::OpenVRPtr;
 use crate::application::VR;
 use crate::math::{Mat4, Perspective3, AMat4, VRSlice, PMat4, SubsetOfLossy, Vec4};
@@ -50,6 +50,8 @@ impl Eyes {
 		let fovx = config.fov / 360.0 * std::f32::consts::TAU;
 		let fovy = fovx / aspect;
 		
+		debug::set_flag("FOV", fovx);
+		
 		let view = AMat4::identity();
 		let projection = clip() * Perspective3::new(aspect, fovy, 0.1, 100.0).as_projective();
 		let raw = vector!((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
@@ -68,6 +70,7 @@ impl Eyes {
 		let proj_right = clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr.system.projection_matrix(openvr::Eye::Right, 0.1, 100.0)));
 		
 		let raw_left  = vr.system.projection_raw(openvr::Eye::Left);
+		debug::set_flag("FOV", (-raw_left.left).atan() + raw_left.right.atan());
 		let raw_left = vector!(-raw_left.left, raw_left.right, -raw_left.top, raw_left.bottom);
 		
 		let raw_right = vr.system.projection_raw(openvr::Eye::Right);

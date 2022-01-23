@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -23,6 +23,7 @@ use crate::component::toolgun::{ToolGunError};
 use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
+use crate::component::suit_zoom::SuitZoom;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
@@ -42,6 +43,7 @@ pub struct Application {
 	pub physics: RefCell<Physics>,
 	pub vr_poses: WaitPoses,
 	pub camera_entity: EntityRef,
+	pub fov_scale: Cell<f32>,
 	pub input: Input,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
@@ -74,6 +76,7 @@ impl Application {
 			physics: RefCell::new(Physics::new()),
 			vr_poses: default_wait_poses(),
 			camera_entity: EntityRef::null(),
+			fov_scale: Cell::new(1.0),
 			input: Input::new(),
 			window,
 			entities: BTreeMap::new(),
@@ -101,6 +104,7 @@ impl Application {
 						.translation(point!(0.0, 1.5, 1.5))
 						.component(PoV::new())
 						.component(PCControlled::new())
+						.component(SuitZoom::new())
 						.tag("Head", true)
 						.build()
 				);
@@ -239,7 +243,7 @@ impl Application {
 			
 			let hmd_pose = self.vr_poses.render[HMD as usize].device_to_absolute_tracking().clone();
 			
-			self.renderer.get_mut().render(hmd_pose, pov, &mut self.entities, &mut self.window)?;
+			self.renderer.get_mut().render(hmd_pose, pov, &mut self.entities, &mut self.window, self.fov_scale.get())?;
 			
 			self.cleanup_loop()?;
 		}

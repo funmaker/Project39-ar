@@ -30,11 +30,12 @@ struct Intrinsics {
 pub struct Background {
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
+	intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<dyn DescriptorSet + Send + Sync>,
 	fence: FenceCheck,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
+	raw_proj: [Vec4; 2],
 }
 
 impl Background {
@@ -129,42 +130,27 @@ impl Background {
 		Ok(Background {
 			pipeline,
 			vertices,
-			// intrinsics,
+			intrinsics,
 			set,
 			fence,
 			extrinsics: (left_extrinsics, right_extrinsics),
 			last_frame_pose: Isometry3::identity(),
+			raw_proj: [
+				eyes.raw_projection.0,
+				eyes.raw_projection.1,
+			],
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, camera_pos: Isometry3) -> Result<(), BackgroundRenderError> {
+	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, camera_pos: Isometry3, fov_scale: f32) -> Result<(), BackgroundRenderError> {
 		if !self.fence.check() { return Ok(()); }
 		
-		// if let Ok(mut intrinsics) = self.intrinsics.write() {
-		// 	if debug::get_flag_or_default("KeyA") {
-		// 		intrinsics.center[0].x -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyD") {
-		// 		intrinsics.center[0].x += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyW") {
-		// 		intrinsics.center[0].y -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyS") {
-		// 		intrinsics.center[0].y += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyH") {
-		// 		intrinsics.center[1].x -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyK") {
-		// 		intrinsics.center[1].x += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyU") {
-		// 		intrinsics.center[1].y -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyJ") {
-		// 		intrinsics.center[1].y += 0.0001;
-		// 	}
-		// }
+		if let Ok(mut intrinsics) = self.intrinsics.write() {
+			intrinsics.rawproj = [
+				self.raw_proj[0] * fov_scale,
+				self.raw_proj[1] * fov_scale,
+			];
+		}
 		
 		let rotation = (camera_pos.rotation.inverse() * camera_pos.rotation / self.last_frame_pose.rotation * camera_pos.rotation).to_rotation_matrix();
 		

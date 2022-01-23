@@ -114,7 +114,7 @@ impl Component for HandComponent {
 			}
 		} else if let Some(root) = entity.find_component_by_type::<VrTracked>()
 		                                 .and_then(|tracked| tracked.root.entity().get(application)) {
-			if !root.has_tag("Seat") {
+			if !root.has_tag("Seat") && self.hand == Hand::Right {
 				if let Some(input) = application.input.controller(self.hand) {
 					let dir = vector!(input.axis(0), 0.0, -input.axis(1)) * WALK_SPEED * delta_time.as_secs_f32();
 					let dir = entity.state().position * dir;
