@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use crate::application::{Entity, Application, Key, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::debug;
-use crate::math::{Color, PI, Point2, Point3, Similarity3, Translation3, Vec2};
+use crate::math::{Color, PI, Point3, Similarity3, Translation3};
 
 #[derive(ComponentBase)]
 pub struct SuitZoom {
