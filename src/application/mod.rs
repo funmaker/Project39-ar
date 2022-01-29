@@ -27,7 +27,8 @@ use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
 use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
-use crate::renderer::camera::{self, OpenCVCameraError, OpenVRCameraError};
+use crate::renderer::camera::{self, OpenVRCameraError};
+#[cfg(feature = "opencv-camera")] use crate::renderer::camera::{OpenCVCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
 use crate::utils::default_wait_poses;
 use crate::debug;
@@ -60,7 +61,7 @@ impl Application {
 		}
 		
 		let renderer = match config.camera.driver {
-			CameraAPI::OpenCV => Renderer::new(vr.clone(), camera::OpenCV::new()?)?,
+			#[cfg(feature = "opencv-camera")] CameraAPI::OpenCV => Renderer::new(vr.clone(), camera::OpenCV::new()?)?,
 			CameraAPI::OpenVR => Renderer::new(vr.clone(), camera::OpenVR::new(vr.clone().unwrap())?)?,
 			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), camera::Escapi::new()?)?,
 			CameraAPI::Dummy => Renderer::new(vr.clone(), camera::Dummy::new())?,
@@ -358,7 +359,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
 	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
-	#[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
+	#[cfg(feature = "opencv-camera")] #[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),

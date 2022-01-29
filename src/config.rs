@@ -84,7 +84,7 @@ pub struct NovrConfig {
 #[serde(rename_all = "lowercase")]
 pub enum CameraAPI {
 	#[cfg(windows)] Escapi,
-	OpenCV,
+	#[cfg(feature = "opencv-camera")] OpenCV,
 	OpenVR,
 	Dummy,
 }

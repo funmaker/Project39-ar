@@ -10,12 +10,12 @@ use vulkano::device::{Queue};
 use vulkano::format::Format;
 
 #[cfg(windows)] mod escapi;
-mod opencv;
+#[cfg(feature = "opencv-camera")] mod opencv;
 mod openvr;
 mod dummy;
 
 #[cfg(windows)] pub use self::escapi::{Escapi, EscapiCameraError};
-pub use self::opencv::{OpenCV, OpenCVCameraError};
+#[cfg(feature = "opencv-camera")] pub use self::opencv::{OpenCV, OpenCVCameraError};
 pub use self::openvr::{OpenVR, OpenVRCameraError};
 pub use self::dummy::Dummy;
 use crate::debug;

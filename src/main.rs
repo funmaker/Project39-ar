@@ -7,7 +7,6 @@
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(drain_filter)]
-#![feature(llvm_asm)]
 #![feature(map_first_last)]
 #![feature(btree_drain_filter)]
 #![feature(hash_drain_filter)]
