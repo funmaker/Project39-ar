@@ -22,7 +22,7 @@ pub struct TextureAsset {
 #[derive(Clone)]
 pub struct TextureBundle {
 	pub image: Arc<ImmutableImage>,
-	pub view: Arc<ImageView<Arc<ImmutableImage>>>,
+	pub view: Arc<ImageView<ImmutableImage>>,
 	pub sampler: Arc<Sampler>,
 	pub fence: FenceCheck,
 }

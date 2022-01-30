@@ -72,7 +72,7 @@ pub trait Camera: Send + Sized + 'static {
 				     .chunks_exact(CHUNK_SIZE)
 				     .map(|c| unsafe { *(c.as_ptr() as *const [u8; CHUNK_SIZE]) })
 			)?;
-			let sub_slice: BufferSlice<[u8], _> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
+			let sub_slice: Arc<BufferSlice<[u8], _>> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
 			
 			let mut builder  = AutoCommandBufferBuilder::primary(queue.device().clone(), queue.family(), CommandBufferUsage::OneTimeSubmit)?;
 			builder.copy_buffer_to_image(sub_slice, target.clone())?;

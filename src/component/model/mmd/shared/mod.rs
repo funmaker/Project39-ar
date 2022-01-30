@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use vulkano::buffer::{CpuBufferPool, ImmutableBuffer};
 use vulkano::descriptor_set::layout::DescriptorSetLayout;
-use vulkano::pipeline::ComputePipeline;
+use vulkano::pipeline::{ComputePipeline, Pipeline};
 
 mod builder;
 mod rigid_body;

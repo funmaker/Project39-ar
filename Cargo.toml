@@ -8,15 +8,15 @@ edition = "2018"
 opencv-camera = ["opencv"]
 
 [dependencies]
-vulkano = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
-vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
-vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
+#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
+#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
+#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
 #vulkano-win = { path = "../vulkano/vulkano-win" }
-#vulkano = "0.25.0"
-#vulkano-shaders = "0.25.0"
-#vulkano-win = "0.25.0"
+vulkano = "0.27.1"
+vulkano-shaders = "0.27.1"
+vulkano-win = "0.27.1"
 image = "0.23.12"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"

@@ -4,11 +4,11 @@ use vulkano::{memory, sync, command_buffer, sampler};
 use vulkano::image::AttachmentImage;
 use vulkano::device::Queue;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
-use vulkano::descriptor_set::{self, DescriptorSet, PersistentDescriptorSet};
+use vulkano::descriptor_set::{self, PersistentDescriptorSet};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 use crate::math::{Vec4, Vec2, Mat3, Isometry3};
 use crate::renderer::eyes::Eyes;
@@ -31,7 +31,7 @@ pub struct Background {
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
-	set: Arc<dyn DescriptorSet + Send + Sync>,
+	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
@@ -102,7 +102,7 @@ impl Background {
 			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone());
 			set_builder.add_buffer(intrinsics.clone())?
 			           .add_sampled_image(view, sampler)?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		let flip_xz = vector!(-1.0, 1.0, -1.0);

@@ -7,8 +7,8 @@ use simba::scalar::SubsetOf;
 use vulkano::{descriptor_set, memory, sync};
 use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
-use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
+use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 mod spawner;
 mod remover;
@@ -61,7 +61,7 @@ pub struct ToolGun {
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	set: Arc<dyn DescriptorSet + Send + Sync>,
+	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
 
@@ -85,7 +85,7 @@ impl ToolGun {
 		let set = {
 			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone());
 			set_builder.add_buffer(renderer.commons.clone())?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		let fence = FenceCheck::new(vertices_promise)?;

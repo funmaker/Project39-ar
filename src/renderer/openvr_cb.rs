@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use vulkano::command_buffer::pool::{CommandPool, CommandPoolBuilderAlloc};
+use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc, CommandPoolBuilderAlloc};
 use vulkano::command_buffer::sys::{UnsafeCommandBuffer, UnsafeCommandBufferBuilder, UnsafeCommandBufferBuilderPipelineBarrier};
 use vulkano::command_buffer::{CommandBufferLevel, CommandBufferUsage, PrimaryCommandBuffer, CommandBufferExecError};
 use vulkano::device::{Device, DeviceOwned, Queue};
@@ -101,7 +101,10 @@ unsafe impl<P> DeviceOwned for OpenVRCommandBuffer<P> {
 	}
 }
 
-unsafe impl<P> PrimaryCommandBuffer for OpenVRCommandBuffer<P> {
+unsafe impl<P> PrimaryCommandBuffer for OpenVRCommandBuffer<P>
+	where
+		P: CommandPoolAlloc
+{
 	fn inner(&self) -> &UnsafeCommandBuffer {
 		self.inner.as_ref()
 	}

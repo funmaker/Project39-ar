@@ -6,8 +6,8 @@ use vulkano::{memory, command_buffer, descriptor_set};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
-use vulkano::descriptor_set::DescriptorSet;
-use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
+use vulkano::descriptor_set::PersistentDescriptorSet;
 use nalgebra::Unit;
 
 mod text_cache;
@@ -305,7 +305,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<dyn DescriptorSet + Send + Sync>>, DebugRendererRenderError> {
+	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>, DebugRendererRenderError> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
 		let size_px = vector!(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);

@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 use err_derive::Error;
 use vulkano::{descriptor_set, DeviceSize, memory, sync};
-use vulkano::pipeline::input_assembly::Index;
+use vulkano::pipeline::graphics::input_assembly::Index;
 
 pub mod simple;
 pub mod mmd;

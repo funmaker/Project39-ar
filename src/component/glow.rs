@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 use crate::application::Entity;
 use crate::renderer::Renderer;

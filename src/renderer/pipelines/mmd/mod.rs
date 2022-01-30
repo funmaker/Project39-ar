@@ -1,4 +1,5 @@
 use vulkano::pipeline::ComputePipeline;
+use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 
 #[macro_use] mod macros;
 mod vertex;
@@ -28,7 +29,7 @@ mmd_pipelines!(
 		shader fs = base_frag { transparent_pass: 0 };
 		
 		config builder {
-			builder.cull_mode_disabled()
+			builder.rasterization_state(RasterizationState::new().cull_mode(CullMode::None))
 		}
 	}
 
@@ -37,7 +38,7 @@ mmd_pipelines!(
 		shader fs = base_frag { transparent_pass: 1 };
 		
 		config builder {
-			builder.blend_collective(pre_mul_alpha_blending())
+			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
 		}
 	}
 	
@@ -46,8 +47,8 @@ mmd_pipelines!(
 		shader fs = base_frag { transparent_pass: 1 };
 		
 		config builder {
-			builder.blend_collective(pre_mul_alpha_blending())
-			       .cull_mode_disabled()
+			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
+			       .rasterization_state(RasterizationState::new().cull_mode(CullMode::None))
 		}
 	}
 
@@ -56,8 +57,8 @@ mmd_pipelines!(
 		shader fs = outline_frag;
 		
 		config builder {
-			builder.blend_collective(pre_mul_alpha_blending())
-			       .cull_mode_front()
+			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
+			       .rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
 		}
 	}
 );
@@ -71,11 +72,9 @@ impl PipelineConstructor for MMDPipelineMorphs {
 	
 	fn new(render_pass: &Arc<RenderPass>, _frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device().clone();
-		let cs = morph_comp::Shader::load(device.clone()).unwrap();
+		let cs = morph_comp::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(
-			ComputePipeline::new(device, &cs.main_entry_point(), &(), None, |_| {})?
-		))
+		Ok(ComputePipeline::new(device, cs.entry_point("main").unwrap(), &(), None, |_| {})?)
 	}
 }
 

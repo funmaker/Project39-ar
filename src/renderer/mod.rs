@@ -346,7 +346,7 @@ impl Renderer {
 		
 		let render_pass = RenderPass::new(device.clone(), render_pass_desc)?;
 		
-		Ok(Arc::new(render_pass))
+		Ok(render_pass)
 	}
 	
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
@@ -569,7 +569,7 @@ pub enum RendererError {
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::GraphicsPipelineCreationError),
+	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::graphics::GraphicsPipelineCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }
 

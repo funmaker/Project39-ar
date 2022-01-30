@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::convert::TryInto;
 use err_derive::Error;
-use vulkano::render_pass::{Framebuffer, FramebufferAbstract, RenderPass};
+use vulkano::render_pass::{Framebuffer, RenderPass};
 use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, SampleCount};
 use vulkano::format::{Format, ClearValue};
 use vulkano::device::Queue;
@@ -33,7 +33,7 @@ pub struct Eyes {
 	pub resolved_image: Arc<AttachmentImage>,
 	pub side_image: Arc<AttachmentImage>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
 	pub depth_image: Arc<AttachmentImage>,
-	pub frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync>,
+	pub frame_buffer: Arc<Framebuffer>,
 	pub frame_buffer_size: (u32, u32),
 	pub textures: (Texture, Texture),
 	pub view: (AMat4, AMat4),
@@ -170,13 +170,11 @@ impl Eyes {
 			.add(ImageView::new(main_image.clone())?)?
 			.add(ImageView::new(depth_image.clone())?)?;
 		
-		let frame_buffer: Arc<dyn FramebufferAbstract + Send + Sync> = if samples != SampleCount::Sample1 {
-			Arc::new(
-				frame_buffer.add(ImageView::new(resolved_image.clone())?)?
-				            .build()?
-			)
+		let frame_buffer = if samples != SampleCount::Sample1 {
+			frame_buffer.add(ImageView::new(resolved_image.clone())?)?
+			            .build()?
 		} else {
-			Arc::new(frame_buffer.build()?)
+			frame_buffer.build()?
 		};
 		
 		let mut clear_values = vec![ ClearValue::None ];

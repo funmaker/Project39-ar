@@ -24,8 +24,12 @@ macro_rules! mmd_pipelines {
 		use std::sync::Arc;
 		use vulkano::pipeline::GraphicsPipeline;
 		use vulkano::render_pass::{RenderPass, Subpass};
-		use vulkano::pipeline::viewport::Viewport;
+		use vulkano::pipeline::graphics::viewport::Viewport;
 		use vulkano::device::DeviceOwned;
+		use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
+		use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
+		use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState, FrontFace};
+		use vulkano::pipeline::graphics::viewport::ViewportState;
 		
 		use $crate::renderer::pipelines::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 		
@@ -40,8 +44,8 @@ macro_rules! mmd_pipelines {
 					use $fragment_shader as fragment_shader;
 					
 					let device = render_pass.device();
-					let vs = vertex_shader::Shader::load(device.clone()).unwrap();
-					let fs = fragment_shader::Shader::load(device.clone()).unwrap();
+					let vs = vertex_shader::load(device.clone()).unwrap();
+					let fs = fragment_shader::load(device.clone()).unwrap();
 					
 					#[allow(unused_variables)]
 					let vs_consts = ();
@@ -60,22 +64,23 @@ macro_rules! mmd_pipelines {
 					)*
 					
 					let $builder = GraphicsPipeline::start()
-						.vertex_input_single_buffer::<Vertex>()
-						.vertex_shader(vs.main_entry_point(), vs_consts)
-						.fragment_shader(fs.main_entry_point(), fs_consts)
+						.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
+						.vertex_shader(vs.entry_point("main").unwrap(), vs_consts)
+						.fragment_shader(fs.entry_point("main").unwrap(), fs_consts)
 						.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-						.front_face_clockwise()
-						.depth_stencil_simple_depth()
-						.cull_mode_back()
-						.viewports(Some(Viewport {
-							origin: [0.0, 0.0],
-							dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-							depth_range: 0.0..1.0,
-						}));
+						.depth_stencil_state(DepthStencilState::simple_depth_test())
+						.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back).front_face(FrontFace::Clockwise))
+						.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
+							Viewport {
+								origin: [0.0, 0.0],
+								dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
+								depth_range: 0.0..1.0,
+							},
+						]));
 					
-					Ok(Arc::new(
+					Ok(
 						$code.build(device.clone())?
-					))
+					)
 				}
 			}
 		)*

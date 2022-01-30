@@ -8,6 +8,8 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::window::Window as WinitWindow;
+use vulkano_win::{VkSurfaceBuild, CreationError};
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError, CommandBufferUsage};
@@ -15,8 +17,7 @@ use vulkano::device::{Queue, Device};
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
 use vulkano::OomError;
-use vulkano_win::{VkSurfaceBuild, CreationError};
-use winit::window::Window as WinitWindow;
+use vulkano::image::ImageAccess;
 
 use super::{Renderer, RendererSwapchainError};
 use crate::config;
@@ -144,7 +145,7 @@ impl Window {
 		
 		builder.blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [image_dims[0] as i32, image_dims[1] as i32, 1],
+		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
 		                   0,
 		                   0,
 		                   images[image_num].clone(),
@@ -156,7 +157,7 @@ impl Window {
 		                   Filter::Linear)?
 		       .blit_image(image.clone(),
 		                   [0, 0, 0],
-		                   [image_dims[0] as i32, image_dims[1] as i32, 1],
+		                   [image_dims.width() as i32, image_dims.height() as i32, 1],
 		                   1,
 		                   0,
 		                   images[image_num].clone(),

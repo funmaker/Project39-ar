@@ -1,8 +1,11 @@
 use std::sync::Arc;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{RenderPass, Subpass};
-use vulkano::pipeline::viewport::Viewport;
 use vulkano::device::DeviceOwned;
+use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
+use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
+use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
+use vulkano::pipeline::graphics::viewport::{Viewport, ViewportState};
 
 mod vertex;
 
@@ -36,23 +39,25 @@ impl PipelineConstructor for BackgroundPipeline {
 	
 	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
-		let vs = vert::Shader::load(device.clone()).unwrap();
-		let fs = frag::Shader::load(device.clone()).unwrap();
+		let vs = vert::load(device.clone()).unwrap();
+		let fs = frag::load(device.clone()).unwrap();
 		
-		Ok(Arc::new(
+		Ok(
 			GraphicsPipeline::start()
-				.vertex_input_single_buffer::<Vertex>()
-				.vertex_shader(vs.main_entry_point(), ())
-				.viewports(Some(Viewport {
-					origin: [0.0, 0.0],
-					dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-					depth_range: 0.0..1.0,
-				}))
-				.fragment_shader(fs.main_entry_point(), ())
-				.depth_stencil_disabled()
-				.cull_mode_back()
+				.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
+				.vertex_shader(vs.entry_point("main").unwrap(), ())
+				.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
+					Viewport {
+						origin: [0.0, 0.0],
+						dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
+						depth_range: 0.0..1.0,
+					},
+				]))
+				.fragment_shader(fs.entry_point("main").unwrap(), ())
+				.depth_stencil_state(DepthStencilState::disabled())
+				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 				.build(device.clone())?
-		))
+		)
 	}
 }

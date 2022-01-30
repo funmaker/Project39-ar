@@ -9,10 +9,10 @@ use rapier3d::prelude::BallJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
+use vulkano::descriptor_set::PersistentDescriptorSet;
 use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
-use vulkano::pipeline::PipelineBindPoint;
+use vulkano::pipeline::{Pipeline, PipelineBindPoint};
 
 pub mod shared;
 pub mod asset;
@@ -49,8 +49,8 @@ pub struct MMDModel {
 	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
 	morphs_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
 	offsets_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
-	morphs_set: Arc<dyn DescriptorSet + Send + Sync>,
-	model_set: Arc<dyn DescriptorSet + Send + Sync>,
+	morphs_set: Arc<PersistentDescriptorSet>,
+	model_set: Arc<PersistentDescriptorSet>,
 }
 
 #[allow(dead_code)]
@@ -101,7 +101,7 @@ impl MMDModel {
 			set_builder.add_buffer(morphs_ubo.clone())?
 			           .add_buffer(shared.morphs_offsets.clone())?
 			           .add_buffer(offsets_ubo.clone())?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		let model_set = {
@@ -109,7 +109,7 @@ impl MMDModel {
 			set_builder.add_buffer(renderer.commons.clone())?
 			           .add_buffer(bones_ubo.clone())?
 			           .add_buffer(offsets_ubo.clone())?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		Ok(MMDModel {

@@ -3,15 +3,15 @@ use std::ops::Range;
 use vulkano::buffer::ImmutableBuffer;
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::Sampler;
-use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
-use vulkano::pipeline::GraphicsPipeline;
+use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::pipeline::{GraphicsPipeline, Pipeline};
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
 use crate::component::model::ModelError;
 use crate::math::{Vec3, Vec4};
 
-pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<dyn DescriptorSet + Send + Sync>);
+pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<PersistentDescriptorSet>);
 
 #[derive(Debug, Copy, Clone)]
 pub struct MaterialInfo {
@@ -59,7 +59,7 @@ impl SubMesh {
 			           .add_sampled_image(texture_view.clone(), sampler.clone())?
 			           .add_sampled_image(toon_view.clone(), sampler.clone())?
 			           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		let mut sub_mesh = SubMesh {
@@ -83,7 +83,7 @@ impl SubMesh {
 				           .add_sampled_image(texture_view.clone(), sampler.clone())?
 				           .add_sampled_image(toon_view.clone(), sampler.clone())?
 				           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
-				Arc::new(set_builder.build()?)
+				set_builder.build()?
 			};
 			
 			sub_mesh.transparent = Some((pipeline, set));
@@ -98,7 +98,7 @@ impl SubMesh {
 			let set = {
 				let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
 				set_builder.add_sampled_image(texture_view.clone(), sampler.clone())?;
-				Arc::new(set_builder.build()?)
+				set_builder.build()?
 			};
 			
 			sub_mesh.edge = Some((pipeline.into(), set));

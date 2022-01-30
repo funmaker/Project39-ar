@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::sync::GpuFuture;
-use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet};
+use vulkano::descriptor_set::PersistentDescriptorSet;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::pipeline::{GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
@@ -22,7 +22,7 @@ pub struct SimpleModel {
 	pipeline: Arc<GraphicsPipeline>,
 	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	pub indices: ImmutableIndexBuffer,
-	pub set: Arc<dyn DescriptorSet + Send + Sync>,
+	pub set: Arc<PersistentDescriptorSet>,
 	pub fence: FenceCheck,
 }
 
@@ -49,7 +49,7 @@ impl SimpleModel {
 			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone());
 			set_builder.add_buffer(renderer.commons.clone())?
 			           .add_sampled_image(texture.view.clone(), texture.sampler.clone())?;
-			Arc::new(set_builder.build()?)
+			set_builder.build()?
 		};
 		
 		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(texture.fence.future()))?;

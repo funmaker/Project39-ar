@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use err_derive::Error;
-use vulkano::descriptor_set::{self, PersistentDescriptorSet, DescriptorSet};
+use vulkano::descriptor_set::{self, PersistentDescriptorSet};
 use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode, BorderColor};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::device::Queue;
 use vulkano::sampler;
+use vulkano::pipeline::Pipeline;
 use unifont::Glyph;
 
 use crate::renderer::pipelines::debug::DebugTexturedPipeline;
@@ -74,7 +75,7 @@ impl TextCache {
 			let set = {
 				let mut set_builder = PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone());
 				set_builder.add_sampled_image(ImageView::new(image)?, sampler.clone())?;
-				Arc::new(set_builder.build()?)
+				set_builder.build()?
 			};
 			
 			let entry = TextEntry {
@@ -173,7 +174,7 @@ impl ExactSizeIterator for Rasterizer {
 #[derive(Clone)]
 pub struct TextEntry {
 	pub size: (u32, u32),
-	pub set: Arc<dyn DescriptorSet + Send + Sync>,
+	pub set: Arc<PersistentDescriptorSet>,
 	pub stale: usize,
 }
 
