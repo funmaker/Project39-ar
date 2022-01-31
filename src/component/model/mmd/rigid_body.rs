@@ -3,6 +3,7 @@ use rapier3d::prelude::{ColliderHandle, JointHandle, RigidBodyHandle};
 use crate::math::Isometry3;
 
 pub struct MMDRigidBody {
+	pub name: String,
 	pub parent: Option<usize>,
 	pub bone: usize,
 	pub handle: RigidBodyHandle,
@@ -12,8 +13,9 @@ pub struct MMDRigidBody {
 }
 
 impl MMDRigidBody {
-	pub fn new(handle: RigidBodyHandle, bone: usize, rest_pos: Isometry3) -> Self {
+	pub fn new(name: impl Into<String>,handle: RigidBodyHandle, bone: usize, rest_pos: Isometry3) -> Self {
 		MMDRigidBody {
+			name: name.into(),
 			parent: None,
 			bone,
 			handle,

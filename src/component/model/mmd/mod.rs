@@ -3,9 +3,8 @@ use std::mem::size_of;
 use std::sync::Arc;
 use std::time::Duration;
 use num_traits::Zero;
-use rapier3d::dynamics::{RigidBodyBuilder, RigidBodyType};
+use rapier3d::dynamics::{JointAxis, JointData, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
-use rapier3d::prelude::BallJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
@@ -168,7 +167,8 @@ impl Component for MMDModel {
 		let ent_state = entity.state();
 		let state = &mut *self.state.borrow_mut();
 		
-		state.rigid_bodies.push(MMDRigidBody::new(entity.rigid_body,
+		state.rigid_bodies.push(MMDRigidBody::new("Root",
+		                                          entity.rigid_body,
 		                                          0,
 		                                          Isometry3::new(state.bones[0].origin().coords, Vec3::zeros())));
 		
@@ -187,12 +187,14 @@ impl Component for MMDModel {
 			let rb = RigidBodyBuilder::new(RigidBodyType::Dynamic)
 			                          .position(position)
 			                          .gravity_scale(0.05)
+			                          .sleeping(false)
+			                          .can_sleep(false)
 			                          .user_data(get_userdata(entity.id, self.id()))
 			                          .build();
 			
 			let handle = physics.rigid_body_set.insert(rb);
 			
-			state.rigid_bodies.push(MMDRigidBody::new(handle, bone_id, desc.position))
+			state.rigid_bodies.push(MMDRigidBody::new(&desc.name, handle, bone_id, desc.position))
 		}
 		
 		state.rigid_bodies.sort_by(|a, b| a.bone.cmp(&b.bone));
@@ -219,31 +221,44 @@ impl Component for MMDModel {
 			let rb_a_id = state.find_rb_index(bone_a);
 			let rb_b_id = state.find_rb_index(bone_b);
 			
-			{
-				let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
-				let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
-			
-				// Check if joint divides the bone tree
-				if state.bone_ancestors_iter(bone_id)
-				        .all(|id| parent_bone_id != id) {
-					continue;
-				}
-			}
+			// {
+			// 	let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
+			// 	let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
+			//
+			// 	// Check if joint divides the bone tree
+			// 	if state.bone_ancestors_iter(bone_id)
+			// 	        .all(|id| parent_bone_id != id) {
+			// 		continue;
+			// 	}
+			// }
 			
 			let handle = {
 				let rb_a = &state.rigid_bodies[rb_a_id];
 				let rb_b = &state.rigid_bodies[rb_b_id];
 				
-				let mut joint = BallJoint::new(rb_a.rest_pos.inverse() * desc.position,
-				                               rb_b.rest_pos.inverse() * desc.position);
+				let mut joint = JointData::default()
+					.local_frame1(rb_a.rest_pos.inverse() * desc.position)
+					.local_frame2(rb_b.rest_pos.inverse() * desc.position);
 				
-				joint.limits_enabled = true;
-				joint.limits_swing_angle = desc.rotation_min.xz().abs().max().max(desc.rotation_max.xz().abs().max());
-				joint.limits_twist_angle = desc.rotation_min.y.abs().max(desc.rotation_max.y.abs());
+				fn limit(joint: JointData, axis: JointAxis, min: f32, max: f32) -> JointData {
+					if min != max {
+						joint.limit_axis(axis, [min, max])
+					} else {
+						joint.lock_axes(axis.into())
+					}
+				}
 				
-				physics.joint_set.insert(rb_a.handle,
-				                         rb_b.handle,
-				                         joint)
+				joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x);
+				joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y);
+				joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z);
+				
+				joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x);
+				joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y);
+				joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z);
+				
+				physics.impulse_joint_set.insert(rb_a.handle,
+				                                 rb_b.handle,
+				                                 joint)
 			};
 			
 			if bone_a > bone_b {
@@ -257,13 +272,14 @@ impl Component for MMDModel {
 	}
 	
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
-		let physics = application.physics.borrow();
+		let physics = &mut *application.physics.borrow_mut();
 		let state = &mut *self.state.borrow_mut();
 		let ent_state = entity.state();
 		
 		for rb in state.rigid_bodies.iter() {
-			let pos = physics.rigid_body_set.get(rb.handle).unwrap().position();
-			state.bones[rb.bone].transform_override = Some((ent_state.position.inverse() * pos).to_superset());
+			let rrb = physics.rigid_body_set.get_mut(rb.handle).unwrap();
+			state.bones[rb.bone].transform_override = Some((ent_state.position.inverse() * rrb.position()).to_superset());
+			rrb.wake_up(true);
 		}
 		
 		Ok(())

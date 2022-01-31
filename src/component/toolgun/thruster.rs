@@ -100,10 +100,12 @@ impl Tool for ThrusterTool {
 					.collider(ColliderBuilder::new(ColliderShape::cylinder(0.15, 0.2)).density(200.0).build())
 					.component(self.thruster_model.clone())
 					.component(Thruster::new(self.direction))
-					.component(JointComponent::new(FixedJoint::new(
-						Isometry3::identity(),
-						local_pos,
-					), hit_ent))
+					.component(JointComponent::new(
+						FixedJoint::new()
+						           .local_frame1(Isometry3::identity())
+						           .local_frame2(local_pos),
+						hit_ent,
+					))
 					.build()
 				);
 			}

@@ -6,6 +6,7 @@ use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index::HMD;
+use rapier3d::dynamics::{JointAxesMask, JointAxis, JointData, RigidBodyType};
 use rapier3d::prelude::ColliderBuilder;
 
 pub mod vr;
@@ -36,6 +37,7 @@ pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
+use crate::component::physics::joint::JointComponent;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -158,32 +160,31 @@ impl Application {
 					.build()
 			);
 			
-			// let box1 = application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-			// 		.collider_from_aabb(1000.0)
-			// 		.rigid_body_type(RigidBodyType::Dynamic)
-			// 		.build()
-			// );
-			//
-			// let mut joint = BallJoint::new(
-			// 	Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)),
-			// 	Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)),
-			// );
-			// joint.limits_enabled = true;
-			// joint.limits_swing_angle = 30.0 / 180.0 * PI;
-			// joint.limits_twist_angle = 30.0 / 180.0 * PI;
-			//
-			// application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-			// 		.component(JointComponent::new(joint, box1))
-			// 		.collider_from_aabb(1000000.0)
-			// 		.rigid_body_type(RigidBodyType::Dynamic)
-			// 		.build()
-			// );
+			let box1 = application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+					.collider_from_aabb(1000.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
+			
+			let joint = JointData::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z)
+				.local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
+				.local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
+				.limit_axis(JointAxis::AngX, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+				.limit_axis(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+				.limit_axis(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+					.component(JointComponent::new(joint, box1))
+					.collider_from_aabb(1000.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
 		}
 		
 		Ok(application)

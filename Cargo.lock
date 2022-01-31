@@ -856,6 +856,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "libm"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1021,9 +1027,9 @@ dependencies = [
 
 [[package]]
 name = "nalgebra"
-version = "0.29.0"
+version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d506eb7e08d6329505faa8a3a00a5dcc6de9f76e0c77e4b75763ae3c770831ff"
+checksum = "4fb2d0de08694bed883320212c18ee3008576bfe8c306f4c3c4a58b4876998be"
 dependencies = [
  "approx 0.5.1",
  "matrixmultiply",
@@ -1226,6 +1232,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
@@ -1406,9 +1413,9 @@ dependencies = [
 
 [[package]]
 name = "parry3d"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "067fa44bf7f7cc4022756ef9796c5f8d67c7a63041df71e6eeb09ad08ab1ece8"
+checksum = "c418a03e2ba297c931c530a690b305ce3b3dcc675caf16777f4f8565c8e84732"
 dependencies = [
  "approx 0.5.1",
  "bitflags",
@@ -1558,8 +1565,9 @@ dependencies = [
 
 [[package]]
 name = "rapier3d"
-version = "0.11.1"
-source = "git+https://github.com/funmaker/rapier?rev=1f3c61595c03a507b34590d7127eebfe50bf3c84#1f3c61595c03a507b34590d7127eebfe50bf3c84"
+version = "0.12.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f0590e74514004c7313934d092ed071302146323124efde9d30d6aa517186bf"
 dependencies = [
  "approx 0.5.1",
  "arrayvec 0.7.2",
@@ -1834,9 +1842,9 @@ checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 
 [[package]]
 name = "simba"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0b7840f121a46d63066ee7a99fc81dcabbc6105e437cae43528cea199b5a05f"
+checksum = "13a2609e876d4f77f6ab7ff5254fc39b4f1927ba8e6db3d18be7c32534d3725e"
 dependencies = [
  "approx 0.5.1",
  "num-complex",
