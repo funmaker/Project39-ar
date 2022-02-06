@@ -857,9 +857,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
+checksum = "33a33a362ce288760ec6a508b94caaec573ae7d3bbbd91b87aa0bad4456839db"
 
 [[package]]
 name = "linked-hash-map"
@@ -1566,8 +1566,7 @@ dependencies = [
 [[package]]
 name = "rapier3d"
 version = "0.12.0-alpha.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f0590e74514004c7313934d092ed071302146323124efde9d30d6aa517186bf"
+source = "git+https://github.com/funmaker/rapier?rev=8c5f88738dd9be9ca3458d610c34d39a85956d23#8c5f88738dd9be9ca3458d610c34d39a85956d23"
 dependencies = [
  "approx 0.5.1",
  "arrayvec 0.7.2",

@@ -39,9 +39,9 @@ toml = { version = "0.5.8", features = ['preserve_order'] }
 serde = "1.0.126"
 serde_derive = "1.0.126"
 project39-ar-derive = { path = "derive" }
-#rapier3d = { git = "https://github.com/funmaker/rapier", rev = "1f3c61595c03a507b34590d7127eebfe50bf3c84" }
-#rapier3d = { path = "../rapier/build/rapier3d" }
-rapier3d = "0.12.0-alpha.1"
+rapier3d = { git = "https://github.com/funmaker/rapier", rev = "8c5f88738dd9be9ca3458d610c34d39a85956d23" }
+#rapier3d = { path = "../rapier/crates/rapier3d" }
+#rapier3d = "0.12.0-alpha.1"
 linked-hash-map = { version = "0.5.4", features = ['serde_impl'] }
 
 [target.'cfg(windows)'.dependencies]
