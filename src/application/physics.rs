@@ -1,8 +1,9 @@
 use std::time::Duration;
+use nalgebra::Quaternion;
 use rapier3d::prelude::*;
 use crate::debug;
 
-use crate::math::{Color, Point3, Vec3};
+use crate::math::{Color, Point3, Rot3, Vec3};
 
 pub struct Physics {
 	pub rigid_body_set: RigidBodySet,
@@ -112,6 +113,17 @@ impl Physics {
 				_ => {},
 			}
 		}
+		
+		for contact in self.narrow_phase.contact_graph().interactions() {
+			if let Some(pos1) = self.collider_set.get(contact.collider1)
+			                                     .map(Collider::position) {
+				for manifold in &contact.manifolds {
+					for point in &manifold.points {
+						debug::draw_point(pos1 * point.local_p1, 8.0, Color::dgreen());
+					}
+				}
+			}
+		}
 	}
 	
 	pub fn debug_draw_joints(&self) {
@@ -125,38 +137,44 @@ impl Physics {
 			debug::draw_point(frame1 * Point3::origin(), 5.0, Color::dmagenta());
 			debug::draw_point(frame2 * Point3::origin(), 5.0, Color::magenta());
 			
-			if joint.data.limit_axes.contains(JointAxesMask::X) {
-				debug::draw_line(frame1 * point!(joint.data.limits[0].min, 0.0, 0.0), frame1 * point!(joint.data.limits[0].max, 0.0, 0.0), 1.0, Color::dred());
-			}
-			if joint.data.limit_axes.contains(JointAxesMask::Y) {
-				debug::draw_line(frame1 * point!(joint.data.limits[1].min, 0.0, 0.0), frame1 * point!(joint.data.limits[1].max, 0.0, 0.0), 1.0, Color::dgreen());
-			}
-			if joint.data.limit_axes.contains(JointAxesMask::Z) {
-				debug::draw_line(frame1 * point!(joint.data.limits[2].min, 0.0, 0.0), frame1 * point!(joint.data.limits[2].max, 0.0, 0.0), 1.0, Color::dblue());
+			// if joint.data.limit_axes.contains(JointAxesMask::X) {
+			// 	debug::draw_line(frame1 * point!(-1.0, 0.0, 0.0), frame1 * point!(1.0, 0.0, 0.0), 1.0, Color::dred());
+			// }
+			// if joint.data.limit_axes.contains(JointAxesMask::Y) {
+			// 	debug::draw_line(frame1 * point!(0.0, -1.0, 0.0), frame1 * point!(0.0, 1.0, 0.0), 1.0, Color::dgreen());
+			// }
+			// if joint.data.limit_axes.contains(JointAxesMask::Z) {
+			// 	debug::draw_line(frame1 * point!(0.0, 0.0, -1.0), frame1 * point!(0.0, 0.0, 1.0), 1.0, Color::dblue());
+			// }
+			
+			let rot = frame2.rotation / frame1.rotation;
+			let dir = frame1 * Vec3::y_axis();
+			let ra = rot.vector();
+			let p = ra.dot(&dir) * *dir;
+			let twist = Rot3::new_normalize(Quaternion::new(rot.w, p.x, p.y, p.z));
+			let swing = rot * twist.conjugate();
+			
+			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X) {
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
 			}
 			
-			// let rot = frame2.rotation / frame1.rotation;
-			// let dir = frame1 * Vec3::y_axis();
-			// let ra = rot.vector();
-			// let p = ra.dot(&dir) * *dir;
-			// let twist = Rot3::new_normalize(Quaternion::new(rot.w, p.x, p.y, p.z));
-			// let swing = rot * twist.conjugate();
-			//
-			// let twist_limit = Rot3::from_axis_angle(&dir, params.limits_twist_angle);
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1 * point!(0.03, 0.0, 0.0), 1.0, Color::dred());
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * twist_limit * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * twist_limit.inverse() * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
-			//
-			// let swing_axis = swing.axis().unwrap_or(frame1 * Vec3::x_axis());
-			// let swing_limit = Rot3::from_axis_angle(&swing_axis, params.limits_swing_angle);
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1 * point!(0.0, 0.03, 0.0), 1.0, Color::dgreen());
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * swing_limit * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * swing_limit.inverse() * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
-			//
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * twist * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::red());
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame1.translation * swing * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::green());
-			//
-			// debug::draw_line(frame1 * point!(0.0, 0.0, 0.0), frame2 * point!(0.0, 0.0, 0.0), 4.0, Color::magenta());
+			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Z) {
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+			}
+			
+			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X | JointAxesMask::ANG_Z) {
+				debug::draw_line(frame1 * Point3::origin(), frame1 * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1 * Point3::origin(), frame1.translation * swing * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::green());
+			}
+			
+			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Y) {
+				debug::draw_line(frame1 * Point3::origin(), frame1 * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].min) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].max) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1 * Point3::origin(), frame1.translation * twist * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::red());
+			}
 		}
 	}
 }

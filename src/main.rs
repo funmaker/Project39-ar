@@ -28,9 +28,9 @@ use utils::from_args::ArgsError;
 
 #[macro_use] #[allow(dead_code)] mod debug;
 #[allow(dead_code)] mod math;
+#[macro_use] mod utils;
 mod renderer;
 mod application;
-mod utils;
 mod config;
 pub mod component;
 

@@ -25,7 +25,7 @@ use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::debug;
-use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3};
+use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI};
 use super::ModelError;
 pub use bone::{MMDBone, BoneConnection};
 pub use rigid_body::MMDRigidBody;
@@ -167,10 +167,12 @@ impl Component for MMDModel {
 		let ent_state = entity.state();
 		let state = &mut *self.state.borrow_mut();
 		
+		let root_pos = Isometry3::new(state.bones[0].origin().coords, Vec3::zeros());
 		state.rigid_bodies.push(MMDRigidBody::new("Root",
 		                                          entity.rigid_body,
 		                                          0,
-		                                          Isometry3::new(state.bones[0].origin().coords, Vec3::zeros())));
+		                                          root_pos,
+		                                          root_pos.inverse()));
 		
 		for desc in self.shared.joints.iter() {
 			let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
@@ -183,6 +185,7 @@ impl Component for MMDModel {
 			}
 			
 			let position = ent_state.position * desc.position;
+			let inv_bone_pos = desc.position.inverse() * state.bones[bone_id].inv_model_transform.inverse();
 			
 			let rb = RigidBodyBuilder::new(RigidBodyType::Dynamic)
 			                          .position(position)
@@ -194,7 +197,7 @@ impl Component for MMDModel {
 			
 			let handle = physics.rigid_body_set.insert(rb);
 			
-			state.rigid_bodies.push(MMDRigidBody::new(&desc.name, handle, bone_id, desc.position))
+			state.rigid_bodies.push(MMDRigidBody::new(&desc.name, handle, bone_id, desc.position, inv_bone_pos))
 		}
 		
 		state.rigid_bodies.sort_by(|a, b| a.bone.cmp(&b.bone));
@@ -205,8 +208,7 @@ impl Component for MMDModel {
 			
 			let mut collider: Collider = desc.collider.clone();
 			collider.set_position(
-				state.bones[rigid_body.bone].inv_model_transform *
-				state.bones[desc.bone].inv_model_transform.inverse() *
+				rigid_body.rest_pos.inverse() *
 				collider.position()
 			);
 			collider.user_data = get_userdata(entity.id, self.id());
@@ -240,21 +242,23 @@ impl Component for MMDModel {
 					.local_frame1(rb_a.rest_pos.inverse() * desc.position)
 					.local_frame2(rb_b.rest_pos.inverse() * desc.position);
 				
-				fn limit(joint: JointData, axis: JointAxis, min: f32, max: f32) -> JointData {
-					if min != max {
+				fn limit(joint: JointData, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> JointData {
+					if max - min >= max_limit {
+						joint
+					} else if min != max {
 						joint.limit_axis(axis, [min, max])
 					} else {
 						joint.lock_axes(axis.into())
 					}
 				}
 				
-				joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x);
-				joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y);
-				joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z);
+				joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x, 100.0);
+				joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
+				joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
 				
-				joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x);
-				joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y);
-				joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z);
+				joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x, PI * 2.0);
+				joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y, PI * 2.0);
+				joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z, PI * 2.0);
 				
 				physics.impulse_joint_set.insert(rb_a.handle,
 				                                 rb_b.handle,
@@ -274,11 +278,15 @@ impl Component for MMDModel {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		let physics = &mut *application.physics.borrow_mut();
 		let state = &mut *self.state.borrow_mut();
-		let ent_state = entity.state();
+		let inv_ent_pos = entity.state().position.inverse();
 		
 		for rb in state.rigid_bodies.iter() {
 			let rrb = physics.rigid_body_set.get_mut(rb.handle).unwrap();
-			state.bones[rb.bone].transform_override = Some((ent_state.position.inverse() * rrb.position()).to_superset());
+			state.bones[rb.bone].transform_override = Some((
+				inv_ent_pos *
+				rrb.position() *
+				rb.inv_bone_pos
+			).to_superset());
 			rrb.wake_up(true);
 		}
 		
@@ -371,7 +379,7 @@ impl Component for MMDModel {
 				// calculate size of one pixel at distance 1m from background
 				// Assume index
 				// 1440×1600 110 FOV
-				let pixel = (110.0_f32 / 360.0 * std::f32::consts::PI).tan() * 2.0 / 1440.0;
+				let pixel = (110.0_f32 / 360.0 * PI).tan() * 2.0 / 1440.0;
 				let scale: f32 = pixel * sub_mesh.edge_scale;
 				
 				builder.bind_pipeline_graphics(pipeline.clone())

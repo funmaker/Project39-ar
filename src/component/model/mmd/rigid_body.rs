@@ -10,10 +10,11 @@ pub struct MMDRigidBody {
 	pub colliders: Vec<ColliderHandle>,
 	pub joint: JointHandle,
 	pub rest_pos: Isometry3,
+	pub inv_bone_pos: Isometry3,
 }
 
 impl MMDRigidBody {
-	pub fn new(name: impl Into<String>,handle: RigidBodyHandle, bone: usize, rest_pos: Isometry3) -> Self {
+	pub fn new(name: impl Into<String>,handle: RigidBodyHandle, bone: usize, rest_pos: Isometry3, inv_bone_pos: Isometry3) -> Self {
 		MMDRigidBody {
 			name: name.into(),
 			parent: None,
@@ -22,6 +23,7 @@ impl MMDRigidBody {
 			colliders: Vec::new(),
 			joint: JointHandle::invalid(),
 			rest_pos,
+			inv_bone_pos,
 		}
 	}
 }

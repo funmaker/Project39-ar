@@ -217,11 +217,11 @@ impl AssetKey for PmxAsset {
 				&rigid_body.local_name
 			};
 			
-			let translation = (rigid_body.shape_position - bone_defs[rigid_body.bone_index as usize].position).flip_x() * MMD_UNIT_SIZE;
-			let position = Isometry3::from_parts(translation.into(),
-			                                     Rot3::from_euler_angles( rigid_body.shape_rotation.x,
-			                                                             -rigid_body.shape_rotation.y,
-			                                                             -rigid_body.shape_rotation.z));
+			let translation = rigid_body.shape_position.flip_x() * MMD_UNIT_SIZE;
+			let rotation = Rot3::from_axis_angle(&Vec3::y_axis(), -rigid_body.shape_rotation.y)
+			             * Rot3::from_axis_angle(&Vec3::x_axis(),  rigid_body.shape_rotation.x)
+			             * Rot3::from_axis_angle(&Vec3::z_axis(), -rigid_body.shape_rotation.z);
+			let position = Isometry3::from_parts(translation.into(), rotation);
 			
 			let volume;
 			let collider;
@@ -273,19 +273,21 @@ impl AssetKey for PmxAsset {
 				&joint.local_name
 			};
 			
-			let translation = (joint.position).flip_x() * MMD_UNIT_SIZE;
-			let position = Isometry3::from_parts(translation.into(),
-			                                     Rot3::from_euler_angles(joint.rotation.x,
-			                                                            -joint.rotation.y,
-			                                                            -joint.rotation.z));
+			let translation = joint.position.flip_x() * MMD_UNIT_SIZE;
+			let rotation = Rot3::from_axis_angle(&Vec3::y_axis(), -joint.rotation.y)
+			             * Rot3::from_axis_angle(&Vec3::x_axis(),  joint.rotation.x)
+			             * Rot3::from_axis_angle(&Vec3::z_axis(), -joint.rotation.z);
+			let position = Isometry3::from_parts(translation.into(), rotation);
+			let position_min = joint.position_min * MMD_UNIT_SIZE;
+			let position_max = joint.position_max * MMD_UNIT_SIZE;
 			
 			model.add_joint(JointDesc::new(name,
 			                               joint.joint_type,
 			                               joint.rigid_body_a as usize,
 			                               joint.rigid_body_b as usize,
 			                               position,
-			                               joint.position_min,
-			                               joint.position_max,
+			                               position_min,
+			                               position_max,
 			                               joint.rotation_min,
 			                               joint.rotation_max,
 			                               joint.position_spring,

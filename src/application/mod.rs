@@ -16,7 +16,7 @@ pub mod input;
 
 use crate::component::Component;
 use crate::component::ComponentError;
-use crate::component::model::ModelError;
+use crate::component::model::{MMDModel, ModelError};
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
@@ -24,6 +24,8 @@ use crate::component::toolgun::{ToolGunError};
 use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
+use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
+use crate::component::physics::joint::JointComponent;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
@@ -37,7 +39,6 @@ pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
-use crate::component::physics::joint::JointComponent;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
@@ -144,11 +145,19 @@ impl Application {
 			
 			application.add_entity(
 				Entity::builder("初音ミク")
-					.translation(point!(1.0, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * 0.6, 0.0))
+					.translation(point!(-0.5, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * -0.35, 0.0))
 					.component(Miku::new())
 					.build()
 			);
+			
+			// application.add_entity(
+			// 	Entity::builder("Test")
+			// 		.translation(point!(0.5, 0.0, 0.0))
+			// 		// .rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * -0.35, 0.0))
+			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test/test.pmx"))?, renderer)?)
+			// 		.build()
+			// );
 			
 			application.add_entity(
 				Entity::builder("Floor")
@@ -164,7 +173,7 @@ impl Application {
 				Entity::builder("Box")
 					.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
 					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-					.collider_from_aabb(1000.0)
+					.collider_from_aabb(100.0)
 					.rigid_body_type(RigidBodyType::Dynamic)
 					.build()
 			);
@@ -172,7 +181,7 @@ impl Application {
 			let joint = JointData::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z)
 				.local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
 				.local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
-				.limit_axis(JointAxis::AngX, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+				.limit_axis(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
 				.limit_axis(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
 				.limit_axis(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
 			
@@ -223,7 +232,7 @@ impl Application {
 					entity.before_physics(physics);
 				}
 				
-				physics.step(delta_time);
+				physics.step(Duration::from_millis(1000 / 140));
 				
 				for entity in self.entities.values() {
 					entity.after_physics(physics);
@@ -359,6 +368,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
 	#[cfg(feature = "opencv-camera")] #[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
