@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use err_derive::Error;
-use image::{ImageFormat, GenericImageView, DynamicImage};
+use image::{ImageFormat, DynamicImage};
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::format::Format;
 use vulkano::image::view::ImageView;
-use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
+use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 
 use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImageEx};
@@ -67,19 +67,16 @@ impl AssetKey for TextureAsset {
 		                                                       Format::R8G8B8A8_UNORM,
 		                                                       renderer.load_queue.clone())?;
 		
-		let sampler = Sampler::new(renderer.device.clone(),
-		                           self.filter,
-		                           self.filter,
-		                           if self.mipmaps { MipmapMode::Linear } else { MipmapMode::Linear },
-		                           SamplerAddressMode::Repeat,
-		                           SamplerAddressMode::Repeat,
-		                           SamplerAddressMode::Repeat,
-		                           0.0,
-		                           1.0,
-		                           0.0,
-		                           if self.mipmaps { 1000.0 } else { 1.0 })?;
+		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo {
+			mag_filter: self.filter,
+			min_filter: self.filter,
+			mipmap_mode: if self.mipmaps { SamplerMipmapMode::Linear } else { SamplerMipmapMode::Linear },
+			address_mode: [SamplerAddressMode::Repeat; 3],
+			lod: if self.mipmaps { 0.0..=1000.0 } else { 0.0..=1.0 },
+			..SamplerCreateInfo::default()
+		})?;
 		
-		let view = ImageView::new(image.clone())?;
+		let view = ImageView::new_default(image.clone())?;
 		let fence = FenceCheck::new(image_promise)?;
 		
 		Ok(TextureBundle {
@@ -115,8 +112,8 @@ impl TextureBundle {
 		                                                       Format::R8G8B8A8_UNORM,
 		                                                       renderer.load_queue.clone())?;
 		
-		let view = ImageView::new(image.clone())?;
-		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
+		let view = ImageView::new_default(image.clone())?;
+		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo::simple_repeat_linear())?;
 		let fence = FenceCheck::new(image_promise)?;
 		
 		Ok(TextureBundle {

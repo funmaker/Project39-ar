@@ -56,19 +56,19 @@ impl MMDRigidBodyOverride {
 	// I am a code artisan
 	pub fn apply_to(&self, rb: RigidBody<MMDIndexConfig>) -> RigidBody<MMDIndexConfig> {
 		RigidBody {
-			     universal_name: self.name     .clone().unwrap_or(rb.universal_name    ),
-			         bone_index: self.bone_index       .unwrap_or(rb.bone_index        ),
-			           group_id: self.group_id         .unwrap_or(rb.group_id          ),
-			 non_collision_mask: self.collision_mask   .unwrap_or(rb.non_collision_mask),
-			              shape: self.shape            .unwrap_or(rb.shape             ),
-			         shape_size: self.size             .unwrap_or(rb.shape_size        ),
-			     shape_position: self.position         .unwrap_or(rb.shape_position    ),
-			     shape_rotation: self.rotation         .unwrap_or(rb.shape_rotation    ),
-			               mass: self.mass             .unwrap_or(rb.mass              ),
-			   move_attenuation: self.move_attenuation .unwrap_or(rb.move_attenuation  ),
-			   rotation_damping: self.rotation_damping .unwrap_or(rb.rotation_damping  ),
-			          repulsion: self.repulsion        .unwrap_or(rb.repulsion         ),
-			            fiction: self.fiction          .unwrap_or(rb.fiction           ),
+			    universal_name: self.name     .clone().unwrap_or(rb.universal_name    ),
+			        bone_index: self.bone_index       .unwrap_or(rb.bone_index        ),
+			          group_id: self.group_id         .unwrap_or(rb.group_id          ),
+			non_collision_mask: self.collision_mask   .unwrap_or(rb.non_collision_mask),
+			             shape: self.shape            .unwrap_or(rb.shape             ),
+			        shape_size: self.size             .unwrap_or(rb.shape_size        ),
+			    shape_position: self.position         .unwrap_or(rb.shape_position    ),
+			    shape_rotation: self.rotation         .unwrap_or(rb.shape_rotation    ),
+			              mass: self.mass             .unwrap_or(rb.mass              ),
+			  move_attenuation: self.move_attenuation .unwrap_or(rb.move_attenuation  ),
+			  rotation_damping: self.rotation_damping .unwrap_or(rb.rotation_damping  ),
+			         repulsion: self.repulsion        .unwrap_or(rb.repulsion         ),
+			           fiction: self.fiction          .unwrap_or(rb.fiction           ),
 			..rb
 		}
 	}

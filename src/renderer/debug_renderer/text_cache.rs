@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use err_derive::Error;
-use vulkano::descriptor_set::{self, PersistentDescriptorSet};
-use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode, BorderColor};
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
-use vulkano::pipeline::GraphicsPipeline;
-use vulkano::device::Queue;
-use vulkano::sampler;
-use vulkano::pipeline::Pipeline;
 use unifont::Glyph;
+use vulkano::{descriptor_set, sampler};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline};
+use vulkano::device::Queue;
 
 use crate::renderer::pipelines::debug::DebugTexturedPipeline;
 use crate::renderer::pipelines::Pipelines;
@@ -60,23 +59,18 @@ impl TextCache {
 			                                                       vulkano::format::Format::R8_UNORM,
 			                                                       self.queue.clone())?;
 			
-			let sampler = Sampler::new(self.queue.device().clone(),
-			                           Filter::Nearest,
-			                           Filter::Linear,
-			                           MipmapMode::Nearest,
-			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
-			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
-			                           SamplerAddressMode::ClampToBorder(BorderColor::FloatTransparentBlack),
-			                           0.0,
-			                           1.0,
-			                           0.0,
-			                           1.0)?;
+			let sampler = Sampler::new(self.queue.device().clone(), SamplerCreateInfo {
+				mag_filter: Filter::Nearest,
+				min_filter: Filter::Linear,
+				mipmap_mode: SamplerMipmapMode::Nearest,
+				address_mode: [SamplerAddressMode::ClampToBorder; 3],
+				border_color: BorderColor::FloatTransparentBlack,
+				..SamplerCreateInfo::default()
+			})?;
 			
-			let set = {
-				let mut set_builder = PersistentDescriptorSet::start(self.pipeline.layout().descriptor_set_layouts().get(0).unwrap().clone());
-				set_builder.add_sampled_image(ImageView::new(image)?, sampler.clone())?;
-				set_builder.build()?
-			};
+			let set = PersistentDescriptorSet::new(self.pipeline.layout().set_layouts().get(0).unwrap().clone(), [
+				WriteDescriptorSet::image_view_sampler(0, ImageView::new_default(image)?, sampler.clone()),
+			])?;
 			
 			let entry = TextEntry {
 				size: (width, height),
@@ -187,6 +181,6 @@ pub enum TextCacheError {
 pub enum TextCacheGetError {
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
+	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }

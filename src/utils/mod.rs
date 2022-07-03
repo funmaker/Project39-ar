@@ -12,6 +12,7 @@ mod fence_check;
 mod input;
 mod rapier;
 mod index_buffer;
+mod nalgebra_pod;
 
 pub use vec_future::*;
 pub use fps_counter::*;
@@ -22,6 +23,7 @@ pub use fence_check::*;
 pub use input::*;
 pub use rapier::*;
 pub use index_buffer::*;
+pub use nalgebra_pod::*;
 
 pub trait IntoBoxed<T: ?Sized>: 'static {
 	fn into(self) -> Box<T>;

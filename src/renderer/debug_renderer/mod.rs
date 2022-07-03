@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::f32::consts::PI;
 use std::cell::RefCell;
 use err_derive::Error;
-use vulkano::{memory, command_buffer, descriptor_set};
+use vulkano::{command_buffer, memory};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
@@ -97,8 +97,8 @@ impl DebugRenderer {
 	
 	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2) -> Result<(), DebugRendererRenderError> {
 		let viewproj = (
-			commons.projection[0] * commons.view[0],
-			commons.projection[1] * commons.view[1],
+			*commons.projection[0] * *commons.view[0],
+			*commons.projection[1] * *commons.view[1],
 		);
 		
 		DEBUG_LINES.with(|lines| {
@@ -506,7 +506,7 @@ pub enum DebugRendererError {
 #[derive(Debug, Error)]
 pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
 }
 
@@ -514,5 +514,4 @@ pub enum DebugRendererRenderError {
 pub enum DebugRendererPreRenderError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] DescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 }

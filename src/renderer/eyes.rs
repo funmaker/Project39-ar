@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::convert::TryInto;
 use err_derive::Error;
-use vulkano::render_pass::{Framebuffer, RenderPass};
-use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, SampleCount};
+use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass};
+use vulkano::image::{AttachmentImage, ImageUsage, ImageAccess, view::ImageView, SampleCount, ImageViewAbstract};
 use vulkano::format::{Format, ClearValue};
 use vulkano::device::Queue;
 use openvr::compositor::texture::{vulkan, Handle, ColorSpace};
@@ -165,17 +165,20 @@ impl Eyes {
 			color_space: ColorSpace::Gamma,
 		};
 		
-		let frame_buffer = Framebuffer::with_dimensions(render_pass.clone(),
-		                                                [frame_buffer_size.0, frame_buffer_size.1, 1])
-			.add(ImageView::new(main_image.clone())?)?
-			.add(ImageView::new(depth_image.clone())?)?;
+		let mut attachments: Vec<Arc<dyn ImageViewAbstract>> = vec![
+			ImageView::new_default(main_image.clone())?,
+			ImageView::new_default(depth_image.clone())?,
+		];
 		
-		let frame_buffer = if samples != SampleCount::Sample1 {
-			frame_buffer.add(ImageView::new(resolved_image.clone())?)?
-			            .build()?
-		} else {
-			frame_buffer.build()?
-		};
+		if samples != SampleCount::Sample1 {
+			attachments.push(ImageView::new_default(resolved_image.clone())?);
+		}
+		
+		let frame_buffer = Framebuffer::new(render_pass.clone(), FramebufferCreateInfo {
+			attachments,
+			extent: [frame_buffer_size.0, frame_buffer_size.1],
+			..FramebufferCreateInfo::default()
+		})?;
 		
 		let mut clear_values = vec![ ClearValue::None ];
 		

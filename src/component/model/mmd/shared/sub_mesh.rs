@@ -1,24 +1,27 @@
 use std::sync::Arc;
 use std::ops::Range;
+use bytemuck::{Pod, Zeroable};
 use vulkano::buffer::ImmutableBuffer;
 use vulkano::image::{ImmutableImage, view::ImageView};
-use vulkano::sampler::Sampler;
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::sampler::{Sampler, SamplerCreateInfo};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline};
 
 use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
 use crate::component::model::ModelError;
 use crate::math::{Vec3, Vec4};
+use crate::utils::NgPod;
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<PersistentDescriptorSet>);
 
-#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 pub struct MaterialInfo {
-	pub color: Vec4,
-	pub specular: Vec3,
+	pub color: NgPod<Vec4>,
+	pub specular: NgPod<Vec3>,
 	pub specularity: f32,
-	pub ambient: Vec3,
+	pub ambient: NgPod<Vec3>,
 	pub sphere_mode: u32,
 }
 
@@ -42,25 +45,23 @@ impl SubMesh {
 	           edge: Option<(f32, Vec4)>,
 	           renderer: &mut Renderer)
 	           -> Result<SubMesh, ModelError> {
-		let sampler = Sampler::simple_repeat_linear(renderer.device.clone());
+		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo::simple_repeat_linear())?;
 		
 		let main_pipeline = match no_cull {
 			false => renderer.pipelines.get::<MMDPipelineOpaque>()?,
 			true  => renderer.pipelines.get::<MMDPipelineOpaqueNoCull>()?,
 		};
 		
-		let texture_view = ImageView::new(texture)?;
-		let toon_view = ImageView::new(toon)?;
-		let sphere_map_view = ImageView::new(sphere_map)?;
+		let texture_view = ImageView::new_default(texture)?;
+		let toon_view = ImageView::new_default(toon)?;
+		let sphere_map_view = ImageView::new_default(sphere_map)?;
 		
-		let main_set = {
-			let mut set_builder = PersistentDescriptorSet::start(main_pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
-			set_builder.add_buffer(material_buffer.clone())?
-			           .add_sampled_image(texture_view.clone(), sampler.clone())?
-			           .add_sampled_image(toon_view.clone(), sampler.clone())?
-			           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
-			set_builder.build()?
-		};
+		let main_set = PersistentDescriptorSet::new(main_pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+			WriteDescriptorSet::buffer(0, material_buffer.clone()),
+			WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
+			WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
+			WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
+		])?;
 		
 		let mut sub_mesh = SubMesh {
 			range,
@@ -77,14 +78,12 @@ impl SubMesh {
 				true  => renderer.pipelines.get::<MMDPipelineTransNoCull>()?,
 			};
 			
-			let set = {
-				let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
-				set_builder.add_buffer(material_buffer.clone())?
-				           .add_sampled_image(texture_view.clone(), sampler.clone())?
-				           .add_sampled_image(toon_view.clone(), sampler.clone())?
-				           .add_sampled_image(sphere_map_view.clone(), sampler.clone())?;
-				set_builder.build()?
-			};
+			let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+				WriteDescriptorSet::buffer(0, material_buffer.clone()),
+				WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
+				WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
+				WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
+			])?;
 			
 			sub_mesh.transparent = Some((pipeline, set));
 		}
@@ -95,11 +94,9 @@ impl SubMesh {
 			
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
-			let set = {
-				let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone());
-				set_builder.add_sampled_image(texture_view.clone(), sampler.clone())?;
-				set_builder.build()?
-			};
+			let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+				WriteDescriptorSet::image_view_sampler(0, texture_view.clone(), sampler.clone()),
+			])?;
 			
 			sub_mesh.edge = Some((pipeline.into(), set));
 		}

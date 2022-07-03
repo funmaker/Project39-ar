@@ -64,9 +64,9 @@ impl Tool for Weld {
 					if target != hit_ent {
 						target.state_mut().position = hit_pos * self.target_local_pos.inverse();
 						target.add_component(JointComponent::new(
-							FixedJoint::new()
-							           .local_frame1(self.target_local_pos)
-							           .local_frame2(local_pos),
+							*FixedJoint::new()
+							            .set_local_frame1(self.target_local_pos)
+							            .set_local_frame2(local_pos),
 							hit_ent,
 						));
 				

@@ -6,7 +6,7 @@ use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index::HMD;
-use rapier3d::dynamics::{JointAxesMask, JointAxis, JointData, RigidBodyType};
+use rapier3d::dynamics::{JointAxesMask, JointAxis, RigidBodyType, GenericJoint};
 use rapier3d::prelude::ColliderBuilder;
 
 pub mod vr;
@@ -178,12 +178,13 @@ impl Application {
 					.build()
 			);
 			
-			let joint = JointData::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z)
-				.local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
-				.local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
-				.limit_axis(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-				.limit_axis(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-				.limit_axis(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
+			let mut joint = GenericJoint::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z);
+			
+			joint.set_local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
+			     .set_local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
+			     .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+			     .set_limits(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+			     .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
 			
 			application.add_entity(
 				Entity::builder("Box")

@@ -28,7 +28,7 @@ impl EntityBuilder {
 	pub fn new(name: impl Into<String>) -> Self {
 		EntityBuilder {
 			name: name.into(),
-			rigid_body: RigidBodyBuilder::new_static().build(),
+			rigid_body: RigidBodyBuilder::fixed().build(),
 			position: Isometry3::identity(),
 			velocity: Vec3::zeros(),
 			angular_velocity: Vec3::zeros(),

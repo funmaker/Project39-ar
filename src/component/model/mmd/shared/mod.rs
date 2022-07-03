@@ -11,7 +11,7 @@ mod sub_mesh;
 use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
 use crate::renderer::Renderer;
-use crate::utils::{FenceCheck, ImmutableIndexBuffer};
+use crate::utils::{FenceCheck, ImmutableIndexBuffer, NgPod};
 use crate::math::{AMat4, IVec4};
 use super::{MMDBone, Vertex};
 pub use builder::MMDModelSharedBuilder;
@@ -24,11 +24,11 @@ pub struct MMDModelShared {
 	pub indices: ImmutableIndexBuffer,
 	pub sub_meshes: Vec<SubMesh>,
 	pub default_bones: Vec<MMDBone>,
-	pub bones_pool: CpuBufferPool<AMat4>,
-	pub morphs_offsets: Arc<ImmutableBuffer<[IVec4]>>,
+	pub bones_pool: CpuBufferPool<NgPod<AMat4>>,
+	pub morphs_offsets: Arc<ImmutableBuffer<[NgPod<IVec4>]>>,
 	pub morphs_sizes: Vec<usize>,
 	pub morphs_max_size: usize,
-	pub morphs_pool: CpuBufferPool<IVec4>,
+	pub morphs_pool: CpuBufferPool<NgPod<IVec4>>,
 	pub morphs_pipeline: Arc<ComputePipeline>,
 	pub fence: FenceCheck,
 	pub colliders: Vec<ColliderDesc>,
@@ -45,7 +45,7 @@ impl MMDModelShared {
 		               .map(|mesh| mesh.main.0.clone())
 		               .ok_or(ModelError::NoLayout)
 		               .or_else(|_| renderer.pipelines.get::<MMDPipelineOpaque>().map_err(Into::into).map(Into::into))
-		               .and_then(|pipeline| pipeline.layout().descriptor_set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
+		               .and_then(|pipeline| pipeline.layout().set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
 	}
 }
 

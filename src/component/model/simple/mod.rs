@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::sync::GpuFuture;
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
@@ -45,12 +45,10 @@ impl SimpleModel {
 		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
 		                                                            renderer.load_queue.clone())?;
 		
-		let set = {
-			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone());
-			set_builder.add_buffer(renderer.commons.clone())?
-			           .add_sampled_image(texture.view.clone(), texture.sampler.clone())?;
-			set_builder.build()?
-		};
+		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
+			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			WriteDescriptorSet::image_view_sampler(1, texture.view.clone(), texture.sampler.clone()),
+		])?;
 		
 		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(texture.fence.future()))?;
 		

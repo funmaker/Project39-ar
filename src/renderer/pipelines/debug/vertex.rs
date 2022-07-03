@@ -1,6 +1,8 @@
+use bytemuck::{Pod, Zeroable};
 use crate::math::{IntoArray};
 
-#[derive(Default, Copy, Clone, Debug)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 pub struct Vertex {
 	pos_left: [f32; 3],
 	pos_right: [f32; 3],
@@ -19,7 +21,8 @@ impl Vertex {
 	}
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 pub struct TexturedVertex {
 	pos_left: [f32; 3],
 	pos_right: [f32; 3],

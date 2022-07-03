@@ -1,30 +1,32 @@
 use std::sync::Arc;
 use err_derive::Error;
-use vulkano::{memory, sync, command_buffer, sampler};
+use bytemuck::{Zeroable, Pod};
+use vulkano::{sync, command_buffer, sampler, memory, descriptor_set};
 use vulkano::image::AttachmentImage;
 use vulkano::device::Queue;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
-use vulkano::descriptor_set::{self, PersistentDescriptorSet};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::view::ImageView;
-use vulkano::sampler::{Sampler, Filter, MipmapMode, SamplerAddressMode};
+use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 use crate::math::{Vec4, Vec2, Mat3, Isometry3};
 use crate::renderer::eyes::Eyes;
-use crate::utils::FenceCheck;
+use crate::utils::{FenceCheck, NgPod};
 use crate::config;
 use super::pipelines::background::{BackgroundPipeline, Vertex};
 use super::pipelines::{PipelineError, Pipelines};
 
 #[allow(dead_code)]
-#[derive(Copy, Clone)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 struct Intrinsics {
-	rawproj: [Vec4; 2],
-	focal: [Vec2; 2],
-	coeffs: [Vec4; 2],
-	scale: [Vec2; 2],
-	center: [Vec2; 2],
+	rawproj: [NgPod<Vec4>; 2],
+	focal: [NgPod<Vec2>; 2],
+	coeffs: [NgPod<Vec4>; 2],
+	scale: [NgPod<Vec2>; 2],
+	center: [NgPod<Vec2>; 2],
 }
 
 pub struct Background {
@@ -57,24 +59,24 @@ impl Background {
 		
 		let intrinsics = Intrinsics {
 			rawproj: [
-				eyes.raw_projection.0,
-				eyes.raw_projection.1,
+				eyes.raw_projection.0.into(),
+				eyes.raw_projection.1.into(),
 			],
 			focal: [
-				config.camera.left.focal_length.component_div(&config.camera.left.size.cast()),
-				config.camera.right.focal_length.component_div(&config.camera.right.size.cast()),
+				config.camera.left.focal_length.component_div(&config.camera.left.size.cast()).into(),
+				config.camera.right.focal_length.component_div(&config.camera.right.size.cast()).into(),
 			],
 			coeffs: [
-				config.camera.left.coeffs.clone(),
-				config.camera.right.coeffs.clone(),
+				config.camera.left.coeffs.clone().into(),
+				config.camera.right.coeffs.clone().into(),
 			],
 			scale: [
-				config.camera.left.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()),
-				config.camera.right.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()),
+				config.camera.left.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()).into(),
+				config.camera.right.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()).into(),
 			],
 			center: [
-				(config.camera.left.center + config.camera.left.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()),
-				(config.camera.right.center + config.camera.right.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()),
+				(config.camera.left.center + config.camera.left.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()).into(),
+				(config.camera.right.center + config.camera.right.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()).into(),
 			],
 		};
 		
@@ -83,27 +85,19 @@ impl Background {
 		                                                true,
 		                                                intrinsics)?;
 		
-		let view = ImageView::new(camera_image)?;
-		let sampler = Sampler::new(
-			queue.device().clone(),
-			Filter::Linear,
-			Filter::Linear,
-			MipmapMode::Nearest,
-			SamplerAddressMode::ClampToEdge,
-			SamplerAddressMode::ClampToEdge,
-			SamplerAddressMode::ClampToEdge,
-			0.0,
-			1.0,
-			0.0,
-			1.0,
-		)?;
+		let view = ImageView::new_default(camera_image)?;
+		let sampler = Sampler::new(queue.device().clone(), SamplerCreateInfo {
+			mag_filter: Filter::Linear,
+			min_filter: Filter::Linear,
+			mipmap_mode: SamplerMipmapMode::Nearest,
+			address_mode: [SamplerAddressMode::ClampToEdge; 3],
+			..SamplerCreateInfo::default()
+		})?;
 		
-		let set = {
-			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone());
-			set_builder.add_buffer(intrinsics.clone())?
-			           .add_sampled_image(view, sampler)?;
-			set_builder.build()?
-		};
+		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone(), [
+			WriteDescriptorSet::buffer(0, intrinsics.clone()),
+			WriteDescriptorSet::image_view_sampler(1, view, sampler),
+		])?;
 		
 		let flip_xz = vector!(-1.0, 1.0, -1.0);
 		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
@@ -237,11 +231,11 @@ impl Background {
 pub enum BackgroundError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] DescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
+	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }
 

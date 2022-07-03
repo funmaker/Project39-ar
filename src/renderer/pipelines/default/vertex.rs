@@ -1,6 +1,8 @@
+use bytemuck::{Pod, Zeroable};
 use crate::math::IntoArray;
 
-#[derive(Default, Copy, Clone)]
+#[repr(C)]
+#[derive(Default, Copy, Clone, Zeroable, Pod)]
 pub struct Vertex {
 	pub pos: [f32; 3],
 	pub normal: [f32; 3],

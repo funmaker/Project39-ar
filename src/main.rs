@@ -1,4 +1,3 @@
-#![feature(bool_to_option)]
 #![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(trace_macros)]

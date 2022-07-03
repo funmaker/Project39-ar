@@ -22,9 +22,12 @@ impl ImageEx for DynamicImage {
 	}
 	
 	fn has_alpha(&self) -> bool {
+		use DynamicImage::*;
+		
 		match self {
-			DynamicImage::ImageLuma8(_) | DynamicImage::ImageRgb8(_) | DynamicImage::ImageRgb16(_) | DynamicImage::ImageBgr8(_) | DynamicImage::ImageLuma16(_) => false,
-			DynamicImage::ImageLumaA8(_) | DynamicImage::ImageRgba8(_) | DynamicImage::ImageRgba16(_) | DynamicImage::ImageBgra8(_)| DynamicImage::ImageLumaA16(_) => true,
+			ImageLuma8(_)  | ImageRgb8(_)  | ImageLuma16(_)  | ImageRgb16(_)  | ImageRgb32F(_)  => false,
+			ImageLumaA8(_) | ImageRgba8(_) | ImageLumaA16(_) | ImageRgba16(_) | ImageRgba32F(_) => true,
+			_ => false,
 		}
 	}
 }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc, CommandPoolBuilderAlloc};
-use vulkano::command_buffer::sys::{UnsafeCommandBuffer, UnsafeCommandBufferBuilder, UnsafeCommandBufferBuilderPipelineBarrier};
+use vulkano::command_buffer::sys::{CommandBufferBeginInfo, UnsafeCommandBuffer, UnsafeCommandBufferBuilder, UnsafeCommandBufferBuilderPipelineBarrier};
 use vulkano::command_buffer::{CommandBufferLevel, CommandBufferUsage, PrimaryCommandBuffer, CommandBufferExecError};
 use vulkano::device::{Device, DeviceOwned, Queue};
 use vulkano::device::physical::QueueFamily;
@@ -35,11 +35,14 @@ impl OpenVRCommandBuffer<StandardCommandPoolAlloc> {
 	
 	unsafe fn new(image: Arc<AttachmentImage>, from_layout: Option<ImageLayout>, to_layout: Option<ImageLayout>, device: Arc<Device>, queue_family: QueueFamily) -> Result<OpenVRCommandBuffer, OomError> {
 		let pool = Device::standard_command_pool(&device, queue_family);
-		let pool_builder_alloc = pool.alloc(false, 1)?
+		let pool_builder_alloc = pool.allocate(CommandBufferLevel::Primary, 1)?
 			.next()
 			.expect("Requested one command buffer from the command pool, but got zero.");
 		
-		let mut builder = UnsafeCommandBufferBuilder::new(pool_builder_alloc.inner(), CommandBufferLevel::primary(), CommandBufferUsage::MultipleSubmit)?;
+		let mut builder = UnsafeCommandBufferBuilder::new(pool_builder_alloc.inner(), CommandBufferBeginInfo {
+			usage: CommandBufferUsage::MultipleSubmit,
+			..CommandBufferBeginInfo::default()
+		})?;
 		let mut barrier = UnsafeCommandBufferBuilderPipelineBarrier::new();
 		
 		let current_layout = from_layout.unwrap_or(image.final_layout_requirement());
@@ -66,8 +69,8 @@ impl OpenVRCommandBuffer<StandardCommandPoolAlloc> {
 		
 		barrier.add_image_memory_barrier(
 			&image,
-			image.current_miplevels_access(),
-			image.current_layer_levels_access(),
+			image.current_mip_levels_access(),
+			image.current_array_layers_access(),
 			source_stage,
 			source_access,
 			destination_stage,

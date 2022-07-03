@@ -4,17 +4,18 @@ use std::convert::TryInto;
 use std::ffi::CString;
 use std::sync::{Arc, mpsc};
 use err_derive::Error;
-use vulkano::{command_buffer, descriptor_set, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
+use bytemuck::{Pod, Zeroable};
+use vulkano::{command_buffer, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SubpassContents};
-use vulkano::device::{Device, DeviceExtensions, Features, Queue};
+use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::Format;
 use vulkano::image::{ImageLayout, ImageUsage, SampleCount, SwapchainImage};
-use vulkano::instance::{Instance, InstanceExtensions};
+use vulkano::instance::{Instance, InstanceCreateInfo, InstanceExtensions};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::render_pass::{AttachmentDesc, LoadOp, MultiviewDesc, RenderPass, RenderPassDesc, StoreOp, SubpassDesc};
-use vulkano::swapchain::{CompositeAlpha, FullscreenExclusive, PresentMode, Surface, SurfaceTransform, Swapchain};
+use vulkano::render_pass::{AttachmentDescription, AttachmentReference, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
+use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
 use vulkano::sync::{FenceSignalFuture, GpuFuture};
 
 pub mod camera;
@@ -42,11 +43,12 @@ use assets_manager::{AssetsManager, AssetKey};
 
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod)]
 pub struct CommonsUBO {
-	projection: [PMat4; 2],
-	view: [AMat4; 2],
-	light_direction: [Vec4; 2],
+	projection: [NgPod<PMat4>; 2],
+	view: [NgPod<AMat4>; 2],
+	light_direction: [NgPod<Vec4>; 2],
 	ambient: f32,
 }
 
@@ -130,8 +132,6 @@ impl Renderer {
 			dprintln!("\t{}", layer.name());
 		}
 		
-		let app_infos = vulkano::app_info_from_cargo_toml!();
-		
 		let vr_extensions = vr.as_ref().map(|vr| vr.lock().unwrap().compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
 		let extensions = InstanceExtensions::from(vr_extensions.iter().map(CString::as_c_str))
@@ -147,16 +147,21 @@ impl Renderer {
 		let mut layers = vec![];
 		
 		if config::get().validation {
-			layers.push("VK_LAYER_KHRONOS_validation");
+			layers.push("VK_LAYER_KHRONOS_validation".to_string());
 		}
 		
-		let removed = layers.drain_filter(|&mut layer| available_layers.iter().all(|al| al.name() != layer));
+		let removed = layers.drain_filter(|layer| available_layers.iter().all(|al| al.name() != layer));
 		
 		for layer in removed {
 			eprintln!("MISSING LAYER: {}", layer);
 		}
 		
-		Ok(Instance::new(Some(&app_infos), Version::V1_2, &extensions, layers)?)
+		Ok(Instance::new(InstanceCreateInfo {
+			engine_version: Version::V1_2,
+			enabled_extensions: extensions,
+			enabled_layers: layers,
+			..InstanceCreateInfo::application_from_cargo_toml()
+		})?)
 	}
 	
 	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugCallback, RendererError> {
@@ -251,32 +256,34 @@ impl Renderer {
 		                           .find(|&q| q.supports_graphics())
 		                           .ok_or(RendererError::NoQueue)?;
 		
+		// TODO: q.supports_graphics() prevents you from using pure transfer-oriented families, but it's required for mipmaps. Something has to be done about it.
 		let load_queue_family = physical.queue_families()
-		                                .find(|&q| q.explicitly_supports_transfers() && !(q.id() == queue_family.id() && q.queues_count() <= 1))
-		                                .unwrap_or(queue_family);
+		                                .find(|&q| q.explicitly_supports_transfers() && q.supports_graphics() && q.id() != queue_family.id());
 		
-		let families = vec![
-			(queue_family, 0.5),
-			(load_queue_family, 0.2),
-		];
+		let mut queue_create_infos = vec![QueueCreateInfo::family(queue_family)];
+		
+		if let Some(load_queue_family) = load_queue_family {
+			queue_create_infos.push(QueueCreateInfo::family(load_queue_family));
+		}
 		
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.lock().unwrap().compositor, &physical)).unwrap_or_default();
 		
-		let (device, mut queues) = Device::new(physical,
-		                                       &Features {
-			                                       multiview: true,
-			                                       ..Features::none()
-		                                       },
-		                                       &DeviceExtensions::from(vr_extensions.iter().map(CString::as_c_str))
-		                                                         .union(&DeviceExtensions {
-			                                                         khr_swapchain: true,
-			                                                         khr_storage_buffer_storage_class: true,
-			                                                         ..DeviceExtensions::none()
-		                                                         }),
-		                                       families.into_iter())?;
+		let (device, mut queues) = Device::new(physical, DeviceCreateInfo {
+			enabled_extensions: DeviceExtensions::from(vr_extensions.iter().map(CString::as_c_str)).union(&DeviceExtensions {
+				khr_swapchain: true,
+				khr_storage_buffer_storage_class: true,
+				..DeviceExtensions::none()
+			}),
+			enabled_features: Features {
+				multiview: true,
+				..Features::none()
+			},
+			queue_create_infos,
+			..DeviceCreateInfo::default()
+		})?;
 		
 		let queue = queues.next().ok_or(RendererError::NoQueue)?;
-		let load_queue = queues.next().ok_or(RendererError::NoQueue)?;
+		let load_queue = queues.next().unwrap_or_else(|| queue.clone());
 		
 		Ok((device, queue, load_queue))
 	}
@@ -286,80 +293,94 @@ impl Renderer {
 		let samples = msaa.try_into().map_err(|_| RendererError::InvalidMultiSamplingCount(msaa))?;
 		
 		let mut attachments = vec![
-			AttachmentDesc {
-				format: eyes::IMAGE_FORMAT,
+			AttachmentDescription {
+				format: Some(eyes::IMAGE_FORMAT),
 				samples,
-				load: LoadOp::DontCare,
-				store: StoreOp::Store,
-				stencil_load: LoadOp::DontCare,
-				stencil_store: StoreOp::DontCare,
+				load_op: LoadOp::DontCare,
+				store_op: StoreOp::Store,
 				initial_layout: ImageLayout::ColorAttachmentOptimal,
 				final_layout: ImageLayout::ColorAttachmentOptimal,
+				..AttachmentDescription::default()
 			},
-			AttachmentDesc {
-				format: eyes::DEPTH_FORMAT,
+			AttachmentDescription {
+				format: Some(eyes::DEPTH_FORMAT),
 				samples,
-				load: LoadOp::Clear,
-				store: StoreOp::DontCare,
-				stencil_load: LoadOp::DontCare,
-				stencil_store: StoreOp::DontCare,
+				load_op: LoadOp::Clear,
+				store_op: StoreOp::DontCare,
 				initial_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				final_layout: ImageLayout::DepthStencilAttachmentOptimal,
+				..AttachmentDescription::default()
 			},
 		];
 		
 		let mut subpasses = vec![
-			SubpassDesc {
-				color_attachments: vec![(0, attachments[0].final_layout)],
-				depth_stencil: Some((1, attachments[1].final_layout)),
+			SubpassDescription {
+				view_mask: 0b11,
+				color_attachments: vec![Some(AttachmentReference {
+					attachment: 0,
+					layout: attachments[0].final_layout,
+					..AttachmentReference::default()
+				})],
+				depth_stencil_attachment: Some(AttachmentReference {
+					attachment: 1,
+					layout: attachments[1].final_layout,
+					..AttachmentReference::default()
+				}),
 				input_attachments: vec![],
 				resolve_attachments: vec![],
 				preserve_attachments: vec![],
-			}
+				..SubpassDescription::default()
+			},
 		];
 		
 		if samples != SampleCount::Sample1 {
-			attachments.push(AttachmentDesc {
-				format: eyes::IMAGE_FORMAT,
+			attachments.push(AttachmentDescription {
+				format: Some(eyes::IMAGE_FORMAT),
 				samples: SampleCount::Sample1,
-				load: LoadOp::DontCare,
-				store: StoreOp::Store,
-				stencil_load: LoadOp::DontCare,
-				stencil_store: StoreOp::DontCare,
+				load_op: LoadOp::DontCare,
+				store_op: StoreOp::Store,
 				initial_layout: ImageLayout::TransferDstOptimal,
 				final_layout: ImageLayout::TransferDstOptimal,
+				..AttachmentDescription::default()
 			});
 			
-			subpasses[0].resolve_attachments.push((2, ImageLayout::TransferDstOptimal))
+			subpasses[0].resolve_attachments.push(Some(AttachmentReference {
+				attachment: 2,
+				layout: attachments[2].final_layout,
+				..AttachmentReference::default()
+			}))
 		}
 		
-		let render_pass_desc = RenderPassDesc::with_multiview(
+		let render_pass = RenderPass::new(device.clone(), RenderPassCreateInfo {
 			attachments,
 			subpasses,
-			vec![],
-			MultiviewDesc {
-				view_masks: vec![0b11],
-				correlation_masks: vec![0b11],
-				view_offsets: vec![],
-			}
-		);
-		
-		let render_pass = RenderPass::new(device.clone(), render_pass_desc)?;
+			dependencies: vec![],
+			correlated_view_masks: vec![0b11],
+			..RenderPassCreateInfo::default()
+		})?;
 		
 		Ok(render_pass)
 	}
 	
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
-		if !surface.is_supported(self.queue.family())? {
-			return Err(RendererSwapchainError::SurfaceNotSupported)
-		}
+		//TODO: ???
 		
-		let caps = surface.capabilities(self.device.physical_device())?;
+		// if self.queue.family().supports_surface(&surface)? {
+		// 	return Err(RendererSwapchainError::SurfaceNotSupported)
+		// }
+		
+		let caps = self.device
+		               .physical_device()
+		               .surface_capabilities(&surface, SurfaceInfo::default())?;
+		
 		let dimensions = caps.current_extent.unwrap_or(caps.min_image_extent);
-		let format = caps.supported_formats
+		let format = self.device
+		                 .physical_device()
+		                 .surface_formats(&surface, SurfaceInfo::default())?
 		                 .iter()
 		                 .find(|format| format.0 == Format::B8G8R8A8_UNORM || format.0 == Format::R8G8B8A8_UNORM)
-		                 .expect("UNorm format not supported on the surface");
+		                 .expect("UNorm format not supported on the surface")
+		                 .clone();
 		
 		let alpha_preference = [CompositeAlpha::PreMultiplied, CompositeAlpha::Opaque, CompositeAlpha::Inherit];
 		let alpha = alpha_preference.iter()
@@ -373,20 +394,17 @@ impl Renderer {
 			..ImageUsage::none()
 		};
 		
-		Ok(Swapchain::start(self.device.clone(), surface)
-		             .num_images(2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(caps.min_image_count)))
-		             .format(format.0)
-		             .dimensions(dimensions)
-		             .layers(1)
-		             .usage(usage)
-		             .sharing_mode(&self.queue)
-		             .transform(SurfaceTransform::Identity)
-		             .composite_alpha(alpha)
-		             .present_mode(PresentMode::Fifo)
-		             .fullscreen_exclusive(FullscreenExclusive::Allowed)
-		             .clipped(false)
-		             .color_space(format.1)
-		             .build()?)
+		Ok(Swapchain::new(self.device.clone(), surface, SwapchainCreateInfo {
+			min_image_count: 2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(caps.min_image_count)),
+			image_format: Some(format.0),
+			image_color_space: format.1,
+			image_extent: dimensions,
+			image_usage: usage,
+			composite_alpha: alpha,
+			present_mode: PresentMode::Fifo,
+			clipped: false,
+			..SwapchainCreateInfo::default()
+		})?)
 	}
 	
 	pub fn render(&mut self, hmd_pose: [[f32; 4]; 3], camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
@@ -408,7 +426,7 @@ impl Renderer {
 		
 		// TODO: Optimize Boxes
 		while let Ok((command, cam_pose)) = self.load_commands.try_recv() {
-			if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.load_queue) {
+			if !future.queue_change_allowed() && &future.queue().unwrap() != &self.load_queue {
 				future = Box::new(future.then_signal_semaphore()
 				                        .then_execute(self.load_queue.clone(), command)?);
 			} else {
@@ -430,11 +448,11 @@ impl Renderer {
 		let pixel_scale = vector!(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
 		
 		let commons = CommonsUBO {
-			projection: [self.eyes.projection.0.clone(), self.eyes.projection.1.clone()],
-			view: [view_left, view_right],
+			projection: [self.eyes.projection.0.clone().into(), self.eyes.projection.1.clone().into()],
+			view: [view_left.into(), view_right.into()],
 			light_direction: [
-				(view_left * light_source).to_homogeneous(),
-				(view_right * light_source).to_homogeneous(),
+				(view_left * light_source).to_homogeneous().into(),
+				(view_right * light_source).to_homogeneous().into(),
 			],
 			ambient: 0.25,
 		};
@@ -493,7 +511,7 @@ impl Renderer {
 		
 		let command_buffer = builder.build()?;
 		
-		if !future.queue_change_allowed() && !future.queue().unwrap().is_same(&self.queue) {
+		if !future.queue_change_allowed() && &future.queue().unwrap() != &self.queue {
 			future = future.then_signal_semaphore().boxed();
 		}
 		
@@ -570,15 +588,14 @@ pub enum RendererError {
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::graphics::GraphicsPipelineCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 }
 
 #[derive(Debug, Error)]
 pub enum RendererSwapchainError {
 	#[error(display = "Surface presentation is not supported.")] SurfaceNotSupported,
-	#[error(display = "{}", _0)] CapabilitiesError(#[error(source)] swapchain::CapabilitiesError),
+	#[error(display = "{}", _0)] SurfacePropertiesError(#[error(source)] physical::SurfacePropertiesError),
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
 }
 
 #[derive(Debug, Error)]
@@ -599,8 +616,6 @@ pub enum RendererRenderError {
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
 	#[error(display = "{}", _0)] CopyImageError(#[error(source)] command_buffer::CopyImageError),
 	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
-	#[error(display = "{}", _0)] PersistentDescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }
 

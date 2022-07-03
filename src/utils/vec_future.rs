@@ -146,7 +146,7 @@ unsafe impl<GF> GpuFuture for VecFuture<GF>
 			if change_allowed {
 				queue = Some(cur_queue);
 				change_allowed = future.queue_change_allowed();
-			} else if queue.is_some() && queue.as_ref().unwrap().is_same(&cur_queue) {
+			} else if queue.is_some() && queue.as_ref().unwrap() == &cur_queue {
 				// Same queue
 			} else if !future.queue_change_allowed() {
 				return None;

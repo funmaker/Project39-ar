@@ -10,13 +10,13 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window as WinitWindow;
 use vulkano_win::{VkSurfaceBuild, CreationError};
-use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError, AcquireError};
+use vulkano::{command_buffer, swapchain};
+use vulkano::swapchain::{AcquireError, Surface, Swapchain, SwapchainCreateInfo, SwapchainCreationError};
 use vulkano::image::{SwapchainImage, AttachmentImage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageError, BuildError, CommandBufferExecError, CommandBufferUsage};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage};
 use vulkano::device::{Queue, Device};
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
-use vulkano::OomError;
 use vulkano::image::ImageAccess;
 
 use super::{Renderer, RendererSwapchainError};
@@ -85,14 +85,18 @@ impl Window {
 	}
 	
 	pub fn regen_swapchain(&mut self) -> Result<(), WindowSwapchainRegenError> {
-		let dimensions = self.surface.window().inner_size().into();
+		let image_extent = self.surface.window().inner_size().into();
 		
 		self.swapchain = self.swapchain.0
-		                     .recreate()
-		                     .dimensions(dimensions)
-		                     .build()
+		                     .recreate(SwapchainCreateInfo {
+			                     image_extent,
+			                     ..self.swapchain.0.create_info()
+		                     })
 		                     .map_err(|err| match err {
-			                     SwapchainCreationError::UnsupportedDimensions => WindowSwapchainRegenError::NeedRetry, // No idea why this happens on linux
+			                     SwapchainCreationError::ImageExtentNotSupported { provided, min_supported, max_supported } => {
+				                     eprintln!("SwapchainCreationError: ImageExtentNotSupported\n\tprovided: {:?}\n\tmin_supported: {:?}\n\tmax_supported: {:?}", provided, min_supported, max_supported);
+				                     WindowSwapchainRegenError::NeedRetry
+			                     }, // No idea why this happens on linux
 			                     err => err.into(),
 		                     })?;
 		
@@ -138,7 +142,7 @@ impl Window {
 			self.swapchain_regen_required = true;
 		}
 		
-		let out_dims = swapchain.dimensions();
+		let out_dims = swapchain.image_extent();
 		let image_dims = image.dimensions();
 		
 		let mut builder = AutoCommandBufferBuilder::primary(device.clone(), queue.family().clone(), CommandBufferUsage::OneTimeSubmit)?;
@@ -312,17 +316,17 @@ pub enum WindowCreationError {
 #[derive(Debug, Error)]
 pub enum WindowSwapchainRegenError {
 	#[error(display = "Need Retry")] NeedRetry,
-	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] SwapchainCreationError),
+	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
 }
 
 #[derive(Error)]
 pub enum WindowRenderError {
 	#[error(display = "Later")] Later(Box<dyn GpuFuture>),
-	#[error(display = "{}", _0)] AcquireError(#[error(source)] AcquireError),
-	#[error(display = "{}", _0)] BlitImageError(#[error(source)] BlitImageError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] OomError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] CommandBufferExecError),
+	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
+	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
+	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }
 
 impl Debug for WindowRenderError {

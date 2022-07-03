@@ -2,11 +2,11 @@ use std::thread;
 use std::sync::Arc;
 use std::sync::mpsc;
 use err_derive::Error;
-use vulkano::{memory};
-use vulkano::command_buffer::{self, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
-use vulkano::buffer::{self, CpuBufferPool, BufferSlice, BufferAccess};
+use vulkano::{memory, command_buffer, buffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
+use vulkano::buffer::{CpuBufferPool, BufferSlice, BufferAccess};
 use vulkano::image::{AttachmentImage, ImageUsage};
-use vulkano::device::{Queue};
+use vulkano::device::Queue;
 use vulkano::format::Format;
 
 #[cfg(windows)] mod escapi;
@@ -103,5 +103,5 @@ pub enum CaptureLoopError {
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] BufferViewCreationError(#[error(source)] buffer::view::BufferViewCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 }

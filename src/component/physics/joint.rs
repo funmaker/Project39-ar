@@ -7,18 +7,18 @@ use crate::component::{Component, ComponentBase, ComponentInner, ComponentError}
 #[derive(ComponentBase)]
 pub struct JointComponent {
 	#[inner] inner: ComponentInner,
-	template: JointData,
+	template: GenericJoint,
 	target: EntityRef,
-	handle: Cell<JointHandle>,
+	handle: Cell<ImpulseJointHandle>,
 }
 
 impl JointComponent {
-	pub fn new(joint: impl Into<JointData>, target: impl Into<EntityRef>) -> Self {
+	pub fn new(joint: impl Into<GenericJoint>, target: impl Into<EntityRef>) -> Self {
 		JointComponent {
 			inner: ComponentInner::new(),
 			template: joint.into(),
 			target: target.into(),
-			handle: Cell::new(JointHandle::invalid()),
+			handle: Cell::new(ImpulseJointHandle::invalid()),
 		}
 	}
 	
@@ -36,7 +36,7 @@ impl Component for JointComponent {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		if let Some(target) = self.target.get(application) {
-			self.handle.set(physics.impulse_joint_set.insert(entity.rigid_body, target.rigid_body, self.template));
+			self.handle.set(physics.impulse_joint_set.insert(entity.rigid_body, target.rigid_body, self.template, true));
 		}
 		
 		Ok(())
@@ -45,7 +45,7 @@ impl Component for JointComponent {
 	fn end(&self, _entity: &Entity, application: &Application) -> Result<(), ComponentError> {
 		let physics = &mut *application.physics.borrow_mut();
 		
-		physics.impulse_joint_set.remove(self.handle.get(), &mut physics.island_manager, &mut physics.rigid_body_set, true);
+		physics.impulse_joint_set.remove(self.handle.get(), true);
 		
 		Ok(())
 	}

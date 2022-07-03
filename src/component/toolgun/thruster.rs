@@ -101,9 +101,9 @@ impl Tool for ThrusterTool {
 					.component(self.thruster_model.clone())
 					.component(Thruster::new(self.direction))
 					.component(JointComponent::new(
-						FixedJoint::new()
-						           .local_frame1(Isometry3::identity())
-						           .local_frame2(local_pos),
+						*FixedJoint::new()
+						            .set_local_frame1(Isometry3::identity())
+						            .set_local_frame2(local_pos),
 						hit_ent,
 					))
 					.build()

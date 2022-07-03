@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use image::{DynamicImage, GenericImageView, ImageFormat};
+use image::{DynamicImage, ImageFormat};
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::sync::GpuFuture;
@@ -127,10 +127,10 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			                     .unwrap_or_else(|| default_tex.clone());
 			
 			let material_info = MaterialInfo {
-				color: desc.color,
-				specular: desc.specular,
+				color: desc.color.into(),
+				specular: desc.specular.into(),
 				specularity: desc.specularity,
-				ambient: desc.ambient,
+				ambient: desc.ambient.into(),
 				sphere_mode: desc.sphere_mode,
 			};
 			
@@ -152,14 +152,14 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
 		let (morphs_offsets, morphs_promise) = {
-			let mut offsets = vec![IVec4::zeros(); morphs_max_size * self.morphs.len()];
+			let mut offsets = vec![IVec4::zeros().into(); morphs_max_size * self.morphs.len()];
 			
 			for (mid, morph) in self.morphs.into_iter().enumerate() {
 				for (oid, (index, offset)) in morph.into_iter().enumerate() {
 					offsets[mid * morphs_max_size + oid] = vector!((offset.x * 1_000_000.0) as i32,
 					                                                  (offset.y * 1_000_000.0) as i32,
 					                                                  (offset.z * 1_000_000.0) as i32,
-					                                                  Into::<u32>::into(index) as i32);
+					                                                  Into::<u32>::into(index) as i32).into();
 				}
 			}
 			

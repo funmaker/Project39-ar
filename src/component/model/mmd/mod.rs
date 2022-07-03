@@ -3,12 +3,13 @@ use std::mem::size_of;
 use std::sync::Arc;
 use std::time::Duration;
 use num_traits::Zero;
-use rapier3d::dynamics::{JointAxis, JointData, RigidBodyBuilder, RigidBodyType};
+use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
+use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
@@ -23,7 +24,7 @@ mod config;
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;
 use crate::application::{Application, Entity};
-use crate::utils::{AutoCommandBufferBuilderEx, get_userdata};
+use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI};
@@ -46,9 +47,9 @@ pub struct MMDModel {
 	#[inner] inner: ComponentInner,
 	pub state: RefCell<MMDModelState>,
 	shared: Arc<MMDModelShared>,
-	bones_ubo: Arc<DeviceLocalBuffer<[AMat4]>>,
-	morphs_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
-	offsets_ubo: Arc<DeviceLocalBuffer<[IVec4]>>,
+	bones_ubo: Arc<DeviceLocalBuffer<[NgPod<AMat4>]>>,
+	morphs_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
+	offsets_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
 	morphs_set: Arc<PersistentDescriptorSet>,
 	model_set: Arc<PersistentDescriptorSet>,
 }
@@ -91,26 +92,22 @@ impl MMDModel {
 		
 		let compute_layout = shared.morphs_pipeline
 		                           .layout()
-		                           .descriptor_set_layouts()
+		                           .set_layouts()
 		                           .get(0)
 		                           .ok_or(ModelError::NoLayout)?
 		                           .clone();
 		
-		let morphs_set = {
-			let mut set_builder = PersistentDescriptorSet::start(compute_layout);
-			set_builder.add_buffer(morphs_ubo.clone())?
-			           .add_buffer(shared.morphs_offsets.clone())?
-			           .add_buffer(offsets_ubo.clone())?;
-			set_builder.build()?
-		};
+		let morphs_set = PersistentDescriptorSet::new(compute_layout, [
+			WriteDescriptorSet::buffer(0, morphs_ubo.clone()),
+			WriteDescriptorSet::buffer(1, shared.morphs_offsets.clone()),
+			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+		])?;
 		
-		let model_set = {
-			let mut set_builder = PersistentDescriptorSet::start(shared.commons_layout(renderer)?);
-			set_builder.add_buffer(renderer.commons.clone())?
-			           .add_buffer(bones_ubo.clone())?
-			           .add_buffer(offsets_ubo.clone())?;
-			set_builder.build()?
-		};
+		let model_set = PersistentDescriptorSet::new(shared.commons_layout(renderer)?, [
+			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			WriteDescriptorSet::buffer(1, bones_ubo.clone()),
+			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+		])?;
 		
 		Ok(MMDModel {
 			inner: ComponentInner::new(),
@@ -239,18 +236,21 @@ impl Component for MMDModel {
 				let rb_a = &state.rigid_bodies[rb_a_id];
 				let rb_b = &state.rigid_bodies[rb_b_id];
 				
-				let mut joint = JointData::default()
-					.local_frame1(rb_a.rest_pos.inverse() * desc.position)
-					.local_frame2(rb_b.rest_pos.inverse() * desc.position);
+				let mut joint = GenericJoint::default();
 				
-				fn limit(joint: JointData, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> JointData {
+				joint.set_local_frame1(rb_a.rest_pos.inverse() * desc.position)
+				     .set_local_frame2(rb_b.rest_pos.inverse() * desc.position);
+				
+				fn limit(mut joint: GenericJoint, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> GenericJoint {
 					if max - min >= max_limit {
-						joint
+					
 					} else if min != max {
-						joint.limit_axis(axis, [min, max])
+						joint.set_limits(axis, [min, max]);
 					} else {
-						joint.lock_axes(axis.into())
+						joint.lock_axes(axis.into());
 					}
+					
+					joint
 				}
 				
 				joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x, 100.0);
@@ -263,7 +263,8 @@ impl Component for MMDModel {
 				
 				physics.impulse_joint_set.insert(rb_a.handle,
 				                                 rb_b.handle,
-				                                 joint)
+				                                 joint,
+				                                 true)
 			};
 			
 			if bone_a > bone_b {
@@ -318,7 +319,7 @@ impl Component for MMDModel {
 			self.draw_debug_bones(entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
-		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..))?;
+		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..).map(Into::into))?;
 		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
 		state.morphs_vec.clear();
@@ -348,7 +349,7 @@ impl Component for MMDModel {
 		} else {
 			let groups = (max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE;
 			
-			let morph_buf = self.shared.morphs_pool.chunk(state.morphs_vec.iter().copied())?;
+			let morph_buf = self.shared.morphs_pool.chunk(state.morphs_vec.iter().copied().map(Into::into))?;
 			
 			builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
 			       .fill_buffer(self.offsets_ubo.clone(), 0)?

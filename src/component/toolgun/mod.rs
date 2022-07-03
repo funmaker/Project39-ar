@@ -7,7 +7,7 @@ use simba::scalar::SubsetOf;
 use vulkano::{descriptor_set, memory, sync};
 use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 mod spawner;
@@ -82,11 +82,9 @@ impl ToolGun {
 		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
 		                                                              renderer.queue.clone())?;
 		
-		let set = {
-			let mut set_builder = PersistentDescriptorSet::start(pipeline.layout().descriptor_set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone());
-			set_builder.add_buffer(renderer.commons.clone())?;
-			set_builder.build()?
-		};
+		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone(), [
+			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+		])?;
 		
 		let fence = FenceCheck::new(vertices_promise)?;
 		
@@ -291,6 +289,6 @@ pub enum ToolGunError {
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] PropManagerError(#[error(source)] PropManagerError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocError(#[error(source)] memory::DeviceMemoryAllocError),
-	#[error(display = "{}", _0)] DescriptorSetError(#[error(source)] descriptor_set::DescriptorSetError),
+	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
+	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 }

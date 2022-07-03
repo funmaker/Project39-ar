@@ -171,7 +171,7 @@ impl Entity {
 	}
 	
 	pub fn cleanup_physics(&mut self, physics: &mut Physics) {
-		physics.rigid_body_set.remove(self.rigid_body, &mut physics.island_manager, &mut physics.collider_set, &mut physics.impulse_joint_set, &mut physics.multibody_joint_set);
+		physics.rigid_body_set.remove(self.rigid_body, &mut physics.island_manager, &mut physics.collider_set, &mut physics.impulse_joint_set, &mut physics.multibody_joint_set, true);
 	}
 	
 	pub fn as_ref(&self) -> EntityRef {
@@ -248,7 +248,7 @@ impl Entity {
 		let rb = self.rigid_body_mut(physics);
 		
 		if rb.body_type() == RigidBodyType::Dynamic {
-			rb.set_body_type(RigidBodyType::Static);
+			rb.set_body_type(RigidBodyType::Fixed);
 			self.frozen.set(true);
 			true
 		} else { false }

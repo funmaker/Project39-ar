@@ -14,37 +14,38 @@ opencv-camera = ["opencv"]
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
 #vulkano-win = { path = "../vulkano/vulkano-win" }
-vulkano = "0.27.1"
-vulkano-shaders = "0.27.1"
-vulkano-win = "0.27.1"
-image = "0.23.12"
+vulkano = "0.29.0"
+vulkano-shaders = "0.29.0"
+vulkano-win = "0.29.0"
+image = "0.24.2"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"
-err-derive = "0.3.0"
+err-derive = "0.3.1"
 getopts = "0.2.21"
-arc-swap = "1.2.0"
-obj-rs = "0.6.2"
-opencv = { version = "0.54.0", optional = true }
-num-traits = "0.2.14"
+arc-swap = "1.5.0"
+obj-rs = "0.7.0"
+opencv = { version = "0.65.0", optional = true }
+num-traits = "0.2.15"
 lazy_static = "1.4.0"
-winit = "0.25.0"
+winit = "0.26.1"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "cebbbe812593909a0989eb1d86ee609b15c2b51f" }
 #mmd = { path = "../mmd-rs" }
-native-dialog = "0.5.2"
+native-dialog = "0.6.3"
 unifont = "0.1.0"
-nalgebra = { version = "0.30.1", features = ["serde-serialize"] }
+nalgebra = { version = "0.31.0", features = ["serde-serialize"] }
 simba = "0.7.1"
 imghdr = "0.7.0"
 toml = { version = "0.5.9", features = ['preserve_order'] }
-serde = "1.0.126"
-serde_derive = "1.0.126"
+serde = "1.0.138"
+serde_derive = "1.0.138"
 project39-ar-derive = { path = "derive" }
-rapier3d = { git = "https://github.com/funmaker/rapier", rev = "8c5f88738dd9be9ca3458d610c34d39a85956d23" }
+#rapier3d = { git = "https://github.com/funmaker/rapier", rev = "8c5f88738dd9be9ca3458d610c34d39a85956d23" }
 #rapier3d = { path = "../rapier/crates/rapier3d" }
-#rapier3d = "0.12.0-alpha.1"
-linked-hash-map = { version = "0.5.4", features = ['serde_impl'] }
-rand = "0.8.4"
-regex = "1.5.5"
+rapier3d = "0.13.0"
+linked-hash-map = { version = "0.5.6", features = ['serde_impl'] }
+rand = "0.8.5"
+regex = "1.5.6"
+bytemuck = "1.10.0"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"
