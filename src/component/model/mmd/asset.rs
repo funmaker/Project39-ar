@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::convert::TryInto;
+use std::ffi::OsStr;
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
+use std::fs;
 use err_derive::Error;
 use image::ImageFormat;
 use mmd::pmx::morph::Offsets;
@@ -11,19 +13,20 @@ use mmd::WeightDeform;
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
 
 use crate::renderer::Renderer;
-use crate::debug;
+use crate::{config, debug};
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager};
+use super::config::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
 use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
 
-pub struct MMDConfig;
+pub struct MMDIndexConfig;
 
-impl mmd::Config for MMDConfig {
+impl mmd::Config for MMDIndexConfig {
 	type VertexIndex = u32;
 	type TextureIndex = i32;
 	type MaterialIndex = i32;
@@ -62,12 +65,12 @@ impl AssetKey for PmxAsset {
 		// dprintln!("{}", header);
 		
 		let mut vertices_reader = mmd::VertexReader::new(header)?;
-		let vertices = vertices_reader.iter::<MMDConfig>()
+		let vertices = vertices_reader.iter::<MMDIndexConfig>()
 		                              .map(|v| v.map(Into::into))
 		                              .collect::<Result<Vec<Vertex>, _>>()?;
 		
 		let mut surfaces_reader = mmd::SurfaceReader::new(vertices_reader)?;
-		let indices = surfaces_reader.iter::<MMDConfig>()
+		let indices = surfaces_reader.iter::<MMDIndexConfig>()
 		                             .collect::<Result<Vec<[u32; 3]>, _>>()?
 		                             .flatten();
 		
@@ -89,7 +92,7 @@ impl AssetKey for PmxAsset {
 		let mut materials_reader = mmd::MaterialReader::new(textures_reader)?;
 		let mut last_index: u32 = 0;
 		
-		for material in materials_reader.iter::<MMDConfig>() {
+		for material in materials_reader.iter::<MMDIndexConfig>() {
 			let material = material?;
 			
 			let toon_index = match material.toon {
@@ -136,7 +139,7 @@ impl AssetKey for PmxAsset {
 		
 		let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
 		let bone_defs = bones_reader.iter()
-		                            .collect::<Result<Vec<mmd::Bone<MMDConfig>>, _>>()?;
+		                            .collect::<Result<Vec<mmd::Bone<MMDIndexConfig>>, _>>()?;
 		
 		for def in bone_defs.iter() {
 			let name = if def.universal_name.len() > 0 {
@@ -192,7 +195,7 @@ impl AssetKey for PmxAsset {
 		
 		let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;
 		
-		for morph in morphs_reader.iter::<MMDConfig>() {
+		for morph in morphs_reader.iter::<MMDIndexConfig>() {
 			let morph = morph?;
 			
 			if let Offsets::Vertex(offsets) = morph.offsets {
@@ -204,10 +207,16 @@ impl AssetKey for PmxAsset {
 		
 		let display_reader = mmd::DisplayReader::new(morphs_reader)?;
 		
+		let mut dump_config = config::get().gen_model_toml.then(|| MMDConfig::default());
+		
 		let mut rigid_body_reader = mmd::RigidBodyReader::new(display_reader)?;
 		
-		for rigid_body in rigid_body_reader.iter::<MMDConfig>() {
+		for (id, rigid_body) in rigid_body_reader.iter::<MMDIndexConfig>().enumerate() {
 			let rigid_body = rigid_body?;
+			
+			if let Some(dump_config) = &mut dump_config {
+				dump_config.rigid_bodies.push(MMDRigidBodyOverride::from_mmd(&rigid_body, id))
+			}
 			
 			let name = if rigid_body.universal_name.len() > 0 {
 				&rigid_body.universal_name
@@ -262,8 +271,12 @@ impl AssetKey for PmxAsset {
 		
 		let mut joints_reader = mmd::JointReader::new(rigid_body_reader)?;
 		
-		for joint in joints_reader.iter::<MMDConfig>() {
+		for (id, joint) in joints_reader.iter::<MMDIndexConfig>().enumerate() {
 			let joint = joint?;
+			
+			if let Some(dump_config) = &mut dump_config {
+				dump_config.joints.push(MMDJointOverride::from_mmd(&joint, id));
+			}
 			
 			let name = if joint.universal_name.len() > 0 {
 				&joint.universal_name
@@ -294,6 +307,13 @@ impl AssetKey for PmxAsset {
 			                               joint.rotation_spring));
 		}
 		
+		if let Some(dump_config) = &dump_config {
+			let model_name = self.path.file_prefix().map(OsStr::to_string_lossy).unwrap_or("unknown".into());
+			let dump_path = format!("{}_modeldump.toml", model_name);
+			
+			dprintln!("Dumping model.toml of {} to {}", self.path.to_string_lossy(), dump_path);
+			fs::write(dump_path, toml::to_string_pretty(dump_config).unwrap()).unwrap();
+		}
 		
 		Ok(Arc::new(model.build(renderer)?))
 	}
@@ -319,8 +339,8 @@ fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoa
 
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
-impl From<mmd::Vertex<MMDConfig>> for Vertex {
-	fn from(vertex: mmd::Vertex<MMDConfig>) -> Self {
+impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
+	fn from(vertex: mmd::Vertex<MMDIndexConfig>) -> Self {
 		let (bones, bones_weights) = match vertex.weight_deform {
 			WeightDeform::Bdef1(bdef) => ([bdef.bone_index, 0, 0, 0],
 			                              [1.0, 0.0, 0.0, 0.0]),

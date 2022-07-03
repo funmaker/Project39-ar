@@ -2,6 +2,7 @@ use crate::math::{Isometry3, Vec3};
 
 pub type JointType = mmd::pmx::joint::JointType;
 
+#[derive(Clone)]
 pub struct JointDesc {
 	pub name: String,
 	pub joint_type: JointType,

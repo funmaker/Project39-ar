@@ -20,6 +20,8 @@ pub struct Config {
 	#[arg_short = "d"] pub debug: bool,
 	/// Enable validation layers.
 	#[arg_short = "v"] pub validation: bool,
+	/// Generate and print model.toml.
+	pub gen_model_toml: bool,
 	/// Fallback GPU device to use.
 	pub gpu_id: usize,
 	/// Super-Sampling Anti-Aliasing factor.

@@ -18,6 +18,7 @@ pub mod asset;
 pub mod test;
 mod bone;
 mod rigid_body;
+mod config;
 
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;

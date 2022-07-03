@@ -1,5 +1,6 @@
 debug = false
 validation = false
+gen_model_toml = false
 gpu_id = 0
 ssaa = 1
 msaa = 2
