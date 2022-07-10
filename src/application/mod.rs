@@ -246,7 +246,7 @@ impl Application {
 				entity.tick(delta_time, &self)?;
 			}
 			
-			let pov = self.camera_entity.get(&self).map(|e| e.state().position)
+			let pov = self.camera_entity.get(&self).map(|e| *e.state().position)
 			                            .unwrap_or(Isometry3::identity());
 			
 			let hmd_pose = self.vr_poses.render[HMD as usize].device_to_absolute_tracking().clone();
@@ -299,10 +299,15 @@ impl Application {
 				assert!(old.is_none(), "Entity id {} already taken!", id);
 			}
 			
-			let unsafe_ref = unsafe { &*(self as *const Self) }; // TODO: This is unsafe. Maybe split?
 			for entity in self.entities.values_mut() {
-				if entity.setup_components(unsafe_ref)? {
+				if entity.add_new_components() {
 					clean = false;
+				}
+			}
+			
+			if !clean {
+				for entity in self.entities.values() {
+					entity.setup_new_components(self);
 				}
 			}
 		}
@@ -315,11 +320,15 @@ impl Application {
 		while !clean {
 			clean = true;
 			
-			let unsafe_ref = unsafe { &*(self as *const Self) }; // TODO: This is unsafe. Maybe split?
-			
-			for entity in self.entities.values_mut() {
-				if entity.cleanup_components(unsafe_ref)? {
+			for entity in self.entities.values() {
+				if entity.end_components(self)? {
 					clean = false;
+				}
+			}
+			
+			if !clean {
+				for entity in self.entities.values_mut() {
+					entity.cleanup_ended_components();
 				}
 			}
 		}

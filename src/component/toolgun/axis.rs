@@ -62,7 +62,7 @@ impl Tool for Axis {
 				
 				if let Some(target) = self.target.get(application) {
 					if target != hit_ent {
-						target.state_mut().position = hit_pos * self.target_local_pos.inverse();
+						*target.state_mut().position = hit_pos * self.target_local_pos.inverse();
 						target.add_component(JointComponent::new(
 							*RevoluteJoint::new(Vec3::z_axis())
 							               .set_local_anchor1(self.target_local_pos * Point3::origin())

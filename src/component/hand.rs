@@ -34,7 +34,7 @@ pub struct HandComponent {
 impl HandComponent {
 	pub fn new(hand: Hand) -> Self {
 		HandComponent {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			target_parent: ComponentRef::null(),
 			hand,
 			sticky: Cell::new(false),
@@ -104,7 +104,7 @@ impl Component for HandComponent {
 				}
 				
 				if application.input.use_btn(self.hand).down {
-					let grab_pos = target.tag("GrabPos").unwrap_or(entity.state().position.inverse() * target.state().position);
+					let grab_pos = target.tag("GrabPos").unwrap_or(entity.state().position.inverse() * *target.state().position);
 					
 					target.set_tag("Grabbed", self.as_cref());
 					self.sticky.set(target.tag("GrabSticky").unwrap_or_default());
@@ -117,7 +117,7 @@ impl Component for HandComponent {
 			if !root.has_tag("Seat") {
 				if let Some(input) = application.input.controller(self.hand) {
 					let dir = vector!(input.axis(0), 0.0, -input.axis(1)) * WALK_SPEED * delta_time.as_secs_f32();
-					let dir = entity.state().position * dir;
+					let dir = *entity.state().position * dir;
 					
 					root.state_mut().position.append_translation_mut(&Translation3::new(dir.x, 0.0, dir.z));
 				}

@@ -56,7 +56,7 @@ impl Tool for ThrusterTool {
 			self.direction = ThrusterDirection::Back;
 		}
 		
-		let toolgun_pos = toolgun.entity(application).state().position;
+		let toolgun_pos = *toolgun.entity(application).state().position;
 		
 		let dir_icon = match self.direction {
 			ThrusterDirection::Forward => "⬆",

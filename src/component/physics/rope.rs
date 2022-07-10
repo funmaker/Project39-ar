@@ -18,7 +18,7 @@ pub struct Rope {
 impl Rope {
 	pub fn new(local_offset: Point3, other: EntityRef, other_offset: Point3, length: f32, strength: f32) -> Self {
 		Rope {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			local_offset,
 			other,
 			other_offset,
@@ -38,8 +38,8 @@ impl Component for Rope {
 			}
 		};
 		
-		let self_pos = entity.state().position * self.local_offset;
-		let other_pos = other.state().position * self.other_offset;
+		let self_pos = *entity.state().position * self.local_offset;
+		let other_pos = *other.state().position * self.other_offset;
 		let offset = self_pos - other_pos;
 		let magnitude = offset.magnitude();
 		

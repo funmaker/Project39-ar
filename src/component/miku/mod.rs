@@ -41,7 +41,7 @@ pub struct Miku {
 impl Miku {
 	pub fn new() -> Self {
 		Miku {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			model: ComponentRef::null(),
 			anims: RefCell::new((
 				collection!(

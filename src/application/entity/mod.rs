@@ -12,16 +12,16 @@ mod entity_ref;
 use crate::debug;
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::component::{ComponentRef, ComponentError, RenderType};
-use crate::utils::{IntoBoxed, get_userdata};
+use crate::utils::{IntoBoxed, get_userdata, MutMark};
 use crate::renderer::Renderer;
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
 
 pub struct EntityState {
-	pub position: Isometry3,
-	pub velocity: Vec3,
-	pub angular_velocity: Vec3,
+	pub position: MutMark<Isometry3>,
+	pub velocity: MutMark<Vec3>,
+	pub angular_velocity: MutMark<Vec3>,
 	pub hidden: bool,
 }
 
@@ -53,18 +53,19 @@ impl Entity {
 	}
 	
 	pub fn setup_physics(&mut self, physics: &mut Physics) {
+		let state = self.state.get_mut();
 		let mut rb = self.rigid_body_template.clone();
 		rb.user_data = get_userdata(self.id, 0);
+		rb.set_position(*state.position, true);
+		rb.set_linvel(*state.velocity, true);
+		rb.set_angvel(*state.angular_velocity, true);
 		self.rigid_body = physics.rigid_body_set.insert(rb);
 	}
 	
-	// Safety note. These argument combination is not safe.
-	// Immutable reference to Application can be used to create immutable reference to Self while &mut Self exists.
-	// Do not use both at the same time.
-	pub fn setup_components(&mut self, application: &Application) -> Result<bool, ComponentError> {
+	pub fn add_new_components(&mut self) -> bool {
 		let mut did_work = false;
 		
-		while let Some(mut component) = self.new_components.get_mut().pop() {
+		for mut component in self.new_components.get_mut().drain(..) {
 			did_work = true;
 			
 			let component_id = component.id();
@@ -72,30 +73,49 @@ impl Entity {
 			
 			let old = self.components.insert(component_id, component);
 			assert!(old.is_none(), "Component id {} already taken in entity {}!", component_id, self.id);
-			
-			self.components.get(&component_id).unwrap().start(&self, application)?;
 		}
 		
-		Ok(did_work)
+		did_work
+	}
+	
+	pub fn setup_new_components(&self, application: &Application) -> Result<(), ComponentError> {
+		for component in self.components.values() {
+			if component.inner().is_new() {
+				component.inner().mark_started();
+				component.start(self, application)?;
+			}
+		}
+		
+		Ok(())
 	}
 	
 	pub fn before_physics(&self, physics: &mut Physics) {
 		let state = self.state();
 		let rigid_body = self.rigid_body_mut(physics);
 		
-		// TODO: Optimize wakey wakey
-		rigid_body.set_position(state.position, true);
-		rigid_body.set_linvel(state.velocity, true);
-		rigid_body.set_angvel(state.angular_velocity, true);
+		if state.position.mutated {
+			rigid_body.set_position(*state.position, true);
+		}
+		if state.velocity.mutated {
+			rigid_body.set_linvel(*state.velocity, true);
+		}
+		if state.angular_velocity.mutated {
+			rigid_body.set_angvel(*state.angular_velocity, true);
+		}
 	}
 	
 	pub fn after_physics(&self, physics: &mut Physics) {
 		let mut state = self.state_mut();
 		let rigid_body = self.rigid_body(physics);
 		
-		state.position = *rigid_body.position();
-		state.velocity = *rigid_body.linvel();
-		state.angular_velocity = *rigid_body.angvel();
+		*state.position = *rigid_body.position();
+		state.position.reset();
+		
+		*state.velocity = *rigid_body.linvel();
+		state.velocity.reset();
+		
+		*state.angular_velocity = *rigid_body.angvel();
+		state.angular_velocity.reset();
 	}
 	
 	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
@@ -149,25 +169,22 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn cleanup_components(&mut self, application: &Application) -> Result<bool, ComponentError> {
+	pub fn end_components(&self, application: &Application) -> Result<bool, ComponentError> {
 		let mut did_work = false;
-		let mut clean = false;
 		
-		while !clean {
-			clean = true;
-			
-			for component in self.components.values() {
-				if component.inner().is_being_removed() {
-					component.end(&self, application)?;
-					clean = false;
-					did_work = true;
-				}
+		for component in self.components.values() {
+			if component.inner().is_being_removed() {
+				component.inner().mark_dead();
+				component.end(&self, application)?;
+				did_work = true;
 			}
-			
-			self.components.drain_filter(|_, component| component.inner().is_being_removed());
 		}
 		
 		Ok(did_work)
+	}
+	
+	pub fn cleanup_ended_components(&mut self) {
+		self.components.drain_filter(|_, component| component.inner().is_dead());
 	}
 	
 	pub fn cleanup_physics(&mut self, physics: &mut Physics) {

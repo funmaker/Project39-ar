@@ -15,7 +15,7 @@ pub struct Seat {
 impl Seat {
 	pub fn new(trigger: AABB) -> Self {
 		Seat {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			trigger,
 			root_parent: ComponentRef::null(),
 		}
@@ -25,7 +25,7 @@ impl Seat {
 impl Component for Seat {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		if let Some(hmd) = application.find_entity(|e| e.tag("Head").unwrap_or_default()) {
-			let local_pos = entity.state().position.inverse() * hmd.state().position * Point3::origin();
+			let local_pos = entity.state().position.inverse() * *hmd.state().position * Point3::origin();
 			
 			if let Some(root_parent) = self.root_parent.get(application) {
 				if !self.trigger.contains_local_point(&local_pos) || entity.has_tag("Grabbed") {
@@ -41,7 +41,7 @@ impl Component for Seat {
 				}
 			} else if let Some(root) = application.find_entity(|e| e.name == "VR Root") {
 				if self.trigger.contains_local_point(&local_pos) && !entity.has_tag("Grabbed") && !root.has_tag("Seat") {
-					self.root_parent.set(root.add_component(Parent::new(entity.as_ref(), entity.state().position.inverse() * root.state().position)));
+					self.root_parent.set(root.add_component(Parent::new(entity.as_ref(), entity.state().position.inverse() * *root.state().position)));
 					root.set_tag("Seat", self.as_cref());
 				}
 			}

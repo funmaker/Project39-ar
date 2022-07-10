@@ -11,7 +11,7 @@ pub struct PoV {
 impl PoV {
 	pub fn new() -> Self {
 		PoV {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 		}
 	}
 }

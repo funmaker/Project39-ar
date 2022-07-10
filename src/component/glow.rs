@@ -9,7 +9,7 @@ use crate::renderer::pipelines::default::DefaultGlowPipeline;
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::AutoCommandBufferBuilderEx;
 use crate::component::model::SimpleModel;
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner, ComponentError, RenderType};
 
 #[derive(ComponentBase)]
 pub struct Glow {
@@ -23,7 +23,7 @@ impl Glow {
 		let pipeline = renderer.pipelines.get::<DefaultGlowPipeline>()?;
 		
 		Ok(Glow {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::from_render_type(RenderType::Opaque),
 			pipeline,
 			color,
 		})
@@ -43,7 +43,7 @@ impl Component for Glow {
 	// }
 	
 	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
-		let pos = Similarity3::from_isometry(entity.state().position, 1.0);
+		let pos = Similarity3::from_isometry(*entity.state().position, 1.0);
 		
 		if let Some(model) = entity.find_component_by_type::<SimpleModel>() {
 			builder.bind_pipeline_graphics(self.pipeline.clone())

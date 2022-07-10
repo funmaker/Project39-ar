@@ -62,7 +62,7 @@ impl Tool for Weld {
 				
 				if let Some(target) = self.target.get(application) {
 					if target != hit_ent {
-						target.state_mut().position = hit_pos * self.target_local_pos.inverse();
+						*target.state_mut().position = hit_pos * self.target_local_pos.inverse();
 						target.add_component(JointComponent::new(
 							*FixedJoint::new()
 							            .set_local_frame1(self.target_local_pos)

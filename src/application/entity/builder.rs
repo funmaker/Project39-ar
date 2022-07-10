@@ -8,7 +8,7 @@ use rapier3d::geometry::{Collider, ColliderBuilder};
 use crate::math::{Isometry3, Vec3, Point3, Rot3};
 use crate::component::Component;
 use super::Entity;
-use crate::utils::next_uid;
+use crate::utils::{MutMark, next_uid};
 use crate::application::entity::EntityState;
 use crate::component::physics::collider::ColliderComponent;
 use crate::component::model::SimpleModel;
@@ -117,9 +117,9 @@ impl EntityBuilder {
 			name: self.name,
 			tags: RefCell::new(self.tags),
 			state: RefCell::new(EntityState {
-				position: self.position,
-				velocity: self.velocity,
-				angular_velocity: self.angular_velocity,
+				position: MutMark::new(self.position),
+				velocity: MutMark::new(self.velocity),
+				angular_velocity: MutMark::new(self.angular_velocity),
 				hidden: self.hidden,
 			}),
 			removed: Cell::new(false),

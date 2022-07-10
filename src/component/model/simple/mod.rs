@@ -10,7 +10,7 @@ use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImmutableIndexBuffer, AutoCommandBufferBuilderEx};
 use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, RenderType};
 use crate::application::Entity;
 use crate::renderer::assets_manager::texture::TextureBundle;
 use super::{ModelError, VertexIndex};
@@ -53,7 +53,7 @@ impl SimpleModel {
 		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(texture.fence.future()))?;
 		
 		Ok(SimpleModel {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::from_render_type(RenderType::Opaque),
 			aabb,
 			pipeline,
 			vertices,
@@ -100,7 +100,7 @@ impl SimpleModel {
 
 impl Component for SimpleModel {
 	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
-		self.render_impl(Similarity3::from_isometry(entity.state().position, 1.0), Color::full_white(), builder)?;
+		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::full_white(), builder)?;
 		
 		Ok(())
 	}

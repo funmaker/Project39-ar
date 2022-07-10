@@ -15,7 +15,7 @@ pub struct JointComponent {
 impl JointComponent {
 	pub fn new(joint: impl Into<GenericJoint>, target: impl Into<EntityRef>) -> Self {
 		JointComponent {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			template: joint.into(),
 			target: target.into(),
 			handle: Cell::new(ImpulseJointHandle::invalid()),

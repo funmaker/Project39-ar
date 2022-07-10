@@ -17,7 +17,7 @@ pub struct VrTracked {
 impl VrTracked {
 	pub fn new(device_id: TrackedDeviceIndex, root: ComponentRef<VrRoot>) -> Self {
 		VrTracked {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			device_id,
 			root,
 		}
@@ -32,7 +32,7 @@ impl Component for VrTracked {
 		}
 		
 		let root_pos = match self.root.entity().get(application) {
-			Some(root) => root.state().position,
+			Some(root) => *root.state().position,
 			None => {
 				entity.remove();
 				return Ok(());
@@ -49,9 +49,9 @@ impl Component for VrTracked {
 		let orientation: Similarity3 = orientation.to_subset().unwrap();
 		
 		let mut state = entity.state_mut();
-		state.position = root_pos * orientation.isometry;
-		state.velocity = root_pos.transform_vector(&pose.velocity().clone().into());
-		state.angular_velocity = root_pos.transform_vector(&pose.angular_velocity().clone().into());
+		*state.position = root_pos * orientation.isometry;
+		*state.velocity = root_pos.transform_vector(&pose.velocity().clone().into());
+		*state.angular_velocity = root_pos.transform_vector(&pose.angular_velocity().clone().into());
 		
 		Ok(())
 	}

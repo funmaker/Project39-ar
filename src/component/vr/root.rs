@@ -25,7 +25,7 @@ pub struct VrRoot {
 impl VrRoot {
 	pub fn new() -> Self {
 		VrRoot {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			entities: RefCell::new(BTreeMap::new()),
 		}
 	}

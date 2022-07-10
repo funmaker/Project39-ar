@@ -14,7 +14,7 @@ pub struct Parent {
 impl Parent {
 	pub fn new(target: impl Into<EntityRef>, offset: Isometry3) -> Self {
 		Parent {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			target: target.into(),
 			offset
 		}
@@ -25,9 +25,9 @@ impl Component for Parent {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		if let Some(parent) = self.target.get(application) {
 			let mut state = entity.state_mut();
-			state.position = parent.state().position * self.offset;
-			state.velocity = Vec3::zeros();
-			state.angular_velocity = Vec3::zeros();
+			*state.position = *parent.state().position * self.offset;
+			*state.velocity = Vec3::zeros();
+			*state.angular_velocity = Vec3::zeros();
 		} else {
 			self.remove();
 		}

@@ -30,7 +30,8 @@ impl Physics {
 			collider_set: ColliderSet::new(),
 			gravity: vector!(0.0, -9.81, 0.0),
 			integration_parameters: IntegrationParameters {
-				erp: 0.5,
+				erp: 0.8,
+				joint_erp: 0.5,
 				..IntegrationParameters::default()
 			},
 			physics_pipeline: PhysicsPipeline::new(),

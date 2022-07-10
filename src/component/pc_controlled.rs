@@ -14,7 +14,7 @@ pub struct PCControlled {
 impl PCControlled {
 	pub fn new() -> Self {
 		PCControlled {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			rotation: Cell::new((0.0, 0.0)),
 		}
 	}
@@ -42,7 +42,7 @@ impl Component for PCControlled {
 		position += rot * vector!(x, 0.0, z) * dist + Vec3::y() * y * dist;
 		
 		self.rotation.set((pitch, yaw));
-		entity.position = Isometry3::from_parts(position.into(), rot);
+		*entity.position = Isometry3::from_parts(position.into(), rot);
 		
 		Ok(())
 	}

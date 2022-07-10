@@ -15,7 +15,7 @@ pub struct ColliderComponent {
 impl ColliderComponent {
 	pub fn new(collider: Collider) -> Self {
 		ColliderComponent {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			template: collider,
 			handle: Cell::new(ColliderHandle::invalid()),
 		}

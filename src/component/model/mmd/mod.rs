@@ -9,7 +9,7 @@ use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::descriptor_set::{DescriptorSet, PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
@@ -25,7 +25,7 @@ pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::renderer::Renderer;
 use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
 use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI};
 use super::ModelError;
@@ -110,7 +110,7 @@ impl MMDModel {
 		])?;
 		
 		Ok(MMDModel {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::from_render_type(RenderType::Opaque),
 			state: RefCell::new(MMDModelState {
 				bones,
 				morphs,
@@ -182,7 +182,7 @@ impl Component for MMDModel {
 				continue;
 			}
 			
-			let position = ent_state.position * desc.position;
+			let position = *ent_state.position * desc.position;
 			let inv_bone_pos = desc.position.inverse() * state.bones[bone_id].inv_model_transform.inverse();
 			
 			let rb = RigidBodyBuilder::new(RigidBodyType::Dynamic)
@@ -316,7 +316,7 @@ impl Component for MMDModel {
 		}
 		
 		if debug::get_flag_or_default("DebugBonesDraw") {
-			self.draw_debug_bones(entity.state().position, &state.bones, &state.bones_mats);
+			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
 		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..).map(Into::into))?;

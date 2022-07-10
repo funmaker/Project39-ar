@@ -22,7 +22,7 @@ pub struct Thruster {
 impl Thruster {
 	pub fn new(direction: ThrusterDirection) -> Self {
 		Thruster {
-			inner: ComponentInner::new(),
+			inner: ComponentInner::new_norender(),
 			direction,
 		}
 	}

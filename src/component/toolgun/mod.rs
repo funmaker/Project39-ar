@@ -113,7 +113,7 @@ impl ToolGun {
 	}
 	
 	pub fn ray(&self, application: &Application) -> Ray {
-		let position = self.entity(application).state().position;
+		let position = *self.entity(application).state().position;
 		
 		Ray {
 			origin: position.transform_point(&point!(0.002683, 0.038828, 0.150084)),
@@ -235,9 +235,9 @@ impl Component for ToolGun {
 		let tool = state.tools.get_mut(state.tool_id);
 		let text = tool.as_ref().map_or("None", |t| t.name());
 		let text_entry = renderer.debug_text_cache().get(text)?;
-		let text_pos = entity.state().position * Similarity3::from_parts(vector!(0.000671, 0.059217, -0.027263).into(),
-		                                                                 Rot3::from_euler_angles(0.781855066, 0.0, 0.0),
-		                                                                 0.02135);
+		let text_pos = *entity.state().position * Similarity3::from_parts(vector!(0.000671, 0.059217, -0.027263).into(),
+		                                                                  Rot3::from_euler_angles(0.781855066, 0.0, 0.0),
+		                                                                  0.02135);
 		let text_ratio = text_entry.size.0 as f32 / text_entry.size.1 as f32;
 		let model_matrix: AMat4 = text_pos.to_superset();
 		

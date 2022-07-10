@@ -35,7 +35,7 @@ pub trait ComponentBase: Any {
 	}
 	
 	fn remove(&self) -> bool {
-		!self.inner().removed.replace(true)
+		self.inner().mark_for_removal()
 	}
 	
 	fn entity<'a>(&self, application: &'a Application) -> &'a Entity {
@@ -76,30 +76,39 @@ impl<M: Component + 'static> IntoBoxed<dyn Component> for M {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum RenderType {
+	None,
 	Opaque,
 	Transparent,
 	Both,
+}
+
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub enum ComponentLifeStage {
+	New,
+	Alive,
+	BeingRemoved,
+	Dead,
 }
 
 #[derive(Debug)]
 pub struct ComponentInner {
 	id: u64,
 	entity_id: Option<u64>,
-	removed: Cell<bool>,
 	render_type: RenderType,
+	life_stage: Cell<ComponentLifeStage>,
 }
 
 impl ComponentInner {
-	pub fn new() -> Self {
-		ComponentInner::from_render_type(RenderType::Opaque)
+	pub fn new_norender() -> Self {
+		ComponentInner::from_render_type(RenderType::None)
 	}
 	
 	pub fn from_render_type(render_type: RenderType) -> Self {
 		ComponentInner {
 			id: next_uid(),
 			entity_id: None,
-			removed: Cell::new(false),
 			render_type,
+			life_stage: Cell::new(ComponentLifeStage::New),
 		}
 	}
 	
@@ -109,12 +118,9 @@ impl ComponentInner {
 		self.entity_id = Some(entity_id);
 	}
 	
-	pub fn is_being_removed(&self) -> bool {
-		self.removed.get()
-	}
-	
 	pub fn is_opaque(&self) -> bool {
 		match self.render_type {
+			RenderType::None => false,
 			RenderType::Opaque => true,
 			RenderType::Transparent => false,
 			RenderType::Both => true,
@@ -123,9 +129,53 @@ impl ComponentInner {
 	
 	pub fn is_transparent(&self) -> bool {
 		match self.render_type {
+			RenderType::None => false,
 			RenderType::Opaque => false,
 			RenderType::Transparent => true,
 			RenderType::Both => true,
+		}
+	}
+	
+	pub fn life_stage(&self) -> ComponentLifeStage {
+		self.life_stage.get()
+	}
+	
+	pub fn is_new(&self) -> bool {
+		self.life_stage.get() == ComponentLifeStage::New
+	}
+	
+	pub fn is_being_removed(&self) -> bool {
+		self.life_stage.get() == ComponentLifeStage::BeingRemoved
+	}
+	
+	pub fn is_dead(&self) -> bool {
+		self.life_stage.get() == ComponentLifeStage::Dead
+	}
+	
+	pub fn mark_started(&self) {
+		match self.life_stage.replace(ComponentLifeStage::Alive) {
+			ComponentLifeStage::New => {},
+			ComponentLifeStage::Alive |
+			ComponentLifeStage::BeingRemoved => panic!("Component {} in {:?} has already been started!", self.id, self.entity_id),
+			ComponentLifeStage::Dead => panic!("Component {} is already dead!", self.id),
+		}
+	}
+	
+	pub fn mark_dead(&self) {
+		match self.life_stage.replace(ComponentLifeStage::Dead) {
+			ComponentLifeStage::New => panic!("Component {} has not been started yet!", self.id),
+			ComponentLifeStage::Alive |
+			ComponentLifeStage::BeingRemoved => {},
+			ComponentLifeStage::Dead => panic!("Component {} is already dead!", self.id),
+		}
+	}
+	
+	pub fn mark_for_removal(&self) -> bool {
+		match self.life_stage.replace(ComponentLifeStage::BeingRemoved) {
+			ComponentLifeStage::New => panic!("Component {} has not been started yet!", self.id),
+			ComponentLifeStage::Alive => true,
+			ComponentLifeStage::BeingRemoved => false,
+			ComponentLifeStage::Dead => panic!("Component {} is already dead!", self.id),
 		}
 	}
 }
