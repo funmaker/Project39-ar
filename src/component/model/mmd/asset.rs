@@ -341,16 +341,32 @@ const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mm
 
 impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 	fn from(vertex: mmd::Vertex<MMDIndexConfig>) -> Self {
-		let (bones, bones_weights) = match vertex.weight_deform {
-			WeightDeform::Bdef1(bdef) => ([bdef.bone_index, 0, 0, 0],
-			                              [1.0, 0.0, 0.0, 0.0]),
-			WeightDeform::Bdef2(bdef) => ([bdef.bone_1_index, bdef.bone_2_index, 0, 0],
-			                              [bdef.bone_1_weight, 1.0-bdef.bone_1_weight, 0.0, 0.0]),
-			WeightDeform::Bdef4(bdef) => ([bdef.bone_1_index, bdef.bone_2_index, bdef.bone_3_index, bdef.bone_4_index],
-			                              [bdef.bone_1_weight, bdef.bone_2_weight, bdef.bone_3_weight, bdef.bone_4_weight]),
-			WeightDeform::Sdef(sdef) => ([sdef.bone_1_index, sdef.bone_2_index, 0, 0], // TODO: Proper SDEF support
-			                             [sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0]),
-			WeightDeform::Qdef(_) => unimplemented!("QDEF weight deforms are not supported."),
+		let (bones, bones_weights, sdef) = match vertex.weight_deform {
+			WeightDeform::Bdef1(bdef) => (
+				[bdef.bone_index, 0, 0, 0],
+				[1.0, 0.0, 0.0, 0.0],
+				None,
+			),
+			WeightDeform::Bdef2(bdef) => (
+				[bdef.bone_1_index, bdef.bone_2_index, 0, 0],
+				[bdef.bone_1_weight, 1.0-bdef.bone_1_weight, 0.0, 0.0],
+				None,
+			),
+			WeightDeform::Bdef4(bdef) => (
+				[bdef.bone_1_index, bdef.bone_2_index, bdef.bone_3_index, bdef.bone_4_index],
+				[bdef.bone_1_weight, bdef.bone_2_weight, bdef.bone_3_weight, bdef.bone_4_weight],
+				None,
+			),
+			WeightDeform::Sdef(sdef) => (
+				[sdef.bone_1_index, sdef.bone_2_index, 0, 0],
+				[sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0],
+				Some([
+					sdef.c.flip_x() * MMD_UNIT_SIZE,
+					sdef.r0.flip_x() * MMD_UNIT_SIZE,
+					sdef.r1.flip_x() * MMD_UNIT_SIZE,
+				]),
+			),
+			WeightDeform::Qdef(_) => unimplemented!("QDEF deforms are not supported."),
 		};
 		
 		let bones_indices = [bones[0].max(0) as u32, bones[1].max(0) as u32, bones[2].max(0) as u32, bones[3].max(0) as u32];
@@ -364,6 +380,7 @@ impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 			vertex.edge_scale,
 			bones_indices,
 			bones_weights,
+			sdef,
 		)
 	}
 }

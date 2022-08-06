@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::mem::size_of;
 use std::sync::Arc;
 use std::time::Duration;
+use nalgebra::UnitQuaternion;
 use num_traits::Zero;
 use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
@@ -27,7 +28,7 @@ use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
 use crate::debug;
-use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI};
+use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI, Mat4};
 use super::ModelError;
 pub use bone::{MMDBone, BoneConnection};
 pub use rigid_body::MMDRigidBody;
@@ -47,7 +48,7 @@ pub struct MMDModel {
 	#[inner] inner: ComponentInner,
 	pub state: RefCell<MMDModelState>,
 	shared: Arc<MMDModelShared>,
-	bones_ubo: Arc<DeviceLocalBuffer<[NgPod<AMat4>]>>,
+	bones_ubo: Arc<DeviceLocalBuffer<[NgPod<Mat4>]>>,
 	morphs_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
 	offsets_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
 	morphs_set: Arc<PersistentDescriptorSet>,
@@ -319,7 +320,13 @@ impl Component for MMDModel {
 			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
-		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..).map(Into::into))?;
+		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..).map(|mat| {
+			let mut mat = mat.to_homogeneous();
+			let rot = UnitQuaternion::from_matrix(&mat.fixed_resize(0.0)).inverse();
+			mat.set_row(3, &rot.coords.transpose());
+			mat.into()
+		}))?;
+		
 		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
 		state.morphs_vec.clear();

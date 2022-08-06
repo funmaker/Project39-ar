@@ -50,26 +50,26 @@ impl Miku {
 					                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
 					                              .wait(0.5)
 					                              .repeat(),
-					// Bones::ShoulderL => ProcAnim::new(Rot3::identity())
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, -0.1), 3.0, Easing::EaseInOut)
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					//                              .wait(0.5)
-					//                              .repeat(),
-					// Bones::ShoulderR => ProcAnim::new(Rot3::identity())
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.1), 3.0, Easing::EaseInOut)
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					//                              .wait(0.5)
-					//                              .repeat(),
-					// Bones::LeftArm => ProcAnim::new(Rot3::identity())
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, 0.605), 3.0, Easing::EaseOut)
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, 0.6), 3.0, Easing::EaseOut)
-					//                            .wait(0.5)
-					//                            .repeat(),
-					// Bones::RightArm => ProcAnim::new(Rot3::identity())
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, -0.605), 3.0, Easing::EaseOut)
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, -0.6), 3.0, Easing::EaseOut)
-					//                            .wait(0.5)
-					//                            .repeat(),
+					Bones::ShoulderL => ProcAnim::new(Rot3::identity())
+					                             .anim(Rot3::from_euler_angles(0.0, 0.0, -0.1), 3.0, Easing::EaseInOut)
+					                             .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
+					                             .wait(0.5)
+					                             .repeat(),
+					Bones::ShoulderR => ProcAnim::new(Rot3::identity())
+					                             .anim(Rot3::from_euler_angles(0.0, 0.0, 0.1), 3.0, Easing::EaseInOut)
+					                             .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
+					                             .wait(0.5)
+					                             .repeat(),
+					Bones::LeftArm => ProcAnim::new(Rot3::identity())
+					                           .anim(Rot3::from_euler_angles(0.0, 0.0, 0.605), 3.0, Easing::EaseOut)
+					                           .anim(Rot3::from_euler_angles(0.0, 0.0, 0.6), 3.0, Easing::EaseOut)
+					                           .wait(0.5)
+					                           .repeat(),
+					Bones::RightArm => ProcAnim::new(Rot3::identity())
+					                           .anim(Rot3::from_euler_angles(0.0, 0.0, -0.605), 3.0, Easing::EaseOut)
+					                           .anim(Rot3::from_euler_angles(0.0, 0.0, -0.6), 3.0, Easing::EaseOut)
+					                           .wait(0.5)
+					                           .repeat(),
 				), collection!(
 					Morphs::Blink => ProcAnim::new(0.0)
 					                          .wait(0.5..5.0)

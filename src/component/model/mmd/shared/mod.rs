@@ -12,7 +12,7 @@ use crate::component::model::{ModelError, VertexIndex};
 use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
 use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImmutableIndexBuffer, NgPod};
-use crate::math::{AMat4, IVec4};
+use crate::math::{IVec4, Mat4};
 use super::{MMDBone, Vertex};
 pub use builder::MMDModelSharedBuilder;
 pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
@@ -24,7 +24,7 @@ pub struct MMDModelShared {
 	pub indices: ImmutableIndexBuffer,
 	pub sub_meshes: Vec<SubMesh>,
 	pub default_bones: Vec<MMDBone>,
-	pub bones_pool: CpuBufferPool<NgPod<AMat4>>,
+	pub bones_pool: CpuBufferPool<NgPod<Mat4>>,
 	pub morphs_offsets: Arc<ImmutableBuffer<[NgPod<IVec4>]>>,
 	pub morphs_sizes: Vec<usize>,
 	pub morphs_max_size: usize,

@@ -151,6 +151,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let morphs_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
 		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
+		// TODO: Handle models without morphs
 		let (morphs_offsets, morphs_promise) = {
 			let mut offsets = vec![IVec4::zeros().into(); morphs_max_size * self.morphs.len()];
 			

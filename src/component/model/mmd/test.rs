@@ -23,8 +23,8 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 			let bone = (part * bones as f32).trunc() as u32;
 			let bone_w = 1.0 - (part * bones as f32).fract();
 			
-			vertices.push(Vertex::new([from.x, (to.y - from.y) * part + from.y, from.z], normal.clone(), [0.0, part], 1.0, [bone, bone + 1, 0, 0], [bone_w, 1.0 - bone_w, 0.0, 0.0]));
-			vertices.push(Vertex::new([  to.x, (to.y - from.y) * part + from.y,   to.z], normal.clone(), [1.0, part], 1.0, [bone, bone + 1, 0, 0], [bone_w, 1.0 - bone_w, 0.0, 0.0]));
+			vertices.push(Vertex::new([from.x, (to.y - from.y) * part + from.y, from.z], normal.clone(), [0.0, part], 1.0, [bone, bone + 1, 0, 0], [bone_w, 1.0 - bone_w, 0.0, 0.0], None::<[Vec3; 3]>));
+			vertices.push(Vertex::new([  to.x, (to.y - from.y) * part + from.y,   to.z], normal.clone(), [1.0, part], 1.0, [bone, bone + 1, 0, 0], [bone_w, 1.0 - bone_w, 0.0, 0.0], None::<[Vec3; 3]>));
 		}
 		
 		for d in 0..divs {

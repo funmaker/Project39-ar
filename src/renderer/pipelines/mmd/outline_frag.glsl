@@ -23,9 +23,9 @@ layout(push_constant) uniform Pc {
 void main() {
 	// TODO: required to prevent optimizing the binding away for pipeline compatibility. Maybe use separate bindings for edge pipeline?
 	o_color.a = commons.ambient;
-
+	
 	o_color = pc.color;
 	o_color.a *= texture(tex, f_uv).a;
-
+	
 	o_color.rgb *= o_color.a; // Premultiply alpha
 }

@@ -151,14 +151,6 @@ impl Application {
 					.build()
 			);
 			
-			// application.add_entity(
-			// 	Entity::builder("Test")
-			// 		.translation(point!(0.5, 0.0, 0.0))
-			// 		// .rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * -0.35, 0.0))
-			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test/test.pmx"))?, renderer)?)
-			// 		.build()
-			// );
-			
 			application.add_entity(
 				Entity::builder("Floor")
 					.translation(point!(0.0, 0.0, 0.0))
@@ -307,7 +299,7 @@ impl Application {
 			
 			if !clean {
 				for entity in self.entities.values() {
-					entity.setup_new_components(self);
+					entity.setup_new_components(self)?;
 				}
 			}
 		}
