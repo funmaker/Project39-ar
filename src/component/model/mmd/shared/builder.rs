@@ -67,7 +67,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn build(self, renderer: &mut Renderer) -> Result<MMDModelShared, ModelError> {
+	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared, ModelError> {
 		let mut image_promises = VecFuture::new(renderer.device.clone());
 		let mut buffer_promises = VecFuture::new(renderer.device.clone());
 		
@@ -145,22 +145,28 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		}
 		
 		let default_bones = self.bones;
+		let bones_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
+		
+		// Create fake null morph if there is no morphs
+		if self.morphs.is_empty() {
+			self.morphs.push(vec![(VI::zeroed(), Vec3::zeros())])
+		}
+		
 		let morphs_sizes = self.morphs.iter()
 		                       .map(|v| v.len())
 		                       .collect::<Vec<_>>();
 		let morphs_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
 		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
-		// TODO: Handle models without morphs
 		let (morphs_offsets, morphs_promise) = {
 			let mut offsets = vec![IVec4::zeros().into(); morphs_max_size * self.morphs.len()];
 			
 			for (mid, morph) in self.morphs.into_iter().enumerate() {
 				for (oid, (index, offset)) in morph.into_iter().enumerate() {
 					offsets[mid * morphs_max_size + oid] = vector!((offset.x * 1_000_000.0) as i32,
-					                                                  (offset.y * 1_000_000.0) as i32,
-					                                                  (offset.z * 1_000_000.0) as i32,
-					                                                  Into::<u32>::into(index) as i32).into();
+					                                               (offset.y * 1_000_000.0) as i32,
+					                                               (offset.z * 1_000_000.0) as i32,
+					                                               Into::<u32>::into(index) as i32).into();
 				}
 			}
 			
@@ -170,9 +176,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		};
 		buffer_promises.push(morphs_promise);
 		
-		let bones_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
 		let morphs_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
-		
 		let morphs_pipeline = renderer.pipelines.get::<MMDPipelineMorphs>()?;
 		
 		let fence = FenceCheck::new(image_promises.join(buffer_promises))?;

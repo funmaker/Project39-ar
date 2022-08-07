@@ -10,6 +10,7 @@
 #![feature(btree_drain_filter)]
 #![feature(hash_drain_filter)]
 #![feature(path_file_prefix)]
+#![feature(array_chunks)]
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 

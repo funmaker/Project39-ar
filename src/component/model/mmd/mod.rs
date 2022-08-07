@@ -20,14 +20,14 @@ pub mod asset;
 pub mod test;
 mod bone;
 mod rigid_body;
-mod config;
+mod overrides;
 
 pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
+use crate::{config, debug};
 use crate::renderer::Renderer;
 use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
-use crate::debug;
 use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI, Mat4};
 use super::ModelError;
 pub use bone::{MMDBone, BoneConnection};
@@ -53,6 +53,7 @@ pub struct MMDModel {
 	offsets_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
 	morphs_set: Arc<PersistentDescriptorSet>,
 	model_set: Arc<PersistentDescriptorSet>,
+	model_edge_set: Option<Arc<PersistentDescriptorSet>>,
 }
 
 #[allow(dead_code)]
@@ -104,11 +105,20 @@ impl MMDModel {
 			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
 		])?;
 		
-		let model_set = PersistentDescriptorSet::new(shared.commons_layout(renderer)?, [
+		let (main_layout, edge_layout) = shared.layouts()?;
+		
+		let model_set = PersistentDescriptorSet::new(main_layout, [
 			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
 			WriteDescriptorSet::buffer(1, bones_ubo.clone()),
 			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
 		])?;
+		
+		let model_edge_set = edge_layout.map(|edge_layout|
+			PersistentDescriptorSet::new(edge_layout, [
+			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			WriteDescriptorSet::buffer(1, bones_ubo.clone()),
+			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+		])).transpose()?;
 		
 		Ok(MMDModel {
 			inner: ComponentInner::from_render_type(RenderType::Opaque),
@@ -125,6 +135,7 @@ impl MMDModel {
 			morphs_set,
 			offsets_ubo,
 			model_set,
+			model_edge_set,
 		})
 	}
 	
@@ -384,18 +395,15 @@ impl Component for MMDModel {
 		// Outline
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
-				// TODO: Generalize
-				// calculate size of one pixel at distance 1m from background
-				// Assume index
-				// 1440×1600 110 FOV
-				let pixel = (110.0_f32 / 360.0 * PI).tan() * 2.0 / 1440.0;
-				let scale: f32 = pixel * sub_mesh.edge_scale;
+				let config = config::get();
+				let pixel = (config.eye_fov.x / 2.0).tan() * 2.0 / config.eye_frame_buffer_size.x as f32;
+				let scale = pixel * sub_mesh.edge_scale;
 				
 				builder.bind_pipeline_graphics(pipeline.clone())
 				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 				                             pipeline.layout().clone(),
 				                             0,
-				                             (self.model_set.clone(), mesh_set))
+				                             (self.model_edge_set.clone().unwrap(), mesh_set))
 				       .push_constants(pipeline.layout().clone(),
 				                       0,
 				                       (model_matrix.clone(), sub_mesh.edge_color, scale))

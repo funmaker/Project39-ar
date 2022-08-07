@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use err_derive::Error;
 use vulkano::{memory, command_buffer, buffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
-use vulkano::buffer::{CpuBufferPool, BufferSlice, BufferAccess};
+use vulkano::buffer::CpuBufferPool;
 use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::device::Queue;
 use vulkano::format::Format;
@@ -67,15 +67,10 @@ pub trait Camera: Send + Sized + 'static {
 			fps_counter.tick();
 			debug::set_flag("CAMERA_FPS", fps_counter.fps());
 			
-			let sub_buffer = buffer.chunk(
-				frame.0
-				     .chunks_exact(CHUNK_SIZE)
-				     .map(|c| unsafe { *(c.as_ptr() as *const [u8; CHUNK_SIZE]) })
-			)?;
-			let sub_slice: Arc<BufferSlice<[u8], _>> = unsafe { sub_buffer.into_buffer_slice().reinterpret() };
+			let sub_buffer = buffer.chunk(frame.0.array_chunks::<CHUNK_SIZE>().copied())?;
 			
 			let mut builder  = AutoCommandBufferBuilder::primary(queue.device().clone(), queue.family(), CommandBufferUsage::OneTimeSubmit)?;
-			builder.copy_buffer_to_image(sub_slice, target.clone())?;
+			builder.copy_buffer_to_image(sub_buffer, target.clone())?;
 			let command_buffer = builder.build()?;
 			
 			sender.send((command_buffer, frame.1)).or(Err(CaptureLoopError::Quitting))?;

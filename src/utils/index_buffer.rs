@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use vulkano::buffer::{ImmutableBuffer, TypedBufferAccess};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::DeviceSize;
@@ -23,17 +23,17 @@ impl ImmutableIndexBuffer {
 	}
 }
 
+// TODO: Use specialization feature instead instead once it's ready
 impl<VI: VertexIndex> Into<ImmutableIndexBuffer> for Arc<ImmutableBuffer<[VI]>> {
 	fn into(self) -> ImmutableIndexBuffer {
 		let type_id = TypeId::of::<VI>();
 		
-		// TODO: Remove spooky scary unsafe, somehow
-		unsafe {
-			if type_id == TypeId::of::<u8>() { ImmutableIndexBuffer::U8(std::mem::transmute(self)) }
-			else if type_id == TypeId::of::<u16>() { ImmutableIndexBuffer::U16(std::mem::transmute(self)) }
-			else if type_id == TypeId::of::<u32>() { ImmutableIndexBuffer::U32(std::mem::transmute(self)) }
-			else { panic!("Only u8. u16 and u32 are allowed.") }
-		}
+		let wrapped = &mut Some(self) as &mut dyn Any;
+		
+		if      type_id == TypeId::of::<u8 >() { ImmutableIndexBuffer::U8 (wrapped.downcast_mut::<Option<_>>().unwrap().take().unwrap()) }
+		else if type_id == TypeId::of::<u16>() { ImmutableIndexBuffer::U16(wrapped.downcast_mut::<Option<_>>().unwrap().take().unwrap()) }
+		else if type_id == TypeId::of::<u32>() { ImmutableIndexBuffer::U32(wrapped.downcast_mut::<Option<_>>().unwrap().take().unwrap()) }
+		else { panic!("Only u8. u16 and u32 are allowed.") }
 	}
 }
 

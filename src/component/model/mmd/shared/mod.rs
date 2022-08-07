@@ -9,8 +9,6 @@ mod joint;
 mod sub_mesh;
 
 use crate::component::model::{ModelError, VertexIndex};
-use crate::renderer::pipelines::mmd::MMDPipelineOpaque;
-use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImmutableIndexBuffer, NgPod};
 use crate::math::{IVec4, Mat4};
 use super::{MMDBone, Vertex};
@@ -40,12 +38,19 @@ impl MMDModelShared {
 		MMDModelSharedBuilder::new(vertices, indices)
 	}
 	
-	pub fn commons_layout(&self, renderer: &mut Renderer) -> Result<Arc<DescriptorSetLayout>, ModelError> {
-		self.sub_meshes.first()
-		               .map(|mesh| mesh.main.0.clone())
-		               .ok_or(ModelError::NoLayout)
-		               .or_else(|_| renderer.pipelines.get::<MMDPipelineOpaque>().map_err(Into::into).map(Into::into))
-		               .and_then(|pipeline| pipeline.layout().set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
+	pub fn layouts(&self) -> Result<(Arc<DescriptorSetLayout>, Option<Arc<DescriptorSetLayout>>), ModelError> {
+		let main = self.sub_meshes.first()
+		                          .map(|mesh| mesh.main.0.clone())
+		                          .ok_or(ModelError::NoLayout)
+		                          .and_then(|pipeline| pipeline.layout().set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))?;
+		
+		let edge = self.sub_meshes.iter()
+		                          .find(|mesh| mesh.edge.is_some())
+		                          .map(|mesh| mesh.edge.clone().unwrap().0)
+		                          .map(|pipeline| pipeline.layout().set_layouts().get(0).cloned().ok_or(ModelError::NoLayout))
+		                          .transpose()?;
+		
+		Ok((main, edge))
 	}
 }
 

@@ -363,11 +363,9 @@ impl Renderer {
 	}
 	
 	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
-		//TODO: ???
-		
-		// if self.queue.family().supports_surface(&surface)? {
-		// 	return Err(RendererSwapchainError::SurfaceNotSupported)
-		// }
+		if !self.queue.family().supports_surface(&surface)? {
+			return Err(RendererSwapchainError::SurfaceNotSupported)
+		}
 		
 		let caps = self.device
 		               .physical_device()
@@ -520,6 +518,8 @@ impl Renderer {
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let vr = vr.lock().unwrap();
+			
+			// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
 			unsafe {
 				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
 				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?;

@@ -86,6 +86,14 @@ impl Eyes {
 			(min_frame_buffer_size.1 as f32 * config.ssaa) as u32,
 		);
 		
+		config::rcu(|config| {
+			config.eye_frame_buffer_size = vector!(frame_buffer_size.0 as i32, frame_buffer_size.1 as i32);
+			config.eye_fov = vector!(
+				raw_projection.0[0].atan() + raw_projection.0[1].atan(),
+				raw_projection.0[2].atan() + raw_projection.0[3].atan()
+			);
+		});
+		
 		let dimensions = [frame_buffer_size.0, frame_buffer_size.1];
 		
 		let resolved_image = AttachmentImage::multisampled_with_usage_with_layers(device.clone(),

@@ -34,6 +34,10 @@ pub struct Config {
 	pub novr: NovrConfig,
 	/// Window max framerate (0 - unlimited, not recommended)
 	pub window_max_fps: u32,
+	/// Per-eye frame buffer size.
+	#[serde(skip)] #[arg_skip] pub eye_frame_buffer_size: IVec2,
+	/// Per-eye field of view.
+	#[serde(skip)] #[arg_skip] pub eye_fov: Vec2,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]

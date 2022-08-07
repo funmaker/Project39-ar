@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use std::fs;
+use std::mem;
 use err_derive::Error;
 use image::ImageFormat;
 use mmd::pmx::morph::Offsets;
@@ -18,7 +19,7 @@ use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager};
-use super::config::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
+use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
 use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
 
@@ -400,12 +401,27 @@ trait FlattenArrayVec {
 	fn flatten(self) -> Self::Out;
 }
 
-impl<T> FlattenArrayVec for Vec<[T; 3]> {
+impl<T, const N: usize> FlattenArrayVec for Vec<[T; N]> {
 	type Out = Vec<T>;
 	fn flatten(self) -> Self::Out {
+		assert_eq!(
+			mem::align_of::<T>(),
+			mem::align_of::<[T; N]>(),
+		);
+		
+		assert_eq!(
+			N * mem::size_of::<T>(),
+			mem::size_of::<[T; N]>(),
+		);
+		
+		// Safety: https://doc.rust-lang.org/std/vec/struct.Vec.html#safety
+		// - ptr needs to have been previously allocated via Vec
+		// - T needs to have the same alignment as [T; N]
+		// - The size of T times the capacity (ie. the allocated size in bytes) needs to be the same size as the pointer was allocated with.
+		// - length needs to be less than or equal to capacity.
 		unsafe {
 			let (ptr, len, cap) = self.into_raw_parts();
-			Vec::from_raw_parts(ptr as *mut T, len * 3, cap * 3)
+			Vec::from_raw_parts(ptr as *mut T, len * N, cap * N)
 		}
 	}
 }

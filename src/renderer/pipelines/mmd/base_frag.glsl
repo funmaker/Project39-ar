@@ -53,7 +53,7 @@ void main() {
 	} else if(material.sphere_mode == 2) {
 		o_color.rgb += texture(sphere, sphere_uv).rgb;
 	} else if(material.sphere_mode == 3) {
-		// TODO: Implement additional vectors
+		// TODO: Sub textures
 	}
 	
 	o_color *= clamp(vec4(material.ambient, 0.0) + material.color, 0.0, 1.0);
