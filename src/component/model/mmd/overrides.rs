@@ -1,3 +1,5 @@
+use err_derive::Error;
+use mmd::pmx::bone::{Bone, Connection};
 use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
 use serde_derive::{Deserialize, Serialize};
@@ -5,13 +7,13 @@ use serde_derive::{Deserialize, Serialize};
 use crate::math::Vec3;
 use super::asset::MMDIndexConfig;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct MMDConfig {
 	#[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,
 	#[serde(default)] pub joints: Vec<MMDJointOverride>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct MMDRigidBodyOverride {
 	pub id: Option<usize>,
 	pub pattern: Option<String>,
@@ -20,7 +22,7 @@ pub struct MMDRigidBodyOverride {
 	pub bone_index: Option<i32>,
 	pub group_id: Option<u8>,
 	pub collision_mask: Option<u16>,
-	#[serde(with = "shape_type_serde")] pub shape: Option<ShapeType>,
+	#[serde(default)] #[serde(with = "shape_type_serde")] pub shape: Option<ShapeType>,
 	pub size: Option<Vec3>,
 	pub position: Option<Vec3>,
 	pub rotation: Option<Vec3>,
@@ -54,31 +56,27 @@ impl MMDRigidBodyOverride {
 		}
 	}
 	
-	// I am a code artisan
-	pub fn apply_to(&self, rb: RigidBody<MMDIndexConfig>) -> RigidBody<MMDIndexConfig> {
-		RigidBody {
-			        local_name: self.name       .clone().unwrap_or(rb.local_name        ),
-			    universal_name: self.translation.clone().unwrap_or(rb.universal_name    ),
-			        bone_index: self.bone_index         .unwrap_or(rb.bone_index        ),
-			          group_id: self.group_id           .unwrap_or(rb.group_id          ),
-			non_collision_mask: self.collision_mask     .unwrap_or(rb.non_collision_mask),
-			             shape: self.shape              .unwrap_or(rb.shape             ),
-			        shape_size: self.size               .unwrap_or(rb.shape_size        ),
-			    shape_position: self.position           .unwrap_or(rb.shape_position    ),
-			    shape_rotation: self.rotation           .unwrap_or(rb.shape_rotation    ),
-			              mass: self.mass               .unwrap_or(rb.mass              ),
-			  move_attenuation: self.move_attenuation   .unwrap_or(rb.move_attenuation  ),
-			  rotation_damping: self.rotation_damping   .unwrap_or(rb.rotation_damping  ),
-			         repulsion: self.repulsion          .unwrap_or(rb.repulsion         ),
-			           fiction: self.fiction            .unwrap_or(rb.fiction           ),
-			..rb
-		}
+	pub fn apply_to(&self, rb: &mut RigidBody<MMDIndexConfig>) {
+		if let Some(value) = &self.name            { rb.local_name = value.clone(); }
+		if let Some(value) = &self.translation     { rb.universal_name = value.clone(); }
+		if let Some(value) = self.bone_index       { rb.bone_index = value; }
+		if let Some(value) = self.group_id         { rb.group_id = value; }
+		if let Some(value) = self.collision_mask   { rb.non_collision_mask = value; }
+		if let Some(value) = self.shape            { rb.shape = value; }
+		if let Some(value) = self.size             { rb.shape_size = value; }
+		if let Some(value) = self.position         { rb.shape_position = value; }
+		if let Some(value) = self.rotation         { rb.shape_rotation = value; }
+		if let Some(value) = self.mass             { rb.mass = value; }
+		if let Some(value) = self.move_attenuation { rb.move_attenuation = value; }
+		if let Some(value) = self.rotation_damping { rb.rotation_damping = value; }
+		if let Some(value) = self.repulsion        { rb.repulsion = value; }
+		if let Some(value) = self.fiction          { rb.fiction = value; }
 	}
 }
 
 impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 	fn into(self) -> RigidBody<MMDIndexConfig> {
-		self.apply_to(RigidBody {
+		let mut rb = RigidBody {
 			local_name: "New RigidBody".into(),
 			universal_name: "New RigidBody".into(),
 			bone_index: 0,
@@ -94,15 +92,20 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 			repulsion: 0.0,
 			fiction: 0.5,
 			physics_mode: PhysicsMode::Dynamic,
-		})
+		};
+		
+		self.apply_to(&mut rb);
+		
+		rb
 	}
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct MMDJointOverride {
 	pub id: Option<usize>,
 	pub pattern: Option<String>,
 	pub name: Option<String>,
+	pub using_bone: Option<usize>,
 	pub translation: Option<String>,
 	// pub joint_type: JointType,
 	pub rigid_body_a: Option<i32>,
@@ -122,6 +125,7 @@ impl MMDJointOverride {
 		MMDJointOverride {
 			id: Some(id),
 			pattern: None,
+			using_bone: None,
 			name: Some(rb.local_name.clone()),
 			translation: Some(rb.universal_name.clone()),
 			rigid_body_a: Some(rb.rigid_body_a),
@@ -137,28 +141,83 @@ impl MMDJointOverride {
 		}
 	}
 	
-	pub fn apply_to(&self, joint: Joint<MMDIndexConfig>) -> Joint<MMDIndexConfig> {
-		Joint {
-			     local_name: self.name       .clone().unwrap_or(joint.local_name     ),
-			 universal_name: self.translation.clone().unwrap_or(joint.universal_name ),
-			   rigid_body_a: self.rigid_body_a       .unwrap_or(joint.rigid_body_a   ),
-			   rigid_body_b: self.rigid_body_b       .unwrap_or(joint.rigid_body_b   ),
-			       position: self.position           .unwrap_or(joint.position       ),
-			       rotation: self.rotation           .unwrap_or(joint.rotation       ),
-			   position_min: self.position_min       .unwrap_or(joint.position_min   ),
-			   position_max: self.position_max       .unwrap_or(joint.position_max   ),
-			   rotation_min: self.rotation_min       .unwrap_or(joint.rotation_min   ),
-			   rotation_max: self.rotation_max       .unwrap_or(joint.rotation_max   ),
-			position_spring: self.position_spring    .unwrap_or(joint.position_spring),
-			rotation_spring: self.rotation_spring    .unwrap_or(joint.rotation_spring),
-			..joint
+	pub fn apply_to(&self, joint: &mut Joint<MMDIndexConfig>) {
+		if let Some(value) = &self.name           { joint.local_name = value.clone(); }
+		if let Some(value) = &self.translation    { joint.universal_name = value.clone(); }
+		if let Some(value) = self.rigid_body_a    { joint.rigid_body_a = value; }
+		if let Some(value) = self.rigid_body_b    { joint.rigid_body_b = value; }
+		if let Some(value) = self.position        { joint.position = value; }
+		if let Some(value) = self.rotation        { joint.rotation = value; }
+		if let Some(value) = self.position_min    { joint.position_min = value; }
+		if let Some(value) = self.position_max    { joint.position_max = value; }
+		if let Some(value) = self.rotation_min    { joint.rotation_min = value; }
+		if let Some(value) = self.rotation_max    { joint.rotation_max = value; }
+		if let Some(value) = self.position_spring { joint.position_spring = value; }
+		if let Some(value) = self.rotation_spring { joint.rotation_spring = value; }
+	}
+	
+	pub fn normalize(&mut self, bones: &[Bone<MMDIndexConfig>], rigid_bodies: &[RigidBody<MMDIndexConfig>]) -> Result<(), MMDOverrideError> {
+		if let Some(bone_id) = self.using_bone {
+			let bone = bones.get(bone_id)
+			                .ok_or(MMDOverrideError::BoneNotFound(bone_id))?;
+			
+			self.position = Some(bone.position);
+			
+			let offset = match &bone.connection {
+				Connection::Index(con_id) => {
+					if *con_id < 0 { return Err(MMDOverrideError::InvalidOffset(bone_id)) }
+					
+					let position = bones.get(*con_id as usize)
+					                    .ok_or(MMDOverrideError::BoneNotFound(*con_id as usize))?
+					                    .position;
+					
+					position - bone.position
+				},
+				Connection::Position(offset) => {
+					if offset.magnitude_squared() < f32::EPSILON { return Err(MMDOverrideError::InvalidOffset(bone_id)); }
+					
+					*offset
+				},
+			};
+			
+			let offset = -offset.normalize();
+			
+			self.rotation = Some(Vec3::new(
+				-offset.y.acos(),
+				f32::atan2(offset.x, offset.z),
+				0.0,
+			));
+			
+			for (rb_id, rb) in rigid_bodies.iter().enumerate() {
+				if rb.bone_index == bone_id as i32 {
+					self.rigid_body_a = Some(rb_id as i32);
+					break;
+				}
+			}
+			if self.rigid_body_a.is_none() { return Err(MMDOverrideError::NoRigidBodies(bone_id)); }
+			
+			let mut parent_id = bone.parent;
+			'outer:
+			while parent_id >= 0 {
+				for (rb_id, rb) in rigid_bodies.iter().enumerate() {
+					if rb.bone_index == parent_id {
+						self.rigid_body_b = Some(rb_id as i32);
+						break 'outer;
+					}
+				}
+				
+				parent_id = bones[parent_id as usize].parent;
+			}
+			if self.rigid_body_b.is_none() { return Err(MMDOverrideError::AncestorsNoRigidBodies(bone_id)); }
 		}
+		
+		Ok(())
 	}
 }
 
 impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
 	fn into(self) -> Joint<MMDIndexConfig> {
-		self.apply_to(Joint {
+		let mut joint = Joint {
 			local_name: "New Joint".into(),
 			universal_name: "New Joint".into(),
 			joint_type: JointType::SpringFree,
@@ -172,8 +231,21 @@ impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
 			rotation_max: vector!(0.0, 0.0, 0.0),
 			position_spring: vector!(0.0, 0.0, 0.0),
 			rotation_spring: vector!(0.0, 0.0, 0.0),
-		})
+		};
+		
+		self.apply_to(&mut joint);
+		
+		joint
 	}
+}
+
+#[derive(Debug, Error)]
+pub enum MMDOverrideError {
+	#[error(display = "No such bone id {}", _0)] BoneNotFound(usize),
+	#[error(display = "Bone id {} has no parent", _0)] NoParent(usize),
+	#[error(display = "Bone id {} has no connection, can't determine orientation.", _0)] InvalidOffset(usize),
+	#[error(display = "Bone id {} has no rigid bodies", _0)] NoRigidBodies(usize),
+	#[error(display = "Ancestors of bone id {} have no rigid bodies", _0)] AncestorsNoRigidBodies(usize),
 }
 
 mod shape_type_serde {

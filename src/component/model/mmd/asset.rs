@@ -1,24 +1,27 @@
+use std::{fs, mem};
 use std::sync::Arc;
 use std::convert::TryInto;
 use std::ffi::OsStr;
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
-use std::fs;
-use std::mem;
+use std::io::ErrorKind;
 use err_derive::Error;
 use image::ImageFormat;
+use mmd::WeightDeform;
 use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
-use mmd::WeightDeform;
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
 
 use crate::renderer::Renderer;
 use crate::{config, debug};
+use crate::component::model::mmd::overrides::MMDOverrideError;
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager};
+use crate::renderer::assets_manager::toml::{TomlAsset, TomlLoadError};
+use crate::utils::PatternMatcher;
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
 use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
@@ -57,13 +60,18 @@ impl AssetKey for PmxAsset {
 	type Asset = Arc<MMDModelShared>;
 	type Error = MMDModelLoadError;
 	
-	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
+	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
 		let mut root = PathBuf::from(&self.path);
 		root.pop();
 		
 		let header = mmd::HeaderReader::new(AssetsManager::find_asset(&self.path)?)?;
 		
 		// dprintln!("{}", header);
+		
+		let mut overrides: Option<MMDConfig> = match assets_manager.load(TomlAsset::at(&root.join("model.toml")), renderer) {
+			Err(err) if err.kind() == ErrorKind::NotFound => None,
+			overrides => Some(overrides?),
+		};
 		
 		let mut vertices_reader = mmd::VertexReader::new(header)?;
 		let vertices = vertices_reader.iter::<MMDIndexConfig>()
@@ -211,10 +219,39 @@ impl AssetKey for PmxAsset {
 		let mut dump_config = config::get().gen_model_toml.then(|| MMDConfig::default());
 		
 		let mut rigid_body_reader = mmd::RigidBodyReader::new(display_reader)?;
+		let mut rigid_body_defs = rigid_body_reader.iter::<MMDIndexConfig>()
+		                                           .collect::<Result<Vec<_>, _>>()?;
 		
-		for (id, rigid_body) in rigid_body_reader.iter::<MMDIndexConfig>().enumerate() {
-			let rigid_body = rigid_body?;
-			
+		if let Some(overrides) = &mut overrides {
+			for rb in overrides.rigid_bodies.drain(..) {
+				if let Some(id) = rb.id {
+					if id >= rigid_body_defs.len() {
+						eprintln!("Model {} has no rigid body id {}", self.path.to_string_lossy(), id);
+						continue
+					}
+					
+					rb.apply_to(&mut rigid_body_defs[id]);
+				} else if let Some(pattern) = &rb.pattern {
+					let pattern = PatternMatcher::new(pattern);
+					
+					let mut matched = false;
+					for desc in rigid_body_defs.iter_mut() {
+						if pattern.matches(&desc.local_name) || pattern.matches(&desc.universal_name) {
+							matched = true;
+							rb.apply_to(desc);
+						}
+					}
+					
+					if !matched {
+						eprintln!("Model {} has no rigid body matching pattern {}", self.path.to_string_lossy(), pattern);
+					}
+				} else {
+					rigid_body_defs.push(rb.into());
+				}
+			}
+		}
+		
+		for (id, rigid_body) in rigid_body_defs.iter().enumerate() {
 			if let Some(dump_config) = &mut dump_config {
 				dump_config.rigid_bodies.push(MMDRigidBodyOverride::from_mmd(&rigid_body, id))
 			}
@@ -271,10 +308,44 @@ impl AssetKey for PmxAsset {
 		}
 		
 		let mut joints_reader = mmd::JointReader::new(rigid_body_reader)?;
+		let mut joints_defs = joints_reader.iter::<MMDIndexConfig>()
+		                                   .collect::<Result<Vec<_>, _>>()?;
 		
-		for (id, joint) in joints_reader.iter::<MMDIndexConfig>().enumerate() {
-			let joint = joint?;
-			
+		if let Some(overrides) = &mut overrides {
+			for mut rb in overrides.joints.drain(..) {
+				if let Err(err) = rb.normalize(&bone_defs, &rigid_body_defs) {
+					eprintln!("{}", err);
+					continue;
+				}
+				
+				if let Some(id) = rb.id {
+					if id >= joints_defs.len() {
+						eprintln!("Model {} has no joint id {}", self.path.to_string_lossy(), id);
+						continue
+					}
+					
+					rb.apply_to(&mut joints_defs[id]);
+				} else if let Some(pattern) = &rb.pattern {
+					let pattern = PatternMatcher::new(pattern);
+					
+					let mut matched = false;
+					for desc in joints_defs.iter_mut() {
+						if pattern.matches(&desc.local_name) || pattern.matches(&desc.universal_name) {
+							matched = true;
+							rb.apply_to(desc);
+						}
+					}
+					
+					if !matched {
+						eprintln!("Model {} has no joints matching pattern {}", self.path.to_string_lossy(), pattern);
+					}
+				} else {
+					joints_defs.push(rb.into());
+				}
+			}
+		}
+		
+		for (id, joint) in joints_defs.iter().enumerate() {
 			if let Some(dump_config) = &mut dump_config {
 				dump_config.joints.push(MMDJointOverride::from_mmd(&joint, id));
 			}
@@ -312,7 +383,7 @@ impl AssetKey for PmxAsset {
 			let model_name = self.path.file_prefix().map(OsStr::to_string_lossy).unwrap_or("unknown".into());
 			let dump_path = format!("{}_modeldump.toml", model_name);
 			
-			dprintln!("Dumping model.toml of {} to {}", self.path.to_string_lossy(), dump_path);
+			dprintln!("Dumping model2.toml of {} to {}", self.path.to_string_lossy(), dump_path);
 			fs::write(dump_path, toml::to_string_pretty(dump_config).unwrap()).unwrap();
 		}
 		
@@ -430,7 +501,20 @@ impl<T, const N: usize> FlattenArrayVec for Vec<[T; N]> {
 pub enum MMDModelLoadError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
+	#[error(display = "{}", _0)] TomlLoadError(#[error(source)] TomlLoadError),
+	#[error(display = "{}", _0)] MMDJointOverrideNormalizeError(#[error(source)] MMDOverrideError),
 	#[error(display = "{}", _0)] IoError(#[error(source)] std::io::Error),
 	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
+}
+
+impl MMDModelLoadError {
+	pub fn kind(&self) -> ErrorKind {
+		match self {
+			MMDModelLoadError::AssetError(err) => err.kind(),
+			MMDModelLoadError::TomlLoadError(err) => err.kind(),
+			MMDModelLoadError::IoError(err) => err.kind(),
+			_ => ErrorKind::Other,
+		}
+	}
 }

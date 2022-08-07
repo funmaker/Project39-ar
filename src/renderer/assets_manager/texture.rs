@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
+use std::io::ErrorKind;
 use err_derive::Error;
 use image::{ImageFormat, DynamicImage};
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
@@ -133,4 +134,13 @@ pub enum TextureLoadError {
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] vulkano::sampler::SamplerCreationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] vulkano::sync::FlushError),
+}
+
+impl TextureLoadError {
+	pub fn kind(&self) -> ErrorKind {
+		match self {
+			TextureLoadError::AssetError(err) => err.kind(),
+			_ => ErrorKind::Other,
+		}
+	}
 }

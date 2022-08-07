@@ -3,7 +3,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::any::{Any, TypeId};
 use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader, Seek};
+use std::io::{BufRead, BufReader, ErrorKind, Seek};
 use std::fs::File;
 use std::fmt::{Debug, Display, Formatter};
 use std::ffi::{OsStr, OsString};
@@ -138,6 +138,15 @@ impl AssetError {
 			inner: Some(err),
 			path: path.to_string(),
 		}
+	}
+	
+	pub fn kind(&self) -> ErrorKind {
+		self.inner.as_ref()
+		          .map_or(ErrorKind::Other, |inner| inner.kind())
+	}
+	
+	pub fn path(&self) -> &str {
+		&self.path
 	}
 }
 

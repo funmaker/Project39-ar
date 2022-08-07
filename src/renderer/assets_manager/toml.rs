@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::hash::{Hash, Hasher};
+use std::io::ErrorKind;
 use serde::de::DeserializeOwned;
 use err_derive::Error;
 
@@ -30,7 +31,7 @@ impl<T> AssetKey for TomlAsset<T>
 	type Error = TomlLoadError;
 	
 	fn load(&self, _assets_manager: &mut AssetsManager, _renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
-		let file = fs::read_to_string(AssetsManager::find_asset_path("props.toml")?)?;
+		let file = fs::read_to_string(AssetsManager::find_asset_path(&self.path)?)?;
 		let data = toml::from_str(&file)?;
 		
 		Ok(data)
@@ -54,4 +55,14 @@ pub enum TomlLoadError {
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
 	#[error(display = "{}", _0)] DeserializationError(#[error(source)] toml::de::Error),
 	#[error(display = "{}", _0)] IoError(#[error(source)] std::io::Error),
+}
+
+impl TomlLoadError {
+	pub fn kind(&self) -> ErrorKind {
+		match self {
+			TomlLoadError::AssetError(err) => err.kind(),
+			TomlLoadError::IoError(err) => err.kind(),
+			_ => ErrorKind::Other,
+		}
+	}
 }

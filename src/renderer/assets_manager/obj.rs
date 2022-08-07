@@ -1,5 +1,6 @@
 use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
+use std::io::ErrorKind;
 use err_derive::Error;
 use obj::Obj;
 
@@ -64,4 +65,14 @@ pub enum ObjLoadError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] vulkano::sync::FlushError),
+}
+
+impl ObjLoadError {
+	pub fn kind(&self) -> ErrorKind {
+		match self {
+			ObjLoadError::AssetError(err) => err.kind(),
+			ObjLoadError::TextureLoadError(err) => err.kind(),
+			_ => ErrorKind::Other,
+		}
+	}
 }
