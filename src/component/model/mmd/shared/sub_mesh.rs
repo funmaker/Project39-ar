@@ -7,7 +7,7 @@ use vulkano::sampler::{Sampler, SamplerCreateInfo};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline};
 
-use crate::renderer::pipelines::mmd::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
+use crate::component::model::mmd::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::renderer::Renderer;
 use crate::component::model::ModelError;
 use crate::math::{Vec3, Vec4};

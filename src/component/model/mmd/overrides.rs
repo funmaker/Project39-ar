@@ -1,6 +1,5 @@
 use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
-use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::math::Vec3;
@@ -15,8 +14,9 @@ pub struct MMDConfig {
 #[derive(Serialize, Deserialize)]
 pub struct MMDRigidBodyOverride {
 	pub id: Option<usize>,
-	#[serde(with = "regex_serde")] pub regex: Option<Regex>,
+	pub pattern: Option<String>,
 	pub name: Option<String>,
+	pub translation: Option<String>,
 	pub bone_index: Option<i32>,
 	pub group_id: Option<u8>,
 	pub collision_mask: Option<u16>,
@@ -36,8 +36,9 @@ impl MMDRigidBodyOverride {
 	pub fn from_mmd(rb: &RigidBody<MMDIndexConfig>, id: usize) -> MMDRigidBodyOverride {
 		MMDRigidBodyOverride {
 			id: Some(id),
-			regex: None,
+			pattern: None,
 			name: Some(rb.local_name.clone()),
+			translation: Some(rb.universal_name.clone()),
 			bone_index: Some(rb.bone_index),
 			group_id: Some(rb.group_id),
 			collision_mask: Some(rb.non_collision_mask),
@@ -56,19 +57,20 @@ impl MMDRigidBodyOverride {
 	// I am a code artisan
 	pub fn apply_to(&self, rb: RigidBody<MMDIndexConfig>) -> RigidBody<MMDIndexConfig> {
 		RigidBody {
-			    universal_name: self.name     .clone().unwrap_or(rb.universal_name    ),
-			        bone_index: self.bone_index       .unwrap_or(rb.bone_index        ),
-			          group_id: self.group_id         .unwrap_or(rb.group_id          ),
-			non_collision_mask: self.collision_mask   .unwrap_or(rb.non_collision_mask),
-			             shape: self.shape            .unwrap_or(rb.shape             ),
-			        shape_size: self.size             .unwrap_or(rb.shape_size        ),
-			    shape_position: self.position         .unwrap_or(rb.shape_position    ),
-			    shape_rotation: self.rotation         .unwrap_or(rb.shape_rotation    ),
-			              mass: self.mass             .unwrap_or(rb.mass              ),
-			  move_attenuation: self.move_attenuation .unwrap_or(rb.move_attenuation  ),
-			  rotation_damping: self.rotation_damping .unwrap_or(rb.rotation_damping  ),
-			         repulsion: self.repulsion        .unwrap_or(rb.repulsion         ),
-			           fiction: self.fiction          .unwrap_or(rb.fiction           ),
+			        local_name: self.name       .clone().unwrap_or(rb.local_name        ),
+			    universal_name: self.translation.clone().unwrap_or(rb.universal_name    ),
+			        bone_index: self.bone_index         .unwrap_or(rb.bone_index        ),
+			          group_id: self.group_id           .unwrap_or(rb.group_id          ),
+			non_collision_mask: self.collision_mask     .unwrap_or(rb.non_collision_mask),
+			             shape: self.shape              .unwrap_or(rb.shape             ),
+			        shape_size: self.size               .unwrap_or(rb.shape_size        ),
+			    shape_position: self.position           .unwrap_or(rb.shape_position    ),
+			    shape_rotation: self.rotation           .unwrap_or(rb.shape_rotation    ),
+			              mass: self.mass               .unwrap_or(rb.mass              ),
+			  move_attenuation: self.move_attenuation   .unwrap_or(rb.move_attenuation  ),
+			  rotation_damping: self.rotation_damping   .unwrap_or(rb.rotation_damping  ),
+			         repulsion: self.repulsion          .unwrap_or(rb.repulsion         ),
+			           fiction: self.fiction            .unwrap_or(rb.fiction           ),
 			..rb
 		}
 	}
@@ -99,8 +101,9 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 #[derive(Serialize, Deserialize)]
 pub struct MMDJointOverride {
 	pub id: Option<usize>,
-	#[serde(with = "regex_serde")] pub regex: Option<Regex>,
+	pub pattern: Option<String>,
 	pub name: Option<String>,
+	pub translation: Option<String>,
 	// pub joint_type: JointType,
 	pub rigid_body_a: Option<i32>,
 	pub rigid_body_b: Option<i32>,
@@ -118,8 +121,9 @@ impl MMDJointOverride {
 	pub fn from_mmd(rb: &Joint<MMDIndexConfig>, id: usize) -> MMDJointOverride {
 		MMDJointOverride {
 			id: Some(id),
-			regex: None,
+			pattern: None,
 			name: Some(rb.local_name.clone()),
+			translation: Some(rb.universal_name.clone()),
 			rigid_body_a: Some(rb.rigid_body_a),
 			rigid_body_b: Some(rb.rigid_body_b),
 			position: Some(rb.position),
@@ -135,17 +139,18 @@ impl MMDJointOverride {
 	
 	pub fn apply_to(&self, joint: Joint<MMDIndexConfig>) -> Joint<MMDIndexConfig> {
 		Joint {
-			 universal_name: self.name    .clone().unwrap_or(joint.universal_name ),
-			   rigid_body_a: self.rigid_body_a    .unwrap_or(joint.rigid_body_a   ),
-			   rigid_body_b: self.rigid_body_b    .unwrap_or(joint.rigid_body_b   ),
-			       position: self.position        .unwrap_or(joint.position       ),
-			       rotation: self.rotation        .unwrap_or(joint.rotation       ),
-			   position_min: self.position_min    .unwrap_or(joint.position_min   ),
-			   position_max: self.position_max    .unwrap_or(joint.position_max   ),
-			   rotation_min: self.rotation_min    .unwrap_or(joint.rotation_min   ),
-			   rotation_max: self.rotation_max    .unwrap_or(joint.rotation_max   ),
-			position_spring: self.position_spring .unwrap_or(joint.position_spring),
-			rotation_spring: self.rotation_spring .unwrap_or(joint.rotation_spring),
+			     local_name: self.name       .clone().unwrap_or(joint.local_name     ),
+			 universal_name: self.translation.clone().unwrap_or(joint.universal_name ),
+			   rigid_body_a: self.rigid_body_a       .unwrap_or(joint.rigid_body_a   ),
+			   rigid_body_b: self.rigid_body_b       .unwrap_or(joint.rigid_body_b   ),
+			       position: self.position           .unwrap_or(joint.position       ),
+			       rotation: self.rotation           .unwrap_or(joint.rotation       ),
+			   position_min: self.position_min       .unwrap_or(joint.position_min   ),
+			   position_max: self.position_max       .unwrap_or(joint.position_max   ),
+			   rotation_min: self.rotation_min       .unwrap_or(joint.rotation_min   ),
+			   rotation_max: self.rotation_max       .unwrap_or(joint.rotation_max   ),
+			position_spring: self.position_spring    .unwrap_or(joint.position_spring),
+			rotation_spring: self.rotation_spring    .unwrap_or(joint.rotation_spring),
 			..joint
 		}
 	}
@@ -168,30 +173,6 @@ impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
 			position_spring: vector!(0.0, 0.0, 0.0),
 			rotation_spring: vector!(0.0, 0.0, 0.0),
 		})
-	}
-}
-
-mod regex_serde {
-	use std::borrow::Cow;
-	use regex::Regex;
-	use serde::{Serializer, Serialize, Deserializer, Deserialize};
-	use serde::de::Error;
-	
-	pub fn serialize<S: Serializer>(value: &Option<Regex>, ser: S) -> Result<S::Ok, S::Error> {
-		match value {
-			Some(ref value) => value.as_str().serialize(ser),
-			None => ser.serialize_none(),
-		}
-	}
-	
-	pub fn deserialize<'d, D: Deserializer<'d>>(de: D) -> Result<Option<Regex>, D::Error> {
-		let pat = <Option<Cow<str>>>::deserialize(de)?;
-		
-		match pat.as_ref().map(|pat| pat.parse::<Regex>()) {
-			None => Ok(None),
-			Some(Ok(regex)) => Ok(Some(regex)),
-			Some(Err(err)) => Err(D::Error::custom(format!("valid regex \"{}\", {}", pat.unwrap(), err))),
-		}
 	}
 }
 

@@ -7,7 +7,7 @@ macro_rules! mmd_shaders {
 			vulkano_shaders::shader! {
 				ty: $type,
 				path: $source,
-				include: [ "src/renderer/pipelines/mmd" ],
+				include: [ "src/component/model/mmd/pipeline" ],
 				spirv_version: "1.3"
 			}
 		}

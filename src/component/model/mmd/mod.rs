@@ -15,6 +15,7 @@ use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
 
+pub mod pipeline;
 pub mod shared;
 pub mod asset;
 pub mod test;
@@ -22,15 +23,15 @@ mod bone;
 mod rigid_body;
 mod overrides;
 
-pub use crate::renderer::pipelines::mmd::{MORPH_GROUP_SIZE, Vertex};
 use crate::{config, debug};
 use crate::renderer::Renderer;
 use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
-use crate::math::{AMat4, Isometry3, IVec4, Vec4, Vec3, PI, Mat4};
+use crate::math::{AMat4, Isometry3, IVec4, Mat4, PI, Vec3, Vec4};
 use super::ModelError;
-pub use bone::{MMDBone, BoneConnection};
+pub use pipeline::{MORPH_GROUP_SIZE, Vertex};
+pub use bone::{BoneConnection, MMDBone};
 pub use rigid_body::MMDRigidBody;
 use shared::MMDModelShared;
 

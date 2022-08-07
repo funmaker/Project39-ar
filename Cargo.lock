@@ -1574,7 +1574,6 @@ dependencies = [
  "project39-ar-derive",
  "rand",
  "rapier3d",
- "regex",
  "serde",
  "serde_derive",
  "simba",

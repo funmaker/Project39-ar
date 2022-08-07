@@ -11,25 +11,25 @@ use vulkano::device::DeviceOwned;
 mod vertex;
 
 use crate::renderer::pipelines::pre_mul_alpha_blending;
-use super::{PipelineConstructor, PipelineError};
+use crate::renderer::pipelines::{PipelineConstructor, PipelineError};
 pub use vertex::Vertex;
 
 mod vert {
 	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
+	const SOURCE: &'static str = include_str!("vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
-		path: "src/renderer/pipelines/toolgun_text/vert.glsl",
+		path: "src/component/toolgun/pipeline/vert.glsl",
 		spirv_version: "1.3"
 	}
 }
 
 mod frag {
 	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
+	const SOURCE: &'static str = include_str!("frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
-		path: "src/renderer/pipelines/toolgun_text/frag.glsl",
+		path: "src/component/toolgun/pipeline/frag.glsl",
 		spirv_version: "1.3"
 	}
 }

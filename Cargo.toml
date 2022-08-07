@@ -29,7 +29,7 @@ num-traits = "0.2.15"
 lazy_static = "1.4.0"
 winit = "0.26.1"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "cebbbe812593909a0989eb1d86ee609b15c2b51f" }
-#mmd = { path = "../mmd-rs" }
+#pipeline = { path = "../pipeline-rs" }
 native-dialog = "0.6.3"
 unifont = "0.1.0"
 nalgebra = { version = "0.31.0", features = ["serde-serialize"] }
@@ -44,7 +44,6 @@ project39-ar-derive = { path = "derive" }
 rapier3d = "0.13.0"
 linked-hash-map = { version = "0.5.6", features = ['serde_impl'] }
 rand = "0.8.5"
-regex = "1.5.6"
 bytemuck = "1.10.0"
 
 [target.'cfg(windows)'.dependencies]

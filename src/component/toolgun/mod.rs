@@ -8,8 +8,9 @@ use vulkano::{descriptor_set, memory, sync};
 use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 
+mod pipeline;
 mod spawner;
 mod remover;
 mod axis;
@@ -24,13 +25,13 @@ use crate::component::parent::Parent;
 use crate::debug;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::pipelines::PipelineError;
-use crate::renderer::pipelines::toolgun_text::{ToolGunTextPipeline, Vertex};
 use crate::renderer::Renderer;
 use crate::utils::FenceCheck;
+use crate::component::hand::HandComponent;
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef, RenderType};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
-use crate::component::hand::HandComponent;
+use pipeline::{ToolGunTextPipeline, Vertex};
 
 const MENU_SPACING: f32 = 0.1;
 const MENU_DISTANCE: f32 = 0.1;

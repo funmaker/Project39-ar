@@ -7,11 +7,11 @@ mod vertex;
 pub use vertex::Vertex;
 
 mmd_shaders!(
-	"vertex" base_vert = "src/renderer/pipelines/mmd/base_vert.glsl";
-	"fragment" base_frag = "src/renderer/pipelines/mmd/base_frag.glsl";
-	"vertex" outline_vert = "src/renderer/pipelines/mmd/outline_vert.glsl";
-	"fragment" outline_frag = "src/renderer/pipelines/mmd/outline_frag.glsl";
-	"compute" morph_comp = "src/renderer/pipelines/mmd/morph_comp.glsl";
+	"vertex" base_vert = "src/component/model/mmd/pipeline/base_vert.glsl";
+	"fragment" base_frag = "src/component/model/mmd/pipeline/base_frag.glsl";
+	"vertex" outline_vert = "src/component/model/mmd/pipeline/outline_vert.glsl";
+	"fragment" outline_frag = "src/component/model/mmd/pipeline/outline_frag.glsl";
+	"compute" morph_comp = "src/component/model/mmd/pipeline/morph_comp.glsl";
 );
 
 mmd_pipelines!(

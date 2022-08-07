@@ -6,7 +6,7 @@ use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 
 use crate::component::model::{ModelError, VertexIndex};
-use crate::renderer::pipelines::mmd::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
+use crate::component::model::mmd::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
 use crate::utils::{VecFuture, ImageEx, FenceCheck};
 use crate::math::{IVec4, Vec3};
