@@ -6,7 +6,7 @@ use linked_hash_map::LinkedHashMap;
 use crate::component::model::SimpleModel;
 use crate::renderer::Renderer;
 use crate::math::{PI, Vec3, AABB};
-use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
+use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::renderer::assets_manager::toml::{TomlAsset, TomlLoadError};
 
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq)]

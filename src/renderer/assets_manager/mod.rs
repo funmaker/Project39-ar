@@ -10,7 +10,6 @@ use std::ffi::{OsStr, OsString};
 use std::error::Error;
 
 pub mod texture;
-pub mod obj;
 pub mod toml;
 
 use crate::renderer::Renderer;

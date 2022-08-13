@@ -29,7 +29,8 @@ use crate::component::physics::joint::JointComponent;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RendererError, RendererRenderError};
-use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
+use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::component::model::gimp::asset::{GimpAsset, GimpLoadError};
 use crate::renderer::camera::{self, OpenVRCameraError};
 #[cfg(feature = "opencv-camera")] use crate::renderer::camera::{OpenCVCameraError};
 use crate::renderer::window::{Window, WindowCreationError};
@@ -146,7 +147,7 @@ impl Application {
 			application.add_entity(
 				Entity::builder("初音ミク")
 					.translation(point!(-0.5, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * -0.35, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * 0.0, 0.0))
 					.component(Miku::new())
 					.build()
 			);
@@ -158,6 +159,36 @@ impl Application {
 					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
 					.tag("World", true)
 					.hidden(config.camera.driver != CameraAPI::Dummy)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("GIMP")
+					.position(Isometry3::new(vector!(-0.5, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
+					.collider(ColliderBuilder::ball(0.07).build())
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.tag("Id", 0_usize)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("GIMP")
+					.position(Isometry3::new(vector!(-1.0, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
+					.collider(ColliderBuilder::ball(0.07).build())
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.tag("Id", 1_usize)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("GIMP")
+					.position(Isometry3::new(vector!(-1.5, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
+					.collider(ColliderBuilder::ball(0.07).build())
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.tag("Id", 2_usize)
 					.build()
 			);
 			
@@ -370,6 +401,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] GimpLoadError(#[error(source)] GimpLoadError),
 	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
 	#[cfg(feature = "opencv-camera")] #[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),

@@ -1,19 +1,22 @@
 use std::sync::Arc;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage};
+use vulkano::buffer::{BufferUsage, ImmutableBuffer};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
-use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
+use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
+
+pub mod asset;
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::Renderer;
-use crate::utils::{FenceCheck, ImmutableIndexBuffer, AutoCommandBufferBuilderEx};
-use crate::math::{Similarity3, Color, Point3, AABB, aabb_from_points};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, RenderType};
+use crate::utils::{AutoCommandBufferBuilderEx, FenceCheck, ImmutableIndexBuffer};
+use crate::math::{AABB, aabb_from_points, Color, Point3, Similarity3};
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
 use crate::application::Entity;
 use crate::renderer::assets_manager::texture::TextureBundle;
 use super::{ModelError, VertexIndex};
+pub use asset::*;
 
 #[derive(ComponentBase, Clone)]
 pub struct SimpleModel {

@@ -8,6 +8,7 @@ use vulkano::pipeline::graphics::input_assembly::Index;
 
 pub mod simple;
 pub mod mmd;
+pub mod gimp;
 
 use crate::renderer::pipelines::PipelineError;
 pub use simple::SimpleModel;

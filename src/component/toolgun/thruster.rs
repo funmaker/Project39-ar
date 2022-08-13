@@ -12,7 +12,7 @@ use crate::component::toolgun::tool::ToolError;
 use crate::component::toolgun::ToolGun;
 use crate::debug;
 use crate::math::{Color, face_upwards_lossy, Isometry3, Ray, Similarity3};
-use crate::renderer::assets_manager::obj::ObjAsset;
+use crate::component::model::simple::asset::ObjAsset;
 use crate::renderer::Renderer;
 use crate::utils::ColliderEx;
 use super::tool::Tool;

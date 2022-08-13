@@ -15,7 +15,7 @@ mod text_cache;
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
 use crate::utils::AutoCommandBufferBuilderEx;
 use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy};
-use crate::renderer::assets_manager::obj::{ObjAsset, ObjLoadError};
+use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};

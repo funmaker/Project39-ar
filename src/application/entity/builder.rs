@@ -48,6 +48,11 @@ impl EntityBuilder {
 		self
 	}
 	
+	pub fn gravity_scale(mut self, scale: f32) -> Self {
+		self.rigid_body.set_gravity_scale(scale, false);
+		self
+	}
+	
 	pub fn position(mut self, position: Isometry3) -> Self {
 		self.position = position;
 		self

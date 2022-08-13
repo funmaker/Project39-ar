@@ -1,93 +1,93 @@
-
-[[rigid_bodies]]
-id = 18
-collision_mask = 0b1011111011111100
-
-[[rigid_bodies]]
-id = 19
-collision_mask = 0b1011111011111100
-
-
-[[joints]]
-name = 'Arm L'
-using_bone = 38
-rotation_min = [
-    -0.5,
-    -0.5,
-    -0.5,
-]
-rotation_max = [
-    1.0,
-    0.5,
-    1.0,
-]
-
-[[joints]]
-name = 'Arm R'
-using_bone = 43
-rotation_min = [
-    -0.5,
-    -0.5,
-    -0.5,
-]
-rotation_max = [
-    1.0,
-    0.5,
-    1.0,
-]
-
-[[joints]]
-name = 'Elbow L'
-using_bone = 48
-rotation_min = [
-     0.0,
-    -0.5,
-     0.0,
-]
-rotation_max = [
-    0.0,
-    0.5,
-    1.0,
-]
-
-[[joints]]
-name = 'Elbow R'
-using_bone = 53
-rotation_min = [
-     0.0,
-    -0.5,
-     0.0,
-]
-rotation_max = [
-    0.0,
-    0.5,
-    1.0,
-]
-
-[[joints]]
-name = 'Hand L'
-using_bone = 58
-rotation_min = [
-    -0.5,
-     0.0,
-    -0.5,
-]
-rotation_max = [
-    0.5,
-    0.0,
-    0.5,
-]
-
-[[joints]]
-name = 'Hand R'
-using_bone = 60
-rotation_min = [
-    -0.5,
-     0.0,
-    -0.5,
-]
-rotation_max = [
-    0.5,
-    0.0,
-    0.5,
-]
+#
+#[[rigid_bodies]]
+#id = 18
+#collision_mask = 0b1011111011111100
+#
+#[[rigid_bodies]]
+#id = 19
+#collision_mask = 0b1011111011111100
+#
+#
+#[[joints]]
+#name = 'Arm L'
+#using_bone = 38
+#rotation_min = [
+#    -0.5,
+#    -0.5,
+#    -0.5,
+#]
+#rotation_max = [
+#    1.0,
+#    0.5,
+#    1.0,
+#]
+#
+#[[joints]]
+#name = 'Arm R'
+#using_bone = 43
+#rotation_min = [
+#    -0.5,
+#    -0.5,
+#    -0.5,
+#]
+#rotation_max = [
+#    1.0,
+#    0.5,
+#    1.0,
+#]
+#
+#[[joints]]
+#name = 'Elbow L'
+#using_bone = 48
+#rotation_min = [
+#     0.0,
+#    -0.5,
+#     0.0,
+#]
+#rotation_max = [
+#    0.0,
+#    0.5,
+#    1.0,
+#]
+#
+#[[joints]]
+#name = 'Elbow R'
+#using_bone = 53
+#rotation_min = [
+#     0.0,
+#    -0.5,
+#     0.0,
+#]
+#rotation_max = [
+#    0.0,
+#    0.5,
+#    1.0,
+#]
+#
+#[[joints]]
+#name = 'Hand L'
+#using_bone = 58
+#rotation_min = [
+#    -0.5,
+#     0.0,
+#    -0.5,
+#]
+#rotation_max = [
+#    0.5,
+#    0.0,
+#    0.5,
+#]
+#
+#[[joints]]
+#name = 'Hand R'
+#using_bone = 60
+#rotation_min = [
+#    -0.5,
+#     0.0,
+#    -0.5,
+#]
+#rotation_max = [
+#    0.5,
+#    0.0,
+#    0.5,
+#]
