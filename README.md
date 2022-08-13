@@ -18,4 +18,5 @@ Bit pattern texture made by Valve. [(Source)](https://github.com/ValveSoftware/o
 YYB style Hatsune Miku renderer.model made by YYB. You can find original readme in `models\YYB式初音ミクCrude Hair`. [(Source)](https://bowlroll.net/file/67801)  
 GNU Unifont made by Roman Czyborra. [(Source)](http://unifoundry.com/unifont/index.html)  
 Tool Gun and various other models made by [sebimoe](https://github.com/sebimoe).  
-N64 Master Hand model made by [Javier Da Rosa](https://sketchfab.com/3d-models/n64-master-hand-smooth-ver-2ca4295edabe484f88deabf12396f185).  
+N64 Master Hand model made by Javier Da Rosa. [(Source)](https://sketchfab.com/3d-models/n64-master-hand-smooth-ver-2ca4295edabe484f88deabf12396f185)  
+Pepper model by Dodocaedro. [(Source)](https://sketchfab.com/3d-models/green-pepper-photogrametry-78c7db3418b0469a8592564ed4b8d8a1)
