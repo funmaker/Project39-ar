@@ -9,8 +9,8 @@ use super::asset::MMDIndexConfig;
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct MMDConfig {
-	#[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,
-	#[serde(default)] pub joints: Vec<MMDJointOverride>,
+	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,
+	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub joints: Vec<MMDJointOverride>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -184,9 +184,11 @@ impl MMDJointOverride {
 			
 			self.rotation = Some(Vec3::new(
 				-offset.y.acos(),
-				f32::atan2(offset.x, offset.z),
+				f32::atan2(-offset.x, -offset.z),
 				0.0,
 			));
+			
+			println!("{} {} {:?}", self.name.as_ref().map_or("???", |s| s.as_ref()), offset, self.rotation);
 			
 			for (rb_id, rb) in rigid_bodies.iter().enumerate() {
 				if rb.bone_index == bone_id as i32 {

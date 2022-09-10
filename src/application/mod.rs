@@ -16,7 +16,7 @@ pub mod input;
 
 use crate::component::Component;
 use crate::component::ComponentError;
-use crate::component::model::ModelError;
+use crate::component::model::{MMDModel, ModelError};
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
@@ -24,7 +24,7 @@ use crate::component::toolgun::{ToolGunError};
 use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
-use crate::component::model::mmd::asset::MMDModelLoadError;
+use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
 use crate::component::physics::joint::JointComponent;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
@@ -152,6 +152,14 @@ impl Application {
 					.build()
 			);
 			
+			// application.add_entity(
+			// 	Entity::builder("Test")
+			// 		.translation(point!(-3.0, 3.0, -3.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, 0.0, 0.0))
+			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
+			// 		.build()
+			// );
+			
 			application.add_entity(
 				Entity::builder("Floor")
 					.translation(point!(0.0, 0.0, 0.0))
@@ -159,36 +167,6 @@ impl Application {
 					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
 					.tag("World", true)
 					.hidden(config.camera.driver != CameraAPI::Dummy)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("GIMP")
-					.position(Isometry3::new(vector!(-0.5, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
-					.collider(ColliderBuilder::ball(0.07).build())
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.tag("Id", 0_usize)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("GIMP")
-					.position(Isometry3::new(vector!(-1.0, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
-					.collider(ColliderBuilder::ball(0.07).build())
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.tag("Id", 1_usize)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("GIMP")
-					.position(Isometry3::new(vector!(-1.5, 0.5, 1.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(GimpAsset::at("gimp/gimp.obj", "gimp/color.png", "gimp/normal.png"))?)
-					.collider(ColliderBuilder::ball(0.07).build())
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.tag("Id", 2_usize)
 					.build()
 			);
 			

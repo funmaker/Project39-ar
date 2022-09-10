@@ -255,8 +255,8 @@ impl Component for MMDModel {
 				     .set_local_frame2(rb_b.rest_pos.inverse() * desc.position);
 				
 				fn limit(mut joint: GenericJoint, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> GenericJoint {
-					if max - min >= max_limit {
-					
+					if max - min >= max_limit || min > max {
+						// free
 					} else if min != max {
 						joint.set_limits(axis, [min, max]);
 					} else {
@@ -270,9 +270,9 @@ impl Component for MMDModel {
 				joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
 				joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
 				
-				joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x, PI * 2.0);
-				joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y, PI * 2.0);
-				joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z, PI * 2.0);
+				joint = limit(joint, JointAxis::AngX,  desc.rotation_min.x,  desc.rotation_max.x, PI * 2.0);
+				joint = limit(joint, JointAxis::AngY, -desc.rotation_max.y, -desc.rotation_min.y, PI * 2.0);
+				joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
 				
 				physics.impulse_joint_set.insert(rb_a.handle,
 				                                 rb_b.handle,

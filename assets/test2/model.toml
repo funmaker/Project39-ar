@@ -1,0 +1,192 @@
+
+[[joints]]
+name = 'A1'
+using_bone = 2
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'A2'
+using_bone = 3
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'A3'
+using_bone = 4
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'A4'
+using_bone = 5
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'B1'
+using_bone = 6
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'B2'
+using_bone = 7
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'B3'
+using_bone = 8
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'B4'
+using_bone = 9
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'C1'
+using_bone = 10
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'C2'
+using_bone = 11
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'C3'
+using_bone = 12
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'C4'
+using_bone = 13
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'D1'
+using_bone = 14
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'D2'
+using_bone = 15
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'D3'
+using_bone = 16
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'D4'
+using_bone = 17
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'E1'
+using_bone = 18
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'E2'
+using_bone = 19
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'E3'
+using_bone = 20
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'E4'
+using_bone = 21
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'F1'
+using_bone = 22
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'F2'
+using_bone = 23
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'F3'
+using_bone = 24
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'F4'
+using_bone = 25
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'G1'
+using_bone = 26
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'G2'
+using_bone = 27
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'G3'
+using_bone = 28
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'G4'
+using_bone = 29
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'H1'
+using_bone = 30
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'H2'
+using_bone = 31
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'H3'
+using_bone = 32
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
+
+[[joints]]
+name = 'H4'
+using_bone = 33
+rotation_min = [ -0.75, 0.0, 0.0 ]
+rotation_max = [ 0.75, 0.0, 0.0 ]
