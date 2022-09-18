@@ -51,7 +51,6 @@ impl Camera for OpenCV {
 #[derive(Debug, Error)]
 pub enum OpenCVCameraError {
 	#[error(display = "Failed to open background")] CameraOpenError,
-	#[error(display = "{}", _0)] OpenCVError(#[error(source)] opencv::Error),
 }
 
 impl From<opencv::Error> for CameraCaptureError {

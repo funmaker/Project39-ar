@@ -2,7 +2,7 @@ use std::thread;
 use std::sync::Arc;
 use std::sync::mpsc;
 use err_derive::Error;
-use vulkano::{memory, command_buffer, buffer};
+use vulkano::{memory, command_buffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage};
 use vulkano::buffer::CpuBufferPool;
 use vulkano::image::{AttachmentImage, ImageUsage};
@@ -27,10 +27,10 @@ pub const CAPTURE_HEIGHT: u32 = 960;
 pub const CAPTURE_FPS: u64 = 140;
 pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 
-pub trait Camera: Send + Sized + 'static {
+pub trait Camera: Send + 'static {
 	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError>;
 	
-	fn start(mut self, queue: Arc<Queue>)
+	fn start(mut self: Box<Self>, queue: Arc<Queue>)
 		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>), CameraStartError> {
 		let target = AttachmentImage::with_usage(queue.device().clone(),
 		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
@@ -96,7 +96,5 @@ pub enum CaptureLoopError {
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] CopyBufferImageError(#[error(source)] command_buffer::CopyBufferImageError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] BufferViewCreationError(#[error(source)] buffer::view::BufferViewCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 }

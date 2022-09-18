@@ -1,45 +1,42 @@
 use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
+use std::error::Error;
 use std::ffi::CString;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 use err_derive::Error;
 use bytemuck::{Pod, Zeroable};
-use vulkano::{command_buffer, device, instance, memory, pipeline, render_pass, swapchain, sync, Version};
+use vulkano::{command_buffer, device, instance, memory, render_pass, swapchain, sync, Version};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo};
 use vulkano::device::physical::PhysicalDevice;
-use vulkano::format::Format;
-use vulkano::image::{ImageLayout, ImageUsage, SampleCount, SwapchainImage};
+use vulkano::format::{ClearValue, Format};
+use vulkano::image::{AttachmentImage, ImageLayout, ImageUsage, ImageViewAbstract, SampleCount, SwapchainImage};
+use vulkano::image::view::ImageView;
 use vulkano::instance::{Instance, InstanceCreateInfo, InstanceExtensions};
 use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
-use vulkano::render_pass::{AttachmentDescription, AttachmentReference, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
+use vulkano::pipeline::graphics::viewport::Viewport;
+use vulkano::render_pass::{AttachmentDescription, AttachmentReference, Framebuffer, FramebufferCreateInfo, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
-use vulkano::sync::{FenceSignalFuture, GpuFuture};
+use vulkano::sync::GpuFuture;
 
-pub mod camera;
-pub mod eyes;
-pub mod window;
 pub mod pipelines;
 pub mod debug_renderer;
 pub mod assets_manager;
-mod openvr_cb;
-mod background;
+pub mod render_target;
+pub mod context;
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
-use crate::component::{ComponentError, RenderType};
+use crate::component::ComponentError;
 use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
-use background::{Background, BackgroundError, BackgroundRenderError};
-use camera::{Camera, CameraStartError};
-use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererRenderError, TextCache, DebugRendererPreRenderError};
-use eyes::{EyeCreationError, Eyes};
-use openvr_cb::OpenVRCommandBuffer;
+pub use context::{RenderContext, RenderTargetContext, RenderType};
+pub use render_target::RenderTarget;
+use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererPreRenderError, DebugRendererRenderError, TextCache};
 use pipelines::Pipelines;
-use window::{Window, WindowRenderError, WindowSwapchainRegenError};
-use assets_manager::{AssetsManager, AssetKey};
+use assets_manager::{AssetKey, AssetsManager};
 
 
 #[allow(dead_code)]
@@ -56,26 +53,25 @@ pub struct Renderer {
 	pub instance: Arc<Instance>,
 	pub device: Arc<Device>,
 	pub load_queue: Arc<Queue>,
+	pub render_pass: Arc<RenderPass>,
 	pub queue: Arc<Queue>,
 	pub pipelines: Pipelines,
 	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
 	
-	vr: Option<Arc<VR>>,
-	eyes: Eyes,
-	previous_frame_end: Option<FenceSignalFuture<Box<dyn GpuFuture>>>,
-	background: Background,
-	load_commands: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
+	future: Option<Box<dyn GpuFuture>>,
 	debug_renderer: Option<DebugRenderer>,
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
-	transparent_registry: Vec<(f32, u64)>,
+	transparent_registry: Option<Vec<(f32, u64)>>,
 	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
 }
 
+pub const IMAGE_FORMAT: Format = Format::R8G8B8A8_SRGB;
+pub const DEPTH_FORMAT: Format = Format::D24_UNORM_S8_UINT;
+pub const LAYERS: u32 = 2;
+
 impl Renderer {
-	pub fn new<C>(vr: Option<Arc<VR>>, camera: C)
-	             -> Result<Renderer, RendererError>
-	             where C: Camera {
+	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer, RendererError> {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
 		let debug_callback = config::get()
 		                            .validation
@@ -85,12 +81,7 @@ impl Renderer {
 		let physical = Renderer::create_physical_device(&instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
 		let render_pass = Renderer::create_render_pass(&device)?;
-		
-		let eyes = if let Some(ref vr) = vr {
-			Eyes::new_vr(vr, &queue, &render_pass)?
-		} else {
-			Eyes::new_novr(&config::get().novr, &queue, &render_pass)?
-		};
+		let mut pipelines = Pipelines::new(render_pass.clone());
 		
 		let commons = DeviceLocalBuffer::new(device.clone(),
 		                                     BufferUsage{ transfer_destination: true,
@@ -98,30 +89,24 @@ impl Renderer {
 		                                                  ..BufferUsage::none() },
 		                                     Some(queue.family()))?;
 		
-		let mut pipelines = Pipelines::new(render_pass, eyes.frame_buffer_size);
-		let (camera_image, load_commands) = camera.start(load_queue.clone())?;
-		let background = Background::new(camera_image, &eyes, &queue, &mut pipelines)?;
 		let debug_renderer = Some(DebugRenderer::new(&load_queue, &mut pipelines)?);
 		let assets_manager = Some(AssetsManager::new());
 		let fps_counter = FpsCounter::new();
 		
 		Ok(Renderer {
 			instance,
-			commons,
-			vr,
-			debug_callback,
 			device,
-			queue,
 			load_queue,
+			render_pass,
+			queue,
 			pipelines,
-			eyes,
-			previous_frame_end: None,
-			background,
-			load_commands,
+			commons,
+			future: None,
 			debug_renderer,
 			fps_counter,
-			transparent_registry: vec![],
-			assets_manager
+			assets_manager,
+			transparent_registry: None,
+			debug_callback,
 		})
 	}
 	
@@ -291,19 +276,20 @@ impl Renderer {
 	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
 		let msaa = config::get().msaa;
 		let samples = msaa.try_into().map_err(|_| RendererError::InvalidMultiSamplingCount(msaa))?;
+		let view_mask = (1 << LAYERS) - 1;
 		
 		let mut attachments = vec![
 			AttachmentDescription {
-				format: Some(eyes::IMAGE_FORMAT),
+				format: Some(IMAGE_FORMAT),
 				samples,
-				load_op: LoadOp::DontCare,
+				load_op: LoadOp::Clear,
 				store_op: StoreOp::Store,
 				initial_layout: ImageLayout::ColorAttachmentOptimal,
 				final_layout: ImageLayout::ColorAttachmentOptimal,
 				..AttachmentDescription::default()
 			},
 			AttachmentDescription {
-				format: Some(eyes::DEPTH_FORMAT),
+				format: Some(DEPTH_FORMAT),
 				samples,
 				load_op: LoadOp::Clear,
 				store_op: StoreOp::DontCare,
@@ -315,7 +301,7 @@ impl Renderer {
 		
 		let mut subpasses = vec![
 			SubpassDescription {
-				view_mask: 0b11,
+				view_mask,
 				color_attachments: vec![Some(AttachmentReference {
 					attachment: 0,
 					layout: attachments[0].final_layout,
@@ -335,7 +321,7 @@ impl Renderer {
 		
 		if samples != SampleCount::Sample1 {
 			attachments.push(AttachmentDescription {
-				format: Some(eyes::IMAGE_FORMAT),
+				format: Some(IMAGE_FORMAT),
 				samples: SampleCount::Sample1,
 				load_op: LoadOp::DontCare,
 				store_op: StoreOp::Store,
@@ -355,7 +341,7 @@ impl Renderer {
 			attachments,
 			subpasses,
 			dependencies: vec![],
-			correlated_view_masks: vec![0b11],
+			correlated_view_masks: vec![view_mask],
 			..RenderPassCreateInfo::default()
 		})?;
 		
@@ -405,161 +391,246 @@ impl Renderer {
 		})?)
 	}
 	
-	pub fn render(&mut self, hmd_pose: [[f32; 4]; 3], camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, window: &mut Window) -> Result<(), RendererRenderError> {
-		if window.swapchain_regen_required {
-			match window.regen_swapchain() {
-				Err(window::WindowSwapchainRegenError::NeedRetry) => {},
-				Err(err) => return Err(err.into()),
-				Ok(_) => {}
-			}
+	pub fn create_framebuffer(&self, min_framebuffer_size: (u32, u32)) -> Result<FramebufferBundle, RendererCreateFramebufferError> {
+		let config = config::get();
+		let ssaa = config.ssaa;
+		let samples = config.msaa.try_into().map_err(|_| RendererCreateFramebufferError::InvalidMultiSamplingCount(config.msaa))?;
+		
+		let dimensions = [
+			(min_framebuffer_size.0 as f32 * ssaa) as u32,
+			(min_framebuffer_size.1 as f32 * ssaa) as u32,
+		];
+		
+		let main_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+		                                                                      dimensions,
+		                                                                      LAYERS,
+		                                                                      SampleCount::Sample1,
+		                                                                      IMAGE_FORMAT,
+		                                                                      ImageUsage {
+			                                                                      transfer_source: true,
+			                                                                      transfer_destination: true,
+			                                                                      sampled: true,
+			                                                                      ..ImageUsage::none()
+		                                                                      })?;
+		
+		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+		                                                                       dimensions,
+		                                                                       LAYERS,
+		                                                                       samples,
+		                                                                       DEPTH_FORMAT,
+		                                                                       ImageUsage {
+			                                                                       depth_stencil_attachment: true,
+			                                                                       transient_attachment: true,
+			                                                                       ..ImageUsage::none()
+		                                                                       })?;
+		
+		
+		
+		let attachments: Vec<Arc<dyn ImageViewAbstract>> = if samples == SampleCount::Sample1 {
+			vec![
+				ImageView::new_default(main_image.clone())?,
+				ImageView::new_default(depth_image)?,
+			]
+		} else {
+			let msaa_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+			                                                                      dimensions,
+			                                                                      LAYERS,
+			                                                                      samples,
+			                                                                      IMAGE_FORMAT,
+			                                                                      ImageUsage {
+				                                                                      color_attachment: true,
+				                                                                      ..ImageUsage::none()
+			                                                                      })?;
+			
+			vec![
+				ImageView::new_default(msaa_image)?,
+				ImageView::new_default(depth_image)?,
+				ImageView::new_default(main_image.clone())?,
+			]
+		};
+		
+		let framebuffer = Framebuffer::new(self.render_pass.clone(), FramebufferCreateInfo {
+			attachments,
+			extent: dimensions,
+			..FramebufferCreateInfo::default()
+		})?;
+		
+		let mut clear_values = vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.0]) ];
+		
+		if DEPTH_FORMAT.type_stencil().is_some() {
+			clear_values.push(ClearValue::DepthStencil((1.0, 0)))
+		} else {
+			clear_values.push(ClearValue::Depth(1.0))
 		}
 		
-		let mut future = if let Some(mut previous_frame_end) = self.previous_frame_end.take() {
-			previous_frame_end.cleanup_finished();
-			previous_frame_end.wait(None)?;
-			previous_frame_end.boxed()
+		if samples != SampleCount::Sample1 {
+			clear_values.push(ClearValue::None)
+		}
+		
+		Ok(FramebufferBundle {
+			framebuffer,
+			main_image,
+			ssaa,
+			clear_values
+		})
+	}
+	
+	pub fn begin_frame(&mut self) -> Result<(), RendererBeginFrameError> {
+		let future = if let Some(mut previous_frame) = self.future.take() {
+			previous_frame.cleanup_finished();
+			// TODO: Actually wait
+			// previous_frame.wait(None)?;
+			previous_frame
 		} else {
 			sync::now(self.device.clone()).boxed()
 		};
-		
-		// TODO: Optimize Boxes
-		while let Ok((command, cam_pose)) = self.load_commands.try_recv() {
-			if !future.queue_change_allowed() && &future.queue().unwrap() != &self.load_queue {
-				future = Box::new(future.then_signal_semaphore()
-				                        .then_execute(self.load_queue.clone(), command)?);
-			} else {
-				future = Box::new(future.then_execute(self.load_queue.clone(), command)?);
-			}
-			
-			self.background.update_frame_pose(cam_pose.unwrap_or(camera_pos));
-		}
 		
 		self.fps_counter.tick();
 		
 		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
-		let view_base = camera_pos.inverse();
-		let view_left = &self.eyes.view.0 * &view_base;
-		let view_right = &self.eyes.view.1 * &view_base;
-		let light_source = vector!(0.5, -0.5, -1.5).normalize();
-		let pixel_scale = vector!(1.0 / self.eyes.frame_buffer_size.0 as f32, 1.0 / self.eyes.frame_buffer_size.1 as f32) * config::get().ssaa;
+		self.future = Some(future);
 		
+		Ok(())
+	}
+	
+	pub fn enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
+	                  where F: FnOnce(Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
+		self.try_enqueue(queue, |future| Ok::<_, !>(callback(future))).unwrap()
+	}
+	
+	pub fn try_enqueue<Err, F>(&mut self, queue: Arc<Queue>, callback: F)
+	                           -> Result<(), Err>
+	                           where F: FnOnce(Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>, Err> {
+		let mut future = self.future.take().unwrap_or_else(|| sync::now(self.device.clone()).boxed());
+		if !future.queue_change_allowed() && future.queue().unwrap() != queue {
+			future = future.then_signal_semaphore().boxed();
+		}
+		
+		future = callback(future)?;
+		
+		self.future = Some(future);
+		
+		Ok(())
+	}
+	
+	pub fn render<RT>(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, render_target: &mut RT)
+	                  -> Result<(), RendererRenderError<RT::RenderError>>
+	                  where RT: RenderTarget {
+		let rt_context = match render_target.create_context(camera_pos) {
+			Ok(Some(context)) => context,
+			Ok(None) => return Ok(()),
+			Err(err) => return Err(RendererRenderError::RenderTargetError(err)),
+		};
+		
+		let light_source = vector!(0.5, -0.5, -1.5).normalize();
 		let commons = CommonsUBO {
-			projection: [self.eyes.projection.0.clone().into(), self.eyes.projection.1.clone().into()],
-			view: [view_left.into(), view_right.into()],
+			projection: [rt_context.projection.0.into(), rt_context.projection.1.into()],
+			view: [rt_context.view.0.into(), rt_context.view.1.into()],
 			light_direction: [
-				(view_left * light_source).to_homogeneous().into(),
-				(view_right * light_source).to_homogeneous().into(),
+				(rt_context.view.0 * light_source).to_homogeneous().into(),
+				(rt_context.view.1 * light_source).to_homogeneous().into(),
 			],
 			ambient: 0.25,
 		};
 		
-		let (eye_width, eye_height) = self.eyes.frame_buffer_size;
-		
 		let mut builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
-		builder.update_buffer(self.commons.clone(),
-		                      Arc::new(commons.clone()))?;
+		builder.update_buffer(self.commons.clone(), Arc::new(commons.clone()))?;
+		
+		let mut context = RenderContext::new(&rt_context, &mut builder, camera_pos);
+		
+		let mut transparent_registry = self.transparent_registry.take().unwrap_or_default();
 		
 		for entity in scene.values_mut() {
-			let transparent = entity.pre_render(&self, &mut builder)?;
+			let transparent = entity.before_render(&mut context, self)?;
 			
 			if transparent {
-				self.transparent_registry.push(((entity.state().position.translation.vector - camera_pos.translation.vector).magnitude(), entity.id));
+				transparent_registry.push(((entity.state().position.translation.vector - camera_pos.translation.vector).magnitude(), entity.id));
 			}
 		}
 		
 		{
 			let mut debug_renderer = self.debug_renderer.take().unwrap();
-			debug_renderer.pre_render(self)?;
+			debug_renderer.before_render(self)?;
 			self.debug_renderer = Some(debug_renderer);
 		}
 		
-		builder.begin_render_pass(self.eyes.frame_buffer.clone(),
-		                          SubpassContents::Inline,
-		                          self.eyes.clear_values.iter().copied())?;
+		render_target.before_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
 		
-		self.background.render(&mut builder, camera_pos)?;
+		let viewport = Viewport {
+			origin: [0.0, 0.0],
+			dimensions: [context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32],
+			depth_range: 0.0..1.0,
+		};
+		context.builder.begin_render_pass(rt_context.framebuffer.clone(),
+		                                  SubpassContents::Inline,
+		                                  render_target.clear_values().iter().copied())?
+		               .set_viewport(0, Some(viewport));
+		
+		render_target.early_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		
+		context.render_type = RenderType::Opaque;
 		
 		for entity in scene.values_mut() {
-			entity.render(&self, RenderType::Opaque, &mut builder)?;
+			entity.render(&mut context, self)?;
 		}
 		
-		self.transparent_registry.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+		transparent_registry.sort_unstable_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
 		
-		for (_, entity) in self.transparent_registry.iter() {
-			scene.get_mut(&entity).unwrap().render(&self, RenderType::Transparent, &mut builder)?;
+		context.render_type = RenderType::Transparent;
+		
+		for (_, entity) in transparent_registry.iter() {
+			scene.get_mut(&entity).unwrap().render(&mut context, self)?;
 		}
 		
-		self.transparent_registry.clear();
+		transparent_registry.clear();
+		self.transparent_registry = Some(transparent_registry);
 		
-		self.debug_renderer.as_mut().unwrap().render(&mut builder, &commons, pixel_scale)?;
+		self.debug_renderer.as_mut().unwrap().render(&mut context)?;
 		
-		builder.end_render_pass()?
-		       .copy_image(self.eyes.resolved_image.clone(),
-		                   [0, 0, 0],
-		                   1,
-		                   0,
-		                   self.eyes.side_image.clone(),
-		                   [0, 0, 0],
-		                   0,
-		                   0,
-		                   [eye_width as u32, eye_height as u32, 1],
-		                   1)?;
+		render_target.late_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		
+		context.builder.end_render_pass()?;
+		
+		render_target.after_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		
+		drop(context);
 		
 		let command_buffer = builder.build()?;
 		
-		if !future.queue_change_allowed() && &future.queue().unwrap() != &self.queue {
-			future = future.then_signal_semaphore().boxed();
-		}
+		let queue = self.queue.clone();
+		self.try_enqueue(queue.clone(), |future| future.then_execute(queue.clone(), command_buffer).map(GpuFuture::boxed))?;
 		
-		future = future.then_execute(self.queue.clone(), command_buffer)?.boxed();
+		render_target.after_execute(self).map_err(RendererRenderError::RenderTargetError)?;
 		
-		// TODO: Explicit timing mode
-		if let Some(ref vr) = self.vr {
-			let vr = vr.lock().unwrap();
-			
-			// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
-			unsafe {
-				let f = future.then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.resolved_image.clone(), self.device.clone(), self.queue.family())?)?
-				              .then_execute(self.queue.clone(), OpenVRCommandBuffer::start(self.eyes.side_image.clone(), self.device.clone(), self.queue.family())?)?;
-				f.flush()?;
-				
-				let debug = debug::debug();
-				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
-				vr.compositor.submit(openvr::Eye::Left,  &self.eyes.textures.0, None, Some(hmd_pose))?;
-				vr.compositor.submit(openvr::Eye::Right, &self.eyes.textures.1, None, Some(hmd_pose))?;
-				if debug { debug::set_debug(true); }
-				
-				future = f.then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.resolved_image.clone(),  self.device.clone(), self.queue.family())?)?
-				          .then_execute(self.queue.clone(), OpenVRCommandBuffer::end(self.eyes.side_image.clone(),  self.device.clone(), self.queue.family())?)?
-				          .boxed();
+		Ok(())
+	}
+	
+	pub fn end_frame(&mut self) -> Result<(), RendererEndFrameError> {
+		self.debug_renderer.as_mut().unwrap().reset();
+		
+		if let Some(future) = self.future.take() {
+			if future.queue().is_none() {
+				return Ok(())
 			}
-		}
-		
-		future = match window.render(&self.device, &self.queue, future, &self.eyes.resolved_image) {
-			Ok(future) => future,
-			Err(WindowRenderError::Later(future)) => future,
-			Err(err) => return Err(err.into()),
-		};
-		
-		self.debug_renderer.as_mut().unwrap().text_cache.borrow_mut().cleanup();
-		
-		match future.then_signal_fence_and_flush() {
-			Ok(future) => {
-				self.previous_frame_end = Some(future);
-			},
-			Err(sync::FlushError::OutOfDate) => {
-				eprintln!("Flush Error: Out of date, ignoring");
-			},
-			Err(err) => return Err(err.into()),
+			
+			match future.then_signal_fence_and_flush() {
+				Ok(future) => {
+					self.future = Some(future.boxed());
+				},
+				Err(sync::FlushError::OutOfDate) => {
+					// ignore
+				},
+				Err(err) => return Err(err.into()),
+			}
 		}
 		
 		Ok(())
 	}
 	
 	pub fn debug_text_cache(&self) -> RefMut<TextCache> {
-		self.debug_renderer.as_ref().unwrap().text_cache.borrow_mut()
+		self.debug_renderer.as_ref().unwrap().text_cache()
 	}
 	
 	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset, Key::Error> {
@@ -577,17 +648,12 @@ pub enum RendererError {
 	#[error(display = "No compute queue available.")] NoQueue,
 	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
-	#[error(display = "{}", _0)] EyeCreationError(#[error(source)] EyeCreationError),
-	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
-	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
 	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
 	#[error(display = "{}", _0)] DebugCallbackCreationError(#[error(source)] instance::debug::DebugCallbackCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] pipeline::graphics::GraphicsPipelineCreationError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 }
 
@@ -599,27 +665,37 @@ pub enum RendererSwapchainError {
 }
 
 #[derive(Debug, Error)]
-pub enum RendererRenderError {
-	#[error(display = "{}", _0)] SwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
-	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowRenderError),
+pub enum RendererCreateFramebufferError {
+	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
+	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
+	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
+}
+
+#[derive(Debug, Error)]
+pub enum RendererBeginFrameError {
+}
+
+#[derive(Debug, Error)]
+pub enum RendererEndFrameError {
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
+}
+
+#[derive(Debug, Error)]
+pub enum RendererRenderError<RTE: Error> {
+	#[error(display = "{}", _0)] RenderTargetError(RTE),
+	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] DebugRendererPreRenderError(#[error(source)] DebugRendererPreRenderError),
 	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
-	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
-	#[error(display = "{}", _0)] ComponentError(ComponentError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
-	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
 	#[error(display = "{}", _0)] AutoCommandBufferBuilderContextError(#[error(source)] command_buffer::AutoCommandBufferBuilderContextError),
 	#[error(display = "{}", _0)] CommandBufferBuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
-	#[error(display = "{}", _0)] CopyImageError(#[error(source)] command_buffer::CopyImageError),
 	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
-	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }
 
-impl From<ComponentError> for RendererRenderError {
+impl<RTE: Error> From<ComponentError> for RendererRenderError<RTE> {
 	fn from(err: ComponentError) -> Self {
 		RendererRenderError::ComponentError(err)
 	}

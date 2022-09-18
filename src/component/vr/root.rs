@@ -7,13 +7,17 @@ use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use rapier3d::prelude::RigidBodyBuilder;
 use image::{DynamicImage, ImageBuffer};
 use openvr::render_models;
+use rapier3d::geometry::{ColliderBuilder, InteractionGroups};
 
 use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::component::comedy::Comedy;
 use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
 use super::VrTracked;
 use crate::component::hand::HandComponent;
+use crate::component::parent::Parent;
+use crate::math::Isometry3;
 use crate::renderer::assets_manager::texture::TextureBundle;
 
 #[derive(ComponentBase)]
@@ -74,10 +78,10 @@ impl Component for VrRoot {
 								.collider_from_aabb(1000.0);
 							
 							if class == TrackedDeviceClass::HMD {
-								entity = entity.hidden(true)
-								               .tag("NoGrab", false)
+								entity = entity.tag("NoGrab", false)
 								               .tag("Head", true)
-								               .component(PoV::new());
+								               .tag("CloseHide", true)
+								               .component(PoV::new(true));
 							}
 							
 							match vr.system.get_controller_role_for_tracked_device_index(tracked_id) {
@@ -87,6 +91,32 @@ impl Component for VrRoot {
 							}
 							
 							let entity = application.add_entity(entity.build());
+							
+							if class == TrackedDeviceClass::HMD {
+								application.add_entity(
+									Entity::builder("Eye")
+										.rigid_body_type(RigidBodyType::KinematicPositionBased)
+										.collider(ColliderBuilder::ball(0.05)
+											.collision_groups(InteractionGroups::none())
+											.build())
+										.component(Comedy::new(renderer)?)
+										.component(Parent::new(entity.clone(), Isometry3::translation(0.06, 0.02, -0.085)))
+										.tag("CloseHide", true)
+										.build()
+								);
+								
+								application.add_entity(
+									Entity::builder("Eye")
+										.rigid_body_type(RigidBodyType::KinematicPositionBased)
+										.collider(ColliderBuilder::ball(0.05)
+											.collision_groups(InteractionGroups::none())
+											.build())
+										.component(Comedy::new(renderer)?)
+										.component(Parent::new(entity.clone(), Isometry3::translation(-0.06, 0.02, -0.085)))
+										.tag("CloseHide", true)
+										.build()
+								);
+							}
 							
 							entities.insert(tracked_id, entity);
 							

@@ -6,7 +6,7 @@ use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::viewport::{Viewport, ViewportState};
+use vulkano::pipeline::graphics::viewport::ViewportState;
 
 mod vertex;
 
@@ -40,7 +40,7 @@ pub struct DebugPipeline;
 impl PipelineConstructor for DebugPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::load(device.clone()).unwrap();
 		let fs = frag::load(device.clone()).unwrap();
@@ -49,13 +49,7 @@ impl PipelineConstructor for DebugPipeline {
 			GraphicsPipeline::start()
 				.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
-					Viewport {
-						origin: [0.0, 0.0],
-						dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-						depth_range: 0.0..1.0,
-					},
-				]))
+				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
@@ -90,7 +84,7 @@ pub struct DebugTexturedPipeline;
 impl PipelineConstructor for DebugTexturedPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = tex_vert::load(device.clone()).unwrap();
 		let fs = tex_frag::load(device.clone()).unwrap();
@@ -99,13 +93,7 @@ impl PipelineConstructor for DebugTexturedPipeline {
 			GraphicsPipeline::start()
 				.vertex_input_state(BuffersDefinition::new().vertex::<TexturedVertex>())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
-					Viewport {
-						origin: [0.0, 0.0],
-						dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-						depth_range: 0.0..1.0,
-					},
-				]))
+				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
 				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
@@ -141,7 +129,7 @@ pub struct DebugShapePipeline;
 impl PipelineConstructor for DebugShapePipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = shape_vert::load(device.clone()).unwrap();
 		let fs = shape_frag::load(device.clone()).unwrap();
@@ -150,13 +138,7 @@ impl PipelineConstructor for DebugShapePipeline {
 			GraphicsPipeline::start()
 				.vertex_input_state(BuffersDefinition::new().vertex::<DefaultPipelineVertex>())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
-					Viewport {
-						origin: [0.0, 0.0],
-						dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-						depth_range: 0.0..1.0,
-					},
-				]))
+				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.depth_stencil_state(DepthStencilState::disabled())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))

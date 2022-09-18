@@ -22,8 +22,7 @@ pub struct TextureAsset {
 
 #[derive(Clone)]
 pub struct TextureBundle {
-	pub image: Arc<ImmutableImage>,
-	pub view: Arc<ImageView<ImmutableImage>>,
+	pub image: Arc<ImageView<ImmutableImage>>,
 	pub sampler: Arc<Sampler>,
 	pub fence: FenceCheck,
 }
@@ -81,8 +80,7 @@ impl AssetKey for TextureAsset {
 		let fence = FenceCheck::new(image_promise)?;
 		
 		Ok(TextureBundle {
-			image,
-			view,
+			image: view,
 			sampler,
 			fence
 		})
@@ -118,8 +116,7 @@ impl TextureBundle {
 		let fence = FenceCheck::new(image_promise)?;
 		
 		Ok(TextureBundle {
-			image,
-			view,
+			image: view,
 			sampler,
 			fence,
 		})

@@ -4,23 +4,22 @@ use std::time::Duration;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage};
 use vulkano::sync::GpuFuture;
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 pub mod asset;
 mod pipeline;
 
-use crate::renderer::Renderer;
+use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{FenceCheck, ImmutableIndexBuffer, AutoCommandBufferBuilderEx};
 use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, RenderType};
+use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::application::{Entity, Hand};
 use crate::renderer::assets_manager::texture::TextureBundle;
-use super::{ModelError, VertexIndex};
-pub use pipeline::Vertex;
-pub use asset::*;
-use pipeline::GimpPipeline;
 use crate::Application;
+use super::{ModelError, VertexIndex};
+pub use asset::{GimpAsset, GimpLoadError};
+pub use pipeline::Vertex;
+use pipeline::GimpPipeline;
 
 #[derive(ComponentBase, Clone)]
 pub struct GimpModel {
@@ -56,8 +55,8 @@ impl GimpModel {
 		
 		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
 			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			WriteDescriptorSet::image_view_sampler(1, texture.view.clone(), texture.sampler.clone()),
-			WriteDescriptorSet::image_view_sampler(2, normal_texture.view.clone(), normal_texture.sampler.clone()),
+			WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
+			WriteDescriptorSet::image_view_sampler(2, normal_texture.image.clone(), normal_texture.sampler.clone()),
 		])?;
 		
 		let fence = FenceCheck::new(vertices_promise.join(indices_promise).join(texture.fence.future()))?;
@@ -79,24 +78,24 @@ impl GimpModel {
 		self.fence.check()
 	}
 	
-	pub fn render_impl(&self, transform: Similarity3, color: Color, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
 		
-		builder.bind_pipeline_graphics(self.pipeline.clone())
-		       .bind_vertex_buffers(0, self.vertices.clone())
-		       .bind_any_index_buffer(self.indices.clone())
-		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                             self.pipeline.layout().clone(),
+		context.builder.bind_pipeline_graphics(self.pipeline.clone())
+		               .bind_vertex_buffers(0, self.vertices.clone())
+		               .bind_any_index_buffer(self.indices.clone())
+		               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+		                                     self.pipeline.layout().clone(),
+		                                     0,
+		                                     self.set.clone())
+		               .push_constants(self.pipeline.layout().clone(),
+		                               0,
+		                               (transform.to_homogeneous(), color))
+		               .draw_indexed(self.indices.len() as u32,
+		                             1,
 		                             0,
-		                             self.set.clone())
-		       .push_constants(self.pipeline.layout().clone(),
-		                       0,
-		                       (transform.to_homogeneous(), color))
-		       .draw_indexed(self.indices.len() as u32,
-		                     1,
-		                     0,
-		                     0,
-		                     0)?;
+		                             0,
+		                             0)?;
 		
 		Ok(())
 	}
@@ -108,7 +107,7 @@ impl Component for GimpModel {
 			entity.unset_tag("Grabbed");
 			self.active.set(true);
 			self.time.set(entity.tag::<usize>("Id").unwrap_or(0) as f32 * -1.0);
-			let camera = application.camera_entity.get(application).unwrap();
+			let camera = application.pov.get(application).unwrap();
 			
 			let mut orientation = *camera.state().position;
 			let mut towards = orientation.rotation * vector!(0.0, 0.0, 1.0);
@@ -145,8 +144,8 @@ impl Component for GimpModel {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
-		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::full_white(), builder)?;
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::full_white(), context)?;
 		
 		Ok(())
 	}

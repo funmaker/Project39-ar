@@ -15,7 +15,6 @@ use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
 
 use crate::renderer::Renderer;
 use crate::{config, debug};
-use crate::component::model::mmd::overrides::MMDOverrideError;
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
 use crate::renderer::assets_manager::AssetError;
@@ -502,7 +501,6 @@ pub enum MMDModelLoadError {
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
 	#[error(display = "{}", _0)] TomlLoadError(#[error(source)] TomlLoadError),
-	#[error(display = "{}", _0)] MMDJointOverrideNormalizeError(#[error(source)] MMDOverrideError),
 	#[error(display = "{}", _0)] IoError(#[error(source)] std::io::Error),
 	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),

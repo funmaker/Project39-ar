@@ -159,6 +159,53 @@ pub fn face_upwards_lossy(dir: Vec3) -> Rot3 {
 	}
 }
 
+// Using ZXY euler sequence
+pub fn to_euler(rot: Rot3) -> (f32, f32, f32) {
+	let x = rot * Vec3::x_axis();
+	let y = rot * Vec3::y_axis();
+	let z = rot * Vec3::z_axis();
+	
+	let pitch = -z.y.clamp(-1.0, 1.0).asin();
+	let gimbal_lock = pitch.abs() > PI / 2.0 - 0.001;
+	
+	let yaw = if gimbal_lock {
+		f32::atan2(-x.z, x.x)
+	} else {
+		f32::atan2(z.x, z.z)
+	};
+	
+	let xy_proj = x.y / pitch.cos();
+	let roll = if gimbal_lock {
+		0.0
+	} else if y.y < 0.0 {
+		PI.copysign(x.y) - xy_proj.clamp(-1.0, 1.0).asin() // Upside down
+	} else {
+		xy_proj.clamp(-1.0, 1.0).asin()
+	};
+	
+	(pitch, yaw, roll)
+}
+
+// Using ZXY euler sequence
+pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Rot3 {
+	let x = Rot3::from_axis_angle(&Vec3::x_axis(), pitch);
+	let y = Rot3::from_axis_angle(&Vec3::y_axis(), yaw);
+	let z = Rot3::from_axis_angle(&Vec3::z_axis(), roll);
+	
+	y * x * z
+}
+
+// Translates OpenGL projection matrix to Vulkan
+// Can't be const because Mat4::new is not const fn or something
+pub fn projective_clip() -> AMat4 {
+	AMat4::from_matrix_unchecked(Mat4::new(
+		1.0, 0.0, 0.0, 0.0,
+		0.0,-1.0, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.5,
+		0.0, 0.0, 0.0, 1.0,
+	))
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 

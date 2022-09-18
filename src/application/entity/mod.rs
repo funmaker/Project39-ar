@@ -4,16 +4,15 @@ use std::time::Duration;
 use std::any::Any;
 use std::fmt::{Display, Formatter};
 use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 mod builder;
 mod entity_ref;
 
 use crate::debug;
 use crate::math::{Color, Isometry3, Point3, Vec3};
-use crate::component::{ComponentRef, ComponentError, RenderType};
+use crate::component::{ComponentRef, ComponentError};
 use crate::utils::{IntoBoxed, get_userdata, MutMark};
-use crate::renderer::Renderer;
+use crate::renderer::{RenderContext, Renderer, RenderType};
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
@@ -128,26 +127,27 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn pre_render(&mut self, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<bool, ComponentError> {
+	pub fn before_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<bool, ComponentError> {
 		let mut is_transparent = false;
 		
 		for component in self.components.values() {
-			component.pre_render(&self, renderer, builder)?;
+			component.before_render(&self, context, renderer)?;
 			
-			is_transparent = is_transparent || component.inner().is_transparent();
+			is_transparent = is_transparent || component.inner().render_type().contains(RenderType::Transparent);
 		}
 		
 		Ok(is_transparent)
 	}
 	
-	pub fn render(&mut self, renderer: &Renderer, render_type: RenderType, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	pub fn render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> {
+		let close_hide: bool = self.tag("CloseHide").unwrap_or_default();
 		let state = self.state.get_mut();
 		
-		if state.hidden {
+		if state.hidden || (close_hide && (state.position.translation.vector - context.camera_pos.translation.vector).magnitude_squared() < 0.125) {
 			return Ok(());
 		}
 		
-		if debug::get_flag_or_default("DebugEntityDraw") && render_type == RenderType::Opaque {
+		if debug::get_flag_or_default("DebugEntityDraw") && context.render_type == RenderType::Opaque {
 			let pos: Point3 = state.position.translation.vector.into();
 			let ang = &state.position.rotation;
 			
@@ -159,9 +159,8 @@ impl Entity {
 		}
 		
 		for component in self.components.values() {
-			if (render_type == RenderType::Opaque && component.inner().is_opaque())
-			|| (render_type == RenderType::Transparent && component.inner().is_transparent()) {
-				component.render(&self, renderer, builder)?;
+			if component.inner().render_type().contains(context.render_type) {
+				component.render(&self, context, renderer)?;
 			}
 		}
 		

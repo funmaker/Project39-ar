@@ -1,4 +1,3 @@
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use rapier3d::geometry::InteractionGroups;
 use rapier3d::prelude::FixedJoint;
 
@@ -9,6 +8,7 @@ use crate::component::toolgun::tool::ToolError;
 use crate::utils::ColliderEx;
 use crate::component::physics::joint::JointComponent;
 use crate::component::model::SimpleModel;
+use crate::renderer::RenderContext;
 use super::tool::Tool;
 
 pub struct Weld {
@@ -86,10 +86,10 @@ impl Tool for Weld {
 		Ok(())
 	}
 	
-	fn render(&mut self, _toolgun: &ToolGun, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ToolError> {
+	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost) = &self.ghost {
 			if let Some(ghost_pos) = self.ghost_pos {
-				ghost.render_impl(Similarity3::from_isometry(ghost_pos * self.target_local_pos.inverse(), 1.0), Color::full_white().opactiy(0.25), builder)?;
+				ghost.render_impl(Similarity3::from_isometry(ghost_pos * self.target_local_pos.inverse(), 1.0), Color::full_white().opactiy(0.25), context)?;
 			}
 		}
 		

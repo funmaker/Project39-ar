@@ -1,6 +1,5 @@
 use rapier3d::geometry::InteractionGroups;
 use rapier3d::dynamics::RigidBodyType;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Hand, Application};
 use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3, face_upwards_lossy};
@@ -9,6 +8,7 @@ use crate::debug;
 use super::tool::{Tool, ToolError};
 use super::ToolGun;
 use crate::component::seat::Seat;
+use crate::renderer::RenderContext;
 
 const MENU_SCALE: f32 = 0.2;
 const MENU_SPACING: f32 = 0.25;
@@ -111,10 +111,10 @@ impl Tool for Spawner {
 		Ok(())
 	}
 	
-	fn render(&mut self, toolgun: &ToolGun, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ToolError> {
+	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
 			if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
-				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), builder)?;
+				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), context)?;
 			}
 		}
 		
@@ -139,7 +139,7 @@ impl Tool for Spawner {
 					Color::dwhite().opactiy(0.75)
 				};
 				
-				prop.model.render_impl(transform, color, builder)?;
+				prop.model.render_impl(transform, color, context)?;
 				
 				if let Some(tip) = &prop.tip {
 					debug::draw_text(tip, &transform.transform_point(&Point3::origin()), debug::DebugOffset::top(0.0, 8.0), 32.0, color);

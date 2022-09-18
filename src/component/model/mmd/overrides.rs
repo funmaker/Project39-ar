@@ -188,8 +188,6 @@ impl MMDJointOverride {
 				0.0,
 			));
 			
-			println!("{} {} {:?}", self.name.as_ref().map_or("???", |s| s.as_ref()), offset, self.rotation);
-			
 			for (rb_id, rb) in rigid_bodies.iter().enumerate() {
 				if rb.bone_index == bone_id as i32 {
 					self.rigid_body_a = Some(rb_id as i32);

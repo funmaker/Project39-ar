@@ -64,7 +64,6 @@ pub enum ObjLoadError {
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
 	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] vulkano::sync::FlushError),
 }
 
 impl ObjLoadError {

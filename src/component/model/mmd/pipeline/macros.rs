@@ -25,7 +25,6 @@ macro_rules! mmd_pipelines {
 		use std::sync::Arc;
 		use vulkano::pipeline::GraphicsPipeline;
 		use vulkano::render_pass::{RenderPass, Subpass};
-		use vulkano::pipeline::graphics::viewport::Viewport;
 		use vulkano::device::DeviceOwned;
 		use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 		use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
@@ -40,7 +39,7 @@ macro_rules! mmd_pipelines {
 			impl PipelineConstructor for $name {
 				type PipeType = GraphicsPipeline;
 				
-				fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+				fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 					use $vertex_shader as vertex_shader;
 					use $fragment_shader as fragment_shader;
 					
@@ -71,13 +70,7 @@ macro_rules! mmd_pipelines {
 						.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
 						.depth_stencil_state(DepthStencilState::simple_depth_test())
 						.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back).front_face(FrontFace::Clockwise))
-						.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
-							Viewport {
-								origin: [0.0, 0.0],
-								dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-								depth_range: 0.0..1.0,
-							},
-						]));
+						.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant());
 					
 					Ok(
 						$code.build(device.clone())?

@@ -6,49 +6,49 @@ use err_derive::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index::HMD;
-use rapier3d::dynamics::{JointAxesMask, JointAxis, RigidBodyType, GenericJoint};
+use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::prelude::ColliderBuilder;
 
 pub mod vr;
 pub mod entity;
 pub mod physics;
 pub mod input;
+mod eyes;
+mod window;
 
 use crate::component::Component;
 use crate::component::ComponentError;
-use crate::component::model::{MMDModel, ModelError};
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
-use crate::component::toolgun::{ToolGunError};
 use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
-use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
 use crate::component::physics::joint::JointComponent;
 use crate::config::{self, CameraAPI};
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
-use crate::renderer::{Renderer, RendererError, RendererRenderError};
+use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
-use crate::component::model::gimp::asset::{GimpAsset, GimpLoadError};
-use crate::renderer::camera::{self, OpenVRCameraError};
-#[cfg(feature = "opencv-camera")] use crate::renderer::camera::{OpenCVCameraError};
-use crate::renderer::window::{Window, WindowCreationError};
 use crate::utils::default_wait_poses;
 use crate::debug;
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
+use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
+use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
+
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
 	pub physics: RefCell<Physics>,
 	pub vr_poses: WaitPoses,
-	pub camera_entity: EntityRef,
+	pub pov: EntityRef,
+	pub detached_pov: EntityRef,
 	pub input: Input,
-	window: Window,
+	eyes: Option<Eyes>,
+	window: Option<Window>,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
 }
@@ -64,23 +64,35 @@ impl Application {
 			return Err(ApplicationCreationError::OpenVRCameraInNoVR);
 		}
 		
-		let renderer = match config.camera.driver {
-			#[cfg(feature = "opencv-camera")] CameraAPI::OpenCV => Renderer::new(vr.clone(), camera::OpenCV::new()?)?,
-			CameraAPI::OpenVR => Renderer::new(vr.clone(), camera::OpenVR::new(vr.clone().unwrap())?)?,
-			#[cfg(windows)] CameraAPI::Escapi => Renderer::new(vr.clone(), camera::Escapi::new()?)?,
-			CameraAPI::Dummy => Renderer::new(vr.clone(), camera::Dummy::new())?,
+		let mut renderer = Renderer::new(vr.clone())?;
+		
+		let camera: Box<dyn camera::Camera> = match config.camera.driver {
+			#[cfg(feature = "opencv-camera")]
+			CameraAPI::OpenCV => Box::new(camera::OpenCV::new()?),
+			CameraAPI::OpenVR => Box::new(camera::OpenVR::new(vr.clone().unwrap())?),
+			#[cfg(windows)]
+			CameraAPI::Escapi => Box::new(camera::Escapi::new()?),
+			CameraAPI::Dummy => Box::new(camera::Dummy::new()),
 		};
 		
-		let window = Window::new(&renderer)?;
+		let eyes = if let Some(ref vr) = vr {
+			Eyes::new_vr(vr.clone(), Some(camera), &mut renderer)?
+		} else {
+			Eyes::new_novr(&config::get().novr, Some(camera), &mut renderer)?
+		};
+		
+		let window = Window::new(Some(eyes.framebuffer_size()), &renderer)?;
 		
 		let application = Application {
 			vr,
 			renderer: RefCell::new(renderer),
 			physics: RefCell::new(Physics::new()),
 			vr_poses: default_wait_poses(),
-			camera_entity: EntityRef::null(),
+			pov: EntityRef::null(),
+			detached_pov: EntityRef::null(),
 			input: Input::new(),
-			window,
+			eyes: Some(eyes),
+			window: Some(window),
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
 		};
@@ -104,7 +116,7 @@ impl Application {
 				let pov = application.add_entity(
 					Entity::builder("(You)")
 						.translation(point!(0.0, 1.5, 1.5))
-						.component(PoV::new())
+						.component(PoV::new(true))
 						.component(PCControlled::new())
 						.tag("Head", true)
 						.build()
@@ -147,7 +159,7 @@ impl Application {
 			application.add_entity(
 				Entity::builder("初音ミク")
 					.translation(point!(-0.5, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, std::f32::consts::PI * 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
 					.component(Miku::new())
 					.build()
 			);
@@ -204,7 +216,7 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
-		while !self.window.quit_required {
+		while !self.input.quit_required {
 			let mut delta_time = instant.elapsed();
 			instant = Instant::now();
 			
@@ -214,10 +226,15 @@ impl Application {
 			}
 			
 			self.input.reset();
-			self.window.pull_events(&mut self.input);
+			
+			if let Some(window) = &mut self.window {
+				window.pull_events(&mut self.input);
+			}
+			
 			if self.vr.is_some() {
 				self.handle_vr_input()?;
 			}
+			
 			self.set_debug_flags();
 			
 			let inputs = format!("{}", self.input);
@@ -247,12 +264,46 @@ impl Application {
 				entity.tick(delta_time, &self)?;
 			}
 			
-			let pov = self.camera_entity.get(&self).map(|e| *e.state().position)
-			                            .unwrap_or(Isometry3::identity());
+			self.renderer.get_mut().begin_frame()?;
 			
+			let pov = self.pov
+			              .get(&self).map(|e| *e.state().position)
+			              .unwrap_or(Isometry3::identity());
+			let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
 			let hmd_pose = self.vr_poses.render[HMD as usize].device_to_absolute_tracking().clone();
 			
-			self.renderer.get_mut().render(hmd_pose, pov, &mut self.entities, &mut self.window)?;
+			if let Some(eyes) = &mut self.eyes {
+				eyes.set_hmd_pose(hmd_pose);
+				eyes.load_background(pov, self.renderer.get_mut())?;
+			}
+			
+			if let Some(window) = &mut self.window {
+				match window.regen_swapchain(self.renderer.get_mut()) {
+					Err(WindowSwapchainRegenError::NeedRetry) => {},
+					result => result?,
+				}
+			}
+			
+			if let Some(eyes) = &mut self.eyes {
+				self.renderer.get_mut().render(pov, &mut self.entities, eyes)?;
+			
+				if let Some(window) = &mut self.window {
+					if let Some(detached_pov) = detached_pov {
+						self.renderer.get_mut().render(detached_pov, &mut self.entities, window)?;
+					} else {
+						window.mirror_from(eyes.last_frame(), self.renderer.get_mut())?;
+					}
+				}
+			} else if let Some(window) = &mut self.window {
+				self.renderer.get_mut().render(pov, &mut self.entities, window)?;
+			}
+			
+			if let Some(window) = &mut self.window {
+				window.mark_dirty();
+				self.renderer.get_mut().render(pov, &mut self.entities, window)?;
+			}
+			
+			self.renderer.get_mut().end_frame()?;
 			
 			self.cleanup_loop()?;
 		}
@@ -377,27 +428,24 @@ pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr background with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] GimpLoadError(#[error(source)] GimpLoadError),
-	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
-	#[error(display = "{}", _0)] ToolGunError(#[error(source)] ToolGunError),
-	#[cfg(feature = "opencv-camera")] #[error(display = "{}", _0)] OpenCVCameraError(#[error(source)] OpenCVCameraError),
+	#[error(display = "{}", _0)] EyesCreationError(#[error(source)] EyesCreationError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
-	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] OpenVRCameraError),
+	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum ApplicationRunError {
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] RendererRenderError(#[error(source)] RendererRenderError),
+	#[error(display = "{}", _0)] RendererBeginFrameError(#[error(source)] RendererBeginFrameError),
+	#[error(display = "{}", _0)] RendererRenderEyesError(#[error(source)] RendererRenderError<EyesRenderTargetError>),
+	#[error(display = "{}", _0)] RendererRenderWindowError(#[error(source)] RendererRenderError<WindowRenderTargetError>),
+	#[error(display = "{}", _0)] RendererEndFrameError(#[error(source)] RendererEndFrameError),
+	#[error(display = "{}", _0)] EyesLoadBackgroundError(#[error(source)] EyesLoadBackgroundError),
+	#[error(display = "{}", _0)] WindowSwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
+	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowMirrorFromError),
 	#[error(display = "{}", _0)] ComponentError(ComponentError),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
-	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] openvr::system::TrackedPropertyError),
-	#[error(display = "{}", _0)] RenderModelError(#[error(source)] openvr::render_models::Error),
-	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
 }
 
 impl From<ComponentError> for ApplicationRunError {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{RenderPass, Subpass};
-use vulkano::pipeline::graphics::viewport::{Viewport, ViewportState};
+use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
@@ -39,7 +39,7 @@ pub struct ToolGunTextPipeline;
 impl PipelineConstructor for ToolGunTextPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device();
 		let vs = vert::load(device.clone()).unwrap();
 		let fs = frag::load(device.clone()).unwrap();
@@ -48,13 +48,7 @@ impl PipelineConstructor for ToolGunTextPipeline {
 			GraphicsPipeline::start()
 				.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_fixed_scissor_irrelevant([
-					Viewport {
-						origin: [0.0, 0.0],
-						dimensions: [frame_buffer_size.0 as f32, frame_buffer_size.1 as f32],
-						depth_range: 0.0..1.0,
-					},
-				]))
+				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.depth_stencil_state(DepthStencilState::simple_depth_test())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))

@@ -7,13 +7,12 @@ use vulkano::pipeline::graphics::color_blend::{AttachmentBlend, BlendFactor, Ble
 use vulkano::render_pass::RenderPass;
 
 pub mod default;
-pub mod background;
 pub mod debug;
 
 pub trait PipelineConstructor: 'static {
 	type PipeType: Any + Send + Sync;
 	
-	fn new(render_pass: &Arc<RenderPass>, frame_buffer_size: (u32, u32))
+	fn new(render_pass: &Arc<RenderPass>)
 	      -> Result<Arc<Self::PipeType>, PipelineError>
 	      where Self: Sized;
 }
@@ -21,15 +20,13 @@ pub trait PipelineConstructor: 'static {
 pub struct Pipelines {
 	pipelines: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
 	render_pass: Arc<RenderPass>,
-	frame_buffer_size: (u32, u32),
 }
 
 impl Pipelines {
-	pub fn new(render_pass: Arc<RenderPass>, frame_buffer_size: (u32, u32)) -> Pipelines {
+	pub fn new(render_pass: Arc<RenderPass>) -> Pipelines {
 		Pipelines{
 			pipelines: HashMap::new(),
 			render_pass,
-			frame_buffer_size,
 		}
 	}
 	
@@ -37,7 +34,7 @@ impl Pipelines {
 		if let Some(pipeline) = self.pipelines.get(&TypeId::of::<P>()) {
 			Ok(pipeline.clone().downcast().unwrap())
 		} else {
-			let pipeline = P::new(&self.render_pass, self.frame_buffer_size)?;
+			let pipeline = P::new(&self.render_pass)?;
 			self.pipelines.insert(TypeId::of::<P>(), pipeline.clone());
 			
 			Ok(pipeline)
@@ -60,7 +57,6 @@ pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 
 #[derive(Debug, Error)]
 pub enum PipelineError {
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] vulkano::render_pass::RenderPassCreationError),
 	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] vulkano::pipeline::graphics::GraphicsPipelineCreationError),
 	#[error(display = "{}", _0)] ComputePipelineCreationError(#[error(source)] vulkano::pipeline::compute::ComputePipelineCreationError),
 }

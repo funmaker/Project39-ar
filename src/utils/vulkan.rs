@@ -1,13 +1,30 @@
 use std::ffi::CString;
+use std::sync::Arc;
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
-use vulkano::instance::Instance;
 use vulkano::{VulkanObject, SynchronizedVulkanObject, Handle};
-use vulkano::device::{Device, Queue};
-use vulkano::device::physical::PhysicalDevice;
+use vulkano::instance::Instance;
+use vulkano::device::{Device, Queue, physical::PhysicalDevice};
+use vulkano::format::ClearValue;
+use vulkano::render_pass::Framebuffer;
 use vulkano::image::{AttachmentImage, ImageAccess, StorageImage, ImmutableImage};
 
 pub fn vulkan_device_extensions_required(compositor: &Compositor, physical: &PhysicalDevice) -> Vec<CString> {
 	unsafe { compositor.vulkan_device_extensions_required(physical.as_ptr()) }
+}
+
+#[derive(Clone, Debug)]
+pub struct FramebufferBundle {
+	pub framebuffer: Arc<Framebuffer>,
+	pub main_image: Arc<AttachmentImage>,
+	pub ssaa: f32,
+	pub clear_values: Vec<ClearValue>,
+}
+
+impl FramebufferBundle {
+	pub fn size(&self) -> (u32, u32) {
+		let extent = self.framebuffer.extent();
+		(extent[0], extent[1])
+	}
 }
 
 pub trait OpenVRPtr {

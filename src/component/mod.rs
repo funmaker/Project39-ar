@@ -3,9 +3,10 @@ use std::cell::Cell;
 use std::time::Duration;
 use std::marker::PhantomData;
 use std::fmt::{Formatter, Debug};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
+use enumflags2::BitFlags;
 pub use project39_ar_derive::ComponentBase;
 
+pub mod example;
 pub mod model;
 pub mod miku;
 pub mod vr;
@@ -18,10 +19,11 @@ pub mod glow;
 pub mod hand;
 pub mod seat;
 pub mod thruster;
+pub mod comedy;
 
 use crate::application::{Application, Entity, EntityRef};
+use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{next_uid, IntoBoxed};
-use crate::renderer::Renderer;
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -52,8 +54,8 @@ pub trait ComponentBase: Any {
 pub trait Component: ComponentBase {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> { Ok(()) }
-	fn pre_render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
-	fn render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> { Ok(()) }
+	fn before_render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
+	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
 	fn end(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
 	
 	fn boxed(self)
@@ -74,14 +76,6 @@ impl<M: Component + 'static> IntoBoxed<dyn Component> for M {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub enum RenderType {
-	None,
-	Opaque,
-	Transparent,
-	Both,
-}
-
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum ComponentLifeStage {
 	New,
@@ -94,20 +88,20 @@ pub enum ComponentLifeStage {
 pub struct ComponentInner {
 	id: u64,
 	entity_id: Option<u64>,
-	render_type: RenderType,
+	render_type: BitFlags<RenderType>,
 	life_stage: Cell<ComponentLifeStage>,
 }
 
 impl ComponentInner {
 	pub fn new_norender() -> Self {
-		ComponentInner::from_render_type(RenderType::None)
+		ComponentInner::from_render_type(BitFlags::empty())
 	}
 	
-	pub fn from_render_type(render_type: RenderType) -> Self {
+	pub fn from_render_type(render_type: impl Into<BitFlags<RenderType>>) -> Self {
 		ComponentInner {
 			id: next_uid(),
 			entity_id: None,
-			render_type,
+			render_type: render_type.into(),
 			life_stage: Cell::new(ComponentLifeStage::New),
 		}
 	}
@@ -118,22 +112,8 @@ impl ComponentInner {
 		self.entity_id = Some(entity_id);
 	}
 	
-	pub fn is_opaque(&self) -> bool {
-		match self.render_type {
-			RenderType::None => false,
-			RenderType::Opaque => true,
-			RenderType::Transparent => false,
-			RenderType::Both => true,
-		}
-	}
-	
-	pub fn is_transparent(&self) -> bool {
-		match self.render_type {
-			RenderType::None => false,
-			RenderType::Opaque => false,
-			RenderType::Transparent => true,
-			RenderType::Both => true,
-		}
+	pub fn render_type(&self) -> BitFlags<RenderType> {
+		self.render_type
 	}
 	
 	pub fn life_stage(&self) -> ComponentLifeStage {

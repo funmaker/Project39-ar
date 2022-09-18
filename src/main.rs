@@ -33,7 +33,7 @@ use utils::from_args::ArgsError;
 mod renderer;
 mod application;
 mod config;
-pub mod component;
+#[allow(dead_code)] pub mod component;
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));
@@ -144,14 +144,10 @@ fn panic_hook() -> impl Fn(&PanicInfo) {
 
 #[derive(Debug, Error)]
 pub enum RunError {
-	#[error(display = "Unknown background provider: {}", _0)] BadCamera(String),
 	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
 	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
 	#[error(display = "{}", _0)] ArgsError(#[error(source)] ArgsError),
-	#[error(display = "{}", _0)] ParseIntError(#[error(source)] std::num::ParseIntError),
-	#[error(display = "{}", _0)] ParseFloatError(#[error(source)] std::num::ParseFloatError),
 	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
-	#[error(display = "{}", _0)] Infallible(#[error(source)] std::convert::Infallible),
 	#[error(display = "{}", _0)] DeserializationError(#[error(source)] toml::de::Error),
 	#[error(display = "{}", _0)] SerializationError(#[error(source)] toml::ser::Error),
 }

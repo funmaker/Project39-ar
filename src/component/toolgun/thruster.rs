@@ -1,6 +1,5 @@
 use rapier3d::dynamics::{FixedJoint, RigidBodyType};
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 
 use crate::application::{Application, Hand, Key};
 use crate::application::entity::EntityBuilder;
@@ -13,7 +12,7 @@ use crate::component::toolgun::ToolGun;
 use crate::debug;
 use crate::math::{Color, face_upwards_lossy, Isometry3, Ray, Similarity3};
 use crate::component::model::simple::asset::ObjAsset;
-use crate::renderer::Renderer;
+use crate::renderer::{RenderContext, Renderer};
 use crate::utils::ColliderEx;
 use super::tool::Tool;
 
@@ -115,9 +114,9 @@ impl Tool for ThrusterTool {
 	}
 	
 	
-	fn render(&mut self, _toolgun: &ToolGun, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ToolError> {
+	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
-			self.thruster_model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), builder)?;
+			self.thruster_model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), context)?;
 		}
 		
 		Ok(())

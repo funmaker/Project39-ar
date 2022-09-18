@@ -6,7 +6,6 @@ use rapier3d::geometry::InteractionGroups;
 use simba::scalar::SubsetOf;
 use vulkano::{descriptor_set, memory, sync};
 use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 
@@ -25,10 +24,10 @@ use crate::component::parent::Parent;
 use crate::debug;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::pipelines::PipelineError;
-use crate::renderer::Renderer;
+use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::FenceCheck;
 use crate::component::hand::HandComponent;
-use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef, RenderType};
+use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
 use pipeline::{ToolGunTextPipeline, Vertex};
@@ -229,7 +228,7 @@ impl Component for ToolGun {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> {
 		if !self.fence.check() { return Ok(()); }
 		let state = &mut *self.state.borrow_mut();
 		
@@ -249,23 +248,23 @@ impl Component for ToolGun {
 			-0.5
 		);
 		
-		builder.bind_pipeline_graphics(self.pipeline.clone())
-		       .bind_vertex_buffers(0, self.vertices.clone())
-		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                             self.pipeline.layout().clone(),
-		                             0,
-		                             (self.set.clone(), text_entry.set))
-		       .push_constants(self.pipeline.layout().clone(),
-		                       0,
-		                       (model_matrix.to_homogeneous(), uv_transform))
-		       .draw(self.vertices.len() as u32,
-		             1,
-		             0,
-		             0)?;
+		context.builder.bind_pipeline_graphics(self.pipeline.clone())
+		               .bind_vertex_buffers(0, self.vertices.clone())
+		               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+		                                     self.pipeline.layout().clone(),
+		                                     0,
+		                                     (self.set.clone(), text_entry.set))
+		               .push_constants(self.pipeline.layout().clone(),
+		                               0,
+		                               (model_matrix.to_homogeneous(), uv_transform))
+		               .draw(self.vertices.len() as u32,
+		                     1,
+		                     0,
+		                     0)?;
 		
 		if state.render_tool {
 			if let Some(tool) = tool {
-				tool.render(self, builder)?;
+				tool.render(self, context)?;
 			}
 		}
 		

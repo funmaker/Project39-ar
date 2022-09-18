@@ -70,7 +70,7 @@ pub struct MMDPipelineMorphs;
 impl PipelineConstructor for MMDPipelineMorphs {
 	type PipeType = ComputePipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>, _frame_buffer_size: (u32, u32)) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
 		let device = render_pass.device().clone();
 		let cs = morph_comp::load(device.clone()).unwrap();
 		

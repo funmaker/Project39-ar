@@ -1,8 +1,7 @@
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use err_derive::Error;
 use bytemuck::{Zeroable, Pod};
 use vulkano::{sync, command_buffer, sampler, memory, descriptor_set};
-use vulkano::image::AttachmentImage;
 use vulkano::device::Queue;
 use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -10,13 +9,16 @@ use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
+use vulkano::sync::GpuFuture;
 
 use crate::math::{Vec4, Vec2, Mat3, Isometry3};
-use crate::renderer::eyes::Eyes;
 use crate::utils::{FenceCheck, NgPod};
 use crate::config;
-use super::pipelines::background::{BackgroundPipeline, Vertex};
-use super::pipelines::{PipelineError, Pipelines};
+use crate::application::eyes::camera::CameraStartError;
+use crate::application::eyes::camera::Camera;
+use crate::renderer::Renderer;
+use crate::renderer::pipelines::PipelineError;
+use super::pipeline::{BackgroundPipeline, Vertex};
 
 #[allow(dead_code)]
 #[repr(C)]
@@ -30,6 +32,7 @@ struct Intrinsics {
 }
 
 pub struct Background {
+	queue: Arc<Queue>,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Arc<ImmutableBuffer<[Vertex]>>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
@@ -37,12 +40,16 @@ pub struct Background {
 	fence: FenceCheck,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
+	camera_loads: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
 }
 
 impl Background {
-	pub fn new(camera_image: Arc<AttachmentImage>, eyes: &Eyes, queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<Background, BackgroundError> {
+	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), renderer: &mut Renderer) -> Result<Background, BackgroundError> {
 		let config = config::get();
-		let pipeline = pipelines.get::<BackgroundPipeline>()?;
+		let pipeline = renderer.pipelines.get::<BackgroundPipeline>()?;
+		let queue = renderer.load_queue.clone();
+		
+		let (camera_image, camera_rx) = camera.start(queue.clone())?;
 		
 		let square = [
 			Vertex::new([-1.0, -1.0]),
@@ -59,8 +66,8 @@ impl Background {
 		
 		let intrinsics = Intrinsics {
 			rawproj: [
-				eyes.raw_projection.0.into(),
-				eyes.raw_projection.1.into(),
+				raw_projection.0.into(),
+				raw_projection.1.into(),
 			],
 			focal: [
 				config.camera.left.focal_length.component_div(&config.camera.left.size.cast()).into(),
@@ -85,7 +92,7 @@ impl Background {
 		                                                true,
 		                                                intrinsics)?;
 		
-		let view = ImageView::new_default(camera_image)?;
+		let view = ImageView::new_default(camera_image.clone())?;
 		let sampler = Sampler::new(queue.device().clone(), SamplerCreateInfo {
 			mag_filter: Filter::Linear,
 			min_filter: Filter::Linear,
@@ -121,6 +128,7 @@ impl Background {
 		let fence = FenceCheck::new(vertices_promise)?;
 		
 		Ok(Background {
+			queue,
 			pipeline,
 			vertices,
 			// intrinsics,
@@ -128,10 +136,26 @@ impl Background {
 			fence,
 			extrinsics: (left_extrinsics, right_extrinsics),
 			last_frame_pose: Isometry3::identity(),
+			camera_loads: camera_rx,
 		})
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, camera_pos: Isometry3) -> Result<(), BackgroundRenderError> {
+	pub fn load_camera(&mut self, camera_pos: Isometry3, mut future: Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>, BackgroundLoadError> {
+		while let Ok((command, cam_pose)) = self.camera_loads.try_recv() {
+			if !future.queue_change_allowed() && &future.queue().unwrap() != &self.queue {
+				future = Box::new(future.then_signal_semaphore()
+				                        .then_execute(self.queue.clone(), command)?);
+			} else {
+				future = Box::new(future.then_execute(self.queue.clone(), command)?);
+			}
+			
+			self.last_frame_pose = cam_pose.unwrap_or(camera_pos);
+		}
+		
+		Ok(future)
+	}
+	
+	pub fn render(&mut self, camera_pos: Isometry3, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), BackgroundRenderError> {
 		if !self.fence.check() { return Ok(()); }
 		
 		// if let Ok(mut intrinsics) = self.intrinsics.write() {
@@ -219,10 +243,6 @@ impl Background {
 		
 		Ok(())
 	}
-	
-	pub fn update_frame_pose(&mut self, pose: Isometry3) {
-		self.last_frame_pose = pose;
-	}
 }
 
 
@@ -231,9 +251,9 @@ impl Background {
 pub enum BackgroundError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
+	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
@@ -242,4 +262,9 @@ pub enum BackgroundError {
 #[derive(Debug, Error)]
 pub enum BackgroundRenderError {
 	#[error(display = "{}", _0)] DrawError(#[error(source)] command_buffer::DrawError),
+}
+
+#[derive(Debug, Error)]
+pub enum BackgroundLoadError {
+	#[error(display = "{}", _0)] DrawError(#[error(source)] command_buffer::CommandBufferExecError),
 }

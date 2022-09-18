@@ -9,7 +9,6 @@ use rapier3d::geometry::Collider;
 use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
@@ -23,11 +22,11 @@ mod bone;
 mod rigid_body;
 mod overrides;
 
-use crate::{config, debug};
-use crate::renderer::Renderer;
+use crate::debug;
+use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner, RenderType};
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{AMat4, Isometry3, IVec4, Mat4, PI, Vec3, Vec4};
 use super::ModelError;
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex};
@@ -308,7 +307,7 @@ impl Component for MMDModel {
 		Ok(())
 	}
 	
-	fn pre_render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn before_render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {
@@ -339,7 +338,7 @@ impl Component for MMDModel {
 			mat.into()
 		}))?;
 		
-		builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
+		context.builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
 		
 		state.morphs_vec.clear();
 		let mut max_size = 0;
@@ -364,55 +363,53 @@ impl Component for MMDModel {
 		}
 		
 		if state.morphs_vec.is_empty() {
-			builder.fill_buffer(self.offsets_ubo.clone(), 0)?;
+			context.builder.fill_buffer(self.offsets_ubo.clone(), 0)?;
 		} else {
 			let groups = (max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE;
 			
 			let morph_buf = self.shared.morphs_pool.chunk(state.morphs_vec.iter().copied().map(Into::into))?;
 			
-			builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
-			       .fill_buffer(self.offsets_ubo.clone(), 0)?
-			       .bind_pipeline_compute(self.shared.morphs_pipeline.clone())
-			       .bind_descriptor_sets(PipelineBindPoint::Compute,
-			                             self.shared.morphs_pipeline.layout().clone(),
-			                             0,
-			                             self.morphs_set.clone())
-			       .push_constants(self.shared.morphs_pipeline.layout().clone(),
-			                       0,
-			                       self.shared.morphs_max_size as u32)
-			       .dispatch([groups as u32, state.morphs_vec.len() as u32 * 2, 1])?;
+			context.builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
+			               .fill_buffer(self.offsets_ubo.clone(), 0)?
+			               .bind_pipeline_compute(self.shared.morphs_pipeline.clone())
+			               .bind_descriptor_sets(PipelineBindPoint::Compute,
+			                                     self.shared.morphs_pipeline.layout().clone(),
+			                                     0,
+			                                     self.morphs_set.clone())
+			               .push_constants(self.shared.morphs_pipeline.layout().clone(),
+			                               0,
+			                               self.shared.morphs_max_size as u32)
+			               .dispatch([groups as u32, state.morphs_vec.len() as u32 * 2, 1])?;
 		}
 		
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, _renderer: &Renderer, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
 		if !self.loaded() { return Ok(()) }
 		let model_matrix = entity.state().position.to_homogeneous();
 		
-		builder.bind_vertex_buffers(0, self.shared.vertices.clone())
-		       .bind_any_index_buffer(self.shared.indices.clone());
+		context.builder.bind_vertex_buffers(0, self.shared.vertices.clone())
+		               .bind_any_index_buffer(self.shared.indices.clone());
 		
 		// Outline
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
-				let config = config::get();
-				let pixel = (config.eye_fov.x / 2.0).tan() * 2.0 / config.eye_frame_buffer_size.x as f32;
-				let scale = pixel * sub_mesh.edge_scale;
+				let edge_scale = (context.fov.0.x / 2.0).tan() * 2.0 * context.pixel_scale.x * sub_mesh.edge_scale;
 				
-				builder.bind_pipeline_graphics(pipeline.clone())
-				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-				                             pipeline.layout().clone(),
+				context.builder.bind_pipeline_graphics(pipeline.clone())
+				               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                                     pipeline.layout().clone(),
+				                                     0,
+				                                     (self.model_edge_set.clone().unwrap(), mesh_set))
+				               .push_constants(pipeline.layout().clone(),
+				                               0,
+				                               (model_matrix.clone(), sub_mesh.edge_color, edge_scale))
+				               .draw_indexed(sub_mesh.range.len() as u32,
+				                             1,
+				                             sub_mesh.range.start,
 				                             0,
-				                             (self.model_edge_set.clone().unwrap(), mesh_set))
-				       .push_constants(pipeline.layout().clone(),
-				                       0,
-				                       (model_matrix.clone(), sub_mesh.edge_color, scale))
-				       .draw_indexed(sub_mesh.range.len() as u32,
-				                     1,
-				                     sub_mesh.range.start,
-				                     0,
-				                     0)?;
+				                             0)?;
 			}
 		}
 		
@@ -420,37 +417,37 @@ impl Component for MMDModel {
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			let (pipeline, mesh_set) = sub_mesh.main.clone();
 			
-			builder.bind_pipeline_graphics(pipeline.clone())
-			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-			                             pipeline.layout().clone(),
+			context.builder.bind_pipeline_graphics(pipeline.clone())
+			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                                     pipeline.layout().clone(),
+			                                     0,
+			                                     (self.model_set.clone(), mesh_set))
+			               .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
+			                               0,
+			                               (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+			               .draw_indexed(sub_mesh.range.len() as u32,
+			                             1,
+			                             sub_mesh.range.start,
 			                             0,
-			                             (self.model_set.clone(), mesh_set))
-			       .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
-			                       0,
-			                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
-			       .draw_indexed(sub_mesh.range.len() as u32,
-			                     1,
-			                     sub_mesh.range.start,
-			                     0,
-			                     0)?;
+			                             0)?;
 		}
 		
 		// Transparent
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.transparent.clone() {
-				builder.bind_pipeline_graphics(pipeline.clone())
-				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-				                             pipeline.layout().clone(),
+				context.builder.bind_pipeline_graphics(pipeline.clone())
+				               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                                     pipeline.layout().clone(),
+				                                     0,
+				                                     (self.model_set.clone(), mesh_set))
+				               .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
+				                               0,
+				                               (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+				               .draw_indexed(sub_mesh.range.len() as u32,
+				                             1,
+				                             sub_mesh.range.start,
 				                             0,
-				                             (self.model_set.clone(), mesh_set))
-				       .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
-				                       0,
-				                       (model_matrix.clone(), Vec4::zero(), 0.0_f32))
-				       .draw_indexed(sub_mesh.range.len() as u32,
-				                     1,
-				                     sub_mesh.range.start,
-				                     0,
-				                     0)?;
+				                             0)?;
 			}
 		}
 		

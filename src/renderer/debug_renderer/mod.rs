@@ -1,6 +1,5 @@
 use std::sync::Arc;
-use std::f32::consts::PI;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use err_derive::Error;
 use vulkano::{command_buffer, memory};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
@@ -14,17 +13,18 @@ mod text_cache;
 
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
 use crate::utils::AutoCommandBufferBuilderEx;
-use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy};
+use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
-use super::{Renderer, CommonsUBO};
+use super::Renderer;
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
 use crate::renderer::assets_manager::texture::TextureAsset;
+use crate::renderer::RenderContext;
 
 pub struct DebugRenderer {
-	pub text_cache: RefCell<TextCache>,
+	text_cache: RefCell<TextCache>,
 	pipeline: Arc<GraphicsPipeline>,
 	text_pipeline: Arc<GraphicsPipeline>,
 	shape_pipeline: Arc<GraphicsPipeline>,
@@ -75,7 +75,11 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn pre_render(&mut self, renderer: &mut Renderer) -> Result<(), DebugRendererPreRenderError> {
+	pub fn text_cache(&self) -> RefMut<TextCache> {
+		self.text_cache.borrow_mut()
+	}
+	
+	pub fn before_render(&mut self, renderer: &mut Renderer) -> Result<(), DebugRendererPreRenderError> {
 		if self.models.is_none() {
 			let mut load_models = false;
 			DEBUG_BOXES.with(|boxes| load_models |= !boxes.borrow().is_empty());
@@ -95,30 +99,30 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
-	pub fn render(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, commons: &CommonsUBO, pixel_scale: Vec2) -> Result<(), DebugRendererRenderError> {
+	pub fn render(&mut self, context: &mut RenderContext) -> Result<(), DebugRendererRenderError> {
 		let viewproj = (
-			*commons.projection[0] * *commons.view[0],
-			*commons.projection[1] * *commons.view[1],
+			context.projection.0 * context.view.0,
+			context.projection.1 * context.view.1,
 		);
 		
 		DEBUG_LINES.with(|lines| {
-			for line in lines.borrow_mut().drain(..) {
+			for line in lines.borrow_mut().iter() {
 				if line.width <= 0.0 {
 					continue;
 				} else {
-					self.draw_line(line, &viewproj, &pixel_scale);
+					self.draw_line(line, &viewproj, &context.pixel_scale);
 				}
 			}
 		});
 		
 		DEBUG_POINTS.with(|points| {
-			for point in points.borrow_mut().drain(..) {
+			for point in points.borrow_mut().iter() {
 				if point.radius <= 0.0 {
 					continue;
 				} else if point.radius <= RING_MIN {
-					self.draw_circle(point, &viewproj, &pixel_scale);
+					self.draw_circle(point, &viewproj, &context.pixel_scale);
 				} else {
-					self.draw_ring(point, &viewproj, &pixel_scale);
+					self.draw_ring(point, &viewproj, &context.pixel_scale);
 				}
 			}
 		});
@@ -128,56 +132,67 @@ impl DebugRenderer {
 			let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 			let index_count = index_buffer.len();
 			
-			builder.bind_pipeline_graphics(self.pipeline.clone())
-			       .bind_index_buffer(index_buffer)
-			       .bind_vertex_buffers(0, vertex_buffer)
-			       .draw_indexed(index_count as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?;
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())
+			               .bind_index_buffer(index_buffer)
+			               .bind_vertex_buffers(0, vertex_buffer)
+			               .draw_indexed(index_count as u32,
+			                             1,
+			                             0,
+			                             0,
+			                             0)?;
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
-			let mut texts = texts.borrow_mut();
+			let texts = texts.borrow();
 			
 			if !texts.is_empty() {
-				builder.bind_pipeline_graphics(self.text_pipeline.clone());
+				context.builder.bind_pipeline_graphics(self.text_pipeline.clone());
 			}
 			
-			for text in texts.drain(..) {
+			for text in texts.iter() {
 				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
-				} else if let Some(set) = self.draw_text(text, &viewproj, &pixel_scale)? {
+				} else if let Some(set) = self.draw_text(text, &viewproj, &context.pixel_scale)? {
 					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;
 					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
 					let index_count = index_buffer.len();
 					
-					builder.bind_index_buffer(index_buffer)
-					       .bind_vertex_buffers(0, vertex_buffer)
-					       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-					                             self.text_pipeline.layout().clone(),
+					context.builder.bind_index_buffer(index_buffer)
+					               .bind_vertex_buffers(0, vertex_buffer)
+					               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+					                                     self.text_pipeline.layout().clone(),
+					                                     0,
+					                                     set)
+					               .draw_indexed(index_count as u32,
+					                             1,
 					                             0,
-					                             set)
-					       .draw_indexed(index_count as u32,
-					                     1,
-					                     0,
-					                     0,
-					                     0)?;
+					                             0,
+					                             0)?;
 				}
 			}
 			
 			Ok::<_, DebugRendererRenderError>(())
 		})?;
 		
-		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), builder))?;
-		DEBUG_BOXES.with(|boxes| self.draw_boxes(&mut *boxes.borrow_mut(), builder))?;
-		DEBUG_SPHERES.with(|spheres| self.draw_spheres(&mut *spheres.borrow_mut(), builder))?;
+		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), context.builder))?;
+		DEBUG_BOXES.with(|boxes| self.draw_boxes(&mut *boxes.borrow_mut(), context.builder))?;
+		DEBUG_SPHERES.with(|spheres| self.draw_spheres(&mut *spheres.borrow_mut(), context.builder))?;
 		
 		Ok(())
 	}
 	
-	fn draw_circle(&mut self, point: DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
+	pub fn reset(&mut self) {
+		DEBUG_POINTS.with(|points| points.borrow_mut().clear());
+		DEBUG_LINES.with(|lines| lines.borrow_mut().clear());
+		DEBUG_TEXTS.with(|texts| texts.borrow_mut().clear());
+		DEBUG_CAPSULES.with(|capsules| capsules.borrow_mut().clear());
+		DEBUG_BOXES.with(|boxes| boxes.borrow_mut().clear());
+		DEBUG_SPHERES.with(|spheres| spheres.borrow_mut().clear());
+		
+		self.text_cache.borrow_mut().cleanup();
+	}
+	
+	fn draw_circle(&mut self, point: &DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = point.radius.log(1.2).max(4.0) as u32;
 		let center = point.position.project(viewproj);
 		
@@ -200,7 +215,7 @@ impl DebugRenderer {
 		}
 		
 		for id in 0..edges {
-			let angle = std::f32::consts::TAU / edges as f32 * id as f32;
+			let angle = PI * 2.0 / edges as f32 * id as f32;
 			let offset = Rot2::new(angle).transform_vector(&Vec2::x()).component_mul(pixel_scale) * point.radius;
 			self.vertices.push(Vertex::new(
 				&center.0.coords + offset.to_homogeneous(),
@@ -210,7 +225,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_ring(&mut self, point: DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
+	fn draw_ring(&mut self, point: &DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = (point.radius.ln() * 9.0).max(4.0) as u32;
 		let center = point.position.project(viewproj);
 		
@@ -231,7 +246,7 @@ impl DebugRenderer {
 		}
 		
 		for id in 0..edges {
-			let angle = std::f32::consts::TAU / edges as f32 * id as f32;
+			let angle = PI * 2.0 / edges as f32 * id as f32;
 			let dir = Rot2::new(angle).transform_vector(&Vec2::x()).component_mul(&pixel_scale);
 			let offset: Vec2 = &dir * point.radius;
 			let offset_inner: Vec2 = &dir * ((point.radius - RING_MIN / 2.0) * RING_WIDTH);
@@ -248,7 +263,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_line(&mut self, line: DebugLine, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
+	fn draw_line(&mut self, line: &DebugLine, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = (line.width.ln() * 4.5).max(2.0) as u32;
 		let from = line.from.project(viewproj);
 		let to = line.to.project(viewproj);
@@ -305,7 +320,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_text(&mut self, text: DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>, DebugRendererRenderError> {
+	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>, DebugRendererRenderError> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
 		let size_px = vector!(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
@@ -357,7 +372,6 @@ impl DebugRenderer {
 		let models = match self.models.as_ref() {
 			Some(models) if models.dbox.loaded() => { models }
 			_ => {
-				boxes.drain(..);
 				return Ok(());
 			}
 		};
@@ -372,7 +386,7 @@ impl DebugRenderer {
 			                             models.dbox.set.clone());
 		}
 		
-		for dbox in boxes.drain(..) {
+		for dbox in boxes.iter() {
 			let transform = dbox.position.to_homogeneous().prepend_nonuniform_scaling(&dbox.size);
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
@@ -392,7 +406,6 @@ impl DebugRenderer {
 		let models = match self.models.as_ref() {
 			Some(models) if models.sphere.loaded() => { models }
 			_ => {
-				spheres.drain(..);
 				return Ok(());
 			}
 		};
@@ -407,7 +420,7 @@ impl DebugRenderer {
 			                             models.sphere.set.clone());
 		}
 		
-		for sphere in spheres.drain(..) {
+		for sphere in spheres.iter() {
 			let transform = Similarity3::from_isometry(sphere.position, sphere.radius * 2.0).to_homogeneous();
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
@@ -428,7 +441,6 @@ impl DebugRenderer {
 			Some(models) if models.ccap.loaded()
 			             && models.cbody.loaded() => { models }
 			_ => {
-				capsules.drain(..);
 				return Ok(());
 			}
 		};
@@ -476,7 +488,7 @@ impl DebugRenderer {
 			                             models.cbody.set.clone());
 		}
 		
-		for capsule in capsules.drain(..) {
+		for capsule in capsules.iter() {
 			let dir = capsule.point_b - capsule.point_a;
 			let transform = Isometry3::from_parts((capsule.point_a.coords + dir / 2.0).into(), face_upwards_lossy(dir))
 			                          .to_homogeneous()
@@ -512,6 +524,5 @@ pub enum DebugRendererRenderError {
 
 #[derive(Debug, Error)]
 pub enum DebugRendererPreRenderError {
-	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
 }
