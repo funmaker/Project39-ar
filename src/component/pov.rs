@@ -1,11 +1,13 @@
 use std::cell::Cell;
 use std::time::Duration;
+use egui::Ui;
 
 use crate::application::{Entity, Application, Key, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::math::Isometry3;
+use crate::utils::ExUi;
 
 #[derive(ComponentBase)]
 pub struct PoV {
@@ -42,6 +44,18 @@ impl Component for PoV {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_row("Detached Ent", &self.detached, application);
+	}
+	
+	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		if let Some(detached) = self.detached.get(application) {
+			if ui.button("Reattach").clicked() {
+				detached.remove();
+			}
+		}
 	}
 }
 
@@ -80,5 +94,15 @@ impl Component for DetachedPoV {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, _application: &Application) {
+		ui.inspect_row("Free Cam", &self.free, ());
+	}
+	
+	fn on_inspect_extra(&self, entity: &Entity, ui: &mut Ui, _application: &Application) {
+		if ui.button("Reattach").clicked() {
+			entity.remove();
+		}
 	}
 }

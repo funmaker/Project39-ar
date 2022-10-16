@@ -19,5 +19,6 @@ layout(push_constant) uniform Pc {
 } pc;
 
 void main() {
+	o_color = texture(tex, vec2(0.0, 0.0)) * commons.ambient;
 	o_color = pc.color;
 }

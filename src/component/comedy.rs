@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::time::Duration;
+use egui::Ui;
 use nalgebra::Point3;
 use rapier3d::dynamics::RigidBodyType;
 use rapier3d::prelude::{ColliderBuilder, InteractionGroups, RevoluteJoint};
@@ -11,6 +12,7 @@ use crate::component::model::simple::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
 use crate::component::physics::joint::JointComponent;
 use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::utils::ExUi;
 
 const SCALE: f32 = 0.5;
 
@@ -83,5 +85,10 @@ impl Component for Comedy {
 		self.model.render_impl(Similarity3::from_isometry(base_pos, 1.0 * SCALE), Color::full_white().opactiy(0.6), context)?;
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_row("Iris", &self.iris, application);
+		ui.inspect_row("Offset", &self.iris_pos, ());
 	}
 }

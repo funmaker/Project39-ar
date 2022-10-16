@@ -133,7 +133,6 @@ impl EntityBuilder {
 			new_components: RefCell::new(self.components),
 			rigid_body: RigidBodyHandle::invalid(),
 			rigid_body_template: self.rigid_body,
-			mass: Cell::new(0.0),
 		};
 		
 		entity

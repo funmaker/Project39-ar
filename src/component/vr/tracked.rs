@@ -1,4 +1,5 @@
 use std::time::Duration;
+use egui::Ui;
 use simba::scalar::SupersetOf;
 use openvr::TrackedDeviceIndex;
 
@@ -6,6 +7,7 @@ use crate::application::{Entity, Application};
 use crate::math::{AMat4, Similarity3, VRSlice};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::vr::VrRoot;
+use crate::utils::ExUi;
 
 #[derive(ComponentBase)]
 pub struct VrTracked {
@@ -54,5 +56,10 @@ impl Component for VrTracked {
 		*state.angular_velocity = root_pos.transform_vector(&pose.angular_velocity().clone().into());
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_row("Device ID", format!("{}", self.device_id), ());
+		ui.inspect_row("Root", &self.root, application);
 	}
 }

@@ -1,12 +1,14 @@
+use std::cell::Cell;
 use std::sync::Arc;
+use egui::Ui;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
-use crate::application::Entity;
+use crate::application::{Application, Entity};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::math::{Similarity3, Color};
 use crate::renderer::pipelines::default::DefaultGlowPipeline;
 use crate::renderer::pipelines::PipelineError;
-use crate::utils::AutoCommandBufferBuilderEx;
+use crate::utils::{AutoCommandBufferBuilderEx, ExUi};
 use crate::component::model::SimpleModel;
 use super::{Component, ComponentBase, ComponentInner, ComponentError};
 
@@ -14,17 +16,19 @@ use super::{Component, ComponentBase, ComponentInner, ComponentError};
 pub struct Glow {
 	#[inner] inner: ComponentInner,
 	pipeline: Arc<GraphicsPipeline>,
-	color: Color,
+	color: Cell<Color>,
+	size: Cell<f32>,
 }
 
 impl Glow {
-	pub fn new(color: Color, renderer: &mut Renderer) -> Result<Self, PipelineError> {
+	pub fn new(color: Color, size: f32, renderer: &mut Renderer) -> Result<Self, PipelineError> {
 		let pipeline = renderer.pipelines.get::<DefaultGlowPipeline>()?;
 		
 		Ok(Glow {
 			inner: ComponentInner::from_render_type(RenderType::Opaque),
 			pipeline,
-			color,
+			color: Cell::new(color),
+			size: Cell::new(size),
 		})
 	}
 }
@@ -42,7 +46,7 @@ impl Component for Glow {
 	// }
 	
 	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
-		let pos = Similarity3::from_isometry(*entity.state().position, 1.0);
+		let pos = Similarity3::from_isometry(*entity.state().position, -1.0);
 		
 		if let Some(model) = entity.find_component_by_type::<SimpleModel>() {
 			context.builder.bind_pipeline_graphics(self.pipeline.clone())
@@ -54,7 +58,7 @@ impl Component for Glow {
 			                                     model.set.clone())
 			               .push_constants(self.pipeline.layout().clone(),
 			                               0,
-			                               (pos.to_homogeneous(), self.color, 0.01_f32))
+			                               (pos.to_homogeneous(), self.color.get(), self.size.get()))
 			               .draw_indexed(model.indices.len() as u32,
 			                             1,
 			                             0,
@@ -63,5 +67,10 @@ impl Component for Glow {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, _application: &Application) {
+		ui.inspect_row("Color", &self.color, ());
+		ui.inspect_row("Size", &self.size, (0.0001, 0.0..=0.1));
 	}
 }

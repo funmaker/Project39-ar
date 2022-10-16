@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::error::Error;
+use std::sync::Arc;
 use std::time::{Instant, Duration};
 use std::fmt::Debug;
 use err_derive::Error;
@@ -10,8 +10,8 @@ use winit::window::{WindowBuilder, Fullscreen};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window as WinitWindow;
-use vulkano_win::{VkSurfaceBuild, CreationError};
-use vulkano::{command_buffer, swapchain};
+use vulkano_win::VkSurfaceBuild;
+use vulkano::{command_buffer, swapchain, sync};
 use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError};
 use vulkano::image::{AttachmentImage, SwapchainImage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage};
@@ -19,18 +19,22 @@ use vulkano::format::ClearValue;
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
 use vulkano::image::ImageAccess;
+use winit::error::ExternalError;
+
+mod gui;
 
 use crate::renderer::{Renderer, RenderTarget, RendererSwapchainError};
 use crate::config;
 use crate::math::{Isometry3, Perspective3, projective_clip, Vec2, PI};
-use crate::application::Input;
 use crate::renderer::{RenderContext, RendererCreateFramebufferError, RenderTargetContext};
 use crate::utils::FramebufferBundle;
+use super::Input;
+use gui::{WindowGui, WindowGuiError, WindowGuiRegenFramebufferError, WindowGuiPaintError};
 
 const FOV: f32 = 110.0;
 
 pub struct Window {
-	event_loop: EventLoop<()>,
+	event_loop: Option<EventLoop<()>>,
 	surface: Arc<Surface<WinitWindow>>,
 	last_present: Instant,
 	swapchain: Arc<Swapchain<WinitWindow>>,
@@ -41,6 +45,7 @@ pub struct Window {
 	fb: FramebufferBundle,
 	render_required: bool,
 	cursor_trap: bool,
+	gui: WindowGui,
 }
 
 impl Window {
@@ -67,11 +72,11 @@ impl Window {
 		}
 		
 		let window = surface.window();
-		let size = into_vec(window.outer_size());
+		let outer_size = into_vec(window.outer_size());
 		let monitor_size = window.current_monitor()
 		                         .map(|mon| into_vec(mon.size()))
-		                         .unwrap_or(size.clone());
-		let centered_pos = (monitor_size - size) / 2.0;
+		                         .unwrap_or(outer_size.clone());
+		let centered_pos = (monitor_size - outer_size) / 2.0;
 		
 		if centered_pos.x >= 0.0 && centered_pos.y >= 0.0 {
 			window.set_outer_position(PhysicalPosition::new(centered_pos.x, centered_pos.y));
@@ -82,8 +87,10 @@ impl Window {
 		let swapchain_extent = swapchain.image_extent();
 		let fb = renderer.create_framebuffer((swapchain_extent[0], swapchain_extent[1]))?;
 		
+		let gui = WindowGui::new(window, &fb, renderer)?;
+		
 		Ok(Window {
-			event_loop,
+			event_loop: Some(event_loop),
 			surface,
 			swapchain,
 			swapchain_images,
@@ -94,6 +101,7 @@ impl Window {
 			last_present: Instant::now(),
 			render_required: true,
 			cursor_trap: false,
+			gui,
 		})
 	}
 	
@@ -126,6 +134,7 @@ impl Window {
 		self.swapchain_images = swapchain_images;
 		
 		self.fb = renderer.create_framebuffer(framebuffer_size)?;
+		self.gui.regen_framebuffer(&self.fb)?;
 		
 		self.swapchain_regen_needed = false;
 		
@@ -165,10 +174,6 @@ impl Window {
 		Ok(Some((image_num, acquire_future)))
 	}
 	
-	pub fn mark_dirty(&mut self) {
-		self.render_required = true;
-	}
-	
 	pub fn mirror_from(&mut self,
 	                   image: &Arc<AttachmentImage>,
 	                   renderer: &mut Renderer)
@@ -190,7 +195,7 @@ impl Window {
 			                   [image_dims.width() as i32, image_dims.height() as i32, 1],
 			                   layer as u32,
 			                   0,
-			                   self.swapchain_images[image_num].clone(),
+			                   self.fb.main_image.clone(),
 			                   [out_dims[0] as i32 / layers * layer, 0, 0],
 			                   [out_dims[0] as i32 / layers * (layer + 1), out_dims[1] as i32, 1],
 			                   0,
@@ -199,143 +204,191 @@ impl Window {
 			                   Filter::Linear)?;
 		}
 		
+		let wait_for_frame = self.gui.paint(self.surface.window(), &mut builder)?;
+		
+		builder.blit_image(self.fb.main_image.clone(),
+		                   [0, 0, 0],
+		                   [out_dims[0] as i32, out_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   self.swapchain_images[image_num].clone(),
+		                   [0, 0, 0],
+		                   [out_dims[0] as i32, out_dims[1] as i32, 1],
+		                   0,
+		                   0,
+		                   1,
+		                   Filter::Nearest)?;
+		
 		let command_buffer = builder.build()?;
 		
 		self.render_required = false;
 		self.last_present = Instant::now();
 		
 		let queue = renderer.queue.clone();
-		renderer.try_enqueue::<command_buffer::CommandBufferExecError, _>(queue.clone(), |future| Ok(
-			future.join(acquire_future)
-			      .then_execute(queue.clone(), command_buffer)?
-			      .then_swapchain_present(queue.clone(), self.swapchain.clone(), image_num)
-			      .boxed()
-		))?;
+		if wait_for_frame {
+			renderer.try_enqueue::<sync::FlushError, _>(queue.clone(), |future| {
+				let future = future.then_signal_fence_and_flush()?;
+				future.wait(None)?;
+				Ok(future.boxed())
+			})?;
+		}
+		
+		renderer.try_enqueue::<command_buffer::CommandBufferExecError, _>(queue.clone(), |future| {
+			Ok(
+				future.join(acquire_future)
+				      .then_execute(queue.clone(), command_buffer)?
+				      .then_swapchain_present(queue.clone(), self.swapchain.clone(), image_num)
+				      .boxed()
+			)
+		})?;
 		
 		Ok(())
 	}
 	
+	pub fn grab_cursor(&mut self, grab: bool) -> Result<(), ExternalError> {
+		let window = self.surface.window();
+		self.cursor_trap = grab;
+		window.set_cursor_visible(!grab);
+		window.set_cursor_grab(grab)
+	}
+	
 	pub fn pull_events(&mut self, input: &mut Input) {
-		let surface = &self.surface;
-		let new_swapchain_required = &mut self.swapchain_regen_needed;
-		let render_required = &mut self.render_required;
-		let is_cursor_trapped = self.cursor_trap;
-		let cursor_trap = &mut self.cursor_trap;
+		let mut event_loop = self.event_loop.take().unwrap();
 		
-		let mut grab_cursor = |grab: bool| {
-			let window = surface.window();
-			*cursor_trap = grab;
-			window.set_cursor_visible(!grab);
-			window.set_cursor_grab(grab)
-		};
-		
-		self.event_loop.run_return(|event, _, control_flow| {
-			let result: Result<(), Box<dyn Error>> = try {
-				*control_flow = ControlFlow::Poll;
-				
-				match event {
-					Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
-						input.quit_required = true;
-						*control_flow = ControlFlow::Exit;
-					},
-					
-					Event::WindowEvent {
-						event: WindowEvent::KeyboardInput {
-							input: KeyboardInput {
-								virtual_keycode: Some(code),
-								state, ..
-							}, ..
-						}, ..
-					} if is_cursor_trapped => {
-						if state == ElementState::Pressed {
-							match code {
-								// VirtualKeyCode::Q => {
-								// 	*quit_required = true;
-								// 	*control_flow = ControlFlow::Exit;
-								// },
-								VirtualKeyCode::Escape => {
-									grab_cursor(false)?;
-								},
-								VirtualKeyCode::F => {
-									let window = surface.window();
-									
-									if let None = window.fullscreen() {
-										window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
-									} else {
-										window.set_fullscreen(None);
-									}
-								},
-								_ => {},
-							}
-						}
-						
-						if code != VirtualKeyCode::Escape {
-							input.keyboard.update_button(code, state == ElementState::Pressed);
-						}
-					}
-					
-					Event::WindowEvent {
-						event: WindowEvent::MouseInput {
-							button: MouseButton::Left,
-							state: ElementState::Pressed, ..
-						}, ..
-					} if !is_cursor_trapped => {
-						let window = surface.window();
-						let size = window.inner_size();
-						let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
-						
-						grab_cursor(true)?;
-						window.set_cursor_position(center)?;
-					}
-					
-					Event::WindowEvent {
-						event: WindowEvent::MouseInput {
-							button,
-							state, ..
-						}, ..
-					} if is_cursor_trapped => {
-						input.mouse.update_button(button, state == ElementState::Pressed);
-					}
-					
-					Event::DeviceEvent {
-						event: DeviceEvent::Motion {
-							axis,
-							value,
-						}, ..
-					} if is_cursor_trapped => {
-						let window = surface.window();
-						let size = window.inner_size();
-						let center = PhysicalPosition::new(size.width / 2, size.height / 2);
-						
-						input.mouse.update_axis(axis as usize, value as f32);
-						
-						window.set_cursor_position(center)?;
-					}
-					
-					Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
-						*new_swapchain_required = true;
-						*control_flow = ControlFlow::Exit;
-					}
-					
-					Event::RedrawRequested(_) => {
-						*render_required = true;
-						*control_flow = ControlFlow::Exit;
-					},
-					
-					Event::RedrawEventsCleared => {
-						*control_flow = ControlFlow::Exit;
-					}
-					
-					_ => {}
-				}
-			};
-			
-			if let Err(error) = result {
+		event_loop.run_return(|event, _, control_flow| {
+			if let Err(error) = self.on_event(event, control_flow, input) {
 				eprintln!("Error while processing events {}", error);
-				input.quit_required = true;
+				input.quitting = true;
 				*control_flow = ControlFlow::Exit;
 			}
 		});
+		
+		self.event_loop = Some(event_loop);
+	}
+	
+	pub fn start_gui_frame(&mut self) -> egui::Context {
+		self.gui.start_frame(self.surface.window());
+		
+		self.gui.ctx().clone()
+	}
+	
+	pub fn end_gui_frame(&mut self) {
+		self.gui.end_frame(self.surface.window());
+	}
+	
+	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<(), Box<dyn Error>> {
+		*control_flow = ControlFlow::Poll;
+		
+		if !self.cursor_trap {
+			if let Event::WindowEvent { event, .. } = &event {
+				if self.gui.on_event(&event) {
+					// Event consumed by GUI
+					return Ok(());
+				}
+			}
+		}
+		
+		match event {
+			Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+				input.quitting = true;
+				*control_flow = ControlFlow::Exit;
+			},
+			
+			Event::WindowEvent {
+				event: WindowEvent::KeyboardInput {
+					input: KeyboardInput {
+						virtual_keycode: Some(code),
+						state, ..
+					}, ..
+				}, ..
+			} if self.cursor_trap => {
+				if state == ElementState::Pressed {
+					match code {
+						// VirtualKeyCode::Q => {
+						// 	*quit_required = true;
+						// 	*control_flow = ControlFlow::Exit;
+						// },
+						VirtualKeyCode::Escape => {
+							self.grab_cursor(false)?;
+						},
+						VirtualKeyCode::F => {
+							let window = self.surface.window();
+							
+							if window.fullscreen().is_none() {
+								window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
+							} else {
+								window.set_fullscreen(None);
+							}
+						},
+						_ => {},
+					}
+				}
+				
+				if code != VirtualKeyCode::Escape {
+					input.keyboard.update_button(code, state == ElementState::Pressed);
+				}
+			}
+			
+			Event::WindowEvent {
+				event: WindowEvent::MouseInput {
+					button: MouseButton::Left,
+					state: ElementState::Pressed, ..
+				}, ..
+			} if !self.cursor_trap => {
+				self.grab_cursor(true)?;
+				
+				let window = self.surface.window();
+				let size = window.inner_size();
+				let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
+				window.set_cursor_position(center)?;
+			}
+			
+			Event::WindowEvent {
+				event: WindowEvent::MouseInput {
+					button,
+					state, ..
+				}, ..
+			} if self.cursor_trap => {
+				input.mouse.update_button(button, state == ElementState::Pressed);
+			}
+			
+			Event::DeviceEvent {
+				event: DeviceEvent::Motion {
+					axis,
+					value,
+				}, ..
+			} if self.cursor_trap => {
+				let window = self.surface.window();
+				let size = window.inner_size();
+				let center = PhysicalPosition::new(size.width / 2, size.height / 2);
+				
+				input.mouse.update_axis(axis as usize, value as f32);
+				
+				window.set_cursor_position(center)?;
+			}
+			
+			Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
+				self.swapchain_regen_needed = true;
+				*control_flow = ControlFlow::Exit;
+			}
+			
+			Event::RedrawRequested(_) => {
+				self.render_required = true;
+				*control_flow = ControlFlow::Exit;
+			},
+			
+			Event::RedrawEventsCleared => {
+				*control_flow = ControlFlow::Exit;
+			}
+			
+			_ => {}
+		}
+		
+		if self.gui.is_dragging() && self.cursor_trap {
+			self.grab_cursor(false)?;
+		}
+		
+		Ok(())
 	}
 }
 
@@ -378,6 +431,15 @@ impl RenderTarget for Window {
 		let image_num = self.acquire_image_num.unwrap();
 		let acquire_future = self.acquire_future.take().unwrap();
 		
+		let wait_for_frame = self.gui.paint(self.surface.window(), &mut context.builder)?;
+		if wait_for_frame {
+			renderer.try_enqueue::<sync::FlushError, _>(renderer.queue.clone(), |future| {
+				let future = future.then_signal_fence_and_flush()?;
+				future.wait(None)?;
+				Ok(future.boxed())
+			})?;
+		}
+		
 		renderer.enqueue(renderer.queue.clone(), |future| future.join(acquire_future).boxed());
 		
 		context.builder.blit_image(self.last_frame().clone(),
@@ -408,30 +470,36 @@ impl RenderTarget for Window {
 
 #[derive(Debug, Error)]
 pub enum WindowCreationError {
-	#[error(display = "{}", _0)] WindowBuilderError(#[error(source)] CreationError),
+	#[error(display = "{}", _0)] WindowGuiError(#[error(source)] WindowGuiError),
 	#[error(display = "{}", _0)] RendererSwapchainError(#[error(source)] RendererSwapchainError),
 	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
+	#[error(display = "{}", _0)] WindowBuilderError(#[error(source)] vulkano_win::CreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum WindowSwapchainRegenError {
 	#[error(display = "Need Retry")] NeedRetry,
+	#[error(display = "{}", _0)] WindowGuiRegenFramebufferError(#[error(source)] WindowGuiRegenFramebufferError),
 	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum WindowMirrorFromError {
+	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }
 
 #[derive(Debug, Error)]
 pub enum WindowRenderTargetError {
+	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
 	#[error(display = "{}", _0)] WindowMirrorFromError(#[error(source)] WindowMirrorFromError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
 }

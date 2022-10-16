@@ -1,6 +1,7 @@
 use std::time::Duration;
 use std::collections::BTreeMap;
 use std::cell::RefCell;
+use egui::Ui;
 use rapier3d::dynamics::RigidBodyType;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
 use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
@@ -19,6 +20,7 @@ use crate::component::hand::HandComponent;
 use crate::component::parent::Parent;
 use crate::math::Isometry3;
 use crate::renderer::assets_manager::texture::TextureBundle;
+use crate::utils::ExUi;
 
 #[derive(ComponentBase)]
 pub struct VrRoot {
@@ -128,6 +130,16 @@ impl Component for VrRoot {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		if let Some(vr) = application.vr.as_ref().and_then(|vr| vr.try_lock().ok()) {
+			for (id, entity) in self.entities.borrow_mut().iter() {
+				ui.inspect_row(format!("{:?}", vr.system.tracked_device_class(*id)),
+				               entity,
+				               application);
+			}
+		}
 	}
 }
 

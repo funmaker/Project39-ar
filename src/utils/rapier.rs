@@ -23,10 +23,9 @@ pub trait ColliderEx {
 
 impl ColliderEx for Collider {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent> {
-		let eid = self.user_data & 0xFFFF_FFFF_FFFF_FFFF;
-		let cid = self.user_data >> 64;
+		let (eid, cid) = from_user_data(self.user_data);
 		
-		ComponentRef::new(eid as u64, cid as u64)
+		ComponentRef::new(eid, cid)
 	}
 }
 
@@ -40,12 +39,18 @@ pub trait RigidBodyEx {
 
 impl RigidBodyEx for RigidBody {
 	fn entity_ref(&self) -> EntityRef {
-		let eid = self.user_data & 0xFFFF_FFFF_FFFF_FFFF;
+		let (eid, _) = from_user_data(self.user_data);
 		
-		EntityRef::new(eid as u64)
+		EntityRef::new(eid)
 	}
 }
 
-pub fn get_userdata(eid: u64, cid: u64) -> u128 {
+pub fn get_user_data(eid: u64, cid: u64) -> u128 {
 	eid as u128 + ((cid as u128) << 64)
+}
+
+pub fn from_user_data(userdata: u128) -> (u64, u64) {
+	let eid = (userdata % (1 << 64)) as u64;
+	let cid = (userdata >> 64) as u64;
+	(eid, cid)
 }

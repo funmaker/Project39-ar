@@ -15,6 +15,7 @@ mod index_buffer;
 mod nalgebra_pod;
 mod mut_mark;
 mod pattern;
+mod gui;
 
 pub use vec_future::*;
 pub use fps_counter::*;
@@ -28,6 +29,7 @@ pub use index_buffer::*;
 pub use nalgebra_pod::*;
 pub use mut_mark::*;
 pub use pattern::*;
+pub use gui::*;
 
 pub trait IntoBoxed<T: ?Sized>: 'static {
 	fn into(self) -> Box<T>;

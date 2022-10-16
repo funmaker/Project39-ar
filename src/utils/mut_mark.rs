@@ -1,5 +1,8 @@
 use std::fmt::{Display, Formatter};
 use std::ops::{Deref, DerefMut};
+use egui::Ui;
+
+use crate::utils::{InspectMut, Inspect};
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub struct MutMark<T> {
@@ -38,5 +41,21 @@ impl<T> DerefMut for MutMark<T> {
 impl<T: Display> Display for MutMark<T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		self.inner.fmt(f)
+	}
+}
+
+impl<T: InspectMut + Clone + PartialEq> Inspect for &mut MutMark<T> {
+	type Options<'a> = T::Options<'a>;
+	
+	fn inspect_ui(self, ui: &mut Ui, options: T::Options<'_>) {
+		use crate::utils::gui::ExUi;
+		
+		let mut value = self.clone();
+		
+		ui.inspect(&mut value, options);
+		
+		if value != **self {
+			**self = value;
+		}
 	}
 }

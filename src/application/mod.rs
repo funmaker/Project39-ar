@@ -15,6 +15,8 @@ pub mod physics;
 pub mod input;
 mod eyes;
 mod window;
+mod gui;
+mod bench;
 
 use crate::component::Component;
 use crate::component::ComponentError;
@@ -25,18 +27,22 @@ use crate::component::vr::VrRoot;
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
 use crate::component::physics::joint::JointComponent;
-use crate::config::{self, CameraAPI};
-use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
-use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::component::glow::Glow;
+use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget, pipelines::PipelineError};
+use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
+use crate::config::{self, CameraAPI};
 use crate::utils::default_wait_poses;
 use crate::debug;
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
+
 use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
 use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
+use gui::{ApplicationGui, GuiSelection};
+use bench::Benchmark;
 
 
 pub struct Application {
@@ -51,6 +57,9 @@ pub struct Application {
 	window: Option<Window>,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
+	bench: RefCell<Benchmark>,
+	gui: RefCell<ApplicationGui>,
+	gui_selection: RefCell<GuiSelection>,
 }
 
 impl Application {
@@ -91,10 +100,13 @@ impl Application {
 			pov: EntityRef::null(),
 			detached_pov: EntityRef::null(),
 			input: Input::new(),
+			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
 			window: Some(window),
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(Vec::new()),
+			gui: RefCell::new(ApplicationGui::new()),
+			gui_selection: RefCell::new(GuiSelection::default()),
 		};
 		
 		{
@@ -116,7 +128,7 @@ impl Application {
 				let pov = application.add_entity(
 					Entity::builder("(You)")
 						.translation(point!(0.0, 1.5, 1.5))
-						.component(PoV::new(true))
+						.component(PoV::new(false))
 						.component(PCControlled::new())
 						.tag("Head", true)
 						.build()
@@ -186,6 +198,7 @@ impl Application {
 				Entity::builder("Box")
 					.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
 					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+					.component(Glow::new(Color::magenta(), 0.1, renderer)?)
 					.collider_from_aabb(100.0)
 					.rigid_body_type(RigidBodyType::Dynamic)
 					.build()
@@ -203,6 +216,7 @@ impl Application {
 				Entity::builder("Box")
 					.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
 					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+					.component(Glow::new(Color::magenta(), 0.1, renderer)?)
 					.component(JointComponent::new(joint, box1))
 					.collider_from_aabb(1000.0)
 					.rigid_body_type(RigidBodyType::Dynamic)
@@ -216,7 +230,7 @@ impl Application {
 	pub fn run(mut self) -> Result<(), ApplicationRunError> {
 		let mut instant = Instant::now();
 		
-		while !self.input.quit_required {
+		while !self.input.quitting {
 			let mut delta_time = instant.elapsed();
 			instant = Instant::now();
 			
@@ -231,11 +245,15 @@ impl Application {
 				window.pull_events(&mut self.input);
 			}
 			
+			self.bench.get_mut().tick("Inputs");
+			
 			if self.vr.is_some() {
 				self.handle_vr_input()?;
+				
+				self.bench.get_mut().tick("VR Sync");
 			}
 			
-			self.set_debug_flags();
+			self.bench.get_mut().new_frame();
 			
 			let inputs = format!("{}", self.input);
 			for (id, line) in inputs.split("\n").enumerate() {
@@ -243,6 +261,8 @@ impl Application {
 			}
 			
 			self.setup_loop()?;
+			
+			self.bench.get_mut().tick("Setup");
 			
 			{
 				let physics = self.physics.get_mut();
@@ -256,13 +276,28 @@ impl Application {
 				for entity in self.entities.values() {
 					entity.after_physics(physics);
 				}
-				
-				physics.debug_draw();
 			}
+			
+			self.physics.borrow().debug_draw(&self);
+			
+			self.bench.get_mut().tick("Physics");
+			
+			if let Some(mut window) = self.window.take() {
+				let ctx = window.start_gui_frame();
+				
+				self.gui.borrow_mut().show(&ctx, &self);
+				
+				window.end_gui_frame();
+				self.window = Some(window);
+			}
+			
+			self.bench.get_mut().tick("Gui");
 			
 			for entity in self.entities.values() {
 				entity.tick(delta_time, &self)?;
 			}
+			
+			self.bench.get_mut().tick("Tick");
 			
 			self.renderer.get_mut().begin_frame()?;
 			
@@ -284,8 +319,12 @@ impl Application {
 				}
 			}
 			
+			self.bench.get_mut().tick("Render Setup");
+			
 			if let Some(eyes) = &mut self.eyes {
 				self.renderer.get_mut().render(pov, &mut self.entities, eyes)?;
+				
+				self.bench.get_mut().tick("Render Eyes");
 			
 				if let Some(window) = &mut self.window {
 					if let Some(detached_pov) = detached_pov {
@@ -293,19 +332,22 @@ impl Application {
 					} else {
 						window.mirror_from(eyes.last_frame(), self.renderer.get_mut())?;
 					}
+					
+					self.bench.get_mut().tick("Render Window");
 				}
 			} else if let Some(window) = &mut self.window {
 				self.renderer.get_mut().render(pov, &mut self.entities, window)?;
-			}
-			
-			if let Some(window) = &mut self.window {
-				window.mark_dirty();
-				self.renderer.get_mut().render(pov, &mut self.entities, window)?;
+				
+				self.bench.get_mut().tick("Render Window");
 			}
 			
 			self.renderer.get_mut().end_frame()?;
 			
+			self.bench.get_mut().tick("Render End");
+			
 			self.cleanup_loop()?;
+			
+			self.bench.get_mut().tick("Cleanup");
 		}
 		
 		Ok(())
@@ -335,6 +377,14 @@ impl Application {
 	#[allow(dead_code)]
 	pub fn find_entity(&self, predicate: impl Fn(&Entity) -> bool) -> Option<&Entity> {
 		self.find_all_entities(predicate).next()
+	}
+	
+	pub fn select(&self, target: impl Into<GuiSelection>) {
+		self.gui_selection.replace(target.into());
+	}
+	
+	pub fn get_selection(&self) -> GuiSelection {
+		self.gui_selection.borrow().clone()
 	}
 	
 	fn setup_loop(&mut self) -> Result<(), ApplicationRunError> {
@@ -413,14 +463,6 @@ impl Application {
 		
 		Ok(())
 	}
-	
-	fn set_debug_flags(&self) {
-		debug::set_flag("DebugEntityDraw", self.input.keyboard.toggle(Key::N));
-		debug::set_flag("DebugBonesDraw", self.input.keyboard.toggle(Key::B));
-		debug::set_flag("DebugCollidersDraw", self.input.keyboard.toggle(Key::C));
-		debug::set_flag("DebugJointsDraw", self.input.keyboard.toggle(Key::J));
-		debug::set_flag("DebugRigidBodiesDraw", self.input.keyboard.toggle(Key::M));
-	}
 }
 
 #[derive(Debug, Error)]
@@ -433,6 +475,7 @@ pub enum ApplicationCreationError {
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
+	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 }
 
 #[derive(Debug, Error)]

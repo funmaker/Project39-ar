@@ -25,7 +25,7 @@ mod overrides;
 use crate::debug;
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::application::{Application, Entity};
-use crate::utils::{AutoCommandBufferBuilderEx, get_userdata, NgPod};
+use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{AMat4, Isometry3, IVec4, Mat4, PI, Vec3, Vec4};
 use super::ModelError;
@@ -202,7 +202,7 @@ impl Component for MMDModel {
 			                          .gravity_scale(0.05)
 			                          .sleeping(false)
 			                          .can_sleep(false)
-			                          .user_data(get_userdata(entity.id, self.id()))
+			                          .user_data(get_user_data(entity.id, self.id()))
 			                          .build();
 			
 			let handle = physics.rigid_body_set.insert(rb);
@@ -221,7 +221,7 @@ impl Component for MMDModel {
 				rigid_body.rest_pos.inverse() *
 				collider.position()
 			);
-			collider.user_data = get_userdata(entity.id, self.id());
+			collider.user_data = get_user_data(entity.id, self.id());
 			
 			let handle = physics.collider_set.insert_with_parent(collider, rigid_body.handle, &mut physics.rigid_body_set);
 			rigid_body.colliders.push(handle);

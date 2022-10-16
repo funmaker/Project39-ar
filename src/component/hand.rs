@@ -1,13 +1,14 @@
 use std::time::{Duration, Instant};
 use std::cell::Cell;
 use std::ops::DerefMut;
+use egui::Ui;
 use rapier3d::prelude::{InteractionGroups, ColliderHandle};
 use rapier3d::geometry::Ball;
 
 use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::parent::Parent;
-use crate::utils::ColliderEx;
+use crate::utils::{ColliderEx, ExUi};
 use crate::math::{Point3, Color, Translation3};
 use crate::debug;
 use crate::component::vr::VrTracked;
@@ -137,6 +138,12 @@ impl Component for HandComponent {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_row("Hand", format!("{:?}", self.hand), ());
+		ui.inspect_row("Grabbed", &self.target_parent, application);
+		ui.inspect_row("Sticky", &self.sticky, ());
 	}
 }
 

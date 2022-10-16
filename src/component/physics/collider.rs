@@ -1,9 +1,10 @@
 use std::cell::Cell;
+use egui::Ui;
 use rapier3d::prelude::*;
 
 use crate::application::{Entity, Application, Physics};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::utils::get_userdata;
+use crate::utils::{ExUi, get_user_data};
 
 #[derive(ComponentBase)]
 pub struct ColliderComponent {
@@ -35,7 +36,7 @@ impl Component for ColliderComponent {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		let mut collider = self.template.clone();
-		collider.user_data = get_userdata(entity.id, self.id());
+		collider.user_data = get_user_data(entity.id, self.id());
 		self.handle.set(physics.collider_set.insert_with_parent(collider, entity.rigid_body, &mut physics.rigid_body_set));
 		
 		Ok(())
@@ -47,6 +48,12 @@ impl Component for ColliderComponent {
 		physics.collider_set.remove(self.handle.get(), &mut physics.island_manager, &mut physics.rigid_body_set, true);
 		
 		Ok(())
+	}
+	
+	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_collapsing()
+		  .title("Collider")
+		  .show(ui, self.handle.get(), application);
 	}
 }
 

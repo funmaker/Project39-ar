@@ -3,6 +3,7 @@ use std::cell::Cell;
 use std::time::Duration;
 use std::marker::PhantomData;
 use std::fmt::{Formatter, Debug};
+use egui::{Grid, Ui};
 use enumflags2::BitFlags;
 pub use project39_ar_derive::ComponentBase;
 
@@ -23,7 +24,7 @@ pub mod comedy;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{next_uid, IntoBoxed};
+use crate::utils::{next_uid, IntoBoxed, ExUi};
 
 pub type ComponentError = Box<dyn std::error::Error>;
 
@@ -31,6 +32,7 @@ pub trait ComponentBase: Any {
 	fn inner(&self) -> &ComponentInner;
 	fn inner_mut(&mut self) -> &mut ComponentInner;
 	fn as_any(&self) -> &dyn Any;
+	fn name(&self) -> &'static str;
 	
 	fn id(&self) -> u64 {
 		self.inner().id
@@ -48,6 +50,10 @@ pub trait ComponentBase: Any {
 	fn as_cref(&self) -> ComponentRef<Self> where Self: Sized {
 		ComponentRef::new(self.inner().entity_id.expect("Attempted to get reference of unmounted component"), self.inner().id)
 	}
+	
+	fn as_cref_dyn(&self) -> ComponentRef<dyn Component> {
+		ComponentRef::new(self.inner().entity_id.expect("Attempted to get reference of unmounted component"), self.inner().id)
+	}
 }
 
 #[allow(unused_variables)]
@@ -57,6 +63,19 @@ pub trait Component: ComponentBase {
 	fn before_render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
 	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
 	fn end(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
+	fn on_inspect(&self, entity: &Entity, ui: &mut Ui, application: &Application) {}
+	fn on_inspect_extra(&self, entity: &Entity, ui: &mut Ui, application: &Application) {}
+	fn on_gui(&self, entity: &Entity, ui: &mut Ui, application: &Application) {
+		Grid::new(self.inner().id)
+			.num_columns(2)
+			.min_col_width(100.0)
+			.show(ui, |ui| {
+				ui.inspect_row("ID", &self.as_cref_dyn(), application);
+				self.on_inspect(entity, ui, application);
+			});
+		
+		self.on_inspect_extra(entity, ui, application);
+	}
 	
 	fn boxed(self)
 	         -> Box<dyn Component>
@@ -167,12 +186,12 @@ impl Clone for ComponentInner {
 	}
 }
 
-pub struct ComponentRef<C> {
+pub struct ComponentRef<C: ?Sized> {
 	inner: Cell<Option<(u64, u64)>>,
 	phantom: PhantomData<C>,
 }
 
-impl<C: 'static> ComponentRef<C> {
+impl<C: ?Sized + 'static> ComponentRef<C> {
 	pub fn new(eid: u64, cid: u64) -> Self {
 		ComponentRef {
 			inner: Cell::new(Some((eid, cid))),
@@ -191,7 +210,7 @@ impl<C: 'static> ComponentRef<C> {
 		self.inner.swap(&other.inner);
 	}
 	
-	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a C> {
+	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a C> where C: Sized {
 		if let Some((eid, cid)) = self.inner.get() {
 			if let Some(component) = application.entity(eid)
 			                                    .and_then(|e| e.component(cid)) {
@@ -205,9 +224,36 @@ impl<C: 'static> ComponentRef<C> {
 		}
 	}
 	
-	pub fn using<'e>(&self, entity: &'e Entity) -> Option<&'e C> {
+	pub fn get_dyn<'a>(&self, application: &'a Application) -> Option<&'a dyn Component> {
+		if let Some((eid, cid)) = self.inner.get() {
+			if let Some(component) = application.entity(eid)
+			                                    .and_then(|e| e.component_dyn(cid)) {
+				Some(component)
+			} else {
+				self.inner.set(None);
+				None
+			}
+		} else {
+			None
+		}
+	}
+	
+	pub fn using<'e>(&self, entity: &'e Entity) -> Option<&'e C> where C: Sized {
 		if let Some((_, cid)) = self.inner.get() {
 			if let Some(component) = entity.component(cid) {
+				Some(component)
+			} else {
+				self.inner.set(None);
+				None
+			}
+		} else {
+			None
+		}
+	}
+	
+	pub fn using_dyn<'e>(&self, entity: &'e Entity) -> Option<&'e dyn Component> {
+		if let Some((_, cid)) = self.inner.get() {
+			if let Some(component) = entity.component_dyn(cid) {
 				Some(component)
 			} else {
 				self.inner.set(None);
@@ -224,15 +270,28 @@ impl<C: 'static> ComponentRef<C> {
 			None => EntityRef::null(),
 		}
 	}
+	
+	pub fn inner(&self) -> Option<(u64, u64)> {
+		self.inner.get()
+	}
 }
 
-impl<C, D> PartialEq<ComponentRef<D>> for ComponentRef<C> {
+impl<C: ?Sized, D: ?Sized> PartialEq<ComponentRef<D>> for ComponentRef<C> {
 	fn eq(&self, other: &ComponentRef<D>) -> bool {
 		self.inner.eq(&other.inner)
 	}
 }
 
-impl<C> Debug for ComponentRef<C> {
+impl<C: ?Sized + 'static, D: AsRef<dyn Component>> PartialEq<D> for ComponentRef<C> {
+	fn eq(&self, other: &D) -> bool {
+		match self.inner() {
+			None => false,
+			Some((_, cid)) => cid.eq(&other.as_ref().inner().id)
+		}
+	}
+}
+
+impl<C: ?Sized> Debug for ComponentRef<C> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		if let Some((eid, cid)) = self.inner.get() {
 			write!(f, "ref {}({}-{})", std::any::type_name::<C>(), eid, cid)
@@ -242,7 +301,7 @@ impl<C> Debug for ComponentRef<C> {
 	}
 }
 
-impl<C> Clone for ComponentRef<C> {
+impl<C: ?Sized> Clone for ComponentRef<C> {
 	fn clone(&self) -> Self {
 		ComponentRef {
 			inner: self.inner.clone(),

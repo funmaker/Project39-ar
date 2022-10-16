@@ -362,8 +362,8 @@ impl Renderer {
 		                 .physical_device()
 		                 .surface_formats(&surface, SurfaceInfo::default())?
 		                 .iter()
-		                 .find(|format| format.0 == Format::B8G8R8A8_UNORM || format.0 == Format::R8G8B8A8_UNORM)
-		                 .expect("UNorm format not supported on the surface")
+		                 .find(|format| format.0 == Format::B8G8R8A8_SRGB || format.0 == Format::R8G8B8A8_SRGB)
+		                 .expect("sRGB format not supported on the surface")
 		                 .clone();
 		
 		let alpha_preference = [CompositeAlpha::PreMultiplied, CompositeAlpha::Opaque, CompositeAlpha::Inherit];

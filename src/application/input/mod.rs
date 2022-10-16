@@ -25,7 +25,7 @@ pub struct Input {
 	pub controller_state: HashMap<TrackedDeviceIndex, ControllerState>,
 	pub controller_left: Option<TrackedDeviceIndex>,
 	pub controller_right: Option<TrackedDeviceIndex>,
-	pub quit_required: bool,
+	pub quitting: bool,
 }
 
 impl Input {
@@ -37,7 +37,7 @@ impl Input {
 			controller_state: HashMap::new(),
 			controller_left: None,
 			controller_right: None,
-			quit_required: false,
+			quitting: false,
 		}
 	}
 	

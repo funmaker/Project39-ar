@@ -1,9 +1,11 @@
 use std::time::Duration;
+use egui::Ui;
 
 use crate::application::{Entity, Application, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Point3, Color};
 use crate::debug;
+use crate::utils::ExUi;
 
 #[derive(ComponentBase)]
 pub struct Rope {
@@ -54,5 +56,13 @@ impl Component for Rope {
 		debug::draw_line(&self_pos, &other_pos, 8.0, Color::dblack());
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_row("Local Offset", format!("{}", self.local_offset), ());
+		ui.inspect_row("Other", &self.other, application);
+		ui.inspect_row("Other Offset", format!("{}", self.other_offset), ());
+		ui.inspect_row("Length", format!("{}", self.length), ());
+		ui.inspect_row("strength", format!("{}", self.strength), ());
 	}
 }

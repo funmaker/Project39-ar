@@ -1,14 +1,17 @@
 use std::time::Duration;
 use nalgebra::Quaternion;
 use rapier3d::prelude::*;
-use crate::debug;
 
+use crate::{Application, debug};
+use crate::application::EntityRef;
 use crate::math::{Color, Point3, Rot3, Vec3};
+use crate::utils::{RigidBodyEx, ColliderEx};
 
 pub struct Physics {
 	pub rigid_body_set: RigidBodySet,
 	pub collider_set: ColliderSet,
 	pub gravity: Vec3,
+	pub time_scale: f32,
 	pub integration_parameters: IntegrationParameters,
 	pub physics_pipeline: PhysicsPipeline,
 	pub query_pipeline: QueryPipeline,
@@ -29,6 +32,7 @@ impl Physics {
 			rigid_body_set: RigidBodySet::new(),
 			collider_set: ColliderSet::new(),
 			gravity: vector!(0.0, -9.81, 0.0),
+			time_scale: 1.0,
 			integration_parameters: IntegrationParameters {
 				erp: 0.8,
 				joint_erp: 0.5,
@@ -48,7 +52,7 @@ impl Physics {
 	}
 	
 	pub fn step(&mut self, delta_time: Duration) {
-		self.integration_parameters.dt = delta_time.as_secs_f32();
+		self.integration_parameters.dt = self.time_scale * delta_time.as_secs_f32();
 		
 		self.physics_pipeline.step(&self.gravity,
 		                           &self.integration_parameters,
@@ -68,22 +72,34 @@ impl Physics {
 		                           &self.collider_set);
 	}
 	
-	pub fn debug_draw(&self) {
+	pub fn debug_draw(&self, application: &Application) {
 		if debug::get_flag_or_default("DebugRigidBodiesDraw") {
-			self.debug_draw_rigidbodies();
+			self.debug_draw_rigidbodies(application);
 		}
 		
 		if debug::get_flag_or_default("DebugCollidersDraw") {
-			self.debug_draw_colliders();
+			self.debug_draw_colliders(application);
 		}
 		
 		if debug::get_flag_or_default("DebugJointsDraw") {
-			self.debug_draw_joints();
+			self.debug_draw_joints(application);
 		}
 	}
 	
-	pub fn debug_draw_rigidbodies(&self) {
-		for (_, rigidbody) in self.rigid_body_set.iter() {
+	pub fn debug_draw_rigidbodies(&self, application: &Application) {
+		let sel_rb = application.get_selection().rigid_body();
+		let sel_ent = application.get_selection().entity();
+		let sel_com = application.get_selection().component().entity();
+		
+		for (handle, rigidbody) in self.rigid_body_set.iter() {
+			let selected = handle == sel_rb
+				        || sel_ent == rigidbody.entity_ref()
+				        || sel_com == rigidbody.entity_ref()
+			            || (sel_rb == RigidBodyHandle::invalid() && sel_ent == EntityRef::null() && sel_com == EntityRef::null());
+			
+			if !selected {
+				continue;
+			}
 			
 			let position = rigidbody.position();
 			let pos = position.transform_point(&Point3::origin());
@@ -96,20 +112,32 @@ impl Physics {
 		}
 	}
 	
-	pub fn debug_draw_colliders(&self) {
-		for (_, collider) in self.collider_set.iter() {
+	pub fn debug_draw_colliders(&self, application: &Application) {
+		let sel_rb = application.get_selection().rigid_body();
+		let sel_col = application.get_selection().collider();
+		let sel_ent = application.get_selection().entity();
+		let sel_com = application.get_selection().component().entity();
+		
+		for (handle, collider) in self.collider_set.iter() {
+			let selected = handle == sel_col
+			            || collider.parent() == Some(sel_rb)
+			            || sel_ent == collider.entity_ref()
+			            || sel_com == collider.entity_ref()
+			            || (sel_rb == RigidBodyHandle::invalid() && sel_col == ColliderHandle::invalid() && sel_ent == EntityRef::null() && sel_com == EntityRef::null());
+			
 			match collider.shape().as_typed_shape() {
 				TypedShape::Ball(ball) => {
-					debug::draw_sphere(*collider.position(), ball.radius, Color::transparent(), Color::red());
+					debug::draw_sphere(*collider.position(), ball.radius, Color::transparent(), if selected { Color::red() } else { Color::black() });
 				},
 				TypedShape::Cuboid(cuboid) => {
-					debug::draw_box(*collider.position(), cuboid.half_extents * 2.0, Color::transparent(), Color::magenta());
+					debug::draw_box(*collider.position(), cuboid.half_extents * 2.0, Color::transparent(), if selected { Color::magenta() } else { Color::black() });
 				},
 				TypedShape::Capsule(capsule) => {
 					debug::draw_capsule(collider.position().transform_point(&capsule.segment.a),
 					                    collider.position().transform_point(&capsule.segment.b),
 					                    capsule.radius,
-					                    Color::transparent(), Color::yellow());
+					                    Color::transparent(),
+					                    if selected { Color::yellow() } else { Color::black() });
 				},
 				_ => {},
 			}
@@ -127,8 +155,20 @@ impl Physics {
 		}
 	}
 	
-	pub fn debug_draw_joints(&self) {
-		for (_, joint) in self.impulse_joint_set.iter() {
+	pub fn debug_draw_joints(&self, application: &Application) {
+		let sel_rb = application.get_selection().rigid_body();
+		let sel_joint = application.get_selection().joint();
+		
+		for (handle, joint) in self.impulse_joint_set.iter() {
+			let selected = handle == sel_joint
+			            || joint.body1 == sel_rb
+			            || joint.body2 == sel_rb
+			            || (sel_rb != RigidBodyHandle::invalid() && sel_joint != ImpulseJointHandle::invalid());
+			
+			if !selected {
+				continue;
+			}
+			
 			let rb1 = self.rigid_body_set.get(joint.body1).unwrap();
 			let rb2 = self.rigid_body_set.get(joint.body2).unwrap();
 			

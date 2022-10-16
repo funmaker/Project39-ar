@@ -1,8 +1,10 @@
 use std::cell::Cell;
+use egui::Ui;
 use rapier3d::prelude::*;
 
 use crate::application::{Entity, Application, Physics, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::utils::ExUi;
 
 #[derive(ComponentBase)]
 pub struct JointComponent {
@@ -48,5 +50,11 @@ impl Component for JointComponent {
 		physics.impulse_joint_set.remove(self.handle.get(), true);
 		
 		Ok(())
+	}
+	
+	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		ui.inspect_collapsing()
+		  .title("Joint")
+		  .show(ui, self.handle.get(), application);
 	}
 }

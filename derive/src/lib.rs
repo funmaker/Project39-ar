@@ -164,6 +164,10 @@ pub fn component_base_derive(input: proc_macro::TokenStream) -> proc_macro::Toke
             fn as_any(&self) -> &dyn ::std::any::Any {
                 self
             }
+            
+            fn name(&self) -> &'static str {
+                stringify!(#name)
+            }
         }
     };
     

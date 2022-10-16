@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 use std::any::Any;
 use std::fmt::{Display, Formatter};
+use egui::Ui;
 use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
 
 mod builder;
@@ -11,11 +12,12 @@ mod entity_ref;
 use crate::debug;
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::component::{ComponentRef, ComponentError};
-use crate::utils::{IntoBoxed, get_userdata, MutMark};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
+use crate::application::Hand;
 
 pub struct EntityState {
 	pub position: MutMark<Isometry3>,
@@ -35,7 +37,6 @@ pub struct Entity {
 	frozen: Cell<bool>,
 	components: BTreeMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
-	mass: Cell<f32>,
 }
 
 impl Entity {
@@ -54,7 +55,7 @@ impl Entity {
 	pub fn setup_physics(&mut self, physics: &mut Physics) {
 		let state = self.state.get_mut();
 		let mut rb = self.rigid_body_template.clone();
-		rb.user_data = get_userdata(self.id, 0);
+		rb.user_data = get_user_data(self.id, 0);
 		rb.set_position(*state.position, true);
 		rb.set_linvel(*state.velocity, true);
 		rb.set_angvel(*state.angular_velocity, true);
@@ -122,8 +123,6 @@ impl Entity {
 			component.tick(&self, &application, delta_time)?;
 		}
 		
-		self.mass.set(application.physics.borrow_mut().rigid_body_set.get(self.rigid_body).unwrap().mass());
-		
 		Ok(())
 	}
 	
@@ -189,6 +188,72 @@ impl Entity {
 		physics.rigid_body_set.remove(self.rigid_body, &mut physics.island_manager, &mut physics.collider_set, &mut physics.impulse_joint_set, &mut physics.multibody_joint_set, true);
 	}
 	
+	pub fn on_gui(&self, ui: &mut Ui, application: &Application) {
+		use crate::utils::ExUi;
+		use egui::*;
+		
+		let selected = self.is_selected(&application);
+		
+		if selected {
+			ui.highlight_indent();
+			self.selection_scroll(ui, &application);
+		}
+		
+		CollapsingHeader::new(RichText::new(&self.name).strong())
+			.id_source("Entity")
+			.default_open(true)
+			.open(selected.then_some(true))
+			.show(ui, |ui| {
+				ui.reset_style();
+				
+				Grid::new("Entity State")
+					.num_columns(2)
+					.min_col_width(100.0)
+					.show(ui, |ui| {
+						let state = &mut *self.state_mut();
+						
+						ui.inspect_row("ID", &self.as_ref(), application);
+						ui.inspect_row("Hidden", &mut state.hidden, ());
+						ui.inspect_row("Position", &mut state.position, ());
+						ui.inspect_row("Velocity", &mut state.velocity, ());
+						ui.inspect_row("Angular Velocity", &mut state.angular_velocity, ());
+					});
+			});
+		
+		ui.reset_style();
+		
+		ui.inspect_collapsing()
+		  .title("Rigid Body")
+		  .default_open(true)
+		  .show(ui, self.rigid_body, application);
+		
+		for component in self.components.values() {
+			ui.inspect_collapsing()
+				.default_open(true)
+				.show(ui, &component.as_cref_dyn(), application)
+		}
+		
+		CollapsingHeader::new("Tags")
+			.default_open(true)
+			.show(ui, |ui| {
+				Grid::new("Tags")
+					.num_columns(2)
+					.min_col_width(100.0)
+					.show(ui, |ui| {
+						for (name, value) in self.tags.borrow_mut().iter_mut() {
+							ui.label(name);
+							
+							if let Some(value) = value.downcast_mut::<bool>() { ui.inspect(value, ()); }
+							else if let Some(value) = value.downcast_mut::<Hand>() { ui.inspect(value, ()); }
+							else { ui.label(RichText::new("Unknown Type").weak().italics()); }
+							
+							ui.allocate_space(ui.available_size());
+							ui.end_row();
+						}
+					});
+			});
+	}
+	
 	pub fn as_ref(&self) -> EntityRef {
 		self.into()
 	}
@@ -201,6 +266,12 @@ impl Entity {
 		self.components
 		    .get(&id)
 		    .and_then(|c| c.as_any().downcast_ref::<C>())
+	}
+	
+	pub fn component_dyn(&self, id: u64) -> Option<&dyn Component> {
+		self.components
+		    .get(&id)
+		    .map(|c| &**c)
 	}
 	
 	pub fn find_component_by_type<C: Sized + 'static>(&self) -> Option<&C> {

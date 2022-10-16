@@ -2,19 +2,17 @@
 #![feature(try_blocks)]
 #![feature(trace_macros)]
 #![feature(type_name_of_val)]
-#![feature(backtrace)]
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(drain_filter)]
-#![feature(map_first_last)]
 #![feature(btree_drain_filter)]
 #![feature(hash_drain_filter)]
 #![feature(path_file_prefix)]
 #![feature(array_chunks)]
+#![feature(int_roundings)]
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 
-use std::error::Error;
 use std::fmt::Debug;
 use std::fs;
 use std::panic;
@@ -44,10 +42,6 @@ fn main() {
 		let message = format!("{}\n\nError {:?}", err.to_string(), err);
 		
 		eprintln!("{}", message);
-		
-		if let Some(backtrace) = err.backtrace() {
-			eprintln!("{}", backtrace);
-		}
 		
 		MessageDialog::new()
 		              .set_type(MessageType::Error)
