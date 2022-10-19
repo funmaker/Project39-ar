@@ -160,25 +160,34 @@ pub fn face_upwards_lossy(dir: Vec3) -> Rot3 {
 }
 
 // Using ZXY euler sequence
+// Thanks for help kirsh168
 pub fn to_euler(rot: Rot3) -> (f32, f32, f32) {
-	let x = rot * Vec3::x_axis();
-	let y = rot * Vec3::y_axis();
-	let z = rot * Vec3::z_axis();
+	let m11 = 2.0 * (rot.w * rot.w + rot.i * rot.i) - 1.0;
+	// let m12 = 2.0 * (rot.i * rot.j - rot.w * rot.k);
+	let m13 = 2.0 * (rot.i * rot.k + rot.w * rot.j);
 	
-	let pitch = -z.y.clamp(-1.0, 1.0).asin();
+	let m21 = 2.0 * (rot.i * rot.j + rot.w * rot.k);
+	let m22 = 2.0 * (rot.w * rot.w + rot.j * rot.j) - 1.0;
+	let m23 = 2.0 * (rot.j * rot.k - rot.w * rot.i);
+	
+	let m31 = 2.0 * (rot.i * rot.k - rot.w * rot.j);
+	// let m32 = 2.0 * (rot.j * rot.k + rot.w * rot.i);
+	let m33 = 2.0 * (rot.w * rot.w + rot.k * rot.k) - 1.0;
+	
+	let pitch = -m23.clamp(-1.0, 1.0).asin();
 	let gimbal_lock = pitch.abs() > PI / 2.0 - 0.001;
 	
 	let yaw = if gimbal_lock {
-		f32::atan2(-x.z, x.x)
+		f32::atan2(-m31, m11)
 	} else {
-		f32::atan2(z.x, z.z)
+		f32::atan2(m13, m33)
 	};
 	
-	let xy_proj = x.y / pitch.cos();
+	let xy_proj = m21 / pitch.cos();
 	let roll = if gimbal_lock {
 		0.0
-	} else if y.y < 0.0 {
-		PI.copysign(x.y) - xy_proj.clamp(-1.0, 1.0).asin() // Upside down
+	} else if m22 < 0.0 {
+		PI.copysign(m21) - xy_proj.clamp(-1.0, 1.0).asin() // Upside down
 	} else {
 		xy_proj.clamp(-1.0, 1.0).asin()
 	};

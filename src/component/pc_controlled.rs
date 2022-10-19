@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::application::{Entity, Application, Key};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::math::{Vec3, Isometry3, to_euler, from_euler};
+use crate::math::{Vec3, Isometry3, PI, to_euler, from_euler};
 
 #[derive(ComponentBase)]
 pub struct PCControlled {
@@ -34,7 +34,7 @@ impl Component for PCControlled {
 		let mouse_y = application.input.mouse.axis(1);
 		
 		yaw = yaw + -mouse_x * 0.01;
-		pitch = (pitch + -mouse_y * 0.01).clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+		pitch = (pitch + -mouse_y * 0.01).clamp(-PI / 2.0, PI / 2.0);
 		roll = roll + rr * 0.1;
 		
 		let rot = from_euler(pitch, yaw, roll);
