@@ -34,7 +34,7 @@ pub trait Camera: Send + 'static {
 		     -> Result<(Arc<AttachmentImage>, mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>), CameraStartError> {
 		let target = AttachmentImage::with_usage(queue.device().clone(),
 		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
-		                                         Format::B8G8R8A8_UNORM,
+		                                         Format::B8G8R8A8_SRGB,
 		                                         ImageUsage { sampled: true,
 			                                         transfer_destination: true,
 			                                         ..ImageUsage::none() })?;

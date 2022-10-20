@@ -14,8 +14,6 @@ use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::Vertex;
 
 mod vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/default/vert.glsl",
@@ -24,8 +22,6 @@ mod vert {
 }
 
 mod frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/default/frag.glsl",
@@ -34,8 +30,6 @@ mod frag {
 }
 
 mod glow_vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("glow_vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/default/glow_vert.glsl",
@@ -44,8 +38,6 @@ mod glow_vert {
 }
 
 mod glow_frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("glow_frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/default/glow_frag.glsl",

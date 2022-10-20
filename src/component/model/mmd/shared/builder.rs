@@ -92,7 +92,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			ImmutableImage::from_iter(image.into_pre_mul_iter(),
 			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                          MipmapsCount::Log2,
-			                          Format::R8G8B8A8_UNORM,
+			                          Format::R8G8B8A8_SRGB,
 			                          renderer.load_queue.clone())?
 		};
 		image_promises.push(default_tex_promise);
@@ -104,7 +104,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			let (image, promise) = ImmutableImage::from_iter(texture.into_pre_mul_iter(),
 			                                                 ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                                                 MipmapsCount::Log2,
-			                                                 Format::R8G8B8A8_UNORM,
+			                                                 Format::R8G8B8A8_SRGB,
 			                                                 renderer.load_queue.clone())?;
 			
 			image_promises.push(promise);

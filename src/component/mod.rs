@@ -21,6 +21,7 @@ pub mod hand;
 pub mod seat;
 pub mod thruster;
 pub mod comedy;
+pub mod srgb_test;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::renderer::{RenderContext, Renderer, RenderType};

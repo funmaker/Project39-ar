@@ -15,8 +15,6 @@ use crate::renderer::pipelines::{PipelineConstructor, PipelineError};
 pub use vertex::Vertex;
 
 mod vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/component/toolgun/pipeline/vert.glsl",
@@ -25,8 +23,6 @@ mod vert {
 }
 
 mod frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/component/toolgun/pipeline/frag.glsl",

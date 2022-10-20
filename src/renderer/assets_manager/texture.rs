@@ -64,13 +64,13 @@ impl AssetKey for TextureAsset {
 		let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
 		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 		                                                       if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One },
-		                                                       Format::R8G8B8A8_UNORM,
+		                                                       Format::R8G8B8A8_SRGB,
 		                                                       renderer.load_queue.clone())?;
 		
 		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo {
 			mag_filter: self.filter,
 			min_filter: self.filter,
-			mipmap_mode: if self.mipmaps { SamplerMipmapMode::Linear } else { SamplerMipmapMode::Linear },
+			mipmap_mode: if self.mipmaps { SamplerMipmapMode::Linear } else { SamplerMipmapMode::Nearest },
 			address_mode: [SamplerAddressMode::Repeat; 3],
 			lod: if self.mipmaps { 0.0..=1000.0 } else { 0.0..=1.0 },
 			..SamplerCreateInfo::default()
@@ -108,7 +108,7 @@ impl TextureBundle {
 		let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
 		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 		                                                       MipmapsCount::Log2,
-		                                                       Format::R8G8B8A8_UNORM,
+		                                                       Format::R8G8B8A8_SRGB,
 		                                                       renderer.load_queue.clone())?;
 		
 		let view = ImageView::new_default(image.clone())?;

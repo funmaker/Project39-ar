@@ -1,8 +1,6 @@
 macro_rules! mmd_shaders {
 	( $( $type:literal $name:ident = $source:literal; )* ) => { $(
 		mod $name {
-			#[allow(dead_code)]
-			const SOURCE: &'static str = include_str!(concat!(stringify!($name), ".glsl")); // https://github.com/vulkano-rs/vulkano/issues/1349
 			
 			vulkano_shaders::shader! {
 				ty: $type,

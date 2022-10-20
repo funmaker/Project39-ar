@@ -115,6 +115,7 @@ impl Application {
 			application.add_entity(
 				Entity::builder("ඞ")
 					.translation(point!(0.0, 20.0, 2.0))
+					// .component(SrgbTest::new(renderer)?)
 					.build()
 			);
 			
@@ -128,7 +129,7 @@ impl Application {
 				let pov = application.add_entity(
 					Entity::builder("(You)")
 						.translation(point!(0.0, 1.5, 1.5))
-						.component(PoV::new(false))
+						.component(PoV::new(true))
 						.component(PCControlled::new())
 						.tag("Head", true)
 						.build()

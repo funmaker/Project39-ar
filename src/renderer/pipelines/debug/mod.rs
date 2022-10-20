@@ -16,8 +16,6 @@ pub use vertex::{Vertex, TexturedVertex};
 type DefaultPipelineVertex = super::default::Vertex;
 
 mod vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/debug/vert.glsl",
@@ -26,8 +24,6 @@ mod vert {
 }
 
 mod frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/debug/frag.glsl",
@@ -60,8 +56,6 @@ impl PipelineConstructor for DebugPipeline {
 }
 
 mod tex_vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./tex_vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/debug/tex_vert.glsl",
@@ -70,8 +64,6 @@ mod tex_vert {
 }
 
 mod tex_frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./tex_frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/debug/tex_frag.glsl",
@@ -105,8 +97,6 @@ impl PipelineConstructor for DebugTexturedPipeline {
 
 
 mod shape_vert {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./shape_vert.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/debug/shape_vert.glsl",
@@ -115,8 +105,6 @@ vulkano_shaders::shader! {
 }
 
 mod shape_frag {
-	#[allow(dead_code)]
-	const SOURCE: &'static str = include_str!("./shape_frag.glsl"); // https://github.com/vulkano-rs/vulkano/issues/1349
 vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/debug/shape_frag.glsl",
