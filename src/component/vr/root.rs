@@ -15,12 +15,12 @@ use crate::component::{Component, ComponentBase, ComponentInner, ComponentError}
 use crate::component::comedy::Comedy;
 use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
-use super::VrTracked;
 use crate::component::hand::HandComponent;
 use crate::component::parent::Parent;
+use crate::renderer::assets_manager::TextureBundle;
 use crate::math::Isometry3;
-use crate::renderer::assets_manager::texture::TextureBundle;
 use crate::utils::ExUi;
+use super::VrTracked;
 
 #[derive(ComponentBase)]
 pub struct VrRoot {

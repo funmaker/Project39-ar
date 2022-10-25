@@ -7,13 +7,13 @@ use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 pub mod asset;
 
 pub use crate::renderer::pipelines::default::Vertex;
-use crate::renderer::pipelines::default::DefaultPipeline;
 use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::renderer::pipelines::default::DefaultPipeline;
+use crate::renderer::assets_manager::TextureBundle;
+use crate::application::Entity;
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::utils::{AutoCommandBufferBuilderEx, FenceCheck, ImmutableIndexBuffer};
 use crate::math::{AABB, aabb_from_points, Color, Point3, Similarity3};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::application::Entity;
-use crate::renderer::assets_manager::texture::TextureBundle;
 use super::{ModelError, VertexIndex};
 pub use asset::{ObjAsset, ObjLoadError};
 

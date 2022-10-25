@@ -5,8 +5,7 @@ use err_derive::Error;
 use obj::Obj;
 
 use crate::renderer::Renderer;
-use crate::renderer::assets_manager::texture::{TextureAsset, TextureLoadError};
-use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager};
+use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager, TextureAsset, TextureLoadError};
 use crate::component::model::ModelError;
 use super::{GimpModel, Vertex};
 
@@ -22,7 +21,7 @@ impl GimpAsset {
 		GimpAsset {
 			model: model_path.as_ref().to_path_buf(),
 			texture: texture.into(),
-			norm_texture: norm_texture.into(),
+			norm_texture: norm_texture.into().no_srgb(),
 		}
 	}
 }

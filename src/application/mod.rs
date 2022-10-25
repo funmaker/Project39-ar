@@ -23,22 +23,25 @@ use crate::component::ComponentError;
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::pov::PoV;
-use crate::component::vr::VrRoot;
+use crate::component::vr::{VrIk, VrRoot};
 use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
 use crate::component::physics::joint::JointComponent;
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::component::model::billboard::Billboard;
+use crate::component::model::ModelError;
 use crate::component::glow::Glow;
 use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget, pipelines::PipelineError};
+use crate::renderer::assets_manager::TextureAsset;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::config::{self, CameraAPI};
 use crate::utils::default_wait_poses;
 use crate::debug;
+
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
-
 use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
 use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
 use gui::{ApplicationGui, GuiSelection};
@@ -119,6 +122,16 @@ impl Application {
 					.build()
 			);
 			
+			application.add_entity(
+				Entity::builder("Floor")
+					.translation(point!(0.0, 0.0, 0.0))
+					.component(renderer.load(ObjAsset::at("shapes/floor.obj", "shapes/floor.png"))?)
+					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
+					.tag("World", true)
+					.hidden(config.camera.driver != CameraAPI::Dummy)
+					.build()
+			);
+			
 			if application.vr.is_some() {
 				application.add_entity(
 					Entity::builder("VR Root")
@@ -158,6 +171,73 @@ impl Application {
 				);
 			}
 			
+			application.add_entity(
+				Entity::builder("Burgor 1")
+					.component(Billboard::new(TextureAsset::at("food/sandwich 1.gif"), renderer)?)
+					.collider(ColliderBuilder::ball(0.05).build())
+					.translation(point!(0.0, 1.7, 0.75))
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Burgor 2")
+					.component(Billboard::new(TextureAsset::at("food/sandwich 2.gif"), renderer)?)
+					.collider(ColliderBuilder::ball(0.05).build())
+					.translation(point!(0.2, 1.7, 0.75))
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Burgor 3")
+					.component(Billboard::new(TextureAsset::at("food/sandwich 3.gif"), renderer)?)
+					.collider(ColliderBuilder::ball(0.05).build())
+					.translation(point!(0.4, 1.7, 0.75))
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Fries")
+					.component(Billboard::new(TextureAsset::at("food/fries.gif"), renderer)?)
+					.collider(ColliderBuilder::ball(0.05).build())
+					.translation(point!(0.6, 1.7, 0.75))
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Sticks")
+					.component(Billboard::new(TextureAsset::at("food/sticks.gif"), renderer)?)
+					.collider(ColliderBuilder::ball(0.05).build())
+					.translation(point!(0.8, 1.7, 0.75))
+					.build()
+			);
+			
+			{
+				let left = application.add_entity(
+					Entity::builder("Dummy Hand Left")
+						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
+						.translation(point!(1.4, 1.0, 0.0))
+						.collider_from_aabb(1000.0)
+						.build()
+				);
+				
+				let right = application.add_entity(
+					Entity::builder("Dummy Hand Right")
+						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
+						.translation(point!(0.6, 1.0, 0.0))
+						.collider_from_aabb(1000.0)
+						.build()
+				);
+				
+				application.add_entity(
+					Entity::builder("Dummy")
+						.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
+						.component(VrIk::new(left, right))
+						.translation(point!(1.0, 1.7, 0.0))
+						.collider_from_aabb(1000.0)
+						.build()
+				);
+			}
+			
 			// application.add_entity(
 			// 	Entity::builder("ToolGun")
 			// 		.translation(point!(0.0, 1.0, 1.0))
@@ -184,16 +264,6 @@ impl Application {
 			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
 			// 		.build()
 			// );
-			
-			application.add_entity(
-				Entity::builder("Floor")
-					.translation(point!(0.0, 0.0, 0.0))
-					.component(renderer.load(ObjAsset::at("shapes/floor.obj", "shapes/floor.png"))?)
-					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
-					.tag("World", true)
-					.hidden(config.camera.driver != CameraAPI::Dummy)
-					.build()
-			);
 			
 			let box1 = application.add_entity(
 				Entity::builder("Box")
@@ -472,6 +542,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] EyesCreationError(#[error(source)] EyesCreationError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),

@@ -1,7 +1,8 @@
 use std::hash::Hash;
 use egui::*;
 
-use crate::{Application, debug};
+use crate::debug;
+use crate::application::Application;
 use crate::utils::ExUi;
 
 pub fn main_ui(ui: &mut Ui, application: &Application) {

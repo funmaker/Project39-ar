@@ -2,8 +2,8 @@ use std::time::Duration;
 use nalgebra::Quaternion;
 use rapier3d::prelude::*;
 
-use crate::{Application, debug};
-use crate::application::EntityRef;
+use crate::debug;
+use crate::application::{Application, EntityRef};
 use crate::math::{Color, Point3, Rot3, Vec3};
 use crate::utils::{RigidBodyEx, ColliderEx};
 

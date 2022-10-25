@@ -3,7 +3,8 @@ use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
 use err_derive::Error;
-use image::{ImageFormat, DynamicImage};
+use image::{ImageFormat, DynamicImage, ImageDecoder, AnimationDecoder, RgbaImage, imageops};
+use image::codecs::gif::GifDecoder;
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::format::Format;
 use vulkano::image::view::ImageView;
@@ -18,6 +19,7 @@ pub struct TextureAsset {
 	path: PathBuf,
 	filter: Filter,
 	mipmaps: bool,
+	srgb: bool,
 }
 
 #[derive(Clone)]
@@ -34,6 +36,14 @@ impl TextureAsset {
 			path: path.as_ref().to_path_buf(),
 			filter: Filter::Linear,
 			mipmaps: true,
+			srgb: true,
+		}
+	}
+	
+	pub fn nearest(self) -> Self {
+		TextureAsset {
+			filter: Filter::Nearest,
+			..self
 		}
 	}
 	
@@ -44,9 +54,9 @@ impl TextureAsset {
 		}
 	}
 	
-	pub fn nearest(self) -> Self {
+	pub fn no_srgb(self) -> Self {
 		TextureAsset {
-			filter: Filter::Nearest,
+			srgb: false,
 			..self
 		}
 	}
@@ -57,15 +67,40 @@ impl AssetKey for TextureAsset {
 	type Error = TextureLoadError;
 	
 	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
-		let source = image::load(AssetsManager::find_asset(&self.path)?, ImageFormat::from_path(&self.path)?)?;
-		let width = source.width();
-		let height = source.height();
+		let file_format = ImageFormat::from_path(&self.path)?;
+		let mip_levels = if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One };
+		let format = if self.srgb { Format::R8G8B8A8_SRGB } else { Format::R8G8B8A8_UNORM };
 		
-		let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
-		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-		                                                       if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One },
-		                                                       Format::R8G8B8A8_SRGB,
-		                                                       renderer.load_queue.clone())?;
+		let (image, image_promise) = if file_format == ImageFormat::Gif {
+			let decoder = GifDecoder::new(AssetsManager::find_asset(&self.path)?)?;
+			let (width, height) = decoder.dimensions();
+			let frames = decoder.into_frames().collect_frames()?;
+			let array_layers = frames.len() as u32;
+			
+			let pixels = frames.into_iter()
+			                   .flat_map(|frame| {
+				                   let mut canvas = RgbaImage::new(width, height);
+				                   imageops::replace(&mut canvas, frame.buffer(), frame.left() as i64, frame.top() as i64);
+				                   DynamicImage::from(canvas).into_pre_mul_iter()
+			                   })
+			                   .collect::<Vec<_>>();
+			
+			ImmutableImage::from_iter(pixels.into_iter(),
+			                          ImageDimensions::Dim2d{ width, height, array_layers },
+			                          mip_levels,
+			                          format,
+			                          renderer.load_queue.clone())?
+		} else {
+			let image = image::load(AssetsManager::find_asset(&self.path)?, file_format)?;
+			let width = image.width();
+			let height = image.height();
+			
+			ImmutableImage::from_iter(image.into_pre_mul_iter(),
+			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
+			                          mip_levels,
+			                          format,
+			                          renderer.load_queue.clone())?
+		};
 		
 		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo {
 			mag_filter: self.filter,
@@ -82,7 +117,7 @@ impl AssetKey for TextureAsset {
 		Ok(TextureBundle {
 			image: view,
 			sampler,
-			fence
+			fence,
 		})
 	}
 }

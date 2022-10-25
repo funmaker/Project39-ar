@@ -9,8 +9,11 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ffi::{OsStr, OsString};
 use std::error::Error;
 
-pub mod texture;
-pub mod toml;
+mod texture;
+mod toml;
+
+pub use texture::{TextureAsset, TextureBundle, TextureLoadError};
+pub use self::toml::{TomlAsset, TomlLoadError};
 
 use crate::renderer::Renderer;
 

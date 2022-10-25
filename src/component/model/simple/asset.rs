@@ -5,8 +5,7 @@ use err_derive::Error;
 use obj::Obj;
 
 use crate::renderer::Renderer;
-use crate::renderer::assets_manager::texture::{TextureAsset, TextureLoadError};
-use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager};
+use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager, TextureAsset, TextureLoadError};
 use crate::component::model::ModelError;
 use super::{SimpleModel, Vertex};
 

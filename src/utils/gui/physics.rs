@@ -4,7 +4,7 @@ use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
 use rapier3d::parry::partitioning::IndexedData;
 use egui::*;
 
-use crate::Application;
+use crate::application::Application;
 use crate::utils::{from_user_data, InspectCollapsing, InspectObject};
 use super::*;
 
@@ -66,6 +66,17 @@ impl InspectMut for RigidBody {
 				ui.inspect_row("Sleeping", GetSet(|| (self.is_sleeping(), |sleep| if sleep { self.sleep() })), ());
 			});
 		
+		ui.collapsing("Kinematics", |ui| {
+			Grid::new("Rigid Body")
+				.num_columns(2)
+				.min_col_width(100.0)
+				.show(ui, |ui| {
+					ui.inspect_row("Position", GetSet(|| (*self.position(), |pos| self.set_position(pos, true))), ());
+					ui.inspect_row("Velocity", GetSet(|| (*self.linvel(), |vel| self.set_linvel(vel, true))), ());
+					ui.inspect_row("Angular Velocity", GetSet(|| (*self.angvel(), |angvel| self.set_angvel(angvel, true))), ());
+				});
+		});
+		
 		if !self.colliders().is_empty() {
 			CollapsingHeader::new(format!("Colliders ({})", self.colliders().len()))
 				.id_source("Colliders")
@@ -125,8 +136,12 @@ impl Inspect for RigidBodyHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if ui.button(id_fmt(self.index(), "RB ")).clicked() {
-			application.select(self);
+		if self == RigidBodyHandle::invalid() {
+			ui.label(RichText::new("NULL").monospace().italics());
+		} else {
+			if ui.button(id_fmt(self.index(), "RB ")).clicked() {
+				application.select(self);
+			}
 		}
 	}
 }
@@ -180,11 +195,29 @@ impl InspectMut for Collider {
 			.num_columns(2)
 			.min_col_width(100.0)
 			.show(ui, |ui| {
-				if let Some(parent) = self.parent() {
-					ui.inspect_row("ID", handle, application);
-					ui.inspect_row("Owner", UserData(self.user_data), application);
-					ui.inspect_row("Rigid Body", parent, application);
-					ui.inspect_row("Shape", format!("{:?}", self.shape().shape_type()), ());
+				ui.inspect_row("ID", handle, application);
+				ui.inspect_row("Owner", UserData(self.user_data), application);
+				ui.inspect_row("Rigid Body", self.parent().unwrap_or(RigidBodyHandle::invalid()), application);
+				
+				if let Some(&pos_wrt_parent) = self.position_wrt_parent() {
+					ui.inspect_row("Position", GetSet(|| (pos_wrt_parent, |pos| self.set_position_wrt_parent(pos))), ());
+				} else {
+					ui.inspect_row("Position", GetSet(|| (*self.position(), |pos| self.set_position(pos))), ());
+				}
+				
+				ui.inspect_row("Shape", format!("{:?}", self.shape().shape_type()), ());
+				
+				if let Some(ball) = self.shape_mut().as_ball_mut() {
+					ui.inspect_row("Radius", &mut ball.radius, (0.1, 0.01..=f32::INFINITY));
+				} else if let Some(cuboid) = self.shape_mut().as_cuboid_mut() {
+					ui.inspect_row("Half Extends", &mut cuboid.half_extents, ());
+				} else if let Some(capsule) = self.shape_mut().as_capsule_mut() {
+					ui.inspect_row("Radius", &mut capsule.radius, (0.1, 0.01..=f32::INFINITY));
+					ui.inspect_row("Start", &mut capsule.segment.a, ());
+					ui.inspect_row("End", &mut capsule.segment.b, ());
+				} else if let Some(cylinder) = self.shape_mut().as_cylinder_mut() {
+					ui.inspect_row("Radius", &mut cylinder.radius, (0.1, 0.01..=f32::INFINITY));
+					ui.inspect_row("Half Height", &mut cylinder.half_height, (0.1, 0.01..=f32::INFINITY));
 				}
 			});
 	}
@@ -208,8 +241,12 @@ impl Inspect for ColliderHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if ui.button(id_fmt(self.index(), "CO ")).clicked() {
-			application.select(self);
+		if self == ColliderHandle::invalid() {
+			ui.label(RichText::new("NULL").monospace().italics());
+		} else {
+			if ui.button(id_fmt(self.index(), "CO ")).clicked() {
+				application.select(self);
+			}
 		}
 	}
 }
@@ -290,8 +327,12 @@ impl Inspect for ImpulseJointHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if ui.button(id_fmt(self.0.index(), "IJ ")).clicked() {
-			application.select(self);
+		if self == ImpulseJointHandle::invalid() {
+			ui.label(RichText::new("NULL").monospace().italics());
+		} else {
+			if ui.button(id_fmt(self.0.index(), "IJ ")).clicked() {
+				application.select(self);
+			}
 		}
 	}
 }

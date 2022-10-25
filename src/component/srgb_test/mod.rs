@@ -12,7 +12,7 @@ mod pipeline;
 
 use crate::application::Entity;
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::renderer::assets_manager::texture::{TextureAsset, TextureLoadError};
+use crate::renderer::assets_manager::{TextureAsset, TextureLoadError};
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::FenceCheck;
 use super::{Component, ComponentBase, ComponentInner, ComponentError};

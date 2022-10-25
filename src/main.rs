@@ -31,7 +31,7 @@ use utils::from_args::ArgsError;
 mod renderer;
 mod application;
 mod config;
-#[allow(dead_code)] pub mod component;
+#[allow(dead_code)] mod component;
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));

@@ -9,10 +9,13 @@ use vulkano::pipeline::graphics::input_assembly::Index;
 pub mod simple;
 pub mod mmd;
 pub mod gimp;
+pub mod billboard;
 
 use crate::renderer::pipelines::PipelineError;
+use crate::renderer::assets_manager::{AssetError, TextureLoadError};
 pub use simple::SimpleModel;
 pub use self::mmd::MMDModel;
+pub use billboard::Billboard;
 
 pub trait VertexIndex: Index + Pod + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}
 impl<T> VertexIndex for T where T: Index + Pod + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}
@@ -22,6 +25,8 @@ pub enum ModelError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "Invalid indices range: {:?}, len: {}", _0, _1)] IndicesRangeError(Range<DeviceSize>, DeviceSize),
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
+	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
+	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
 	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),

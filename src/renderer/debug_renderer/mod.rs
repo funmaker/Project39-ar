@@ -20,7 +20,7 @@ use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePi
 use super::pipelines::{Pipelines, PipelineError};
 use super::Renderer;
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
-use crate::renderer::assets_manager::texture::TextureAsset;
+use crate::renderer::assets_manager::TextureAsset;
 use crate::renderer::RenderContext;
 
 pub struct DebugRenderer {
