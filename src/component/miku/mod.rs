@@ -31,6 +31,7 @@ const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 #[derive(ComponentBase)]
 pub struct Miku {
 	#[inner] inner: ComponentInner,
+	asset: PmxAsset,
 	model: ComponentRef<MMDModel>,
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
@@ -39,9 +40,10 @@ pub struct Miku {
 }
 
 impl Miku {
-	pub fn new() -> Self {
+	pub fn new(asset: PmxAsset) -> Self {
 		Miku {
 			inner: ComponentInner::new_norender(),
+			asset,
 			model: ComponentRef::null(),
 			anims: RefCell::new((
 				collection!(
@@ -94,7 +96,7 @@ impl Miku {
 
 impl Component for Miku {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		let model = application.renderer.borrow_mut().load(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx"))?;
+		let model = application.renderer.borrow_mut().load(self.asset.clone())?;
 		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
 		Ok(())

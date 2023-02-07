@@ -148,8 +148,8 @@ impl MMDModel {
 			if bone.display {
 				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.origin()));
 				
-				debug::draw_point(&pos, 10.0, bone.color.clone());
-				debug::draw_text(&bone.name, &pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
+				debug::draw_point(pos, 10.0, bone.color.clone());
+				debug::draw_text(&bone.name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
 				
 				match &bone.connection {
 					BoneConnection::None => {}

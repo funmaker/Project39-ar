@@ -32,14 +32,13 @@ impl EntityRef {
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
 		if let Some(eid) = self.inner.get() {
 			if let Some(entity) = application.entity(eid) {
-				Some(entity)
-			} else {
+				return Some(entity);
+			} else if !application.pending_entity(eid) {
 				self.inner.set(None);
-				None
 			}
-		} else {
-			None
 		}
+		
+		None
 	}
 }
 

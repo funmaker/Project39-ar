@@ -93,7 +93,7 @@ impl Component for Billboard {
 		
 		let position = entity.state().position.translation.vector;
 		let to_camera = context.camera_pos.translation.vector - position;
-		let rotation = face_towards_lossy(to_camera);
+		let rotation = face_towards_lossy(-to_camera);
 		let transform = Similarity3::from_parts(position.into(), rotation, 0.05);
 		let angle = self.rotation.get() - f32::atan2(to_camera.x, to_camera.z);
 		let frame = (angle / PI / 2.0).rem_euclid(1.0) * self.layers as f32;

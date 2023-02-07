@@ -4,7 +4,7 @@ use std::sync::RwLock;
 use std::cell::RefCell;
 use std::any::Any;
 
-use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4, Isometry3, Vec3};
+use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4, Isometry3, Vec3, Similarity3, Translation3};
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
@@ -78,21 +78,33 @@ impl From<Point2> for DebugPosition {
 	}
 }
 
-impl From<&Point2> for DebugPosition {
-	fn from(pos: &Point2) -> Self {
-		DebugPosition::Screen(pos.clone())
-	}
-}
-
 impl From<Point3> for DebugPosition {
 	fn from(pos: Point3) -> Self {
 		DebugPosition::World(pos)
 	}
 }
 
-impl From<&Point3> for DebugPosition {
-	fn from(pos: &Point3) -> Self {
-		DebugPosition::World(pos.clone())
+impl From<Vec3> for DebugPosition {
+	fn from(pos: Vec3) -> Self {
+		DebugPosition::World(pos.into())
+	}
+}
+
+impl From<Translation3> for DebugPosition {
+	fn from(pos: Translation3) -> Self {
+		DebugPosition::World(pos * Point3::origin())
+	}
+}
+
+impl From<Isometry3> for DebugPosition {
+	fn from(pos: Isometry3) -> Self {
+		DebugPosition::World(pos * Point3::origin())
+	}
+}
+
+impl From<Similarity3> for DebugPosition {
+	fn from(pos: Similarity3) -> Self {
+		DebugPosition::World(pos * Point3::origin())
 	}
 }
 

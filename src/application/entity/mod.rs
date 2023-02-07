@@ -147,14 +147,13 @@ impl Entity {
 		}
 		
 		if debug::get_flag_or_default("DebugEntityDraw") && context.render_type == RenderType::Opaque {
-			let pos: Point3 = state.position.translation.vector.into();
-			let ang = &state.position.rotation;
+			let pos = *state.position;
 			
-			debug::draw_point(&pos, 32.0, Color::magenta());
-			debug::draw_line(&pos, &pos + ang * Vec3::x() * 0.3, 4.0, Color::red());
-			debug::draw_line(&pos, &pos + ang * Vec3::y() * 0.3, 4.0, Color::green());
-			debug::draw_line(&pos, &pos + ang * Vec3::z() * 0.3, 4.0, Color::blue());
-			debug::draw_text(&self.name, &pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+			debug::draw_point(pos, 32.0, Color::magenta());
+			debug::draw_line(pos, pos * Point3::from(Vec3::x() * 0.3), 4.0, Color::red());
+			debug::draw_line(pos, pos * Point3::from(Vec3::y() * 0.3), 4.0, Color::green());
+			debug::draw_line(pos, pos * Point3::from(Vec3::z() * 0.3), 4.0, Color::blue());
+			debug::draw_text(&self.name, pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
 		}
 		
 		for component in self.components.values() {
@@ -266,6 +265,13 @@ impl Entity {
 		self.components
 		    .get(&id)
 		    .and_then(|c| c.as_any().downcast_ref::<C>())
+	}
+	
+	pub fn pending_component(&self, id: u64) -> bool {
+		self.new_components
+			.borrow_mut()
+			.iter()
+			.any(|c| c.id() == id)
 	}
 	
 	pub fn component_dyn(&self, id: u64) -> Option<&dyn Component> {

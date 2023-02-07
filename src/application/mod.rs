@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -28,11 +30,11 @@ use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
 use crate::component::physics::joint::JointComponent;
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
-use crate::component::model::billboard::Billboard;
+use crate::component::model::mmd::asset::PmxAsset;
 use crate::component::model::ModelError;
+use crate::component::toolgun::ToolGun;
 use crate::component::glow::Glow;
 use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget, pipelines::PipelineError};
-use crate::renderer::assets_manager::TextureAsset;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::config::{self, CameraAPI};
 use crate::utils::default_wait_poses;
@@ -136,6 +138,7 @@ impl Application {
 				application.add_entity(
 					Entity::builder("VR Root")
 						.component(VrRoot::new())
+						.tag("NoGrab", true)
 						.build()
 				);
 			} else {
@@ -171,51 +174,19 @@ impl Application {
 				);
 			}
 			
-			application.add_entity(
-				Entity::builder("Burgor 1")
-					.component(Billboard::new(TextureAsset::at("food/sandwich 1.gif"), renderer)?)
-					.collider(ColliderBuilder::ball(0.05).build())
-					.translation(point!(0.0, 1.7, 0.75))
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Burgor 2")
-					.component(Billboard::new(TextureAsset::at("food/sandwich 2.gif"), renderer)?)
-					.collider(ColliderBuilder::ball(0.05).build())
-					.translation(point!(0.2, 1.7, 0.75))
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Burgor 3")
-					.component(Billboard::new(TextureAsset::at("food/sandwich 3.gif"), renderer)?)
-					.collider(ColliderBuilder::ball(0.05).build())
-					.translation(point!(0.4, 1.7, 0.75))
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Fries")
-					.component(Billboard::new(TextureAsset::at("food/fries.gif"), renderer)?)
-					.collider(ColliderBuilder::ball(0.05).build())
-					.translation(point!(0.6, 1.7, 0.75))
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Sticks")
-					.component(Billboard::new(TextureAsset::at("food/sticks.gif"), renderer)?)
-					.collider(ColliderBuilder::ball(0.05).build())
-					.translation(point!(0.8, 1.7, 0.75))
-					.build()
-			);
-			
 			{
+				let head = application.add_entity(
+					Entity::builder("Dummy Head")
+						.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
+						.translation(point!(1.0, 1.7, 0.0))
+						.collider_from_aabb(1000.0)
+						.build()
+				);
+				
 				let left = application.add_entity(
 					Entity::builder("Dummy Hand Left")
 						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
-						.translation(point!(1.4, 1.0, 0.0))
+						.translation(point!(0.6, 1.0, 0.0))
 						.collider_from_aabb(1000.0)
 						.build()
 				);
@@ -223,17 +194,15 @@ impl Application {
 				let right = application.add_entity(
 					Entity::builder("Dummy Hand Right")
 						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
-						.translation(point!(0.6, 1.0, 0.0))
+						.translation(point!(1.4, 1.0, 0.0))
 						.collider_from_aabb(1000.0)
 						.build()
 				);
 				
 				application.add_entity(
 					Entity::builder("Dummy")
-						.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
-						.component(VrIk::new(left, right))
-						.translation(point!(1.0, 1.7, 0.0))
-						.collider_from_aabb(1000.0)
+						.component(VrIk::new(head, left, right))
+						.translation(point!(1.0, 0.0, 0.0))
 						.build()
 				);
 			}
@@ -244,8 +213,8 @@ impl Application {
 			// 		.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
 			// 		.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
 			// 		                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
-			// 		                        renderer)?)
-			// 		.collider_from_aabb()
+			// 		                        renderer).unwrap())
+			// 		.collider_from_aabb(100.0)
 			// 		.build()
 			// );
 			
@@ -253,7 +222,7 @@ impl Application {
 				Entity::builder("初音ミク")
 					.translation(point!(-0.5, 0.0, 0.0))
 					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(Miku::new())
+					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
 					.build()
 			);
 			
@@ -265,34 +234,34 @@ impl Application {
 			// 		.build()
 			// );
 			
-			let box1 = application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-					.component(Glow::new(Color::magenta(), 0.1, renderer)?)
-					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
-			
-			let mut joint = GenericJoint::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z);
-			
-			joint.set_local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
-			     .set_local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
-			     .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-			     .set_limits(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-			     .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
-			
-			application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-					.component(Glow::new(Color::magenta(), 0.1, renderer)?)
-					.component(JointComponent::new(joint, box1))
-					.collider_from_aabb(1000.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
+			// let box1 = application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+			// 		.component(Glow::new(Color::magenta(), 0.1, renderer)?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
+			// 		.build()
+			// );
+			//
+			// let mut joint = GenericJoint::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z);
+			//
+			// joint.set_local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
+			//      .set_local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
+			//      .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+			//      .set_limits(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
+			//      .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
+			//
+			// application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
+			// 		.component(Glow::new(Color::magenta(), 0.1, renderer)?)
+			// 		.component(JointComponent::new(joint, box1))
+			// 		.collider_from_aabb(1000.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
+			// 		.build()
+			// );
 		}
 		
 		Ok(application)
@@ -436,6 +405,14 @@ impl Application {
 	#[allow(dead_code)]
 	pub fn entity(&self, id: u64) -> Option<&Entity> {
 		self.entities.get(&id)
+	}
+	
+	#[allow(dead_code)]
+	pub fn pending_entity(&self, id: u64) -> bool {
+		self.new_entities
+			.borrow_mut()
+			.iter()
+			.any(|entity| entity.id == id)
 	}
 	
 	#[allow(dead_code)]

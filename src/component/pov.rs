@@ -4,6 +4,7 @@ use egui::Ui;
 
 use crate::application::{Entity, Application, Key, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::component::model::simple::ObjAsset;
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::math::Isometry3;
@@ -36,8 +37,10 @@ impl Component for PoV {
 			} else {
 				self.detached.set(application.add_entity(
 					Entity::builder("Detached PoV")
+					       .component(application.renderer.borrow_mut().load(ObjAsset::at("camera/camera.obj", "camera/camera.png"))?)
 					       .component(DetachedPoV::new())
 					       .component(Parent::new(entity, Isometry3::identity()))
+					       .collider_from_aabb(1000.0)
 					       .build()
 				));
 			}

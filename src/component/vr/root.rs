@@ -11,12 +11,13 @@ use openvr::render_models;
 use rapier3d::geometry::{ColliderBuilder, InteractionGroups};
 
 use crate::application::{Entity, EntityRef, Application, Hand};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::comedy::Comedy;
 use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::pov::PoV;
 use crate::component::hand::HandComponent;
 use crate::component::parent::Parent;
+use crate::component::vr::VrIk;
 use crate::renderer::assets_manager::TextureBundle;
 use crate::math::Isometry3;
 use crate::utils::ExUi;
@@ -26,6 +27,7 @@ use super::VrTracked;
 pub struct VrRoot {
 	#[inner] inner: ComponentInner,
 	entities: RefCell<BTreeMap<TrackedDeviceIndex, EntityRef>>,
+	ik: ComponentRef<VrIk>,
 }
 
 impl VrRoot {
@@ -33,11 +35,18 @@ impl VrRoot {
 		VrRoot {
 			inner: ComponentInner::new_norender(),
 			entities: RefCell::new(BTreeMap::new()),
+			ik: ComponentRef::null(),
 		}
 	}
 }
 
 impl Component for VrRoot {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+		self.ik.set(entity.add_component(VrIk::new(EntityRef::null(), EntityRef::null(), EntityRef::null())));
+		
+		Ok(())
+	}
+	
 	fn tick(&self, _entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		let vr = application.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		let mut entities = self.entities.borrow_mut();
@@ -118,6 +127,19 @@ impl Component for VrRoot {
 										.tag("CloseHide", true)
 										.build()
 								);
+							}
+							
+							
+							if let Some(ik) = self.ik.get(application) {
+								if class == TrackedDeviceClass::HMD {
+									ik.set_hmd(entity.clone());
+								}
+								
+								match vr.system.get_controller_role_for_tracked_device_index(tracked_id) {
+									Some(TrackedControllerRole::LeftHand) => ik.set_hand_left(entity.clone()),
+									Some(TrackedControllerRole::RightHand) => ik.set_hand_right(entity.clone()),
+									_ => {}
+								}
 							}
 							
 							entities.insert(tracked_id, entity);

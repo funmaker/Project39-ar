@@ -109,7 +109,7 @@ impl Component for GimpModel {
 			let camera = application.pov.get(application).unwrap();
 			
 			let mut orientation = *camera.state().position;
-			let mut towards = orientation.rotation * vector!(0.0, 0.0, 1.0);
+			let mut towards = orientation.rotation * vector!(0.0, 0.0, -1.0);
 			towards.y = 0.0;
 			orientation.rotation = face_towards_lossy(towards);
 			self.orientation.set(orientation);

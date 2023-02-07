@@ -212,57 +212,51 @@ impl<C: ?Sized + 'static> ComponentRef<C> {
 	}
 	
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a C> where C: Sized {
-		if let Some((eid, cid)) = self.inner.get() {
-			if let Some(component) = application.entity(eid)
-			                                    .and_then(|e| e.component(cid)) {
-				Some(component)
-			} else {
+		if let Some((eid, _)) = self.inner.get() {
+			if let Some(entity) = application.entity(eid) {
+				return self.using(entity);
+			} else if !application.pending_entity(eid) {
 				self.inner.set(None);
-				None
 			}
-		} else {
-			None
 		}
+		
+		None
 	}
 	
 	pub fn get_dyn<'a>(&self, application: &'a Application) -> Option<&'a dyn Component> {
-		if let Some((eid, cid)) = self.inner.get() {
-			if let Some(component) = application.entity(eid)
-			                                    .and_then(|e| e.component_dyn(cid)) {
-				Some(component)
-			} else {
+		if let Some((eid, _)) = self.inner.get() {
+			if let Some(entity) = application.entity(eid) {
+				return self.using_dyn(entity);
+			} else if !application.pending_entity(eid) {
 				self.inner.set(None);
-				None
 			}
-		} else {
-			None
 		}
+		
+		None
 	}
 	
 	pub fn using<'e>(&self, entity: &'e Entity) -> Option<&'e C> where C: Sized {
 		if let Some((_, cid)) = self.inner.get() {
 			if let Some(component) = entity.component(cid) {
-				Some(component)
-			} else {
+				return Some(component);
+			} else if !entity.pending_component(cid) {
 				self.inner.set(None);
-				None
 			}
-		} else {
-			None
 		}
+		
+		None
 	}
 	
 	pub fn using_dyn<'e>(&self, entity: &'e Entity) -> Option<&'e dyn Component> {
 		if let Some((_, cid)) = self.inner.get() {
 			if let Some(component) = entity.component_dyn(cid) {
-				Some(component)
-			} else {
+				return Some(component);
+			} else if !entity.pending_component(cid) {
 				self.inner.set(None);
-				None
 			}
-		} else {
-			None
 		}
+		
+		None
 	}
 	
 	pub fn entity(&self) -> EntityRef {

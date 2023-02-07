@@ -64,7 +64,7 @@ impl Tool for ThrusterTool {
 			ThrusterDirection::Right => "⮫",
 		};
 		
-		debug::draw_text(dir_icon, &toolgun_pos.transform_point(&point!(0.0, 0.12, -0.03)), debug::DebugOffset::center(0.0, 0.0), 128.0, Color::full_white());
+		debug::draw_text(dir_icon, toolgun_pos.transform_point(&point!(0.0, 0.12, -0.03)), debug::DebugOffset::center(0.0, 0.0), 128.0, Color::full_white());
 		
 		let result = {
 			let physics = &*application.physics.borrow();

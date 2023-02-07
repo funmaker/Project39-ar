@@ -3,6 +3,8 @@ Project39 - AR Character Experience Simulator The Game
 
 ## Requirements
 
+On Linux you only need some (or none) of these. You should be able to figure it out. 
+
 - Windows SDK
 - LLVM
 - CMake

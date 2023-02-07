@@ -175,8 +175,8 @@ impl Physics {
 			let frame1 = rb1.position() * joint.data.local_frame1;
 			let frame2 = rb2.position() * joint.data.local_frame2;
 			
-			debug::draw_point(frame1 * Point3::origin(), 5.0, Color::dmagenta());
-			debug::draw_point(frame2 * Point3::origin(), 5.0, Color::magenta());
+			debug::draw_point(frame1, 5.0, Color::dmagenta());
+			debug::draw_point(frame2, 5.0, Color::magenta());
 			
 			// if joint.data.limit_axes.contains(JointAxesMask::X) {
 			// 	debug::draw_line(frame1 * point!(-1.0, 0.0, 0.0), frame1 * point!(1.0, 0.0, 0.0), 1.0, Color::dred());
@@ -196,25 +196,25 @@ impl Physics {
 			let swing = rot * twist.conjugate();
 			
 			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X) {
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
 			}
 			
 			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Z) {
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].min) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].max) * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
 			}
 			
 			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X | JointAxesMask::ANG_Z) {
-				debug::draw_line(frame1 * Point3::origin(), frame1 * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
-				debug::draw_line(frame1 * Point3::origin(), frame1.translation * swing * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::green());
+				debug::draw_line(frame1, frame1 * point!(0.0, 0.03, 0.0), 2.0, Color::dgreen());
+				debug::draw_line(frame1, frame1.translation * swing * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::green());
 			}
 			
 			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Y) {
-				debug::draw_line(frame1 * Point3::origin(), frame1 * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].min) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
-				debug::draw_line(frame1 * Point3::origin(), frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].max) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
-				debug::draw_line(frame1 * Point3::origin(), frame1.translation * twist * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::red());
+				debug::draw_line(frame1, frame1 * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].min) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].max) * point!(0.03, 0.0, 0.0), 2.0, Color::dred());
+				debug::draw_line(frame1, frame1.translation * twist * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::red());
 			}
 		}
 	}

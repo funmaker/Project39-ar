@@ -2,7 +2,7 @@ use rapier3d::geometry::InteractionGroups;
 use rapier3d::dynamics::RigidBodyType;
 
 use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, Point3, face_upwards_lossy};
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, face_upwards_lossy};
 use crate::application::entity::EntityBuilder;
 use crate::debug;
 use super::tool::{Tool, ToolError};
@@ -142,7 +142,7 @@ impl Tool for Spawner {
 				prop.model.render_impl(transform, color, context)?;
 				
 				if let Some(tip) = &prop.tip {
-					debug::draw_text(tip, &transform.transform_point(&Point3::origin()), debug::DebugOffset::top(0.0, 8.0), 32.0, color);
+					debug::draw_text(tip, transform, debug::DebugOffset::top(0.0, 8.0), 32.0, color);
 				}
 			}
 		}
