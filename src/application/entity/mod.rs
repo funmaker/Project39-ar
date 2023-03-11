@@ -1,5 +1,5 @@
 use std::cell::{Ref, RefCell, RefMut, Cell};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::time::Duration;
 use std::any::Any;
 use std::fmt::{Display, Formatter};
@@ -35,7 +35,7 @@ pub struct Entity {
 	state: RefCell<EntityState>,
 	removed: Cell<bool>,
 	frozen: Cell<bool>,
-	components: BTreeMap<u64, Box<dyn Component>>,
+	components: HashMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
 }
 

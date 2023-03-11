@@ -121,7 +121,7 @@ impl MMDModel {
 		])).transpose()?;
 		
 		Ok(MMDModel {
-			inner: ComponentInner::from_render_type(RenderType::Opaque),
+			inner: ComponentInner::from_render_type(RenderType::Transparent),
 			state: RefCell::new(MMDModelState {
 				bones,
 				morphs,
@@ -392,27 +392,6 @@ impl Component for MMDModel {
 		context.builder.bind_vertex_buffers(0, self.shared.vertices.clone())
 		               .bind_any_index_buffer(self.shared.indices.clone());
 		
-		// Outline
-		for sub_mesh in self.shared.sub_meshes.iter() {
-			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
-				let edge_scale = (context.fov.0.x / 2.0).tan() * 2.0 * context.pixel_scale.x * sub_mesh.edge_scale;
-				
-				context.builder.bind_pipeline_graphics(pipeline.clone())
-				               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-				                                     pipeline.layout().clone(),
-				                                     0,
-				                                     (self.model_edge_set.clone().unwrap(), mesh_set))
-				               .push_constants(pipeline.layout().clone(),
-				                               0,
-				                               (model_matrix.clone(), sub_mesh.edge_color, edge_scale))
-				               .draw_indexed(sub_mesh.range.len() as u32,
-				                             1,
-				                             sub_mesh.range.start,
-				                             0,
-				                             0)?;
-			}
-		}
-		
 		// Opaque
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			let (pipeline, mesh_set) = sub_mesh.main.clone();
@@ -448,6 +427,27 @@ impl Component for MMDModel {
 				                             sub_mesh.range.start,
 				                             0,
 				                             0)?;
+			}
+		}
+		
+		// Outline
+		for sub_mesh in self.shared.sub_meshes.iter() {
+			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
+				let edge_scale = (context.fov.0.x / 2.0).tan() * 2.0 * context.pixel_scale.x * sub_mesh.edge_scale;
+				
+				context.builder.bind_pipeline_graphics(pipeline.clone())
+				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                             pipeline.layout().clone(),
+				                             0,
+				                             (self.model_edge_set.clone().unwrap(), mesh_set))
+				       .push_constants(pipeline.layout().clone(),
+				                       0,
+				                       (model_matrix.clone(), sub_mesh.edge_color, edge_scale))
+				       .draw_indexed(sub_mesh.range.len() as u32,
+				                     1,
+				                     sub_mesh.range.start,
+				                     0,
+				                     0)?;
 			}
 		}
 		

@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Deref, DerefMut};
 
 #[repr(transparent)]
@@ -25,6 +25,12 @@ impl<T> From<T> for NgPod<T> {
 }
 
 impl<T: Debug> Debug for NgPod<T> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		self.0.fmt(f)
+	}
+}
+
+impl <T: Display> Display for NgPod<T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		self.0.fmt(f)
 	}

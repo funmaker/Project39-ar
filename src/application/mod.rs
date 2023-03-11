@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use err_derive::Error;
@@ -30,8 +30,8 @@ use crate::component::miku::Miku;
 use crate::component::hand::HandComponent;
 use crate::component::physics::joint::JointComponent;
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
-use crate::component::model::mmd::asset::PmxAsset;
-use crate::component::model::ModelError;
+use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
+use crate::component::model::{MMDModel, ModelError};
 use crate::component::toolgun::ToolGun;
 use crate::component::glow::Glow;
 use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget, pipelines::PipelineError};
@@ -60,7 +60,7 @@ pub struct Application {
 	pub input: Input,
 	eyes: Option<Eyes>,
 	window: Option<Window>,
-	entities: BTreeMap<u64, Entity>,
+	entities: HashMap<u64, Entity>,
 	new_entities: RefCell<Vec<Entity>>,
 	bench: RefCell<Benchmark>,
 	gui: RefCell<ApplicationGui>,
@@ -108,7 +108,7 @@ impl Application {
 			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
 			window: Some(window),
-			entities: BTreeMap::new(),
+			entities: HashMap::new(),
 			new_entities: RefCell::new(Vec::new()),
 			gui: RefCell::new(ApplicationGui::new()),
 			gui_selection: RefCell::new(GuiSelection::default()),
@@ -174,38 +174,38 @@ impl Application {
 				);
 			}
 			
-			{
-				let head = application.add_entity(
-					Entity::builder("Dummy Head")
-						.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
-						.translation(point!(1.0, 1.7, 0.0))
-						.collider_from_aabb(1000.0)
-						.build()
-				);
-				
-				let left = application.add_entity(
-					Entity::builder("Dummy Hand Left")
-						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
-						.translation(point!(0.6, 1.0, 0.0))
-						.collider_from_aabb(1000.0)
-						.build()
-				);
-				
-				let right = application.add_entity(
-					Entity::builder("Dummy Hand Right")
-						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
-						.translation(point!(1.4, 1.0, 0.0))
-						.collider_from_aabb(1000.0)
-						.build()
-				);
-				
-				application.add_entity(
-					Entity::builder("Dummy")
-						.component(VrIk::new(head, left, right))
-						.translation(point!(1.0, 0.0, 0.0))
-						.build()
-				);
-			}
+			// {
+			// 	let head = application.add_entity(
+			// 		Entity::builder("Dummy Head")
+			// 			.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
+			// 			.translation(point!(1.0, 1.7, 0.0))
+			// 			.collider_from_aabb(1000.0)
+			// 			.build()
+			// 	);
+			//
+			// 	let left = application.add_entity(
+			// 		Entity::builder("Dummy Hand Left")
+			// 			.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
+			// 			.translation(point!(0.6, 1.0, 0.0))
+			// 			.collider_from_aabb(1000.0)
+			// 			.build()
+			// 	);
+			//
+			// 	let right = application.add_entity(
+			// 		Entity::builder("Dummy Hand Right")
+			// 			.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
+			// 			.translation(point!(1.4, 1.0, 0.0))
+			// 			.collider_from_aabb(1000.0)
+			// 			.build()
+			// 	);
+			//
+			// 	application.add_entity(
+			// 		Entity::builder("Dummy")
+			// 			.component(VrIk::new(head, left, right))
+			// 			.translation(point!(1.0, 0.0, 0.0))
+			// 			.build()
+			// 	);
+			// }
 			
 			// application.add_entity(
 			// 	Entity::builder("ToolGun")
@@ -227,12 +227,29 @@ impl Application {
 			);
 			
 			// application.add_entity(
-			// 	Entity::builder("Test")
-			// 		.translation(point!(-3.0, 3.0, -3.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, 0.0, 0.0))
-			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(0.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("cube/cube.obj", "cube/cube.png"))?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
 			// 		.build()
 			// );
+			
+			application.add_entity(
+				Entity::builder("Test")
+					.translation(point!(1.5, 0.5, -2.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI, 0.0))
+					.component(MMDModel::new(renderer.load(PmxAsset::at("test3/test3.pmx"))?, renderer)?)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Test")
+					.translation(point!(1.5, 2.5, -2.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI, 0.0))
+					.component(renderer.load(ObjAsset::at("test3/test3.obj", "test3/test3.png"))?)
+					.build()
+			);
 			
 			// let box1 = application.add_entity(
 			// 	Entity::builder("Box")
@@ -525,6 +542,7 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
+	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 }
 
 #[derive(Debug, Error)]

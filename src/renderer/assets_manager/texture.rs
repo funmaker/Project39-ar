@@ -81,7 +81,11 @@ impl AssetKey for TextureAsset {
 			                   .flat_map(|frame| {
 				                   let mut canvas = RgbaImage::new(width, height);
 				                   imageops::replace(&mut canvas, frame.buffer(), frame.left() as i64, frame.top() as i64);
-				                   DynamicImage::from(canvas).into_pre_mul_iter()
+				                   if self.srgb {
+					                   DynamicImage::from(canvas).into_pre_mul_iter()
+				                   } else {
+					                   DynamicImage::from(canvas).into_lin_pre_mul_iter()
+				                   }
 			                   })
 			                   .collect::<Vec<_>>();
 			

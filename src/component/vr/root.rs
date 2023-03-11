@@ -1,5 +1,5 @@
 use std::time::Duration;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::cell::RefCell;
 use egui::Ui;
 use rapier3d::dynamics::RigidBodyType;
@@ -26,7 +26,7 @@ use super::VrTracked;
 #[derive(ComponentBase)]
 pub struct VrRoot {
 	#[inner] inner: ComponentInner,
-	entities: RefCell<BTreeMap<TrackedDeviceIndex, EntityRef>>,
+	entities: RefCell<HashMap<TrackedDeviceIndex, EntityRef>>,
 	ik: ComponentRef<VrIk>,
 }
 
@@ -34,7 +34,7 @@ impl VrRoot {
 	pub fn new() -> Self {
 		VrRoot {
 			inner: ComponentInner::new_norender(),
-			entities: RefCell::new(BTreeMap::new()),
+			entities: RefCell::new(HashMap::new()),
 			ik: ComponentRef::null(),
 		}
 	}

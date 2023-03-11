@@ -60,7 +60,7 @@ void main() {
 	o_color.rgb += spec_light;
 	o_color.rgb *= texture(toon, vec2(0.5, 0.5 - lambert * 0.5)).rgb;
 	
-	if(o_color.a < 1 && !transparent_pass) {
+	if(o_color.a < 1.0 && !transparent_pass) {
 		discard;
 	}
 }
