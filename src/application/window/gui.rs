@@ -6,18 +6,17 @@ use egui::{Context, FullOutput, TextStyle};
 use egui_vulkano::{Painter, UpdateTexturesResult};
 use egui_winit::State as EguiWinit;
 use vulkano::{command_buffer, render_pass};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassContents};
 use vulkano::format::ClearValue;
 use vulkano::image::ImageAccess;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass, Subpass};
 use winit::event::WindowEvent;
+use winit::event_loop::EventLoop;
 
 use crate::renderer::{IMAGE_FORMAT, Renderer};
 use crate::utils::FramebufferBundle;
-
-const MAX_TEXTURE_SIZE: usize = 8192;
 
 pub struct WindowGui {
 	ctx: Context,
@@ -29,7 +28,7 @@ pub struct WindowGui {
 }
 
 impl WindowGui {
-	pub fn new(window: &WinitWindow, fb: &FramebufferBundle, renderer: &Renderer) -> Result<Self, WindowGuiError> {
+	pub fn new(fb: &FramebufferBundle, event_loop: &EventLoop<()>, renderer: &Renderer) -> Result<Self, WindowGuiError> {
 		let ctx = Context::default();
 		
 		{
@@ -57,6 +56,8 @@ impl WindowGui {
 		
 		let painter = egui_vulkano::Painter::new(
 			renderer.device.clone(),
+			renderer.memory_allocator.clone(),
+			renderer.descriptor_set_allocator.clone(),
 			renderer.queue.clone(),
 			Subpass::from(render_pass.clone(), 1).unwrap(),
 		)?;
@@ -68,7 +69,7 @@ impl WindowGui {
 			..FramebufferCreateInfo::default()
 		})?;
 		
-		let winit = egui_winit::State::new(MAX_TEXTURE_SIZE, window);
+		let winit = egui_winit::State::new(&**event_loop);
 		
 		Ok(WindowGui {
 			ctx,
@@ -81,7 +82,7 @@ impl WindowGui {
 	}
 	
 	pub fn on_event(&mut self, event: &WindowEvent) -> bool {
-		self.winit.on_event(&self.ctx, &event)
+		self.winit.on_event(&self.ctx, &event).consumed
 	}
 	
 	pub fn regen_framebuffer(&mut self, fb: &FramebufferBundle) -> Result<(), WindowGuiRegenFramebufferError> {
@@ -115,21 +116,27 @@ impl WindowGui {
 	pub fn paint(&mut self, window: &WinitWindow, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<bool, WindowGuiPaintError> {
 		let result = self.painter.update_textures(std::mem::take(&mut self.output.textures_delta), builder)?;
 		let wait_for_frame = result == UpdateTexturesResult::Changed;
-		let extend = self.framebuffer.extent();
 		
-		builder.begin_render_pass(self.framebuffer.clone(), SubpassContents::Inline, Some(ClearValue::None))?
-		       .set_viewport(0, Some(Viewport {
-			       origin: [0.0, 0.0],
-			       dimensions: [extend[0] as f32, extend[1] as f32],
-			       depth_range: 0.0..1.0,
-		       }));
+		let extend = self.framebuffer.extent();
+		let viewport = Viewport {
+			origin: [0.0, 0.0],
+			dimensions: [extend[0] as f32, extend[1] as f32],
+			depth_range: 0.0..1.0,
+		};
+		
+		builder.begin_render_pass(RenderPassBeginInfo {
+			                         clear_values: vec![None],
+			                         ..RenderPassBeginInfo::framebuffer(self.framebuffer.clone())
+		                         }, SubpassContents::Inline)?
+		       .set_viewport(0, Some(viewport.clone()));
 		
 		let size = window.inner_size();
 		let sf = window.scale_factor() as f32;
 		self.painter.draw(builder,
 		                  [(size.width as f32) / sf, (size.height as f32) / sf],
 		                  &self.ctx,
-		                  std::mem::take(&mut self.output.shapes))?;
+		                  std::mem::take(&mut self.output.shapes),
+		                  viewport)?;
 		
 		builder.end_render_pass()?;
 		
@@ -154,8 +161,7 @@ pub enum WindowGuiRegenFramebufferError {
 
 #[derive(Debug, Error)]
 pub enum WindowGuiPaintError {
-	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
-	#[error(display = "{}", _0)] AutoCommandBufferBuilderContextError(#[error(source)] command_buffer::AutoCommandBufferBuilderContextError),
+	#[error(display = "{}", _0)] RenderPassError(#[error(source)] command_buffer::RenderPassError),
 	#[error(display = "{}", _0)] UpdateTexturesError(#[error(source)] egui_vulkano::UpdateTexturesError),
 	#[error(display = "{}", _0)] DrawError(#[error(source)] egui_vulkano::DrawError),
 }

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use vulkano::buffer::{CpuBufferPool, ImmutableBuffer};
+use vulkano::buffer::{CpuBufferPool, DeviceLocalBuffer};
 use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::pipeline::{ComputePipeline, Pipeline};
 
@@ -9,7 +9,7 @@ mod joint;
 mod sub_mesh;
 
 use crate::component::model::{ModelError, VertexIndex};
-use crate::utils::{FenceCheck, ImmutableIndexBuffer, NgPod};
+use crate::utils::{FenceCheck, DeviceLocalIndexBuffer, NgPod};
 use crate::math::{IVec4, Mat4};
 use super::{MMDBone, Vertex};
 pub use builder::MMDModelSharedBuilder;
@@ -18,12 +18,12 @@ pub use rigid_body::ColliderDesc;
 pub use joint::JointDesc;
 
 pub struct MMDModelShared {
-	pub vertices: Arc<ImmutableBuffer<[Vertex]>>,
-	pub indices: ImmutableIndexBuffer,
+	pub vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
+	pub indices: DeviceLocalIndexBuffer,
 	pub sub_meshes: Vec<SubMesh>,
 	pub default_bones: Vec<MMDBone>,
 	pub bones_pool: CpuBufferPool<NgPod<Mat4>>,
-	pub morphs_offsets: Arc<ImmutableBuffer<[NgPod<IVec4>]>>,
+	pub morphs_offsets: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
 	pub morphs_sizes: Vec<usize>,
 	pub morphs_max_size: usize,
 	pub morphs_pool: CpuBufferPool<NgPod<IVec4>>,

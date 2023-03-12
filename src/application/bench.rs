@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::collections::hash_map::Entry;
+use std::iter::FromIterator;
 use std::time::Instant;
 use egui::Ui;
 
@@ -122,11 +123,11 @@ impl Benchmark {
 						Color32::GRAY
 					};
 					
-					plot_ui.line(Line::new(Values::from_values_iter(
+					plot_ui.line(Line::new(PlotPoints::from_iter(
 						self.samples[name].iter()
 						     .copied()
 						     .enumerate()
-						     .map(|(i, (abs, _))| Value::new(-(i as f64), abs))
+						     .map(|(i, (abs, _))| [-(i as f64), abs])
 					)).color(color));
 				}
 				
@@ -137,11 +138,11 @@ impl Benchmark {
 					                      .find(|&(_, n)| n == name)
 					                      .map_or(Color32::WHITE, |(i, _)| COLORS[i % COLORS.len()]);
 					
-					plot_ui.line(Line::new(Values::from_values_iter(
+					plot_ui.line(Line::new(PlotPoints::from_iter(
 						self.samples[name].iter()
 						                  .copied()
 						                  .enumerate()
-						                  .map(|(i, (abs, _))| Value::new(-(i as f64), abs))
+						                  .map(|(i, (abs, _))| [-(i as f64), abs])
 					)).color(color)
 					  .highlight(true));
 					

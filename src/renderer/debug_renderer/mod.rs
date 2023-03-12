@@ -2,11 +2,12 @@ use std::sync::Arc;
 use std::cell::{RefCell, RefMut};
 use err_derive::Error;
 use vulkano::{command_buffer, memory};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, allocator::StandardCommandBufferAllocator};
 use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::{PersistentDescriptorSet, allocator::StandardDescriptorSetAllocator};
+use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
 use nalgebra::Unit;
 
 mod text_cache;
@@ -16,7 +17,7 @@ use crate::utils::AutoCommandBufferBuilderEx;
 use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
-use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, Vertex, TexturedVertex};
+use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, ShapePc, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
 use super::Renderer;
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
@@ -48,17 +49,16 @@ const RING_MIN: f32 = 5.0;
 const RING_WIDTH: f32 = 0.9;
 
 impl DebugRenderer {
-	pub fn new(load_queue: &Arc<Queue>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
-		let device = load_queue.device();
+	pub fn new(queue: &Arc<Queue>, memory_allocator: &Arc<StandardMemoryAllocator>, command_buffer_allocator: &Arc<StandardCommandBufferAllocator>, descriptor_set_allocator: &Arc<StandardDescriptorSetAllocator>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
 		let pipeline = pipelines.get::<DebugPipeline>()?;
 		let text_pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		let shape_pipeline = pipelines.get::<DebugShapePipeline>()?;
 		
-		let vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
-		let text_vertices_pool = CpuBufferPool::new(device.clone(), BufferUsage::vertex_buffer());
-		let indexes_pool = CpuBufferPool::new(device.clone(), BufferUsage::index_buffer());
+		let vertices_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { vertex_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
+		let text_vertices_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { vertex_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
+		let indexes_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { index_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
 		
-		let text_cache = RefCell::new(TextCache::new(load_queue, pipelines)?);
+		let text_cache = RefCell::new(TextCache::new(queue, memory_allocator, command_buffer_allocator, descriptor_set_allocator, pipelines)?);
 		
 		Ok(DebugRenderer {
 			pipeline,
@@ -128,8 +128,8 @@ impl DebugRenderer {
 		});
 		
 		if !self.vertices.is_empty() {
-			let vertex_buffer = self.vertices_pool.chunk(self.vertices.drain(..))?;
-			let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
+			let vertex_buffer = self.vertices_pool.from_iter(self.vertices.drain(..))?;
+			let index_buffer = self.indexes_pool.from_iter(self.indexes.drain(..))?;
 			let index_count = index_buffer.len();
 			
 			context.builder.bind_pipeline_graphics(self.pipeline.clone())
@@ -153,8 +153,8 @@ impl DebugRenderer {
 				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
 				} else if let Some(set) = self.draw_text(text, &viewproj, &context.pixel_scale)? {
-					let vertex_buffer = self.text_vertices_pool.chunk(self.text_vertices.drain(..))?;
-					let index_buffer = self.indexes_pool.chunk(self.indexes.drain(..))?;
+					let vertex_buffer = self.text_vertices_pool.from_iter(self.text_vertices.drain(..))?;
+					let index_buffer = self.indexes_pool.from_iter(self.indexes.drain(..))?;
 					let index_count = index_buffer.len();
 					
 					context.builder.bind_index_buffer(index_buffer)
@@ -391,7 +391,11 @@ impl DebugRenderer {
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
 			                       0,
-			                       (transform, dbox.color, dbox.edge))
+			                       ShapePc {
+				                       model: transform.into(),
+				                       color: dbox.color.into(),
+				                       edge: dbox.edge.into(),
+			                       })
 			       .draw_indexed(models.dbox.indices.len() as u32,
 			                     1,
 			                     0,
@@ -425,7 +429,11 @@ impl DebugRenderer {
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
 			                       0,
-			                       (transform, sphere.color, sphere.edge))
+			                       ShapePc {
+				                       model: transform.into(),
+				                       color: sphere.color.into(),
+				                       edge: sphere.edge.into(),
+			                       })
 			       .draw_indexed(models.sphere.indices.len() as u32,
 			                     1,
 			                     0,
@@ -462,7 +470,11 @@ impl DebugRenderer {
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
 			                       0,
-			                       (transform_a, capsule.color, capsule.edge))
+			                       ShapePc {
+				                       model: transform_a.into(),
+				                       color: capsule.color.into(),
+				                       edge: capsule.edge.into(),
+			                       })
 			       .draw_indexed(models.ccap.indices.len() as u32,
 			                     1,
 			                     0,
@@ -470,7 +482,11 @@ impl DebugRenderer {
 			                     0)?
 			       .push_constants(self.shape_pipeline.layout().clone(),
 			                       0,
-			                       (transform_b, capsule.color, capsule.edge))
+			                       ShapePc {
+				                       model: transform_b.into(),
+				                       color: capsule.color.into(),
+				                       edge: capsule.edge.into(),
+			                       })
 			       .draw_indexed(models.ccap.indices.len() as u32,
 			                     1,
 			                     0,
@@ -496,7 +512,11 @@ impl DebugRenderer {
 			
 			builder.push_constants(self.shape_pipeline.layout().clone(),
 			                       0,
-			                       (transform, capsule.color, capsule.edge))
+			                       ShapePc {
+				                       model: transform.into(),
+				                       color: capsule.color.into(),
+				                       edge: capsule.edge.into(),
+			                       })
 			       .draw_indexed(models.cbody.indices.len() as u32,
 			                     1,
 			                     0,
@@ -518,8 +538,8 @@ pub enum DebugRendererError {
 #[derive(Debug, Error)]
 pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
-	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::DrawIndexedError),
+	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
+	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::PipelineExecutionError),
 }
 
 #[derive(Debug, Error)]

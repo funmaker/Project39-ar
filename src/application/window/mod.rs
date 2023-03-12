@@ -6,15 +6,15 @@ use err_derive::Error;
 use simba::scalar::SubsetOf;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{WindowBuilder, Fullscreen};
+use winit::window::{WindowBuilder, Fullscreen, CursorGrabMode};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window as WinitWindow;
 use vulkano_win::VkSurfaceBuild;
 use vulkano::{command_buffer, swapchain, sync};
-use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError};
-use vulkano::image::{AttachmentImage, SwapchainImage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage};
+use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError, SwapchainPresentInfo};
+use vulkano::image::{AttachmentImage, ImageSubresourceLayers, SwapchainImage};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageInfo, CommandBufferUsage, ImageBlit, ImageCopy};
 use vulkano::format::ClearValue;
 use vulkano::sampler::Filter;
 use vulkano::sync::GpuFuture;
@@ -35,13 +35,13 @@ const FOV: f32 = 110.0;
 
 pub struct Window {
 	event_loop: Option<EventLoop<()>>,
-	surface: Arc<Surface<WinitWindow>>,
+	surface: Arc<Surface>,
 	last_present: Instant,
-	swapchain: Arc<Swapchain<WinitWindow>>,
-	swapchain_images: Vec<Arc<SwapchainImage<WinitWindow>>>,
+	swapchain: Arc<Swapchain>,
+	swapchain_images: Vec<Arc<SwapchainImage>>,
 	swapchain_regen_needed: bool,
-	acquire_image_num: Option<usize>,
-	acquire_future: Option<SwapchainAcquireFuture<WinitWindow>>,
+	acquire_image_num: Option<u32>,
+	acquire_future: Option<SwapchainAcquireFuture>,
 	fb: FramebufferBundle,
 	render_required: bool,
 	cursor_trap: bool,
@@ -71,7 +71,10 @@ impl Window {
 			vector!(ps.width as f32, ps.height as f32)
 		}
 		
-		let window = surface.window();
+		let window = surface.object()
+		                    .ok_or(WindowCreationError::NoWindow)?
+		                    .downcast_ref::<WinitWindow>()
+		                    .ok_or(WindowCreationError::NoWinitWindow)?;
 		let outer_size = into_vec(window.outer_size());
 		let monitor_size = window.current_monitor()
 		                         .map(|mon| into_vec(mon.size()))
@@ -87,7 +90,7 @@ impl Window {
 		let swapchain_extent = swapchain.image_extent();
 		let fb = renderer.create_framebuffer((swapchain_extent[0], swapchain_extent[1]))?;
 		
-		let gui = WindowGui::new(window, &fb, renderer)?;
+		let gui = WindowGui::new(&fb, &event_loop, renderer)?;
 		
 		Ok(Window {
 			event_loop: Some(event_loop),
@@ -105,12 +108,20 @@ impl Window {
 		})
 	}
 	
+	fn window(&self) -> Arc<WinitWindow> {
+		self.surface.object()
+		            .expect("Surface doesn't have any window!")
+		            .clone()
+		            .downcast()
+		            .expect("Surface doesn't have a winit window!")
+	}
+	
 	pub fn regen_swapchain(&mut self, renderer: &Renderer) -> Result<(), WindowSwapchainRegenError> {
 		if !self.swapchain_regen_needed {
 			return Ok(())
 		}
 		
-		let window_size = self.surface.window().inner_size();
+		let window_size = self.window().inner_size();
 		let framebuffer_size = (window_size.width, window_size.height);
 		
 		if window_size.width == 0 || window_size.height == 0 {
@@ -141,7 +152,7 @@ impl Window {
 		Ok(())
 	}
 	
-	pub fn acquire_swapchain_image(&mut self) -> Result<Option<(usize, SwapchainAcquireFuture<WinitWindow>)>, swapchain::AcquireError> {
+	pub fn acquire_swapchain_image(&mut self) -> Result<Option<(u32, SwapchainAcquireFuture)>, swapchain::AcquireError> {
 		let timeout = if !self.render_required {
 			let max_fps = config::get().window_max_fps;
 			
@@ -185,39 +196,46 @@ impl Window {
 		
 		let out_dims = self.swapchain.image_extent();
 		let image_dims = image.dimensions();
-		let layers = image_dims.array_layers() as i32;
+		let layers = image_dims.array_layers();
 		
-		let mut builder = AutoCommandBufferBuilder::primary(renderer.device.clone(), renderer.queue.family().clone(), CommandBufferUsage::OneTimeSubmit)?;
+		let mut builder = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                    renderer.queue.queue_family_index(),
+		                                                    CommandBufferUsage::OneTimeSubmit)?;
+		
+		let mut copy_info = BlitImageInfo::images(image.clone(), self.fb.main_image.clone());
+		copy_info.filter = Filter::Linear;
+		copy_info.regions.clear();
 		
 		for layer in 0..layers {
-			builder.blit_image(image.clone(),
-			                   [0, 0, 0],
-			                   [image_dims.width() as i32, image_dims.height() as i32, 1],
-			                   layer as u32,
-			                   0,
-			                   self.fb.main_image.clone(),
-			                   [out_dims[0] as i32 / layers * layer, 0, 0],
-			                   [out_dims[0] as i32 / layers * (layer + 1), out_dims[1] as i32, 1],
-			                   0,
-			                   0,
-			                   1,
-			                   Filter::Linear)?;
+			copy_info.regions.push(ImageBlit {
+				src_subresource: ImageSubresourceLayers {
+					array_layers: layer..(layer + 1),
+					..self.fb.main_image.subresource_layers()
+				},
+				dst_subresource: ImageSubresourceLayers {
+					array_layers: 0..1,
+					..self.fb.main_image.subresource_layers()
+				},
+				src_offsets: [
+					[0, 0, 0],
+					image_dims.width_height_depth()
+				],
+				dst_offsets: [
+					[out_dims[0] / layers * layer, 0, 0],
+					[out_dims[0] / layers * (layer + 1), out_dims[1], 1]
+				],
+				..ImageBlit::default()
+			});
 		}
 		
-		let wait_for_frame = self.gui.paint(self.surface.window(), &mut builder)?;
+		builder.blit_image(copy_info)?;
 		
-		builder.blit_image(self.fb.main_image.clone(),
-		                   [0, 0, 0],
-		                   [out_dims[0] as i32, out_dims[1] as i32, 1],
-		                   0,
-		                   0,
-		                   self.swapchain_images[image_num].clone(),
-		                   [0, 0, 0],
-		                   [out_dims[0] as i32, out_dims[1] as i32, 1],
-		                   0,
-		                   0,
-		                   1,
-		                   Filter::Nearest)?;
+		let wait_for_frame = self.gui.paint(&self.window(), &mut builder)?;
+		
+		builder.blit_image(BlitImageInfo {
+			filter: Filter::Nearest,
+			..BlitImageInfo::images(self.fb.main_image.clone(), self.swapchain_images[image_num as usize].clone())
+		})?;
 		
 		let command_buffer = builder.build()?;
 		
@@ -237,7 +255,7 @@ impl Window {
 			Ok(
 				future.join(acquire_future)
 				      .then_execute(queue.clone(), command_buffer)?
-				      .then_swapchain_present(queue.clone(), self.swapchain.clone(), image_num)
+				      .then_swapchain_present(queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), image_num))
 				      .boxed()
 			)
 		})?;
@@ -246,10 +264,10 @@ impl Window {
 	}
 	
 	pub fn grab_cursor(&mut self, grab: bool) -> Result<(), ExternalError> {
-		let window = self.surface.window();
 		self.cursor_trap = grab;
+		let window = self.window();
 		window.set_cursor_visible(!grab);
-		window.set_cursor_grab(grab)
+		window.set_cursor_grab(if grab { CursorGrabMode::Confined } else { CursorGrabMode::None })
 	}
 	
 	pub fn pull_events(&mut self, input: &mut Input) {
@@ -267,13 +285,13 @@ impl Window {
 	}
 	
 	pub fn start_gui_frame(&mut self) -> egui::Context {
-		self.gui.start_frame(self.surface.window());
+		self.gui.start_frame(&self.window());
 		
 		self.gui.ctx().clone()
 	}
 	
 	pub fn end_gui_frame(&mut self) {
-		self.gui.end_frame(self.surface.window());
+		self.gui.end_frame(&self.window());
 	}
 	
 	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<(), Box<dyn Error>> {
@@ -312,7 +330,7 @@ impl Window {
 							self.grab_cursor(false)?;
 						},
 						VirtualKeyCode::F => {
-							let window = self.surface.window();
+							let window = self.window();
 							
 							if window.fullscreen().is_none() {
 								window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
@@ -337,7 +355,7 @@ impl Window {
 			} if !self.cursor_trap => {
 				self.grab_cursor(true)?;
 				
-				let window = self.surface.window();
+				let window = self.window();
 				let size = window.inner_size();
 				let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
 				window.set_cursor_position(center)?;
@@ -358,7 +376,7 @@ impl Window {
 					value,
 				}, ..
 			} if self.cursor_trap => {
-				let window = self.surface.window();
+				let window = self.window();
 				let size = window.inner_size();
 				let center = PhysicalPosition::new(size.width / 2, size.height / 2);
 				
@@ -417,7 +435,7 @@ impl RenderTarget for Window {
 		                                 (vector!(fovx, fovy), vector!(fovx, fovy)))))
 	}
 
-	fn clear_values(&self) -> &[ClearValue] {
+	fn clear_values(&self) -> &[Option<ClearValue>] {
 		&self.fb.clear_values
 	}
 
@@ -426,12 +444,10 @@ impl RenderTarget for Window {
 	}
 	
 	fn after_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), Self::RenderError> {
-		let framebuffer_size = self.fb.size();
-		let swapchain_size = self.swapchain.image_extent();
 		let image_num = self.acquire_image_num.unwrap();
 		let acquire_future = self.acquire_future.take().unwrap();
 		
-		let wait_for_frame = self.gui.paint(self.surface.window(), &mut context.builder)?;
+		let wait_for_frame = self.gui.paint(&self.window(), &mut context.builder)?;
 		if wait_for_frame {
 			renderer.try_enqueue::<sync::FlushError, _>(renderer.queue.clone(), |future| {
 				let future = future.then_signal_fence_and_flush()?;
@@ -442,18 +458,7 @@ impl RenderTarget for Window {
 		
 		renderer.enqueue(renderer.queue.clone(), |future| future.join(acquire_future).boxed());
 		
-		context.builder.blit_image(self.last_frame().clone(),
-		                           [0, 0, 0],
-		                           [framebuffer_size.0 as i32, framebuffer_size.1 as i32, 1],
-		                           0,
-		                           0,
-		                           self.swapchain_images[image_num].clone(),
-		                           [0, 0, 0],
-		                           [swapchain_size[0] as i32, swapchain_size[1] as i32, 1],
-		                           0,
-		                           0,
-		                           1,
-		                           Filter::Linear)?;
+		context.builder.blit_image(BlitImageInfo::images(self.last_frame().clone(), self.swapchain_images[image_num as usize].clone()))?;
 		
 		Ok(())
 	}
@@ -462,7 +467,7 @@ impl RenderTarget for Window {
 		let image_num = self.acquire_image_num.take().unwrap();
 		
 		let queue = renderer.queue.clone();
-		renderer.enqueue(queue.clone(), |future| future.then_swapchain_present(queue, self.swapchain.clone(), image_num).boxed());
+		renderer.enqueue(queue.clone(), |future| future.then_swapchain_present(queue, SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), image_num)).boxed());
 		
 		Ok(())
 	}
@@ -470,6 +475,8 @@ impl RenderTarget for Window {
 
 #[derive(Debug, Error)]
 pub enum WindowCreationError {
+	#[error(display = "Surface doesn't have any window!")] NoWindow,
+	#[error(display = "Surface doesn't have a winit window!")] NoWinitWindow,
 	#[error(display = "{}", _0)] WindowGuiError(#[error(source)] WindowGuiError),
 	#[error(display = "{}", _0)] RendererSwapchainError(#[error(source)] RendererSwapchainError),
 	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
@@ -488,9 +495,10 @@ pub enum WindowSwapchainRegenError {
 pub enum WindowMirrorFromError {
 	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
-	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
+	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }
@@ -501,5 +509,5 @@ pub enum WindowRenderTargetError {
 	#[error(display = "{}", _0)] WindowMirrorFromError(#[error(source)] WindowMirrorFromError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] BlitImageError(#[error(source)] command_buffer::BlitImageError),
+	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 }

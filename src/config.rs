@@ -3,9 +3,9 @@ use std::sync::Arc;
 use std::str::FromStr;
 use std::fmt::{Display, Formatter};
 use std::env;
-use serde_derive::{Deserialize, Serialize};
 use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
+use serde::{Deserialize, Serialize};
 
 use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
 use crate::math::{IVec2, Vec2, Vec4, Vec3};
@@ -154,7 +154,9 @@ args_terminals! { CameraAPI }
 
 impl FromStr for CameraAPI {
 	type Err = toml::de::Error;
-	fn from_str(s: &str) -> Result<Self, Self::Err> { toml::from_str(&format!("\"{}\"", s)) }
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		CameraAPI::deserialize(toml::de::ValueDeserializer::new(&format!("\"{}\"", s)))
+	}
 }
 
 impl Display for CameraAPI {

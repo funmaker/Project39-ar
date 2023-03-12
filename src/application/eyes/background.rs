@@ -3,11 +3,11 @@ use err_derive::Error;
 use bytemuck::{Zeroable, Pod};
 use vulkano::{sync, command_buffer, sampler, memory, descriptor_set};
 use vulkano::device::Queue;
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
+use vulkano::buffer::{DeviceLocalBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use vulkano::sync::GpuFuture;
 
@@ -18,7 +18,7 @@ use crate::application::eyes::camera::CameraStartError;
 use crate::application::eyes::camera::Camera;
 use crate::renderer::Renderer;
 use crate::renderer::pipelines::PipelineError;
-use super::pipeline::{BackgroundPipeline, Vertex};
+use super::pipeline::{BackgroundPipeline, Vertex, Pc};
 
 #[allow(dead_code)]
 #[repr(C)]
@@ -34,7 +34,7 @@ struct Intrinsics {
 pub struct Background {
 	queue: Arc<Queue>,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<ImmutableBuffer<[Vertex]>>,
+	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
@@ -49,7 +49,7 @@ impl Background {
 		let pipeline = renderer.pipelines.get::<BackgroundPipeline>()?;
 		let queue = renderer.load_queue.clone();
 		
-		let (camera_image, camera_rx) = camera.start(queue.clone())?;
+		let (camera_image, camera_rx) = camera.start(renderer.load_queue.clone(), renderer.memory_allocator.clone(), renderer.command_buffer_allocator.clone())?;
 		
 		let square = [
 			Vertex::new([-1.0, -1.0]),
@@ -60,9 +60,14 @@ impl Background {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(square.iter().cloned(),
-		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
-		                                                              queue.clone())?;
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
+		
+		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+		                                            square.iter().cloned(),
+		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
+		                                            &mut upload_buffer)?;
 		
 		let intrinsics = Intrinsics {
 			rawproj: [
@@ -87,8 +92,8 @@ impl Background {
 			],
 		};
 		
-		let intrinsics = CpuAccessibleBuffer::from_data(queue.device().clone(),
-		                                                BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
+		let intrinsics = CpuAccessibleBuffer::from_data(&renderer.memory_allocator,
+		                                                BufferUsage{ uniform_buffer: true, ..BufferUsage::empty() },
 		                                                true,
 		                                                intrinsics)?;
 		
@@ -101,7 +106,9 @@ impl Background {
 			..SamplerCreateInfo::default()
 		})?;
 		
-		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone(), [
+		let set = PersistentDescriptorSet::new(
+			&renderer.descriptor_set_allocator,
+			pipeline.layout().set_layouts().get(0).ok_or(BackgroundError::NoLayout)?.clone(), [
 			WriteDescriptorSet::buffer(0, intrinsics.clone()),
 			WriteDescriptorSet::image_view_sampler(1, view, sampler),
 		])?;
@@ -125,7 +132,10 @@ impl Background {
 		  .try_inverse()
 		  .expect("Unable to inverse right camera extrinsics");
 		
-		let fence = FenceCheck::new(vertices_promise)?;
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
+		
+		let fence = FenceCheck::new(upload_future)?;
 		
 		Ok(Background {
 			queue,
@@ -222,10 +232,12 @@ impl Background {
 		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::z() / 20.0, 4.0, Color::blue());
 		// }
 		
-		let constants = (
-			(rotation * self.extrinsics.0).to_homogeneous(),
-			(rotation * self.extrinsics.1).to_homogeneous(),
-		);
+		let constants = Pc {
+			shift: [
+				(rotation * self.extrinsics.0).to_homogeneous().into(),
+				(rotation * self.extrinsics.1).to_homogeneous().into()
+			],
+		};
 		
 		builder.bind_pipeline_graphics(self.pipeline.clone())
 		       .bind_vertex_buffers(0, self.vertices.clone())
@@ -252,19 +264,22 @@ pub enum BackgroundError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
+	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum BackgroundRenderError {
-	#[error(display = "{}", _0)] DrawError(#[error(source)] command_buffer::DrawError),
+	#[error(display = "{}", _0)] PipelineExecutionError(#[error(source)] command_buffer::PipelineExecutionError),
 }
 
 #[derive(Debug, Error)]
 pub enum BackgroundLoadError {
-	#[error(display = "{}", _0)] DrawError(#[error(source)] command_buffer::CommandBufferExecError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }

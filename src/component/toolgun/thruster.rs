@@ -1,5 +1,6 @@
 use rapier3d::dynamics::{FixedJoint, RigidBodyType};
-use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
+use rapier3d::geometry::{ColliderBuilder, ColliderShape};
+use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Application, Hand, Key};
 use crate::application::entity::EntityBuilder;
@@ -69,7 +70,7 @@ impl Tool for ThrusterTool {
 		let result = {
 			let physics = &*application.physics.borrow();
 			
-			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None) {
+			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new()) {
 				physics.collider_set.get(c)
 				       .map(|c| (c.entity(application), toi))
 			} else {

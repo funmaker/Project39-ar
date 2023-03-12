@@ -235,22 +235,6 @@ impl Application {
 			// 		.build()
 			// );
 			
-			application.add_entity(
-				Entity::builder("Test")
-					.translation(point!(1.5, 0.5, -2.0))
-					.rotation(Rot3::from_euler_angles(0.0, PI, 0.0))
-					.component(MMDModel::new(renderer.load(PmxAsset::at("test3/test3.pmx"))?, renderer)?)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Test")
-					.translation(point!(1.5, 2.5, -2.0))
-					.rotation(Rot3::from_euler_angles(0.0, PI, 0.0))
-					.component(renderer.load(ObjAsset::at("test3/test3.obj", "test3/test3.png"))?)
-					.build()
-			);
-			
 			// let box1 = application.add_entity(
 			// 	Entity::builder("Box")
 			// 		.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))

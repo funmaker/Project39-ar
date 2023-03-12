@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 use bytemuck::Pod;
 use err_derive::Error;
-use vulkano::{descriptor_set, DeviceSize, memory, sampler, sync};
+use vulkano::{command_buffer, descriptor_set, DeviceSize, memory, sampler, sync};
 use vulkano::pipeline::graphics::input_assembly::Index;
 
 pub mod simple;
@@ -28,10 +28,13 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
+	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
 }

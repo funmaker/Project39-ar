@@ -2,10 +2,11 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use err_derive::Error;
-use rapier3d::geometry::InteractionGroups;
+use rapier3d::pipeline::QueryFilter;
 use simba::scalar::SubsetOf;
-use vulkano::{descriptor_set, memory, sync};
-use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
+use vulkano::{descriptor_set, memory, sync, command_buffer};
+use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 
@@ -30,7 +31,7 @@ use crate::component::hand::HandComponent;
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
-use pipeline::{ToolGunTextPipeline, Vertex};
+use pipeline::{ToolGunTextPipeline, Vertex, Pc};
 
 const MENU_SPACING: f32 = 0.1;
 const MENU_DISTANCE: f32 = 0.1;
@@ -60,7 +61,7 @@ pub struct ToolGun {
 	parent: ComponentRef<Parent>,
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<ImmutableBuffer<[Vertex]>>,
+	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
@@ -78,15 +79,24 @@ impl ToolGun {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(square.iter().cloned(),
-		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
-		                                                              renderer.queue.clone())?;
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone(), [
-			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-		])?;
+		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+		                                            square.iter().cloned(),
+		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
+		                                            &mut upload_buffer)?;
 		
-		let fence = FenceCheck::new(vertices_promise)?;
+		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+		                                       pipeline.layout().set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone(), [
+			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+		                                       ])?;
+		
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
+		
+		let fence = FenceCheck::new(upload_future)?;
 		
 		let prop_manager = PropCollection::new(renderer)?;
 		
@@ -126,7 +136,7 @@ impl ToolGun {
 		
 		let result = {
 			let physics = &*application.physics.borrow();
-			physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+			physics.query_pipeline.cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
 		};
 		
 		if let Some((_, toi)) = result {
@@ -156,7 +166,7 @@ impl Component for ToolGun {
 		
 		let result = {
 			let physics = &*application.physics.borrow();
-			physics.query_pipeline.cast_ray(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+			physics.query_pipeline.cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
 		};
 		
 		if let Some((_, intersection)) = result {
@@ -256,7 +266,10 @@ impl Component for ToolGun {
 		                                     (self.set.clone(), text_entry.set))
 		               .push_constants(self.pipeline.layout().clone(),
 		                               0,
-		                               (model_matrix.to_homogeneous(), uv_transform))
+		                               Pc {
+			                               model: model_matrix.to_homogeneous().into(),
+			                               uv_transform: uv_transform.into(),
+		                               })
 		               .draw(self.vertices.len() as u32,
 		                     1,
 		                     0,
@@ -289,6 +302,9 @@ pub enum ToolGunError {
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] PropManagerError(#[error(source)] PropManagerError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
+	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }

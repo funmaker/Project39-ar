@@ -11,7 +11,7 @@ use mmd::WeightDeform;
 use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
-use rapier3d::geometry::{ColliderBuilder, ColliderShape, InteractionGroups};
+use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups};
 
 use crate::renderer::Renderer;
 use crate::{config, debug};
@@ -290,7 +290,7 @@ impl AssetKey for PmxAsset {
 			};
 			
 			let collider = collider.position(position)
-			                       .collision_groups(InteractionGroups::new(1 << rigid_body.group_id, 0xFFFF0000 | rigid_body.non_collision_mask as u32))
+			                       .collision_groups(InteractionGroups::new(Group::from(1 << rigid_body.group_id), Group::from(0xFFFF0000 | rigid_body.non_collision_mask as u32)))
 			                       .density(rigid_body.mass / volume)
 			                       .build();
 			

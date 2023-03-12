@@ -46,7 +46,7 @@ pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
 ng_pod_impl!(AMat3, AMat4, PMat3, PMat4, Mat2, Mat3, Mat4, Mat3x4);
 
 pub type Ray = rapier3d::geometry::Ray;
-pub type AABB = rapier3d::geometry::AABB;
+pub type AABB = rapier3d::geometry::Aabb;
 
 pub trait VRSlice {
 	fn from_slice34(from: &[[f32; 4]; 3]) -> Self;
@@ -264,6 +264,12 @@ impl Deref for Color {
 impl DerefMut for Color {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		&mut self.0
+	}
+}
+
+impl Into<[f32; 4]> for Color {
+	fn into(self) -> [f32; 4] {
+		self.0.into()
 	}
 }
 

@@ -8,49 +8,50 @@ edition = "2018"
 opencv-camera = ["opencv"]
 
 [dependencies]
-#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
-#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
-#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "13b7188b711d7bec67bfb0267979f76b82030d5a" }
+vulkano = { git = "https://github.com/funmaker/vulkano", rev = "06c089ccbf255dff4e5c52f916efe464ba68a5c2" }
+vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "06c089ccbf255dff4e5c52f916efe464ba68a5c2" }
+vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "06c089ccbf255dff4e5c52f916efe464ba68a5c2" }
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
 #vulkano-win = { path = "../vulkano/vulkano-win" }
-vulkano = "0.29.0"
-vulkano-shaders = "0.29.0"
-vulkano-win = "0.29.0"
-image = "0.24.2"
+#vulkano = "0.32.3"
+#vulkano-shaders = "0.32.0"
+#vulkano-win = "0.32.0"
+ash = "0.37.0"
+image = "0.24.5"
 openvr = "0.6.0"
 openvr_sys = "2.0.3"
 err-derive = "0.3.1"
 getopts = "0.2.21"
-arc-swap = "1.5.0"
+arc-swap = "1.6.0"
 obj-rs = "0.7.0"
-opencv = { version = "0.65.0", optional = true }
+opencv = { version = "0.78.0", optional = true }
 num-traits = "0.2.15"
 lazy_static = "1.4.0"
-winit = "0.26.1"
+winit = "0.27.5"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "cebbbe812593909a0989eb1d86ee609b15c2b51f" }
-#pipeline = { path = "../pipeline-rs" }
 native-dialog = "0.6.3"
 unifont = "0.1.0"
-nalgebra = { version = "0.31.0", features = ["serde-serialize"] }
-simba = "0.7.1"
+nalgebra = { version = "0.32.2", features = ["serde-serialize"] }
+simba = "0.8.0"
 imghdr = "0.7.0"
-toml = { version = "0.5.9", features = ['preserve_order'] }
-serde = "1.0.138"
-serde_derive = "1.0.138"
+toml = { version = "0.7.2", features = ['preserve_order'] }
+serde = "1.0.154"
+serde_derive = "1.0.154"
 project39-ar-derive = { path = "derive" }
 #rapier3d = { git = "https://github.com/funmaker/rapier", rev = "8c5f88738dd9be9ca3458d610c34d39a85956d23" }
 #rapier3d = { path = "../rapier/crates/rapier3d" }
-rapier3d = "0.13.0"
+rapier3d = "0.17.2"
 linked-hash-map = { version = "0.5.6", features = ['serde_impl'] }
 rand = "0.8.5"
-bytemuck = "1.10.0"
+bytemuck = "1.13.1"
 enumflags2 = "0.7.5"
-egui = "0.18.1"
+egui = "0.20.1"
 #egui_vulkano = "0.8.0"
 #egui_vulkano = { path = "../egui_vulkano" }
-egui_vulkano = { git = "https://github.com/funmaker/egui_vulkano", rev = "8572b91bf2f8be49896347f0b845d92feace1983" }
-egui-winit = "0.18.0"
+egui_vulkano = { git = "https://github.com/funmaker/egui_vulkano", rev = "d73764c1403181f31eadbc81cd8e76c978858cad" }
+egui-winit = "0.20.1"
+parking_lot = "0.12.1"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"

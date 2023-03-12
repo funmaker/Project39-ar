@@ -1,198 +1,155 @@
+use std::ops::Range;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc, CommandPoolBuilderAlloc};
-use vulkano::command_buffer::sys::{CommandBufferBeginInfo, UnsafeCommandBuffer, UnsafeCommandBufferBuilder, UnsafeCommandBufferBuilderPipelineBarrier};
-use vulkano::command_buffer::{CommandBufferLevel, CommandBufferUsage, PrimaryCommandBuffer, CommandBufferExecError};
+use parking_lot::{Mutex, MutexGuard};
+use vulkano::command_buffer::allocator::{CommandBufferAlloc, CommandBufferAllocator, StandardCommandBufferAlloc, StandardCommandBufferAllocator};
+use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc};
+use vulkano::command_buffer::sys::{CommandBufferBeginInfo, UnsafeCommandBuffer, UnsafeCommandBufferBuilder};
+use vulkano::command_buffer::{CommandBufferLevel, CommandBufferUsage, CommandBufferExecError, PrimaryCommandBufferAbstract, CommandBufferExecFuture, CommandBufferState, CommandBufferResourcesUsage};
 use vulkano::device::{Device, DeviceOwned, Queue};
-use vulkano::device::physical::QueueFamily;
 use vulkano::image::{AttachmentImage, ImageAccess, ImageLayout};
-use vulkano::sync::{PipelineStages, AccessFlags, AccessCheckError, GpuFuture, AccessError};
+use vulkano::sync::{PipelineStages, AccessFlags, AccessCheckError, GpuFuture, AccessError, NowFuture, DependencyInfo, ImageMemoryBarrier};
 use vulkano::command_buffer::synced::{SyncCommandBuffer, SyncCommandBufferBuilder};
+use vulkano::command_buffer::allocator::CommandBufferBuilderAlloc;
 use vulkano::buffer::BufferAccess;
-use vulkano::command_buffer::pool::standard::StandardCommandPoolAlloc;
-use vulkano::OomError;
+use vulkano::buffer::sys::Buffer;
+use vulkano::image::sys::Image;
+use vulkano::{OomError, SafeDeref, VulkanObject};
+use vulkano::DeviceSize;
 
 
-pub struct OpenVRCommandBuffer<P = StandardCommandPoolAlloc> {
+pub struct OpenVRCommandBuffer<A = StandardCommandBufferAlloc> {
 	inner: SyncCommandBuffer,
-	#[allow(dead_code)] pool_alloc: P, // Safety: must be dropped after `inner`
-	in_use: AtomicBool,
+	#[allow(dead_code)] _alloc: A, // Safety: must be dropped after `inner`
 	image: Arc<AttachmentImage>,
-	image_initial_layout: ImageLayout,
 	image_final_layout: ImageLayout,
 	image_final_stages: PipelineStages,
 	image_final_access: AccessFlags,
+	
+	state: Mutex<CommandBufferState>,
 }
 
-impl OpenVRCommandBuffer<StandardCommandPoolAlloc> {
-	pub unsafe fn start(image: Arc<AttachmentImage>, device: Arc<Device>, queue_family: QueueFamily) -> Result<OpenVRCommandBuffer, OomError> {
-		Self::new(image, None, Some(ImageLayout::TransferSrcOptimal), device, queue_family)
+impl OpenVRCommandBuffer {
+	pub unsafe fn start(allocator: &StandardCommandBufferAllocator, image: Arc<AttachmentImage>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+		Self::new(allocator, image, None, Some(ImageLayout::TransferSrcOptimal), queue_family_index)
 	}
 	
-	pub unsafe fn end(image: Arc<AttachmentImage>, device: Arc<Device>, queue_family: QueueFamily) -> Result<OpenVRCommandBuffer, OomError> {
-		Self::new(image, Some(ImageLayout::TransferSrcOptimal), None, device, queue_family)
+	pub unsafe fn end(allocator: &StandardCommandBufferAllocator, image: Arc<AttachmentImage>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+		Self::new(allocator, image, Some(ImageLayout::TransferSrcOptimal), None, queue_family_index)
 	}
 	
-	unsafe fn new(image: Arc<AttachmentImage>, from_layout: Option<ImageLayout>, to_layout: Option<ImageLayout>, device: Arc<Device>, queue_family: QueueFamily) -> Result<OpenVRCommandBuffer, OomError> {
-		let pool = Device::standard_command_pool(&device, queue_family);
-		let pool_builder_alloc = pool.allocate(CommandBufferLevel::Primary, 1)?
-			.next()
-			.expect("Requested one command buffer from the command pool, but got zero.");
+	unsafe fn new(allocator: &StandardCommandBufferAllocator, image: Arc<AttachmentImage>, from_layout: Option<ImageLayout>, to_layout: Option<ImageLayout>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+		let builder_alloc = allocator.allocate(queue_family_index, CommandBufferLevel::Primary, 1)?
+		                             .next()
+		                             .expect("Requested one command buffer from the command pool, but got zero.");
 		
-		let mut builder = UnsafeCommandBufferBuilder::new(pool_builder_alloc.inner(), CommandBufferBeginInfo {
+		let mut builder = UnsafeCommandBufferBuilder::new(builder_alloc.inner(), CommandBufferBeginInfo {
 			usage: CommandBufferUsage::MultipleSubmit,
 			..CommandBufferBeginInfo::default()
 		})?;
-		let mut barrier = UnsafeCommandBufferBuilderPipelineBarrier::new();
 		
-		let current_layout = from_layout.unwrap_or(image.final_layout_requirement());
-		let source_stage = PipelineStages {
+		let mut dependency_info = DependencyInfo::default();
+		
+		let src_stages = PipelineStages {
 			bottom_of_pipe: from_layout.is_none(),
-			transfer: from_layout.is_some(),
-			..PipelineStages::none()
+			all_transfer: from_layout.is_some(),
+			..PipelineStages::empty()
 		};
-		let source_access = AccessFlags {
+		let src_access = AccessFlags {
 			transfer_read: from_layout.is_some(),
-			..AccessFlags::none()
+			..AccessFlags::empty()
 		};
 		
-		let new_layout = to_layout.unwrap_or(image.final_layout_requirement());
-		let destination_stage = PipelineStages {
+		let dst_stages = PipelineStages {
 			top_of_pipe: to_layout.is_none(),
-			transfer: to_layout.is_some(),
-			..PipelineStages::none()
+			all_transfer: to_layout.is_some(),
+			..PipelineStages::empty()
 		};
-		let destination_access = AccessFlags {
+		let dst_access = AccessFlags {
 			transfer_read: to_layout.is_some(),
-			..AccessFlags::none()
+			..AccessFlags::empty()
 		};
 		
-		barrier.add_image_memory_barrier(
-			&image,
-			image.current_mip_levels_access(),
-			image.current_array_layers_access(),
-			source_stage,
-			source_access,
-			destination_stage,
-			destination_access,
-			false,
-			None,
-			current_layout,
+		let old_layout = from_layout.unwrap_or(image.final_layout_requirement());
+		let new_layout = to_layout.unwrap_or(image.final_layout_requirement());
+		
+		dependency_info.image_memory_barriers.push(ImageMemoryBarrier {
+			src_stages,
+			src_access,
+			dst_stages,
+			dst_access,
+			old_layout,
 			new_layout,
-		);
+			queue_family_transfer: None,
+			subresource_range: image.subresource_range(),
+			..ImageMemoryBarrier::image(image.inner().image.clone())
+		});
 		
-		builder.pipeline_barrier(&barrier);
+		builder.pipeline_barrier(&dependency_info);
 		
-		let sync = SyncCommandBufferBuilder::from_unsafe_cmd(builder, false, false).build()?;
+		let sync = SyncCommandBufferBuilder::from_unsafe_cmd(builder, CommandBufferLevel::Primary, false).build()?;
 		
 		Ok(OpenVRCommandBuffer {
 			inner: sync,
-			pool_alloc: pool_builder_alloc.into_alloc(),
-			in_use: AtomicBool::new(false),
+			_alloc: builder_alloc.into_alloc(),
 			image,
-			image_initial_layout: current_layout,
 			image_final_layout: new_layout,
-			image_final_stages: destination_stage,
-			image_final_access: destination_access,
+			image_final_stages: dst_stages,
+			image_final_access: dst_access,
+			
+			state: Mutex::new(Default::default()),
 		})
 	}
 }
 
-unsafe impl<P> DeviceOwned for OpenVRCommandBuffer<P> {
+unsafe impl<A> VulkanObject for OpenVRCommandBuffer<A> {
+	type Handle = ash::vk::CommandBuffer;
+	
+	fn handle(&self) -> Self::Handle {
+		self.inner.as_ref().handle()
+	}
+}
+
+unsafe impl<A> DeviceOwned for OpenVRCommandBuffer<A> {
 	fn device(&self) -> &Arc<Device> {
 		self.inner.device()
 	}
 }
 
-unsafe impl<P> PrimaryCommandBuffer for OpenVRCommandBuffer<P>
-	where
-		P: CommandPoolAlloc
-{
-	fn inner(&self) -> &UnsafeCommandBuffer {
-		self.inner.as_ref()
+unsafe impl<A> PrimaryCommandBufferAbstract for OpenVRCommandBuffer<A>
+where A: CommandBufferAlloc {
+	fn usage(&self) -> CommandBufferUsage {
+		CommandBufferUsage::MultipleSubmit
 	}
 	
-	fn lock_submit(&self, future: &dyn GpuFuture, queue: &Queue) -> Result<(), CommandBufferExecError> {
-		let already_in_use = self.in_use.swap(true, Ordering::SeqCst);
-		if already_in_use {
-			return Err(CommandBufferExecError::ExclusiveAlreadyInUse);
-		}
-		
-		// Only lock when image leaves its preferred layout buffer
-		if self.image_initial_layout != self.image.final_layout_requirement() {
-			return Ok(());
-		}
-		
-		let prev_err = match future.check_image_access(
-			&self.image,
-			self.image_initial_layout,
-			true,
-			queue,
-		) {
-			Ok(_) => {
-				unsafe {
-					self.image.increase_gpu_lock();
-				}
-				return Ok(());
-			}
-			Err(err) => err,
-		};
-		
-		match (
-			self.image.try_gpu_lock(
-				true,
-				false,
-				self.image_initial_layout,
-			),
-			prev_err,
-		) {
-			(Ok(_), _) => return Ok(()),
-			(Err(err), AccessCheckError::Unknown)
-			| (_, AccessCheckError::Denied(err)) => {
-				
-				// Lock failed, we revert action.
-				self.in_use.store(false, Ordering::SeqCst);
-				
-				Err(CommandBufferExecError::AccessError {
-					error: err,
-					command_name: "OpenVRBarrier".into(),
-					command_param: "Image".into(),
-					command_offset: 0,
-				})
-			}
-		}
-	}
-	
-	unsafe fn unlock(&self) {
-		// Only unlock on when image reverts to its preferred layout buffer
-		if self.image_final_layout == self.image.final_layout_requirement() {
-			self.image.unlock(None);
-		}
-		
-		let old_val = self.in_use.swap(false, Ordering::SeqCst);
-		debug_assert!(old_val);
-	}
-	
-	fn check_buffer_access(&self, _buffer: &dyn BufferAccess, _exclusive: bool, _queue: &Queue) -> Result<Option<(PipelineStages, AccessFlags)>, AccessCheckError> {
+	fn check_buffer_access(&self, _buffer: &Buffer, _range: Range<DeviceSize>, _exclusive: bool, _queue: &Queue) -> Result<Option<(PipelineStages, AccessFlags)>, AccessCheckError> {
 		Err(AccessCheckError::Unknown)
 	}
 	
-	fn check_image_access(&self, image: &dyn ImageAccess, layout: ImageLayout, _exclusive: bool, _queue: &Queue) -> Result<Option<(PipelineStages, AccessFlags)>, AccessCheckError> {
+	fn check_image_access(&self, image: &Image, _range: Range<DeviceSize>, _exclusive: bool, expected_layout: ImageLayout, _queue: &Queue) -> Result<Option<(PipelineStages, AccessFlags)>, AccessCheckError> {
 		// TODO: check the queue family
-		if self.image.conflict_key() == image.conflict_key() {
-			if layout != ImageLayout::Undefined && self.image_final_layout != layout {
+		if &**self.image.inner().image == image {
+			if expected_layout != ImageLayout::Undefined && self.image_final_layout != expected_layout {
 				return Err(AccessCheckError::Denied(
 					AccessError::UnexpectedImageLayout {
 						allowed: self.image_final_layout,
-						requested: layout,
+						requested: expected_layout,
 					},
 				));
 			}
 			
-			return Ok(Some((self.image_final_stages, self.image_final_access)));
+			Ok(Some((self.image_final_stages, self.image_final_access)))
 		} else {
 			Err(AccessCheckError::Unknown)
 		}
+	}
+	
+	fn state(&self) -> MutexGuard<'_, CommandBufferState> {
+		self.state.lock().into()
+	}
+	
+	fn resources_usage(&self) -> &CommandBufferResourcesUsage {
+		self.inner.resources_usage()
 	}
 }
 

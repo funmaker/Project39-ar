@@ -1,17 +1,21 @@
 use std::sync::Arc;
 use vulkano::pipeline::GraphicsPipeline;
-use vulkano::render_pass::{RenderPass, Subpass};
+use vulkano::render_pass::RenderPass;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::image::SampleCount;
 
 mod vertex;
 
 use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::{Vertex, TexturedVertex};
+
+pub use shape_vert::ty::Pc as ShapePc;
 
 type DefaultPipelineVertex = super::default::Vertex;
 
@@ -48,8 +52,12 @@ impl PipelineConstructor for DebugPipeline {
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+				.render_pass(render_pass.clone().first_subpass())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
+				.multisample_state(MultisampleState {
+					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
+					..MultisampleState::new()
+				})
 				.build(device.clone())?
 		)
 	}
@@ -88,8 +96,12 @@ impl PipelineConstructor for DebugTexturedPipeline {
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+				.render_pass(render_pass.clone().first_subpass())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
+				.multisample_state(MultisampleState {
+					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
+					..MultisampleState::new()
+				})
 				.build(device.clone())?
 		)
 	}
@@ -100,7 +112,8 @@ mod shape_vert {
 vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/debug/shape_vert.glsl",
-		spirv_version: "1.3"
+		spirv_version: "1.3",
+		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
 	}
 }
 
@@ -108,7 +121,8 @@ mod shape_frag {
 vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/debug/shape_frag.glsl",
-		spirv_version: "1.3"
+		spirv_version: "1.3",
+		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
 	}
 }
 
@@ -131,7 +145,11 @@ impl PipelineConstructor for DebugShapePipeline {
 				.depth_stencil_state(DepthStencilState::disabled())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
 				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+				.render_pass(render_pass.clone().first_subpass())
+				.multisample_state(MultisampleState {
+					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
+					..MultisampleState::new()
+				})
 				.build(device.clone())?
 		)
 	}

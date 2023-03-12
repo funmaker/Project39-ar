@@ -62,7 +62,7 @@ impl InspectMut for RigidBody {
 			.show(ui, |ui| {
 				ui.inspect_row("ID", handle, application);
 				ui.inspect_row("Owner", UserData(self.user_data), application);
-				ui.inspect_row("Body Type", GetSet(|| (self.body_type(), |bt| self.set_body_type(bt))), ());
+				ui.inspect_row("Body Type", GetSet(|| (self.body_type(), |bt| self.set_body_type(bt, true))), ());
 				ui.inspect_row("Sleeping", GetSet(|| (self.is_sleeping(), |sleep| if sleep { self.sleep() })), ());
 			});
 		

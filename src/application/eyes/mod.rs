@@ -3,7 +3,8 @@ use err_derive::Error;
 use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use openvr::compositor::Texture;
 use vulkano::{command_buffer, sync};
-use vulkano::image::{AttachmentImage, ImageAccess, ImageUsage, SampleCount};
+use vulkano::command_buffer::{CopyImageInfo, ImageCopy};
+use vulkano::image::{AttachmentImage, ImageAccess, ImageSubresourceLayers, ImageUsage, SampleCount};
 use vulkano::format::ClearValue;
 use vulkano::sync::GpuFuture;
 
@@ -79,15 +80,15 @@ impl Eyes {
 		
 		let dimensions = fb.framebuffer.extent();
 		
-		let side_image = AttachmentImage::multisampled_with_usage(renderer.device.clone(),
+		let side_image = AttachmentImage::multisampled_with_usage(&renderer.memory_allocator,
 		                                                          dimensions,
 		                                                          SampleCount::Sample1,
 		                                                          IMAGE_FORMAT,
 		                                                          ImageUsage {
-			                                                          transfer_source: true,
-			                                                          transfer_destination: true,
+			                                                          transfer_src: true,
+			                                                          transfer_dst: true,
 			                                                          sampled: true,
-			                                                          ..ImageUsage::none()
+			                                                          ..ImageUsage::empty()
 		                                                          })?;
 		
 		let handle_defs = vulkan::Texture {
@@ -96,7 +97,7 @@ impl Eyes {
 			physical_device: renderer.device.physical_device().as_ptr(),
 			instance: renderer.instance.as_ptr(),
 			queue: renderer.queue.as_ptr(),
-			queue_family_index: renderer.queue.family().id(),
+			queue_family_index: renderer.queue.queue_family_index(),
 			width: fb.main_image.dimensions().width(),
 			height: fb.main_image.dimensions().height(),
 			format: fb.main_image.format() as u32,
@@ -164,7 +165,7 @@ impl RenderTarget for Eyes {
 		                                 ))))
 	}
 	
-	fn clear_values(&self) -> &[ClearValue] {
+	fn clear_values(&self) -> &[Option<ClearValue>] {
 		&self.fb.clear_values
 	}
 	
@@ -183,16 +184,23 @@ impl RenderTarget for Eyes {
 	fn after_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
 		let framebuffer_size = self.framebuffer_size();
 		
-		context.builder.copy_image(self.fb.main_image.clone(),
-		                           [0, 0, 0],
-		                           1,
-		                           0,
-		                           self.side_image.clone(),
-		                           [0, 0, 0],
-		                           0,
-		                           0,
-		                           [framebuffer_size.0, framebuffer_size.1, 1],
-		                           1)?;
+		let mut copy_info = CopyImageInfo::images(self.fb.main_image.clone(), self.side_image.clone());
+		
+		copy_info.regions.clear();
+		copy_info.regions.push(ImageCopy {
+			src_subresource: ImageSubresourceLayers {
+				array_layers: 1..2,
+				..self.fb.main_image.subresource_layers()
+			},
+			dst_subresource: ImageSubresourceLayers {
+				array_layers: 0..1,
+				..self.fb.main_image.subresource_layers()
+			},
+			extent: [framebuffer_size.0, framebuffer_size.1, 1],
+			..ImageCopy::default()
+		});
+		
+		context.builder.copy_image(copy_info)?;
 		
 		Ok(())
 	}
@@ -201,14 +209,14 @@ impl RenderTarget for Eyes {
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let vr = vr.lock().unwrap();
-			let device = renderer.device.clone();
 			let queue = renderer.queue.clone();
+			let command_buffer_allocator = renderer.command_buffer_allocator.clone();
 			
 			renderer.try_enqueue::<EyesRenderTargetError, _>(queue.clone(), |future| {
 				// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
 				unsafe {
-					let f = future.then_execute(queue.clone(), OpenVRCommandBuffer::start(self.fb.main_image.clone(), device.clone(), queue.family())?)?
-						.then_execute(queue.clone(), OpenVRCommandBuffer::start(self.side_image.clone(), device.clone(), queue.family())?)?;
+					let f = future.then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
+					              .then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?;
 					f.flush()?;
 					
 					let debug = debug::debug();
@@ -217,8 +225,8 @@ impl RenderTarget for Eyes {
 					vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
 					if debug { debug::set_debug(true); }
 					
-					Ok(f.then_execute(queue.clone(), OpenVRCommandBuffer::end(self.fb.main_image.clone(), device.clone(), queue.family())?)?
-					    .then_execute(queue.clone(), OpenVRCommandBuffer::end(self.side_image.clone(), device.clone(), queue.family())?)?
+					Ok(f.then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
+					    .then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?
 					    .boxed())
 				}
 			})?;
@@ -232,7 +240,8 @@ impl RenderTarget for Eyes {
 pub enum EyesCreationError {
 	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
 	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
+	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 }
 
 pub type EyesLoadBackgroundError = BackgroundLoadError;
@@ -241,7 +250,7 @@ pub type EyesLoadBackgroundError = BackgroundLoadError;
 pub enum EyesRenderTargetError {
 	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] CopyImageError(#[error(source)] command_buffer::CopyImageError),
+	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),

@@ -6,7 +6,8 @@ macro_rules! mmd_shaders {
 				ty: $type,
 				path: $source,
 				include: [ "src/component/model/mmd/pipeline" ],
-				spirv_version: "1.3"
+				spirv_version: "1.3",
+		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
 			}
 		}
 	)* }
@@ -22,12 +23,14 @@ macro_rules! mmd_pipelines {
 	)* ) => {
 		use std::sync::Arc;
 		use vulkano::pipeline::GraphicsPipeline;
-		use vulkano::render_pass::{RenderPass, Subpass};
+		use vulkano::render_pass::RenderPass;
 		use vulkano::device::DeviceOwned;
 		use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 		use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 		use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState, FrontFace};
 		use vulkano::pipeline::graphics::viewport::ViewportState;
+		use vulkano::pipeline::graphics::multisample::MultisampleState;
+		use vulkano::image::SampleCount;
 		
 		use $crate::renderer::pipelines::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 		
@@ -65,10 +68,14 @@ macro_rules! mmd_pipelines {
 						.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
 						.vertex_shader(vs.entry_point("main").unwrap(), vs_consts)
 						.fragment_shader(fs.entry_point("main").unwrap(), fs_consts)
-						.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+						.render_pass(render_pass.clone().first_subpass())
 						.depth_stencil_state(DepthStencilState::simple_depth_test())
 						.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back).front_face(FrontFace::Clockwise))
-						.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant());
+						.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
+						.multisample_state(MultisampleState {
+							rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
+							..MultisampleState::new()
+						});
 					
 					Ok(
 						$code.build(device.clone())?

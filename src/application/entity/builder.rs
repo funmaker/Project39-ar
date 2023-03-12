@@ -44,7 +44,7 @@ impl EntityBuilder {
 	}
 	
 	pub fn rigid_body_type(mut self, rb_type: RigidBodyType) -> Self {
-		self.rigid_body.set_body_type(rb_type);
+		self.rigid_body.set_body_type(rb_type, false);
 		self
 	}
 	

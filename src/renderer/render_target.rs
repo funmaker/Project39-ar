@@ -10,7 +10,7 @@ pub trait RenderTarget {
 	type RenderError: Error;
 	
 	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>, Self::RenderError>;
-	fn clear_values(&self) -> &[ClearValue];
+	fn clear_values(&self) -> &[Option<ClearValue>];
 	fn last_frame(&self) -> &Arc<AttachmentImage>;
 	
 	fn before_render(&mut self, _context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), Self::RenderError> { Ok(()) }

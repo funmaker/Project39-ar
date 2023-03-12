@@ -2,8 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 use egui::Ui;
-use vulkano::buffer::{BufferUsage, ImmutableBuffer, TypedBufferAccess};
-use vulkano::sync::GpuFuture;
+use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImageAccess;
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
@@ -17,7 +16,9 @@ use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::application::{Application, Entity};
 use super::ModelError;
-use pipeline::{FoodPipeline, Vertex};
+use pipeline::{FoodPipeline, Vertex, Pc};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
+use vulkano::sync::GpuFuture;
 
 #[derive(ComponentBase, Clone)]
 pub struct Billboard {
@@ -27,7 +28,7 @@ pub struct Billboard {
 	rotation: Cell<f32>,
 	last_rot: Cell<Rot3>,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<ImmutableBuffer<[Vertex]>>,
+	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
@@ -50,16 +51,25 @@ impl Billboard {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(square.iter().cloned(),
-		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
-		                                                              renderer.queue.clone())?;
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
-			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
-		])?;
+		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+		                                            square.iter().cloned(),
+		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
+		                                            &mut upload_buffer)?;
 		
-		let fence = FenceCheck::new(vertices_promise.join(texture.fence.future()))?;
+		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
+			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			                                       WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
+		                                       ])?;
+		
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
+		
+		let fence = FenceCheck::new(upload_future.join(texture.fence.future()))?;
 		
 		Ok(Billboard {
 			inner: ComponentInner::from_render_type(RenderType::Transparent),
@@ -106,7 +116,11 @@ impl Component for Billboard {
 		                             self.set.clone())
 		       .push_constants(self.pipeline.layout().clone(),
 		                       0,
-		                       (transform.to_homogeneous(), self.ratio, frame))
+		                       Pc {
+			                       model: transform.to_homogeneous().into(),
+			                       ratio: self.ratio,
+			                       frame,
+		                       })
 		       .draw(self.vertices.len() as u32,
 		             1,
 		             0,

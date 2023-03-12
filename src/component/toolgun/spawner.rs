@@ -1,5 +1,5 @@
-use rapier3d::geometry::InteractionGroups;
 use rapier3d::dynamics::RigidBodyType;
+use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Hand, Application};
 use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, face_upwards_lossy};
@@ -73,7 +73,7 @@ impl Tool for Spawner {
 		} else {
 			let result = {
 				let physics = &*application.physics.borrow();
-				physics.query_pipeline.cast_ray_and_get_normal(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None)
+				physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
 			};
 			
 			if let Some((_, intersection)) = result {

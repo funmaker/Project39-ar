@@ -2,8 +2,9 @@ use std::time::{Duration, Instant};
 use std::cell::Cell;
 use std::ops::DerefMut;
 use egui::Ui;
-use rapier3d::prelude::{InteractionGroups, ColliderHandle};
+use rapier3d::prelude::ColliderHandle;
 use rapier3d::geometry::Ball;
+use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
@@ -87,11 +88,11 @@ impl Component for HandComponent {
 					false
 				};
 				
-				physics.query_pipeline.intersections_with_shape(&physics.collider_set,
+				physics.query_pipeline.intersections_with_shape(&physics.rigid_body_set,
+				                                                &physics.collider_set,
 				                                                &entity.state().position,
 				                                                &Ball::new(GRAB_DIST),
-				                                                InteractionGroups::all(),
-				                                                None,
+				                                                QueryFilter::new(),
 				                                                callback);
 			}
 			

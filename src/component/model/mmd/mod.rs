@@ -3,14 +3,12 @@ use std::mem::size_of;
 use std::sync::Arc;
 use std::time::Duration;
 use nalgebra::UnitQuaternion;
-use num_traits::Zero;
 use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
 use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::device::DeviceOwned;
 use vulkano::DeviceSize;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
 
@@ -27,12 +25,13 @@ use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::application::{Application, Entity};
 use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, NgPod};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::math::{AMat4, Isometry3, IVec4, Mat4, PI, Vec3, Vec4};
+use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI, Vec3};
 use super::ModelError;
-pub use pipeline::{MORPH_GROUP_SIZE, Vertex};
+pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
 pub use bone::{BoneConnection, MMDBone};
 pub use rigid_body::MMDRigidBody;
 use shared::MMDModelShared;
+use vulkano::command_buffer::{CopyBufferInfo, FillBufferInfo};
 
 pub struct MMDModelState {
 	pub bones: Vec<MMDBone>,
@@ -62,35 +61,35 @@ impl MMDModel {
 		let bones = shared.default_bones.clone();
 		let bones_count = bones.len();
 		let bones_mats = Vec::with_capacity(bones_count);
-		let bones_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
+		let bones_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
 		                                         (size_of::<AMat4>() * bones_count) as DeviceSize,
 		                                         BufferUsage {
-			                                         transfer_destination: true,
+			                                         transfer_dst: true,
 			                                         storage_buffer: true,
-			                                         ..BufferUsage::none()
+			                                         ..BufferUsage::empty()
 		                                         },
-		                                         Some(renderer.queue.family()))?;
+		                                         Some(renderer.queue.queue_family_index()))?;
 		
 		let morphs = vec![0.0; shared.morphs_sizes.len()];
 		let morphs_vec_count = (shared.morphs_sizes.len() + 1) / 2;
 		let morphs_vec = Vec::with_capacity(morphs_vec_count);
-		let morphs_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
+		let morphs_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
 		                                          morphs_vec_count as DeviceSize,
 		                                          BufferUsage {
-			                                          transfer_destination: true,
+			                                          transfer_dst: true,
 			                                          storage_buffer: true,
-			                                          ..BufferUsage::none()
+			                                          ..BufferUsage::empty()
 		                                          },
-		                                          Some(renderer.queue.family()))?;
+		                                          Some(renderer.queue.queue_family_index()))?;
 		
-		let offsets_ubo = DeviceLocalBuffer::array(shared.vertices.device().clone(),
+		let offsets_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
 		                                           shared.vertices.len(),
 		                                           BufferUsage {
-			                                           transfer_destination: true,
+			                                           transfer_dst: true,
 			                                           storage_buffer: true,
-			                                           ..BufferUsage::none()
+			                                           ..BufferUsage::empty()
 		                                           },
-		                                           Some(renderer.queue.family()))?;
+		                                           Some(renderer.queue.queue_family_index()))?;
 		
 		let compute_layout = shared.morphs_pipeline
 		                           .layout()
@@ -99,26 +98,30 @@ impl MMDModel {
 		                           .ok_or(ModelError::NoLayout)?
 		                           .clone();
 		
-		let morphs_set = PersistentDescriptorSet::new(compute_layout, [
-			WriteDescriptorSet::buffer(0, morphs_ubo.clone()),
-			WriteDescriptorSet::buffer(1, shared.morphs_offsets.clone()),
-			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
-		])?;
+		let morphs_set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+		                                              compute_layout, [
+			                                              WriteDescriptorSet::buffer(0, morphs_ubo.clone()),
+			                                              WriteDescriptorSet::buffer(1, shared.morphs_offsets.clone()),
+			                                              WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+		                                              ])?;
 		
 		let (main_layout, edge_layout) = shared.layouts()?;
 		
-		let model_set = PersistentDescriptorSet::new(main_layout, [
-			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			WriteDescriptorSet::buffer(1, bones_ubo.clone()),
-			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
-		])?;
+		let model_set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+		                                             main_layout, [
+			                                             WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			                                             WriteDescriptorSet::buffer(1, bones_ubo.clone()),
+			                                             WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+		                                             ])?;
 		
 		let model_edge_set = edge_layout.map(|edge_layout|
-			PersistentDescriptorSet::new(edge_layout, [
-			WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			WriteDescriptorSet::buffer(1, bones_ubo.clone()),
-			WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
-		])).transpose()?;
+			PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+			                             edge_layout, [
+				                             WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+				                             WriteDescriptorSet::buffer(1, bones_ubo.clone()),
+				                             WriteDescriptorSet::buffer(2, offsets_ubo.clone()),
+			                             ])
+		).transpose()?;
 		
 		Ok(MMDModel {
 			inner: ComponentInner::from_render_type(RenderType::Transparent),
@@ -331,14 +334,14 @@ impl Component for MMDModel {
 			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
-		let bone_buf = self.shared.bones_pool.chunk(state.bones_mats.drain(..).map(|mat| {
+		let bone_buf = self.shared.bones_pool.from_iter(state.bones_mats.drain(..).map(|mat| {
 			let mut mat = mat.to_homogeneous();
 			let rot = UnitQuaternion::from_matrix(&mat.fixed_resize(0.0)).inverse();
 			mat.set_row(3, &rot.coords.transpose());
 			mat.into()
 		}))?;
 		
-		context.builder.copy_buffer(bone_buf, self.bones_ubo.clone())?;
+		context.builder.copy_buffer(CopyBufferInfo::buffers(bone_buf, self.bones_ubo.clone()))?;
 		
 		state.morphs_vec.clear();
 		let mut max_size = 0;
@@ -363,14 +366,14 @@ impl Component for MMDModel {
 		}
 		
 		if state.morphs_vec.is_empty() {
-			context.builder.fill_buffer(self.offsets_ubo.clone(), 0)?;
+			context.builder.fill_buffer(FillBufferInfo::dst_buffer(self.offsets_ubo.clone()))?;
 		} else {
 			let groups = (max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE;
 			
-			let morph_buf = self.shared.morphs_pool.chunk(state.morphs_vec.iter().copied().map(Into::into))?;
+			let morph_buf = self.shared.morphs_pool.from_iter(state.morphs_vec.iter().copied().map(Into::into))?;
 			
-			context.builder.copy_buffer(morph_buf, self.morphs_ubo.clone())?
-			               .fill_buffer(self.offsets_ubo.clone(), 0)?
+			context.builder.copy_buffer(CopyBufferInfo::buffers(morph_buf, self.morphs_ubo.clone()))?
+			               .fill_buffer(FillBufferInfo::dst_buffer(self.offsets_ubo.clone()))?
 			               .bind_pipeline_compute(self.shared.morphs_pipeline.clone())
 			               .bind_descriptor_sets(PipelineBindPoint::Compute,
 			                                     self.shared.morphs_pipeline.layout().clone(),
@@ -403,7 +406,11 @@ impl Component for MMDModel {
 			                                     (self.model_set.clone(), mesh_set))
 			               .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
 			                               0,
-			                               (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+			                               Pc {
+				                               model: model_matrix.into(),
+				                               color: Color::white().into(),
+				                               scale: 1.0,
+			                               })
 			               .draw_indexed(sub_mesh.range.len() as u32,
 			                             1,
 			                             sub_mesh.range.start,
@@ -421,7 +428,11 @@ impl Component for MMDModel {
 				                                     (self.model_set.clone(), mesh_set))
 				               .push_constants(self.shared.sub_meshes.first().unwrap().main.0.layout().clone(),
 				                               0,
-				                               (model_matrix.clone(), Vec4::zero(), 0.0_f32))
+				                               Pc {
+					                               model: model_matrix.into(),
+					                               color: Color::white().into(),
+					                               scale: 1.0,
+				                               })
 				               .draw_indexed(sub_mesh.range.len() as u32,
 				                             1,
 				                             sub_mesh.range.start,
@@ -434,7 +445,7 @@ impl Component for MMDModel {
 		for sub_mesh in self.shared.sub_meshes.iter() {
 			if let Some((pipeline, mesh_set)) = sub_mesh.edge.clone() {
 				let edge_scale = (context.fov.0.x / 2.0).tan() * 2.0 * context.pixel_scale.x * sub_mesh.edge_scale;
-				
+		
 				context.builder.bind_pipeline_graphics(pipeline.clone())
 				       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 				                             pipeline.layout().clone(),
@@ -442,7 +453,11 @@ impl Component for MMDModel {
 				                             (self.model_edge_set.clone().unwrap(), mesh_set))
 				       .push_constants(pipeline.layout().clone(),
 				                       0,
-				                       (model_matrix.clone(), sub_mesh.edge_color, edge_scale))
+				                       Pc {
+					                       model: model_matrix.into(),
+					                       color: sub_mesh.edge_color.into(),
+					                       scale: edge_scale,
+				                       })
 				       .draw_indexed(sub_mesh.range.len() as u32,
 				                     1,
 				                     sub_mesh.range.start,

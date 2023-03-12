@@ -2,24 +2,27 @@ use std::cell::RefMut;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
-use std::ffi::CString;
 use std::sync::Arc;
+use std::iter::FromIterator;
 use err_derive::Error;
 use bytemuck::{Pod, Zeroable};
-use vulkano::{command_buffer, device, instance, memory, render_pass, swapchain, sync, Version};
+use vulkano::{command_buffer, device, instance, memory, render_pass, swapchain, sync, Version, VulkanLibrary};
 use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
+use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::{ClearValue, Format};
 use vulkano::image::{AttachmentImage, ImageLayout, ImageUsage, ImageViewAbstract, SampleCount, SwapchainImage};
 use vulkano::image::view::ImageView;
 use vulkano::instance::{Instance, InstanceCreateInfo, InstanceExtensions};
-use vulkano::instance::debug::{DebugCallback, MessageSeverity, MessageType};
+use vulkano::instance::debug::{DebugUtilsMessenger, DebugUtilsMessengerCreateInfo};
+use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{AttachmentDescription, AttachmentReference, Framebuffer, FramebufferCreateInfo, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
-use vulkano::sync::GpuFuture;
+use vulkano::sync::{GpuFuture, PipelineStage};
 
 pub mod pipelines;
 pub mod debug_renderer;
@@ -56,6 +59,9 @@ pub struct Renderer {
 	pub render_pass: Arc<RenderPass>,
 	pub queue: Arc<Queue>,
 	pub pipelines: Pipelines,
+	pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
+	pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
+	pub memory_allocator: Arc<StandardMemoryAllocator>,
 	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
 	
 	future: Option<Box<dyn GpuFuture>>,
@@ -63,7 +69,7 @@ pub struct Renderer {
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
 	transparent_registry: Option<Vec<(f32, u64)>>,
-	#[allow(dead_code)] debug_callback: Option<DebugCallback>,
+	#[allow(dead_code)] debug_utils_messenger: Option<DebugUtilsMessenger>,
 }
 
 pub const IMAGE_FORMAT: Format = Format::R8G8B8A8_SRGB;
@@ -73,23 +79,26 @@ pub const LAYERS: u32 = 2;
 impl Renderer {
 	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer, RendererError> {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
-		let debug_callback = config::get()
-		                            .validation
-		                            .then(|| Renderer::create_debug_callbacks(&instance))
-		                            .transpose()?;
+		let debug_utils_messenger = config::get()
+		                                   .validation
+		                                   .then(|| Renderer::create_debug_callbacks(&instance))
+		                                   .transpose()?;
 		
 		let physical = Renderer::create_physical_device(&instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
+		let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo::default()));
+		let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone()));
+		let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let render_pass = Renderer::create_render_pass(&device)?;
 		let mut pipelines = Pipelines::new(render_pass.clone());
 		
-		let commons = DeviceLocalBuffer::new(device.clone(),
-		                                     BufferUsage{ transfer_destination: true,
+		let commons = DeviceLocalBuffer::new(&memory_allocator,
+		                                     BufferUsage{ transfer_dst: true,
 		                                                  uniform_buffer: true,
-		                                                  ..BufferUsage::none() },
-		                                     Some(queue.family()))?;
+		                                                  ..BufferUsage::empty() },
+		                                     Some(queue.queue_family_index()))?;
 		
-		let debug_renderer = Some(DebugRenderer::new(&load_queue, &mut pipelines)?);
+		let debug_renderer = Some(DebugRenderer::new(&load_queue, &memory_allocator, &command_buffer_allocator, &descriptor_set_allocator, &mut pipelines)?);
 		let assets_manager = Some(AssetsManager::new());
 		let fps_counter = FpsCounter::new();
 		
@@ -100,33 +109,38 @@ impl Renderer {
 			render_pass,
 			queue,
 			pipelines,
+			command_buffer_allocator,
+			descriptor_set_allocator,
+			memory_allocator,
 			commons,
 			future: None,
 			debug_renderer,
 			fps_counter,
 			assets_manager,
 			transparent_registry: None,
-			debug_callback,
+			debug_utils_messenger,
 		})
 	}
 	
 	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
+		let library = VulkanLibrary::new().unwrap();
+		
 		dprintln!("List of Vulkan layers available to use:");
-		let available_layers: Vec<_> = vulkano::instance::layers_list()?.collect();
-		for layer in &available_layers {
+		let layer_properties: Vec<_> = library.layer_properties()?.collect();
+		for layer in &layer_properties {
 			dprintln!("\t{}", layer.name());
 		}
 		
 		let vr_extensions = vr.as_ref().map(|vr| vr.lock().unwrap().compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
-		let extensions = InstanceExtensions::from(vr_extensions.iter().map(CString::as_c_str))
-		                                    .union(&vulkano_win::required_extensions())
+		let extensions = InstanceExtensions::from_iter(vr_extensions.iter().map(|ex| ex.to_str().expect("Failed to parse OpenVR required instance extensions!")))
+		                                    .union(&vulkano_win::required_extensions(&library))
 		                                    .union(&InstanceExtensions {
 			                                    ext_debug_utils: debug::debug(),
 			                                    ext_debug_report: debug::debug(), // required by RenderDoc
 			                                    khr_get_physical_device_properties2: true, // required by multiview
 			                                    khr_external_semaphore_capabilities: true, // required by khr_external_semaphore from vr_extensions
-			                                    ..InstanceExtensions::none()
+			                                    ..InstanceExtensions::empty()
 		                                    });
 		
 		let mut layers = vec![];
@@ -135,133 +149,141 @@ impl Renderer {
 			layers.push("VK_LAYER_KHRONOS_validation".to_string());
 		}
 		
-		let removed = layers.drain_filter(|layer| available_layers.iter().all(|al| al.name() != layer));
+		let removed = layers.drain_filter(|layer| layer_properties.iter().all(|al| al.name() != layer));
 		
 		for layer in removed {
 			eprintln!("MISSING LAYER: {}", layer);
 		}
 		
-		Ok(Instance::new(InstanceCreateInfo {
-			engine_version: Version::V1_2,
-			enabled_extensions: extensions,
-			enabled_layers: layers,
-			..InstanceCreateInfo::application_from_cargo_toml()
-		})?)
+		Ok(Instance::new(library,
+		                 InstanceCreateInfo {
+			                 engine_version: Version::V1_2,
+			                 enabled_extensions: extensions,
+			                 enabled_layers: layers,
+			                 ..InstanceCreateInfo::application_from_cargo_toml()
+		                 })?)
 	}
 	
-	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugCallback, RendererError> {
-		let severity = MessageSeverity {
-			error:       true,
-			warning:     true,
-			information: true,
-			verbose:     true,
-		};
-		
-		let ty = MessageType::all();
-		
-		Ok(DebugCallback::new(instance, severity, ty, |msg| {
-			if !debug::debug() { return }
-			if msg.ty.general && msg.severity.verbose { return }
-			
-			// debug::debugger();
-			
-			let severity = if msg.severity.error {
-				"error"
-			} else if msg.severity.warning {
-				"warning"
-			} else if msg.severity.information {
-				"information"
-			} else if msg.severity.verbose {
-				"verbose"
-			} else {
-				"unknown"
-			};
-			
-			let ty = if msg.ty.general {
-				"general"
-			} else if msg.ty.validation {
-				"validation"
-			} else if msg.ty.performance {
-				"performance"
-			} else {
-				"unknown"
-			};
-			
-			println!("{} {} {}: {}",
-			         msg.layer_prefix.unwrap_or("UNKNOWN"),
-			         ty,
-			         severity,
-			         msg.description);
-		})?)
+	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger, RendererError> {
+		// SAFETY: user callback must not make any calls to the Vulkan API.
+		unsafe {
+			Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo::user_callback(Arc::new(|msg| {
+				if !debug::debug() { return }
+				if msg.ty.general && msg.severity.verbose { return }
+				
+				// debug::debugger();
+				
+				let severity = if msg.severity.error {
+					"error"
+				} else if msg.severity.warning {
+					"warning"
+				} else if msg.severity.information {
+					"information"
+				} else if msg.severity.verbose {
+					"verbose"
+				} else {
+					"unknown"
+				};
+				
+				let ty = if msg.ty.general {
+					"general"
+				} else if msg.ty.validation {
+					"validation"
+				} else if msg.ty.performance {
+					"performance"
+				} else {
+					"unknown"
+				};
+				
+				println!("{} {} {}: {}",
+				         msg.layer_prefix.unwrap_or("UNKNOWN"),
+				         ty,
+				         severity,
+				         msg.description);
+			})))?)
+		}
 	}
 	
-	fn create_physical_device<'a>(instance: &'a Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<PhysicalDevice<'a>, RendererError> {
+	fn create_physical_device(instance: &Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<Arc<PhysicalDevice>, RendererError> {
 		dprintln!("Devices:");
-		for device in PhysicalDevice::enumerate(&instance) {
+		let physical_devices = instance.enumerate_physical_devices()?
+		                               .collect::<Vec<_>>();
+		
+		for (index, physical_device) in physical_devices.iter().enumerate() {
 			dprintln!("\t{}: {} api: {} driver: {}",
-			          device.index(),
-			          device.properties().device_name,
-			          device.properties().api_version,
-			          device.properties().driver_version);
+			          index,
+			          physical_device.properties().device_name,
+			          physical_device.properties().api_version,
+			          physical_device.properties().driver_version);
 		}
 		
-		let physical = vr.as_ref()
+		let index = vr.as_ref()
 		                 .and_then(|vr| vr.lock().unwrap().system.vulkan_output_device(instance.as_ptr()))
-		                 .and_then(|ptr| PhysicalDevice::enumerate(&instance).find(|physical| physical.as_ptr() == ptr))
-		                 .or_else(|| {
+		                 .and_then(|ptr| physical_devices.iter().position(|physical| physical.as_ptr() == ptr))
+		                 .unwrap_or_else(|| {
 			                 if vr.is_some() { println!("Failed to fetch device from openvr, using fallback"); }
-			                 PhysicalDevice::enumerate(&instance).skip(config::get().gpu_id).next()
-		                 })
-		                 .ok_or(RendererError::NoDevices)?;
+			                 config::get().gpu_id
+		                 });
 		
-		if physical.properties().max_multiview_view_count.unwrap_or(0) < 2 {
+		let physical_device = physical_devices.into_iter()
+		                                      .skip(index)
+		                                      .next()
+		                                      .ok_or(RendererError::NoDevices)?;
+		
+		if physical_device.properties().max_multiview_view_count.unwrap_or(0) < 2 {
 			return Err(RendererError::MultiviewNotSupported);
 		}
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
-		          physical.index(),
-		          physical.properties().device_name,
-		          physical.properties().api_version,
-		          physical.properties().driver_version);
+		          index,
+		          physical_device.properties().device_name,
+		          physical_device.properties().api_version,
+		          physical_device.properties().driver_version);
 		
-		Ok(physical)
+		Ok(physical_device)
 	}
 	
-	fn create_device(physical: PhysicalDevice, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
-		for family in physical.queue_families() {
-			dprintln!("Found a queue family with {:?} queue(s){}{}{}{}",
-		          family.queues_count(),
-		          family.supports_graphics().then_some(", Graphics").unwrap_or_default(),
-		          family.supports_compute().then_some(", Compute").unwrap_or_default(),
-		          family.supports_sparse_binding().then_some(", Sparse").unwrap_or_default(),
-		          family.explicitly_supports_transfers().then_some(", Transfers").unwrap_or_default());
+	fn create_device(physical: Arc<PhysicalDevice>, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
+		for family in physical.queue_family_properties() {
+			dprintln!("Found a queue family with {} queue(s) {:?}",
+			          family.queue_count,
+			          family.queue_flags);
 		}
 		
-		let queue_family = physical.queue_families()
-		                           .find(|&q| q.supports_graphics())
-		                           .ok_or(RendererError::NoQueue)?;
+		let queue_family = physical.queue_family_properties()
+		                                        .iter()
+		                                        .position(|q| q.supports_stage(PipelineStage::AllGraphics))
+		                                        .ok_or(RendererError::NoQueue)?;
 		
 		// TODO: q.supports_graphics() prevents you from using pure transfer-oriented families, but it's required for mipmaps. Something has to be done about it.
-		let load_queue_family = physical.queue_families()
-		                                .find(|&q| q.explicitly_supports_transfers() && q.supports_graphics() && q.id() != queue_family.id());
+		let load_queue_family = physical.queue_family_properties()
+		                                .iter()
+		                                .enumerate()
+		                                .position(|(id, q)| q.supports_stage(PipelineStage::AllTransfer) && q.supports_stage(PipelineStage::AllGraphics) && id != queue_family);
 		
-		let mut queue_create_infos = vec![QueueCreateInfo::family(queue_family)];
+		let mut queue_create_infos = vec![QueueCreateInfo {
+			queue_family_index: queue_family as u32,
+			..QueueCreateInfo::default()
+		}];
 		
 		if let Some(load_queue_family) = load_queue_family {
-			queue_create_infos.push(QueueCreateInfo::family(load_queue_family));
+			queue_create_infos.push(QueueCreateInfo {
+				queue_family_index: load_queue_family as u32,
+				..QueueCreateInfo::default()
+			});
 		}
 		
 		let vr_extensions = vr.as_ref().map(|vr| vulkan_device_extensions_required(&vr.lock().unwrap().compositor, &physical)).unwrap_or_default();
 		
 		let (device, mut queues) = Device::new(physical, DeviceCreateInfo {
-			enabled_extensions: DeviceExtensions::from(vr_extensions.iter().map(CString::as_c_str)).union(&DeviceExtensions {
+			enabled_extensions: DeviceExtensions::from_iter(vr_extensions.iter().map(|c| c.to_str().expect("Failed to parse OpenVR required device extensions!"))).union(&DeviceExtensions {
 				khr_swapchain: true,
 				khr_storage_buffer_storage_class: true,
-				..DeviceExtensions::none()
+				..DeviceExtensions::empty()
 			}),
 			enabled_features: Features {
 				multiview: true,
-				..Features::none()
+				..Features::empty()
 			},
 			queue_create_infos,
 			..DeviceCreateInfo::default()
@@ -293,6 +315,8 @@ impl Renderer {
 				samples,
 				load_op: LoadOp::Clear,
 				store_op: StoreOp::DontCare,
+				stencil_load_op: LoadOp::Clear,
+				stencil_store_op: StoreOp::DontCare,
 				initial_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				final_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				..AttachmentDescription::default()
@@ -348,8 +372,8 @@ impl Renderer {
 		Ok(render_pass)
 	}
 	
-	pub fn create_swapchain<W>(&self, surface: Arc<Surface<W>>) -> Result<(Arc<Swapchain<W>>, Vec<Arc<SwapchainImage<W>>>), RendererSwapchainError> {
-		if !self.queue.family().supports_surface(&surface)? {
+	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<SwapchainImage>>), RendererSwapchainError> {
+		if !self.device.physical_device().surface_support(self.queue.queue_family_index(), &surface)? {
 			return Err(RendererSwapchainError::SurfaceNotSupported)
 		}
 		
@@ -373,9 +397,9 @@ impl Renderer {
 		                            .expect("PreMultiplied and Opaque alpha composites not supported on the surface");
 		
 		let usage = ImageUsage{
-			transfer_destination: true,
+			transfer_dst: true,
 			sampled: true,
-			..ImageUsage::none()
+			..ImageUsage::empty()
 		};
 		
 		Ok(Swapchain::new(self.device.clone(), surface, SwapchainCreateInfo {
@@ -401,19 +425,19 @@ impl Renderer {
 			(min_framebuffer_size.1 as f32 * ssaa) as u32,
 		];
 		
-		let main_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+		let main_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
 		                                                                      dimensions,
 		                                                                      LAYERS,
 		                                                                      SampleCount::Sample1,
 		                                                                      IMAGE_FORMAT,
 		                                                                      ImageUsage {
-			                                                                      transfer_source: true,
-			                                                                      transfer_destination: true,
+			                                                                      transfer_src: true,
+			                                                                      transfer_dst: true,
 			                                                                      sampled: true,
-			                                                                      ..ImageUsage::none()
+			                                                                      ..ImageUsage::empty()
 		                                                                      })?;
 		
-		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
 		                                                                       dimensions,
 		                                                                       LAYERS,
 		                                                                       samples,
@@ -421,7 +445,7 @@ impl Renderer {
 		                                                                       ImageUsage {
 			                                                                       depth_stencil_attachment: true,
 			                                                                       transient_attachment: true,
-			                                                                       ..ImageUsage::none()
+			                                                                       ..ImageUsage::empty()
 		                                                                       })?;
 		
 		
@@ -432,14 +456,14 @@ impl Renderer {
 				ImageView::new_default(depth_image)?,
 			]
 		} else {
-			let msaa_image = AttachmentImage::multisampled_with_usage_with_layers(self.device.clone(),
+			let msaa_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
 			                                                                      dimensions,
 			                                                                      LAYERS,
 			                                                                      samples,
 			                                                                      IMAGE_FORMAT,
 			                                                                      ImageUsage {
 				                                                                      color_attachment: true,
-				                                                                      ..ImageUsage::none()
+				                                                                      ..ImageUsage::empty()
 			                                                                      })?;
 			
 			vec![
@@ -455,16 +479,16 @@ impl Renderer {
 			..FramebufferCreateInfo::default()
 		})?;
 		
-		let mut clear_values = vec![ ClearValue::Float([0.0, 0.0, 0.0, 0.0]) ];
+		let mut clear_values = vec![ Some(ClearValue::Float([0.0, 0.0, 0.0, 0.0])) ];
 		
 		if DEPTH_FORMAT.type_stencil().is_some() {
-			clear_values.push(ClearValue::DepthStencil((1.0, 0)))
+			clear_values.push(Some(ClearValue::DepthStencil((1.0, 0))))
 		} else {
-			clear_values.push(ClearValue::Depth(1.0))
+			clear_values.push(Some(ClearValue::Depth(1.0)))
 		}
 		
 		if samples != SampleCount::Sample1 {
-			clear_values.push(ClearValue::None)
+			clear_values.push(None)
 		}
 		
 		Ok(FramebufferBundle {
@@ -535,8 +559,8 @@ impl Renderer {
 			ambient: 0.25,
 		};
 		
-		let mut builder = AutoCommandBufferBuilder::primary(self.device.clone(), self.queue.family(), CommandBufferUsage::OneTimeSubmit)?;
-		builder.update_buffer(self.commons.clone(), Arc::new(commons.clone()))?;
+		let mut builder = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator, self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
+		builder.update_buffer(Arc::new(commons), self.commons.clone(), 0)?;
 		
 		let mut context = RenderContext::new(&rt_context, &mut builder, camera_pos);
 		
@@ -563,9 +587,10 @@ impl Renderer {
 			dimensions: [context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32],
 			depth_range: 0.0..1.0,
 		};
-		context.builder.begin_render_pass(rt_context.framebuffer.clone(),
-		                                  SubpassContents::Inline,
-		                                  render_target.clear_values().iter().copied())?
+		context.builder.begin_render_pass(RenderPassBeginInfo {
+			                                  clear_values: render_target.clear_values().iter().copied().collect(),
+			                                  ..RenderPassBeginInfo::framebuffer(rt_context.framebuffer.clone())
+		                                  }, SubpassContents::Inline)?
 		               .set_viewport(0, Some(viewport));
 		
 		render_target.early_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
@@ -649,26 +674,28 @@ pub enum RendererError {
 	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
-	#[error(display = "{}", _0)] LayersListError(#[error(source)] instance::LayersListError),
+	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
+	#[error(display = "{}", _0)] VulkanError(#[error(source)] vulkano::VulkanError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
-	#[error(display = "{}", _0)] DebugCallbackCreationError(#[error(source)] instance::debug::DebugCallbackCreationError),
+	#[error(display = "{}", _0)] DebugUtilsMessengerCreationError(#[error(source)] instance::debug::DebugUtilsMessengerCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] DeviceMemoryAllocationError(#[error(source)] memory::DeviceMemoryAllocationError),
+	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum RendererSwapchainError {
 	#[error(display = "Surface presentation is not supported.")] SurfaceNotSupported,
-	#[error(display = "{}", _0)] SurfacePropertiesError(#[error(source)] physical::SurfacePropertiesError),
+	#[error(display = "{}", _0)] PhysicalDeviceError(#[error(source)] physical::PhysicalDeviceError),
 	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
 }
 
 #[derive(Debug, Error)]
 pub enum RendererCreateFramebufferError {
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
+	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
 	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
 }
 
@@ -688,11 +715,12 @@ pub enum RendererRenderError<RTE: Error> {
 	#[error(display = "{}", _0)] DebugRendererPreRenderError(#[error(source)] DebugRendererPreRenderError),
 	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
-	#[error(display = "{}", _0)] BeginRenderPassError(#[error(source)] command_buffer::BeginRenderPassError),
-	#[error(display = "{}", _0)] AutoCommandBufferBuilderContextError(#[error(source)] command_buffer::AutoCommandBufferBuilderContextError),
+	#[error(display = "{}", _0)] RenderPassError(#[error(source)] command_buffer::RenderPassError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
+	#[error(display = "{}", _0)] PipelineExecutionError(#[error(source)] command_buffer::PipelineExecutionError),
 	#[error(display = "{}", _0)] CommandBufferBuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] UpdateBufferError(#[error(source)] command_buffer::UpdateBufferError),
+	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 }
 
 impl<RTE: Error> From<ComponentError> for RendererRenderError<RTE> {

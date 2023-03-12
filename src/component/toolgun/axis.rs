@@ -1,4 +1,4 @@
-use rapier3d::geometry::InteractionGroups;
+use rapier3d::pipeline::QueryFilter;
 use rapier3d::prelude::RevoluteJoint;
 
 use crate::component::toolgun::ToolGun;
@@ -40,7 +40,7 @@ impl Tool for Axis {
 		let result = {
 			let physics = &*application.physics.borrow();
 			
-			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.collider_set, &ray, 9999.0, false, InteractionGroups::all(), None) {
+			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new()) {
 				physics.collider_set.get(c)
 				       .map(|c| (c.entity(application), toi))
 			} else {

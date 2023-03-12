@@ -2,7 +2,6 @@ use openvr::compositor::WaitPoses;
 use openvr::{TrackedDevicePose, MAX_TRACKED_DEVICE_COUNT};
 use openvr_sys::{TrackedDevicePose_t, HmdMatrix34_t, HmdVector3_t, ETrackedDeviceClass_TrackedDeviceClass_Invalid};
 
-mod vec_future;
 pub mod from_args;
 mod fps_counter;
 mod vulkan;
@@ -17,7 +16,6 @@ mod mut_mark;
 mod pattern;
 mod gui;
 
-pub use vec_future::*;
 pub use fps_counter::*;
 pub use vulkan::*;
 pub use images::*;

@@ -340,7 +340,7 @@ impl Entity {
 		let rb = self.rigid_body_mut(physics);
 		
 		if rb.body_type() == RigidBodyType::Dynamic {
-			rb.set_body_type(RigidBodyType::Fixed);
+			rb.set_body_type(RigidBodyType::Fixed, true);
 			self.frozen.set(true);
 			true
 		} else { false }
@@ -349,7 +349,7 @@ impl Entity {
 	pub fn unfreeze(&self, physics: &mut Physics) -> bool {
 		if self.frozen.replace(false) {
 			self.rigid_body_mut(physics)
-			    .set_body_type(RigidBodyType::Dynamic);
+			    .set_body_type(RigidBodyType::Dynamic, true);
 			true
 		} else { false }
 	}

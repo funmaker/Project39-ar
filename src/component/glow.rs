@@ -6,7 +6,7 @@ use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use crate::application::{Application, Entity};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::math::{Similarity3, Color};
-use crate::renderer::pipelines::default::DefaultGlowPipeline;
+use crate::renderer::pipelines::default::{DefaultGlowPipeline, GlowPc};
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::{AutoCommandBufferBuilderEx, ExUi};
 use crate::component::model::SimpleModel;
@@ -58,7 +58,11 @@ impl Component for Glow {
 			                                     model.set.clone())
 			               .push_constants(self.pipeline.layout().clone(),
 			                               0,
-			                               (pos.to_homogeneous(), self.color.get(), self.size.get()))
+			                               GlowPc {
+				                               model: pos.to_homogeneous().into(),
+				                               color: self.color.get().into(),
+				                               scale: self.size.get(),
+			                               })
 			               .draw_indexed(model.indices.len() as u32,
 			                             1,
 			                             0,

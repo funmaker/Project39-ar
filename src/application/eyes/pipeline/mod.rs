@@ -6,17 +6,21 @@ use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::image::SampleCount;
 
 mod vertex;
 
 use crate::renderer::pipelines::{PipelineConstructor, PipelineError};
 pub use vertex::Vertex;
+pub use frag::ty::Pc;
 
 mod vert {
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/application/eyes/pipeline/vert.glsl",
-		spirv_version: "1.3"
+		spirv_version: "1.3",
+		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
 	}
 }
 
@@ -24,7 +28,8 @@ mod frag {
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/application/eyes/pipeline/frag.glsl",
-		spirv_version: "1.3"
+		spirv_version: "1.3",
+		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
 	}
 }
 
@@ -46,7 +51,11 @@ impl PipelineConstructor for BackgroundPipeline {
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
 				.depth_stencil_state(DepthStencilState::disabled())
 				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-				.render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+				.render_pass(render_pass.clone().first_subpass())
+				.multisample_state(MultisampleState {
+					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
+					..MultisampleState::new()
+				})
 				.build(device.clone())?
 		)
 	}

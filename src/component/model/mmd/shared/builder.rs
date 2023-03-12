@@ -1,14 +1,14 @@
 use std::io::Cursor;
 use image::{DynamicImage, ImageFormat};
-use vulkano::buffer::{ImmutableBuffer, BufferUsage, CpuBufferPool};
+use vulkano::buffer::{DeviceLocalBuffer, BufferUsage, CpuBufferPool};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
-use vulkano::sync::GpuFuture;
 use vulkano::format::Format;
 
 use crate::component::model::{ModelError, VertexIndex};
 use crate::component::model::mmd::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
-use crate::utils::{VecFuture, ImageEx, FenceCheck};
+use crate::utils::{ImageEx, FenceCheck};
 use crate::math::{IVec4, Vec3};
 use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
@@ -68,46 +68,47 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 	}
 	
 	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared, ModelError> {
-		let mut image_promises = VecFuture::new(renderer.device.clone());
-		let mut buffer_promises = VecFuture::new(renderer.device.clone());
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let (vertices, vertices_promise) = ImmutableBuffer::from_iter(self.vertices.into_iter(),
-		                                                              BufferUsage{ vertex_buffer: true, ..BufferUsage::none() },
-		                                                              renderer.load_queue.clone())?;
-		buffer_promises.push(vertices_promise);
+		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+		                                            self.vertices.into_iter(),
+		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
+		                                            &mut upload_buffer)?;
 		
-		let (indices, indices_promise) = ImmutableBuffer::from_iter(self.indices.into_iter(),
-		                                                            BufferUsage{ index_buffer: true, ..BufferUsage::none() },
-		                                                            renderer.load_queue.clone())?;
-		buffer_promises.push(indices_promise);
+		let indices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+		                                           self.indices.into_iter(),
+		                                           BufferUsage{ index_buffer: true, ..BufferUsage::empty() },
+		                                           &mut upload_buffer)?;
 		
-		let mut images = vec![];
-		
-		let (default_tex, default_tex_promise) = {
+		let default_tex = {
 			let texture_reader = Cursor::new(&include_bytes!("../default_tex.png")[..]);
 			let image = image::load(texture_reader, ImageFormat::Png)?;
 			let width = image.width();
 			let height = image.height();
 			
-			ImmutableImage::from_iter(image.into_pre_mul_iter(),
+			ImmutableImage::from_iter(&renderer.memory_allocator,
+			                          image.into_pre_mul_iter(),
 			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                          MipmapsCount::Log2,
 			                          Format::R8G8B8A8_SRGB,
-			                          renderer.load_queue.clone())?
+			                          &mut upload_buffer)?
 		};
-		image_promises.push(default_tex_promise);
+		
+		let mut images = vec![];
 		
 		for texture in self.textures {
 			let width = texture.width();
 			let height = texture.height();
 			
-			let (image, promise) = ImmutableImage::from_iter(texture.into_pre_mul_iter(),
-			                                                 ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-			                                                 MipmapsCount::Log2,
-			                                                 Format::R8G8B8A8_SRGB,
-			                                                 renderer.load_queue.clone())?;
+			let image = ImmutableImage::from_iter(&renderer.memory_allocator,
+			                                      texture.into_pre_mul_iter(),
+			                                      ImageDimensions::Dim2d{ width, height, array_layers: 1 },
+			                                      MipmapsCount::Log2,
+			                                      Format::R8G8B8A8_SRGB,
+			                                      &mut upload_buffer)?;
 			
-			image_promises.push(promise);
 			images.push(image);
 		}
 		
@@ -134,18 +135,18 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 				sphere_mode: desc.sphere_mode,
 			};
 			
-			let (material_buffer, material_promise) = ImmutableBuffer::from_data(material_info,
-			                                                                     BufferUsage{ uniform_buffer: true, ..BufferUsage::none() },
-			                                                                     renderer.load_queue.clone())?;
+			let material_buffer = DeviceLocalBuffer::from_data(&renderer.memory_allocator,
+			                                                   material_info,
+			                                                   BufferUsage{ uniform_buffer: true, ..BufferUsage::empty() },
+			                                                   &mut upload_buffer)?;
 			
 			let sub_mesh = SubMesh::new(desc.range, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
 			
-			buffer_promises.push(material_promise);
 			sub_meshes.push(sub_mesh);
 		}
 		
 		let default_bones = self.bones;
-		let bones_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
+		let bones_pool = CpuBufferPool::upload(renderer.memory_allocator.clone());
 		
 		// Create fake null morph if there is no morphs
 		if self.morphs.is_empty() {
@@ -158,7 +159,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		let morphs_max_size = morphs_sizes.iter().copied().max().unwrap_or(MORPH_GROUP_SIZE);
 		let morphs_max_size = (morphs_max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE * MORPH_GROUP_SIZE;
 		
-		let (morphs_offsets, morphs_promise) = {
+		let morphs_offsets = {
 			let mut offsets = vec![IVec4::zeros().into(); morphs_max_size * self.morphs.len()];
 			
 			for (mid, morph) in self.morphs.into_iter().enumerate() {
@@ -170,16 +171,19 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 				}
 			}
 			
-			ImmutableBuffer::from_iter(offsets.into_iter(),
-			                           BufferUsage{ storage_buffer: true, uniform_buffer: true, ..BufferUsage::none() },
-			                           renderer.load_queue.clone())?
+			DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
+			                             offsets.into_iter(),
+			                             BufferUsage{ storage_buffer: true, uniform_buffer: true, ..BufferUsage::empty() },
+			                             &mut upload_buffer)?
 		};
-		buffer_promises.push(morphs_promise);
 		
-		let morphs_pool = CpuBufferPool::upload(renderer.load_queue.device().clone());
+		let morphs_pool = CpuBufferPool::upload(renderer.memory_allocator.clone());
 		let morphs_pipeline = renderer.pipelines.get::<MMDPipelineMorphs>()?;
 		
-		let fence = FenceCheck::new(image_promises.join(buffer_promises))?;
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
+		
+		let fence = FenceCheck::new(upload_future)?;
 		
 		Ok(MMDModelShared {
 			vertices,

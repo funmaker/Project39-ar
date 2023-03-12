@@ -5,6 +5,8 @@ use std::io::ErrorKind;
 use err_derive::Error;
 use image::{ImageFormat, DynamicImage, ImageDecoder, AnimationDecoder, RgbaImage, imageops};
 use image::codecs::gif::GifDecoder;
+use vulkano::{command_buffer, sampler, sync};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::format::Format;
 use vulkano::image::view::ImageView;
@@ -71,7 +73,11 @@ impl AssetKey for TextureAsset {
 		let mip_levels = if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One };
 		let format = if self.srgb { Format::R8G8B8A8_SRGB } else { Format::R8G8B8A8_UNORM };
 		
-		let (image, image_promise) = if file_format == ImageFormat::Gif {
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
+		
+		let image = if file_format == ImageFormat::Gif {
 			let decoder = GifDecoder::new(AssetsManager::find_asset(&self.path)?)?;
 			let (width, height) = decoder.dimensions();
 			let frames = decoder.into_frames().collect_frames()?;
@@ -89,22 +95,28 @@ impl AssetKey for TextureAsset {
 			                   })
 			                   .collect::<Vec<_>>();
 			
-			ImmutableImage::from_iter(pixels.into_iter(),
+			ImmutableImage::from_iter(&renderer.memory_allocator,
+			                          pixels.into_iter(),
 			                          ImageDimensions::Dim2d{ width, height, array_layers },
 			                          mip_levels,
 			                          format,
-			                          renderer.load_queue.clone())?
+			                          &mut upload_buffer)?
 		} else {
 			let image = image::load(AssetsManager::find_asset(&self.path)?, file_format)?;
 			let width = image.width();
 			let height = image.height();
 			
-			ImmutableImage::from_iter(image.into_pre_mul_iter(),
+			ImmutableImage::from_iter(&renderer.memory_allocator,
+			                          image.into_pre_mul_iter(),
 			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
 			                          mip_levels,
 			                          format,
-			                          renderer.load_queue.clone())?
+			                          &mut upload_buffer)?
 		};
+		
+		
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
 		
 		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo {
 			mag_filter: self.filter,
@@ -116,7 +128,7 @@ impl AssetKey for TextureAsset {
 		})?;
 		
 		let view = ImageView::new_default(image.clone())?;
-		let fence = FenceCheck::new(image_promise)?;
+		let fence = FenceCheck::new(upload_future)?;
 		
 		Ok(TextureBundle {
 			image: view,
@@ -144,15 +156,24 @@ impl TextureBundle {
 		let width = source.width();
 		let height = source.height();
 		
-		let (image, image_promise) = ImmutableImage::from_iter(source.into_pre_mul_iter(),
-		                                                       ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-		                                                       MipmapsCount::Log2,
-		                                                       Format::R8G8B8A8_SRGB,
-		                                                       renderer.load_queue.clone())?;
+		// TODO: Batching of all upload_buffers?
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
+		
+		let image = ImmutableImage::from_iter(&renderer.memory_allocator,
+		                                      source.into_pre_mul_iter(),
+		                                      ImageDimensions::Dim2d{ width, height, array_layers: 1 },
+		                                      MipmapsCount::Log2,
+		                                      Format::R8G8B8A8_SRGB,
+		                                      &mut upload_buffer)?;
+		
+		let upload_future = upload_buffer.build()?
+		                                 .execute(renderer.load_queue.clone())?;
 		
 		let view = ImageView::new_default(image.clone())?;
 		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo::simple_repeat_linear())?;
-		let fence = FenceCheck::new(image_promise)?;
+		let fence = FenceCheck::new(upload_future)?;
 		
 		Ok(TextureBundle {
 			image: view,
@@ -166,10 +187,13 @@ impl TextureBundle {
 pub enum TextureLoadError {
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
-	#[error(display = "{}", _0)] ImageCreationError(#[error(source)] vulkano::image::ImageCreationError),
+	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
+	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
+	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] vulkano::sampler::SamplerCreationError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] vulkano::sync::FlushError),
+	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 }
 
 impl TextureLoadError {

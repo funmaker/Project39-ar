@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::ops::Range;
 use bytemuck::{Pod, Zeroable};
-use vulkano::buffer::ImmutableBuffer;
+use vulkano::buffer::DeviceLocalBuffer;
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::{Sampler, SamplerCreateInfo};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -36,7 +36,7 @@ pub struct SubMesh {
 
 impl SubMesh {
 	pub fn new(range: Range<u32>,
-	           material_buffer: Arc<ImmutableBuffer<MaterialInfo>>,
+	           material_buffer: Arc<DeviceLocalBuffer<MaterialInfo>>,
 	           texture: Arc<ImmutableImage>,
 	           toon: Arc<ImmutableImage>,
 	           sphere_map: Arc<ImmutableImage>,
@@ -56,12 +56,13 @@ impl SubMesh {
 		let toon_view = ImageView::new_default(toon)?;
 		let sphere_map_view = ImageView::new_default(sphere_map)?;
 		
-		let main_set = PersistentDescriptorSet::new(main_pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
-			WriteDescriptorSet::buffer(0, material_buffer.clone()),
-			WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
-			WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
-			WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
-		])?;
+		let main_set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+		                                            main_pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+			                                            WriteDescriptorSet::buffer(0, material_buffer.clone()),
+			                                            WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
+			                                            WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
+			                                            WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
+		                                            ])?;
 		
 		let mut sub_mesh = SubMesh {
 			range,
@@ -78,12 +79,13 @@ impl SubMesh {
 				true  => renderer.pipelines.get::<MMDPipelineTransNoCull>()?,
 			};
 			
-			let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
-				WriteDescriptorSet::buffer(0, material_buffer.clone()),
-				WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
-				WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
-				WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
-			])?;
+			let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+			                                       pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+				                                       WriteDescriptorSet::buffer(0, material_buffer.clone()),
+				                                       WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
+				                                       WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
+				                                       WriteDescriptorSet::image_view_sampler(3, sphere_map_view.clone(), sampler.clone()),
+			                                       ])?;
 			
 			sub_mesh.transparent = Some((pipeline, set));
 		}
@@ -94,9 +96,10 @@ impl SubMesh {
 			
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
-			let set = PersistentDescriptorSet::new(pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
-				WriteDescriptorSet::image_view_sampler(0, texture_view.clone(), sampler.clone()),
-			])?;
+			let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
+			                                       pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+				                                       WriteDescriptorSet::image_view_sampler(0, texture_view.clone(), sampler.clone()),
+			                                       ])?;
 			
 			sub_mesh.edge = Some((pipeline.into(), set));
 		}
