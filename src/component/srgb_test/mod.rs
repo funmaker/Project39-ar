@@ -2,11 +2,12 @@ use std::sync::Arc;
 use egui::Vec2;
 use err_derive::Error;
 use vulkano::{command_buffer, descriptor_set, memory, sync};
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImageAccess;
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
+use vulkano::sync::GpuFuture;
 
 mod pipeline;
 
@@ -14,17 +15,16 @@ use crate::application::Entity;
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::{TextureAsset, TextureLoadError};
 use crate::renderer::pipelines::PipelineError;
-use crate::utils::FenceCheck;
+use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
 use super::{Component, ComponentBase, ComponentInner, ComponentError};
 use pipeline::{SrgbTestPipeline, Vertex, Pc};
-use vulkano::sync::GpuFuture;
 
 #[derive(ComponentBase)]
 pub struct SrgbTest {
 	#[inner] inner: ComponentInner,
 	image_size: Vec2,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
+	vertices: Subbuffer<[Vertex]>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
@@ -50,10 +50,10 @@ impl SrgbTest {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            square.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   square.iter().cloned(),
+		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
 		                                       pipeline.layout().set_layouts().get(0).ok_or(SrgbTestError::NoLayout)?.clone(), [
@@ -107,6 +107,7 @@ pub enum SrgbTestError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
+	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),

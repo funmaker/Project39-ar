@@ -2,9 +2,8 @@ use std::sync::Arc;
 use std::convert::TryFrom;
 use winit::window::Window as WinitWindow;
 use err_derive::Error;
-use egui::{Context, FullOutput, TextStyle};
-use egui_vulkano::{Painter, UpdateTexturesResult};
-use egui_winit::State as EguiWinit;
+use egui::{Context, TextStyle};
+use egui_winit_vulkano::{Gui, GuiConfig};
 use vulkano::{command_buffer, render_pass};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassContents};
 use vulkano::format::ClearValue;
@@ -12,6 +11,7 @@ use vulkano::image::ImageAccess;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass, Subpass};
+use vulkano::swapchain::Surface;
 use winit::event::WindowEvent;
 use winit::event_loop::EventLoop;
 
@@ -19,25 +19,13 @@ use crate::renderer::{IMAGE_FORMAT, Renderer};
 use crate::utils::FramebufferBundle;
 
 pub struct WindowGui {
-	ctx: Context,
-	output: FullOutput,
-	painter: Painter,
-	winit: EguiWinit,
+	gui: Gui,
 	render_pass: Arc<RenderPass>,
 	framebuffer: Arc<Framebuffer>,
 }
 
 impl WindowGui {
-	pub fn new(fb: &FramebufferBundle, event_loop: &EventLoop<()>, renderer: &Renderer) -> Result<Self, WindowGuiError> {
-		let ctx = Context::default();
-		
-		{
-			let mut style = (*ctx.style()).clone();
-			let font = style.text_styles.get_mut(&TextStyle::Monospace).unwrap();
-			font.size = 16.0;
-			ctx.set_style(style);
-		}
-		
+	pub fn new(fb: &FramebufferBundle, event_loop: &EventLoop<()>, surface: Arc<Surface>, renderer: &Renderer) -> Result<Self, WindowGuiError> {
 		let render_pass = vulkano::ordered_passes_renderpass!(
 			renderer.device.clone(),
 			attachments: {
@@ -49,18 +37,21 @@ impl WindowGui {
 				}
 			},
 			passes: [
-				{ color: [color], depth_stencil: {}, input: [] },
-                { color: [color], depth_stencil: {}, input: [] } // Create a second renderpass to draw egui
+				{ color: [color], depth_stencil: {}, input: [] }
 			]
 		)?;
 		
-		let painter = egui_vulkano::Painter::new(
-			renderer.device.clone(),
-			renderer.memory_allocator.clone(),
-			renderer.descriptor_set_allocator.clone(),
-			renderer.queue.clone(),
-			Subpass::from(render_pass.clone(), 1).unwrap(),
-		)?;
+		let gui = Gui::new_with_subpass(&event_loop,
+		                                surface,
+		                                renderer.queue.clone(),
+		                                render_pass.clone().first_subpass(),
+		                                GuiConfig { is_overlay: true, ..GuiConfig::default() });
+		{
+			let mut style = (*gui.egui_ctx.style()).clone();
+			let font = style.text_styles.get_mut(&TextStyle::Monospace).unwrap();
+			font.size = 16.0;
+			gui.egui_ctx.set_style(style);
+		}
 		
 		let framebuffer = Framebuffer::new(render_pass.clone(), FramebufferCreateInfo {
 			attachments: vec![ImageView::new_default(fb.main_image.clone())?],
@@ -69,20 +60,15 @@ impl WindowGui {
 			..FramebufferCreateInfo::default()
 		})?;
 		
-		let winit = egui_winit::State::new(&**event_loop);
-		
 		Ok(WindowGui {
-			ctx,
-			output: FullOutput::default(),
-			painter,
-			winit,
+			gui,
 			render_pass,
 			framebuffer,
 		})
 	}
 	
 	pub fn on_event(&mut self, event: &WindowEvent) -> bool {
-		self.winit.on_event(&self.ctx, &event).consumed
+		self.gui.update(event)
 	}
 	
 	pub fn regen_framebuffer(&mut self, fb: &FramebufferBundle) -> Result<(), WindowGuiRegenFramebufferError> {
@@ -97,50 +83,32 @@ impl WindowGui {
 	}
 	
 	pub fn is_dragging(&self) -> bool {
-		self.ctx.memory().is_anything_being_dragged()
+		self.gui.egui_ctx.memory(|m| m.is_anything_being_dragged())
 	}
 	
-	pub fn start_frame(&mut self, window: &WinitWindow) {
-		self.ctx.begin_frame(self.winit.take_egui_input(window));
+	pub fn start_frame(&mut self) {
+		self.gui.begin_frame();
 	}
 	
-	pub fn end_frame(&mut self, window: &WinitWindow) {
-		self.output = self.ctx.end_frame();
-		self.winit.handle_platform_output(window, &self.ctx, std::mem::take(&mut self.output.platform_output));
+	pub fn end_frame(&mut self) {
+	
 	}
 	
 	pub fn ctx(&self) -> &Context {
-		&self.ctx
+		&self.gui.egui_ctx
 	}
 	
-	pub fn paint(&mut self, window: &WinitWindow, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<bool, WindowGuiPaintError> {
-		let result = self.painter.update_textures(std::mem::take(&mut self.output.textures_delta), builder)?;
-		let wait_for_frame = result == UpdateTexturesResult::Changed;
-		
-		let extend = self.framebuffer.extent();
-		let viewport = Viewport {
-			origin: [0.0, 0.0],
-			dimensions: [extend[0] as f32, extend[1] as f32],
-			depth_range: 0.0..1.0,
-		};
+	pub fn paint(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), WindowGuiPaintError> {
+		let cb = self.gui.draw_on_subpass_image(self.framebuffer.extent());
 		
 		builder.begin_render_pass(RenderPassBeginInfo {
-			                         clear_values: vec![None],
-			                         ..RenderPassBeginInfo::framebuffer(self.framebuffer.clone())
-		                         }, SubpassContents::Inline)?
-		       .set_viewport(0, Some(viewport.clone()));
+			                          clear_values: vec![None],
+			                          ..RenderPassBeginInfo::framebuffer(self.framebuffer.clone())
+		                          }, SubpassContents::SecondaryCommandBuffers)?
+		       .execute_commands(cb)?
+		       .end_render_pass()?;
 		
-		let size = window.inner_size();
-		let sf = window.scale_factor() as f32;
-		self.painter.draw(builder,
-		                  [(size.width as f32) / sf, (size.height as f32) / sf],
-		                  &self.ctx,
-		                  std::mem::take(&mut self.output.shapes),
-		                  viewport)?;
-		
-		builder.end_render_pass()?;
-		
-		Ok(wait_for_frame)
+		Ok(())
 	}
 }
 
@@ -148,7 +116,6 @@ impl WindowGui {
 #[derive(Debug, Error)]
 pub enum WindowGuiError {
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] PainterCreationError(#[error(source)] egui_vulkano::PainterCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
 }
@@ -162,6 +129,5 @@ pub enum WindowGuiRegenFramebufferError {
 #[derive(Debug, Error)]
 pub enum WindowGuiPaintError {
 	#[error(display = "{}", _0)] RenderPassError(#[error(source)] command_buffer::RenderPassError),
-	#[error(display = "{}", _0)] UpdateTexturesError(#[error(source)] egui_vulkano::UpdateTexturesError),
-	#[error(display = "{}", _0)] DrawError(#[error(source)] egui_vulkano::DrawError),
+	#[error(display = "{}", _0)] ExecuteCommandsError(#[error(source)] command_buffer::ExecuteCommandsError),
 }

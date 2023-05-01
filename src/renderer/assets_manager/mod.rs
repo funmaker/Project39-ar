@@ -7,7 +7,6 @@ use std::io::{BufRead, BufReader, ErrorKind, Seek};
 use std::fs::File;
 use std::fmt::{Debug, Display, Formatter};
 use std::ffi::{OsStr, OsString};
-use std::error::Error;
 
 mod texture;
 mod toml;
@@ -161,5 +160,5 @@ impl Display for AssetError {
 	}
 }
 
-impl Error for AssetError {}
+impl std::error::Error for AssetError {}
 

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::ops::Range;
-use bytemuck::{Pod, Zeroable};
-use vulkano::buffer::DeviceLocalBuffer;
+use vulkano::buffer::BufferContents;
+use vulkano::buffer::Subbuffer;
 use vulkano::image::{ImmutableImage, view::ImageView};
 use vulkano::sampler::{Sampler, SamplerCreateInfo};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -11,17 +11,16 @@ use crate::component::model::mmd::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelin
 use crate::renderer::Renderer;
 use crate::component::model::ModelError;
 use crate::math::{Vec3, Vec4};
-use crate::utils::NgPod;
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<PersistentDescriptorSet>);
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, BufferContents)]
 pub struct MaterialInfo {
-	pub color: NgPod<Vec4>,
-	pub specular: NgPod<Vec3>,
+	pub color: Vec4,
+	pub specular: Vec3,
 	pub specularity: f32,
-	pub ambient: NgPod<Vec3>,
+	pub ambient: Vec3,
 	pub sphere_mode: u32,
 }
 
@@ -36,7 +35,7 @@ pub struct SubMesh {
 
 impl SubMesh {
 	pub fn new(range: Range<u32>,
-	           material_buffer: Arc<DeviceLocalBuffer<MaterialInfo>>,
+	           material_buffer: Subbuffer<MaterialInfo>,
 	           texture: Arc<ImmutableImage>,
 	           toon: Arc<ImmutableImage>,
 	           sphere_map: Arc<ImmutableImage>,

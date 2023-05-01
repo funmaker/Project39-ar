@@ -90,7 +90,7 @@ impl Window {
 		let swapchain_extent = swapchain.image_extent();
 		let fb = renderer.create_framebuffer((swapchain_extent[0], swapchain_extent[1]))?;
 		
-		let gui = WindowGui::new(&fb, &event_loop, renderer)?;
+		let gui = WindowGui::new(&fb, &event_loop, surface.clone(), renderer)?;
 		
 		Ok(Window {
 			event_loop: Some(event_loop),
@@ -230,7 +230,7 @@ impl Window {
 		
 		builder.blit_image(copy_info)?;
 		
-		let wait_for_frame = self.gui.paint(&self.window(), &mut builder)?;
+		self.gui.paint(&mut builder)?;
 		
 		builder.blit_image(BlitImageInfo {
 			filter: Filter::Nearest,
@@ -243,14 +243,6 @@ impl Window {
 		self.last_present = Instant::now();
 		
 		let queue = renderer.queue.clone();
-		if wait_for_frame {
-			renderer.try_enqueue::<sync::FlushError, _>(queue.clone(), |future| {
-				let future = future.then_signal_fence_and_flush()?;
-				future.wait(None)?;
-				Ok(future.boxed())
-			})?;
-		}
-		
 		renderer.try_enqueue::<command_buffer::CommandBufferExecError, _>(queue.clone(), |future| {
 			Ok(
 				future.join(acquire_future)
@@ -285,13 +277,13 @@ impl Window {
 	}
 	
 	pub fn start_gui_frame(&mut self) -> egui::Context {
-		self.gui.start_frame(&self.window());
+		self.gui.start_frame();
 		
 		self.gui.ctx().clone()
 	}
 	
 	pub fn end_gui_frame(&mut self) {
-		self.gui.end_frame(&self.window());
+		self.gui.end_frame();
 	}
 	
 	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<(), Box<dyn Error>> {
@@ -447,14 +439,7 @@ impl RenderTarget for Window {
 		let image_num = self.acquire_image_num.unwrap();
 		let acquire_future = self.acquire_future.take().unwrap();
 		
-		let wait_for_frame = self.gui.paint(&self.window(), &mut context.builder)?;
-		if wait_for_frame {
-			renderer.try_enqueue::<sync::FlushError, _>(renderer.queue.clone(), |future| {
-				let future = future.then_signal_fence_and_flush()?;
-				future.wait(None)?;
-				Ok(future.boxed())
-			})?;
-		}
+		self.gui.paint(&mut context.builder)?;
 		
 		renderer.enqueue(renderer.queue.clone(), |future| future.join(acquire_future).boxed());
 		

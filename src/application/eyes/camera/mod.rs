@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::sync::mpsc;
 use err_derive::Error;
 use vulkano::{memory, command_buffer};
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage, CopyBufferToImageInfo};
-use vulkano::buffer::CpuBufferPool;
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::device::Queue;
@@ -22,7 +22,7 @@ pub use self::openvr::{OpenVR, OpenVRCameraError};
 pub use self::dummy::Dummy;
 use crate::debug;
 use crate::math::Isometry3;
-use crate::utils::FpsCounter;
+use crate::utils::{FpsCounter, SubbufferAllocatorEx, SubbufferAllocatorExError};
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;
@@ -37,9 +37,8 @@ pub trait Camera: Send + 'static {
 		let target = AttachmentImage::with_usage(&*memory_allocator,
 		                                         [CAPTURE_WIDTH, CAPTURE_HEIGHT],
 		                                         Format::B8G8R8A8_SRGB,
-		                                         ImageUsage { sampled: true,
-		                                                      transfer_dst: true,
-		                                                      ..ImageUsage::empty() })?;
+		                                         ImageUsage::SAMPLED
+			                                         | ImageUsage::TRANSFER_DST)?;
 		let ret = target.clone();
 		
 		let (sender, receiver) = mpsc::sync_channel(1);
@@ -56,7 +55,7 @@ pub trait Camera: Send + 'static {
 	}
 	
 	fn capture_loop(&mut self, queue: Arc<Queue>, memory_allocator: Arc<StandardMemoryAllocator>, command_buffer_allocator: Arc<StandardCommandBufferAllocator>, target: Arc<AttachmentImage>, sender: mpsc::SyncSender<(PrimaryAutoCommandBuffer, Option<Isometry3>)>) -> Result<(), CaptureLoopError> {
-		let buffer = CpuBufferPool::upload(memory_allocator.clone());
+		let allocator = SubbufferAllocator::new(memory_allocator, SubbufferAllocatorCreateInfo::default());
 		let mut fps_counter = FpsCounter::<20>::new();
 		
 		loop {
@@ -69,7 +68,7 @@ pub trait Camera: Send + 'static {
 			fps_counter.tick();
 			debug::set_flag("CAMERA_FPS", fps_counter.fps());
 			
-			let sub_buffer = buffer.from_iter(frame.0.array_chunks::<CHUNK_SIZE>().copied())?;
+			let sub_buffer = allocator.from_iter(frame.0.array_chunks::<CHUNK_SIZE>().copied())?;
 			
 			let mut builder  = AutoCommandBufferBuilder::primary(&*command_buffer_allocator, queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
 			builder.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(sub_buffer, target.clone()))?;
@@ -96,6 +95,7 @@ pub enum CameraStartError {
 pub enum CaptureLoopError {
 	#[error(display = "Quitting")] Quitting,
 	#[error(display = "{}", _0)] CaptureError(#[error(source)] CameraCaptureError),
+	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),

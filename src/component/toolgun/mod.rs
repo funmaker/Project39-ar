@@ -5,7 +5,7 @@ use err_derive::Error;
 use rapier3d::pipeline::QueryFilter;
 use simba::scalar::SubsetOf;
 use vulkano::{descriptor_set, memory, sync, command_buffer};
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
@@ -26,7 +26,7 @@ use crate::debug;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::pipelines::PipelineError;
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::FenceCheck;
+use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
 use crate::component::hand::HandComponent;
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
 use prop_manager::{PropCollection, PropManagerError};
@@ -61,7 +61,7 @@ pub struct ToolGun {
 	parent: ComponentRef<Parent>,
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
+	vertices: Subbuffer<[Vertex]>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
@@ -83,10 +83,10 @@ impl ToolGun {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            square.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   square.iter().cloned(),
+		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
 		                                       pipeline.layout().set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone(), [
@@ -301,6 +301,7 @@ pub enum ToolGunError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] PropManagerError(#[error(source)] PropManagerError),
+	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),

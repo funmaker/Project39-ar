@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
-use vulkano::sync::{FenceSignalFuture, GpuFuture, FlushError};
+use vulkano::sync::future::{FenceSignalFuture, GpuFuture, FlushError};
 
 #[derive(Clone)]
 pub struct FenceCheck(Arc<FenceSignalFuture<Box<dyn GpuFuture>>>);

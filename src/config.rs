@@ -22,6 +22,8 @@ pub struct Config {
 	#[arg_short = "v"] pub validation: bool,
 	/// Generate and print model2.toml.
 	pub gen_model_toml: bool,
+	/// Use colors in output: auto, never or always
+	pub color: Color,
 	/// Fallback GPU device to use.
 	pub gpu_id: usize,
 	/// Super-Sampling Anti-Aliasing factor.
@@ -34,6 +36,14 @@ pub struct Config {
 	pub novr: NovrConfig,
 	/// Window max framerate (0 - unlimited, not recommended)
 	pub window_max_fps: u32,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Color {
+	Auto,
+	Never,
+	Always,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
@@ -147,6 +157,24 @@ impl Config {
 impl Default for Config {
 	fn default() -> Self {
 		toml::from_str(include_str!("../config.toml")).expect("Bad config during compilation")
+	}
+}
+
+args_terminals! { Color }
+
+impl FromStr for Color {
+	type Err = toml::de::Error;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Color::deserialize(toml::de::ValueDeserializer::new(&format!("\"{}\"", s)))
+	}
+}
+
+impl Display for Color {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		let str = toml::to_string(self).map_err(|_| std::fmt::Error)?;
+		f.write_str(&str).map_err(|_| std::fmt::Error)?;
+		
+		Ok(())
 	}
 }
 

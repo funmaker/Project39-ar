@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::fmt::Debug;
 use bytemuck::Pod;
 use err_derive::Error;
-use vulkano::{command_buffer, descriptor_set, DeviceSize, memory, sampler, sync};
+use vulkano::{buffer, command_buffer, descriptor_set, DeviceSize, memory, sampler, sync};
 use vulkano::pipeline::graphics::input_assembly::Index;
 
 pub mod simple;
@@ -13,6 +13,7 @@ pub mod billboard;
 
 use crate::renderer::pipelines::PipelineError;
 use crate::renderer::assets_manager::{AssetError, TextureLoadError};
+use crate::utils::UploadError;
 pub use simple::SimpleModel;
 pub use self::mmd::MMDModel;
 pub use billboard::Billboard;
@@ -27,6 +28,7 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
+	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
 	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
@@ -37,4 +39,5 @@ pub enum ModelError {
 	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
+	#[error(display = "{}", _0)] BufferError(#[error(source)] buffer::BufferError),
 }

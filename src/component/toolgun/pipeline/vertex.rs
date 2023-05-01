@@ -1,13 +1,14 @@
-use bytemuck::{Pod, Zeroable};
+use std::convert::TryInto;
+use vulkano::buffer::BufferContents;
+use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 use crate::math::IntoArray;
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, BufferContents, VertexTy)]
 pub struct Vertex {
+	#[format(R32G32_SFLOAT)]
 	pos: [f32; 2],
 }
-
-vulkano::impl_vertex!(Vertex, pos);
 
 impl Vertex {
 	pub fn new(pos: impl IntoArray<[f32; 2]>) -> Self {

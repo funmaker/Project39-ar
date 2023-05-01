@@ -1,13 +1,13 @@
 use std::sync::Arc;
-use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::RenderPass;
 use vulkano::device::DeviceOwned;
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 use vulkano::image::SampleCount;
 
 mod vertex;
@@ -15,7 +15,7 @@ mod vertex;
 use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::{Vertex, TexturedVertex};
 
-pub use shape_vert::ty::Pc as ShapePc;
+pub use shape_vert::Pc as ShapePc;
 
 type DefaultPipelineVertex = super::default::Vertex;
 
@@ -47,7 +47,7 @@ impl PipelineConstructor for DebugPipeline {
 		
 		Ok(
 			GraphicsPipeline::start()
-				.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
+				.vertex_input_state(Vertex::per_vertex())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
@@ -91,7 +91,7 @@ impl PipelineConstructor for DebugTexturedPipeline {
 		
 		Ok(
 			GraphicsPipeline::start()
-				.vertex_input_state(BuffersDefinition::new().vertex::<TexturedVertex>())
+				.vertex_input_state(TexturedVertex::per_vertex())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())
@@ -112,8 +112,7 @@ mod shape_vert {
 vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/renderer/pipelines/debug/shape_vert.glsl",
-		spirv_version: "1.3",
-		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
+		spirv_version: "1.3"
 	}
 }
 
@@ -121,8 +120,7 @@ mod shape_frag {
 vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/renderer/pipelines/debug/shape_frag.glsl",
-		spirv_version: "1.3",
-		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
+		spirv_version: "1.3"
 	}
 }
 
@@ -138,7 +136,7 @@ impl PipelineConstructor for DebugShapePipeline {
 		
 		Ok(
 			GraphicsPipeline::start()
-				.vertex_input_state(BuffersDefinition::new().vertex::<DefaultPipelineVertex>())
+				.vertex_input_state(DefaultPipelineVertex::per_vertex())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())

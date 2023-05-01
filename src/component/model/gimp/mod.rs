@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
-use vulkano::buffer::{DeviceLocalBuffer, BufferUsage};
+use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
@@ -14,7 +14,7 @@ use crate::application::{Application, Entity, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureBundle;
-use crate::utils::{FenceCheck, DeviceLocalIndexBuffer, AutoCommandBufferBuilderEx};
+use crate::utils::{FenceCheck, IndexSubbuffer, AutoCommandBufferBuilderEx, BufferEx, IntoInfo};
 use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
 use super::{ModelError, VertexIndex};
 pub use asset::{GimpAsset, GimpLoadError};
@@ -25,8 +25,8 @@ use pipeline::{GimpPipeline, Pc};
 pub struct GimpModel {
 	#[inner] inner: ComponentInner,
 	pipeline: Arc<GraphicsPipeline>,
-	pub vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
-	pub indices: DeviceLocalIndexBuffer,
+	pub vertices: Subbuffer<[Vertex]>,
+	pub indices: IndexSubbuffer,
 	pub set: Arc<PersistentDescriptorSet>,
 	pub fence: FenceCheck,
 	active: Cell<bool>,
@@ -49,15 +49,15 @@ impl GimpModel {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            vertices.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   vertices.iter().cloned(),
+		                                   &mut upload_buffer)?;
 		
-		let indices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                           indices.iter().copied(),
-		                                           BufferUsage{ index_buffer: true, ..BufferUsage::empty() },
-		                                           &mut upload_buffer)?;
+		let indices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                  BufferUsage::INDEX_BUFFER.into_info(),
+		                                  indices.iter().copied(),
+		                                  &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
 		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [

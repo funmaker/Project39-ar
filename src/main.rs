@@ -12,6 +12,7 @@
 #![feature(int_roundings)]
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
+extern crate core;
 
 use std::fmt::Debug;
 use std::fs;
@@ -24,6 +25,7 @@ use native_dialog::{MessageDialog, MessageType};
 use application::{Application, ApplicationCreationError, ApplicationRunError};
 use config::Config;
 use utils::from_args::ArgsError;
+use crate::config::Color;
 
 #[macro_use] #[allow(dead_code)] mod debug;
 #[allow(dead_code)] mod math;
@@ -79,6 +81,12 @@ fn run_application() -> Result<(), RunError> {
 	if config.example_config {
 		println!("{}", Config::default_toml()?);
 		return Ok(());
+	}
+	
+	match config.color {
+		Color::Auto => colored::control::unset_override(),
+		Color::Never => colored::control::set_override(false),
+		Color::Always => colored::control::set_override(true),
 	}
 	
 	debug::set_debug(config.debug);

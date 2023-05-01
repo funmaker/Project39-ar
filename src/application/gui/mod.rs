@@ -106,7 +106,7 @@ impl ApplicationGui {
 		
 		if response.drag_delta().length_sq() > 16.0 && tab != GuiTab::Main {
 			self.grabbed = Some(tab);
-			if let Some(hover_pos) = ui.ctx().input().pointer.hover_pos() {
+			if let Some(hover_pos) = ui.ctx().input(|i| i.pointer.hover_pos()) {
 				self.drag_pos = hover_pos;
 			}
 		}

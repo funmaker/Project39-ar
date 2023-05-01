@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
@@ -13,7 +13,7 @@ use crate::renderer::pipelines::default::{DefaultPipeline, Pc};
 use crate::renderer::assets_manager::TextureBundle;
 use crate::application::Entity;
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::utils::{AutoCommandBufferBuilderEx, FenceCheck, DeviceLocalIndexBuffer};
+use crate::utils::{AutoCommandBufferBuilderEx, BufferEx, IntoInfo, FenceCheck, IndexSubbuffer};
 use crate::math::{AABB, aabb_from_points, Color, Point3, Similarity3};
 use super::{ModelError, VertexIndex};
 pub use asset::{ObjAsset, ObjLoadError};
@@ -23,8 +23,8 @@ pub struct SimpleModel {
 	#[inner] inner: ComponentInner,
 	aabb: AABB,
 	pipeline: Arc<GraphicsPipeline>,
-	pub vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
-	pub indices: DeviceLocalIndexBuffer,
+	pub vertices: Subbuffer<[Vertex]>,
+	pub indices: IndexSubbuffer,
 	pub set: Arc<PersistentDescriptorSet>,
 	pub fence: FenceCheck,
 }
@@ -44,15 +44,15 @@ impl SimpleModel {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            vertices.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   vertices.iter().cloned(),
+		                                   &mut upload_buffer)?;
 		
-		let indices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                           indices.iter().copied(),
-		                                           BufferUsage{ index_buffer: true, ..BufferUsage::empty() },
-		                                           &mut upload_buffer)?;
+		let indices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                  BufferUsage::INDEX_BUFFER.into_info(),
+		                                  indices.iter().copied(),
+		                                  &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
 		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [

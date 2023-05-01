@@ -4,25 +4,26 @@ use std::convert::TryInto;
 use std::error::Error;
 use std::sync::Arc;
 use std::iter::FromIterator;
+use colored::Colorize;
 use err_derive::Error;
-use bytemuck::{Pod, Zeroable};
+use vulkano::buffer::{BufferContents, BufferError};
 use vulkano::{command_buffer, device, instance, memory, render_pass, swapchain, sync, Version, VulkanLibrary};
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo};
+use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo, QueueFlags};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::{ClearValue, Format};
 use vulkano::image::{AttachmentImage, ImageLayout, ImageUsage, ImageViewAbstract, SampleCount, SwapchainImage};
 use vulkano::image::view::ImageView;
 use vulkano::instance::{Instance, InstanceCreateInfo, InstanceExtensions};
-use vulkano::instance::debug::{DebugUtilsMessenger, DebugUtilsMessengerCreateInfo};
-use vulkano::memory::allocator::StandardMemoryAllocator;
+use vulkano::instance::debug::{DebugUtilsMessenger, DebugUtilsMessengerCreateInfo, DebugUtilsMessageType, DebugUtilsMessageSeverity};
+use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
 use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{AttachmentDescription, AttachmentReference, Framebuffer, FramebufferCreateInfo, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
-use vulkano::sync::{GpuFuture, PipelineStage};
+use vulkano::sync::future::GpuFuture;
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 
 pub mod pipelines;
 pub mod debug_renderer;
@@ -44,11 +45,11 @@ use assets_manager::{AssetKey, AssetsManager};
 
 #[allow(dead_code)]
 #[repr(C)]
-#[derive(Clone, Copy, Zeroable, Pod)]
+#[derive(Default, Clone, Copy, BufferContents)]
 pub struct CommonsUBO {
-	projection: [NgPod<PMat4>; 2],
-	view: [NgPod<AMat4>; 2],
-	light_direction: [NgPod<Vec4>; 2],
+	projection: [PMat4; 2],
+	view: [AMat4; 2],
+	light_direction: [Vec4; 2],
 	ambient: f32,
 }
 
@@ -62,7 +63,7 @@ pub struct Renderer {
 	pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
 	pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
 	pub memory_allocator: Arc<StandardMemoryAllocator>,
-	pub commons: Arc<DeviceLocalBuffer<CommonsUBO>>,
+	pub commons: Subbuffer<CommonsUBO>,
 	
 	future: Option<Box<dyn GpuFuture>>,
 	debug_renderer: Option<DebugRenderer>,
@@ -86,17 +87,16 @@ impl Renderer {
 		
 		let physical = Renderer::create_physical_device(&instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
+		
 		let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo::default()));
 		let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone()));
 		let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let render_pass = Renderer::create_render_pass(&device)?;
 		let mut pipelines = Pipelines::new(render_pass.clone());
 		
-		let commons = DeviceLocalBuffer::new(&memory_allocator,
-		                                     BufferUsage{ transfer_dst: true,
-		                                                  uniform_buffer: true,
-		                                                  ..BufferUsage::empty() },
-		                                     Some(queue.queue_family_index()))?;
+		let commons = Buffer::new_sized(&memory_allocator,
+		                                (BufferUsage::TRANSFER_DST | BufferUsage::UNIFORM_BUFFER).into_info(),
+		                                MemoryUsage::DeviceOnly.into_info())?;
 		
 		let debug_renderer = Some(DebugRenderer::new(&load_queue, &memory_allocator, &command_buffer_allocator, &descriptor_set_allocator, &mut pipelines)?);
 		let assets_manager = Some(AssetsManager::new());
@@ -167,40 +167,29 @@ impl Renderer {
 	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger, RendererError> {
 		// SAFETY: user callback must not make any calls to the Vulkan API.
 		unsafe {
-			Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo::user_callback(Arc::new(|msg| {
-				if !debug::debug() { return }
-				if msg.ty.general && msg.severity.verbose { return }
-				
-				// debug::debugger();
-				
-				let severity = if msg.severity.error {
-					"error"
-				} else if msg.severity.warning {
-					"warning"
-				} else if msg.severity.information {
-					"information"
-				} else if msg.severity.verbose {
-					"verbose"
-				} else {
-					"unknown"
-				};
-				
-				let ty = if msg.ty.general {
-					"general"
-				} else if msg.ty.validation {
-					"validation"
-				} else if msg.ty.performance {
-					"performance"
-				} else {
-					"unknown"
-				};
-				
-				println!("{} {} {}: {}",
-				         msg.layer_prefix.unwrap_or("UNKNOWN"),
-				         ty,
-				         severity,
-				         msg.description);
-			})))?)
+			Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo {
+				message_severity: DebugUtilsMessageSeverity::ERROR
+					| DebugUtilsMessageSeverity::WARNING
+					| DebugUtilsMessageSeverity::INFO
+					| DebugUtilsMessageSeverity::VERBOSE,
+				message_type: DebugUtilsMessageType::GENERAL
+					| DebugUtilsMessageType::VALIDATION
+					| DebugUtilsMessageType::PERFORMANCE,
+				..DebugUtilsMessengerCreateInfo::user_callback(Arc::new(|msg| {
+					if !debug::debug() { return }
+					
+					let color = if msg.severity.contains(DebugUtilsMessageSeverity::ERROR) { colored::Color::BrightRed }
+					else if msg.severity.contains(DebugUtilsMessageSeverity::WARNING) { colored::Color::Yellow }
+					else if msg.severity.contains(DebugUtilsMessageSeverity::INFO) { colored::Color::Cyan }
+					else { colored::Color::White };
+					
+					println!("[{} {}] {}: {}",
+					         format!("{:?}", msg.ty).color(color).bold(),
+					         format!("{:?}", msg.severity).color(color).bold(),
+					         msg.layer_prefix.unwrap_or("UNKNOWN").bright_white(),
+					         msg.description.white());
+				}))
+			})?)
 		}
 	}
 	
@@ -251,15 +240,15 @@ impl Renderer {
 		}
 		
 		let queue_family = physical.queue_family_properties()
-		                                        .iter()
-		                                        .position(|q| q.supports_stage(PipelineStage::AllGraphics))
-		                                        .ok_or(RendererError::NoQueue)?;
+		                           .iter()
+		                           .position(|q| q.queue_flags.contains(QueueFlags::GRAPHICS))
+		                           .ok_or(RendererError::NoQueue)?;
 		
 		// TODO: q.supports_graphics() prevents you from using pure transfer-oriented families, but it's required for mipmaps. Something has to be done about it.
 		let load_queue_family = physical.queue_family_properties()
 		                                .iter()
 		                                .enumerate()
-		                                .position(|(id, q)| q.supports_stage(PipelineStage::AllTransfer) && q.supports_stage(PipelineStage::AllGraphics) && id != queue_family);
+		                                .position(|(id, q)| q.queue_flags.contains(QueueFlags::TRANSFER) && q.queue_flags.contains(QueueFlags::GRAPHICS) && id != queue_family);
 		
 		let mut queue_create_infos = vec![QueueCreateInfo {
 			queue_family_index: queue_family as u32,
@@ -392,22 +381,16 @@ impl Renderer {
 		
 		let alpha_preference = [CompositeAlpha::PreMultiplied, CompositeAlpha::Opaque, CompositeAlpha::Inherit];
 		let alpha = alpha_preference.iter()
-		                            .cloned()
-		                            .find(|&composite| caps.supported_composite_alpha.supports(composite))
+		                            .copied()
+		                            .find(|&composite| caps.supported_composite_alpha.contains_enum(composite))
 		                            .expect("PreMultiplied and Opaque alpha composites not supported on the surface");
-		
-		let usage = ImageUsage{
-			transfer_dst: true,
-			sampled: true,
-			..ImageUsage::empty()
-		};
 		
 		Ok(Swapchain::new(self.device.clone(), surface, SwapchainCreateInfo {
 			min_image_count: 2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(caps.min_image_count)),
 			image_format: Some(format.0),
 			image_color_space: format.1,
 			image_extent: dimensions,
-			image_usage: usage,
+			image_usage: ImageUsage::TRANSFER_DST | ImageUsage::SAMPLED,
 			composite_alpha: alpha,
 			present_mode: PresentMode::Fifo,
 			clipped: false,
@@ -430,23 +413,18 @@ impl Renderer {
 		                                                                      LAYERS,
 		                                                                      SampleCount::Sample1,
 		                                                                      IMAGE_FORMAT,
-		                                                                      ImageUsage {
-			                                                                      transfer_src: true,
-			                                                                      transfer_dst: true,
-			                                                                      sampled: true,
-			                                                                      ..ImageUsage::empty()
-		                                                                      })?;
+		                                                                      ImageUsage::COLOR_ATTACHMENT
+			                                                                      | ImageUsage::TRANSFER_SRC
+			                                                                      | ImageUsage::TRANSFER_DST
+			                                                                      | ImageUsage::SAMPLED)?;
 		
 		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
 		                                                                       dimensions,
 		                                                                       LAYERS,
 		                                                                       samples,
 		                                                                       DEPTH_FORMAT,
-		                                                                       ImageUsage {
-			                                                                       depth_stencil_attachment: true,
-			                                                                       transient_attachment: true,
-			                                                                       ..ImageUsage::empty()
-		                                                                       })?;
+		                                                                       ImageUsage::DEPTH_STENCIL_ATTACHMENT
+			                                                                       | ImageUsage::TRANSIENT_ATTACHMENT)?;
 		
 		
 		
@@ -461,10 +439,7 @@ impl Renderer {
 			                                                                      LAYERS,
 			                                                                      samples,
 			                                                                      IMAGE_FORMAT,
-			                                                                      ImageUsage {
-				                                                                      color_attachment: true,
-				                                                                      ..ImageUsage::empty()
-			                                                                      })?;
+			                                                                      ImageUsage::COLOR_ATTACHMENT)?;
 			
 			vec![
 				ImageView::new_default(msaa_image)?,
@@ -500,21 +475,18 @@ impl Renderer {
 	}
 	
 	pub fn begin_frame(&mut self) -> Result<(), RendererBeginFrameError> {
-		let future = if let Some(mut previous_frame) = self.future.take() {
-			previous_frame.cleanup_finished();
-			// TODO: Actually wait
-			// previous_frame.wait(None)?;
-			previous_frame
-		} else {
-			sync::now(self.device.clone()).boxed()
-		};
+		if let Some(previous_frame) = self.future.take() {
+			// TODO: double fence?
+			previous_frame.then_signal_fence_and_flush()?
+			              .wait(None)?;
+		}
 		
 		self.fps_counter.tick();
 		
 		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::green());
 		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::green());
 		
-		self.future = Some(future);
+		self.future = Some(sync::now(self.device.clone()).boxed());
 		
 		Ok(())
 	}
@@ -548,8 +520,10 @@ impl Renderer {
 			Err(err) => return Err(RendererRenderError::RenderTargetError(err)),
 		};
 		
+		let mut builder = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator, self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
+		
 		let light_source = vector!(0.5, -0.5, -1.5).normalize();
-		let commons = CommonsUBO {
+		builder.update_buffer(self.commons.clone(), Arc::new(CommonsUBO {
 			projection: [rt_context.projection.0.into(), rt_context.projection.1.into()],
 			view: [rt_context.view.0.into(), rt_context.view.1.into()],
 			light_direction: [
@@ -557,10 +531,7 @@ impl Renderer {
 				(rt_context.view.1 * light_source).to_homogeneous().into(),
 			],
 			ambient: 0.25,
-		};
-		
-		let mut builder = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator, self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
-		builder.update_buffer(Arc::new(commons), self.commons.clone(), 0)?;
+		}))?;
 		
 		let mut context = RenderContext::new(&rt_context, &mut builder, camera_pos);
 		
@@ -674,6 +645,7 @@ pub enum RendererError {
 	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
 	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
+	#[error(display = "{}", _0)] BufferError(#[error(source)] BufferError),
 	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] VulkanError(#[error(source)] vulkano::VulkanError),
 	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
@@ -701,6 +673,7 @@ pub enum RendererCreateFramebufferError {
 
 #[derive(Debug, Error)]
 pub enum RendererBeginFrameError {
+	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 }
 
 #[derive(Debug, Error)]
@@ -721,6 +694,7 @@ pub enum RendererRenderError<RTE: Error> {
 	#[error(display = "{}", _0)] CommandBufferBuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
+	#[error(display = "{}", _0)] ClearError(#[error(source)] command_buffer::ClearError),
 }
 
 impl<RTE: Error> From<ComponentError> for RendererRenderError<RTE> {

@@ -1,27 +1,26 @@
 use std::sync::Arc;
-use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::RenderPass;
 use vulkano::device::DeviceOwned;
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::vertex_input::BuffersDefinition;
 use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 use vulkano::image::SampleCount;
 
 mod vertex;
 
 use crate::renderer::pipelines::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::Vertex;
-pub use vert::ty::Pc;
+pub use vert::Pc;
 
 mod vert {
 	vulkano_shaders::shader! {
 		ty: "vertex",
 		path: "src/component/model/gimp/pipeline/vert.glsl",
-		spirv_version: "1.3",
-		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
+		spirv_version: "1.3"
 	}
 }
 
@@ -29,8 +28,7 @@ mod frag {
 	vulkano_shaders::shader! {
 		ty: "fragment",
 		path: "src/component/model/gimp/pipeline/frag.glsl",
-		spirv_version: "1.3",
-		types_meta: { use bytemuck::{Zeroable, Pod}; #[derive(Clone, Copy, Zeroable, Pod)] }
+		spirv_version: "1.3"
 	}
 }
 
@@ -46,7 +44,7 @@ impl PipelineConstructor for GimpPipeline {
 		
 		Ok(
 			GraphicsPipeline::start()
-				.vertex_input_state(BuffersDefinition::new().vertex::<Vertex>())
+				.vertex_input_state(Vertex::per_vertex())
 				.vertex_shader(vs.entry_point("main").unwrap(), ())
 				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
 				.fragment_shader(fs.entry_point("main").unwrap(), ())

@@ -1,21 +1,30 @@
-use bytemuck::{Pod, Zeroable};
+use std::convert::TryInto;
+use vulkano::buffer::BufferContents;
+use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 use crate::math::IntoArray;
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, BufferContents, VertexTy)]
 pub struct Vertex {
+	#[format(R32G32B32_SFLOAT)]
 	pos: [f32; 3],
+	#[format(R32G32B32_SFLOAT)]
 	normal: [f32; 3],
+	#[format(R32G32_SFLOAT)]
 	uv: [f32; 2],
+	#[format(R32_SFLOAT)]
 	edge_scale: f32,
+	#[format(R32G32B32A32_UINT)]
 	bones_indices: [u32; 4],
+	#[format(R32G32B32A32_SFLOAT)]
 	bones_weights: [f32; 4],
+	#[format(R32G32B32_SFLOAT)]
 	sdef_c: [f32; 3],
+	#[format(R32G32B32_SFLOAT)]
 	sdef_r0: [f32; 3],
+	#[format(R32G32B32_SFLOAT)]
 	sdef_r1: [f32; 3],
 }
-
-vulkano::impl_vertex!(Vertex, pos, normal, uv, edge_scale, bones_indices, bones_weights, sdef_c, sdef_r0, sdef_r1);
 
 const SDEF_DEF: [[f32; 3]; 3] = [
 	[0.0, 0.0, 0.0],

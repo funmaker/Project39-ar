@@ -1,18 +1,19 @@
 use std::sync::{Arc, mpsc};
 use err_derive::Error;
 use bytemuck::{Zeroable, Pod};
-use vulkano::{sync, command_buffer, sampler, memory, descriptor_set};
+use vulkano::{sync, command_buffer, sampler, memory, descriptor_set, buffer};
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage, BufferContents};
 use vulkano::device::Queue;
-use vulkano::buffer::{DeviceLocalBuffer, BufferUsage, CpuAccessibleBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract};
+use vulkano::memory::allocator::{AllocationCreateInfo, MemoryUsage};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use vulkano::sync::GpuFuture;
 
 use crate::math::{Vec4, Vec2, Mat3, Isometry3};
-use crate::utils::{FenceCheck, NgPod};
+use crate::utils::{FenceCheck, IntoInfo};
 use crate::config;
 use crate::application::eyes::camera::CameraStartError;
 use crate::application::eyes::camera::Camera;
@@ -22,22 +23,21 @@ use super::pipeline::{BackgroundPipeline, Vertex, Pc};
 
 #[allow(dead_code)]
 #[repr(C)]
-#[derive(Default, Copy, Clone, Zeroable, Pod)]
+#[derive(Default, Copy, Clone, BufferContents)]
 struct Intrinsics {
-	rawproj: [NgPod<Vec4>; 2],
-	focal: [NgPod<Vec2>; 2],
-	coeffs: [NgPod<Vec4>; 2],
-	scale: [NgPod<Vec2>; 2],
-	center: [NgPod<Vec2>; 2],
+	rawproj: [Vec4; 2],
+	focal: [Vec2; 2],
+	coeffs: [Vec4; 2],
+	scale: [Vec2; 2],
+	center: [Vec2; 2],
 }
 
 pub struct Background {
 	queue: Arc<Queue>,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
+	vertices: Subbuffer<[Vertex]>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<PersistentDescriptorSet>,
-	fence: FenceCheck,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
 	camera_loads: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
@@ -60,14 +60,11 @@ impl Background {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
-		                                                          renderer.load_queue.queue_family_index(),
-		                                                          CommandBufferUsage::OneTimeSubmit)?;
-		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            square.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		// TODO: Upload
+		let vertices = Buffer::from_iter(&renderer.memory_allocator,
+		                                 BufferUsage::VERTEX_BUFFER.into_info(),
+		                                 MemoryUsage::Upload.into_info(),
+		                                 square.iter().copied())?; // TODO: remove copied (array_into_iter)
 		
 		let intrinsics = Intrinsics {
 			rawproj: [
@@ -92,10 +89,10 @@ impl Background {
 			],
 		};
 		
-		let intrinsics = CpuAccessibleBuffer::from_data(&renderer.memory_allocator,
-		                                                BufferUsage{ uniform_buffer: true, ..BufferUsage::empty() },
-		                                                true,
-		                                                intrinsics)?;
+		let intrinsics = Buffer::from_data(&renderer.memory_allocator,
+		                                   BufferUsage::UNIFORM_BUFFER.into_info(),
+		                                   MemoryUsage::Upload.into_info(),
+		                                   intrinsics)?;
 		
 		let view = ImageView::new_default(camera_image.clone())?;
 		let sampler = Sampler::new(queue.device().clone(), SamplerCreateInfo {
@@ -132,18 +129,12 @@ impl Background {
 		  .try_inverse()
 		  .expect("Unable to inverse right camera extrinsics");
 		
-		let upload_future = upload_buffer.build()?
-		                                 .execute(renderer.load_queue.clone())?;
-		
-		let fence = FenceCheck::new(upload_future)?;
-		
 		Ok(Background {
 			queue,
 			pipeline,
 			vertices,
 			// intrinsics,
 			set,
-			fence,
 			extrinsics: (left_extrinsics, right_extrinsics),
 			last_frame_pose: Isometry3::identity(),
 			camera_loads: camera_rx,
@@ -166,8 +157,6 @@ impl Background {
 	}
 	
 	pub fn render(&mut self, camera_pos: Isometry3, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), BackgroundRenderError> {
-		if !self.fence.check() { return Ok(()); }
-		
 		// if let Ok(mut intrinsics) = self.intrinsics.write() {
 		// 	if debug::get_flag_or_default("KeyA") {
 		// 		intrinsics.center[0].x -= 0.0001;
@@ -272,6 +261,7 @@ pub enum BackgroundError {
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
+	#[error(display = "{}", _0)] BufferError(#[error(source)] buffer::BufferError),
 }
 
 #[derive(Debug, Error)]

@@ -3,8 +3,6 @@ use std::ops::{Deref, DerefMut};
 use nalgebra::{Scalar, Transform, TCategory};
 use simba::scalar::{SubsetOf, SupersetOf};
 
-use crate::utils::ng_pod_impl;
-
 pub use std::f32::consts::PI;
 
 pub type Vec2 = nalgebra::Vector2<f32>;
@@ -18,8 +16,6 @@ pub type IVec4 = nalgebra::Vector4<i32>;
 pub type Point2 = nalgebra::Point2<f32>;
 pub type Point3 = nalgebra::Point3<f32>;
 pub type Point4 = nalgebra::Point4<f32>;
-
-ng_pod_impl!(Vec2, Vec3, Vec4, IVec2, IVec3, IVec4, Point2, Point3, Point4);
 
 pub type Rot3 = nalgebra::UnitQuaternion<f32>;
 pub type Translation3 = nalgebra::Translation3<f32>;
@@ -42,8 +38,6 @@ pub type Mat2 = nalgebra::Matrix2<f32>;
 pub type Mat3 = nalgebra::Matrix3<f32>;
 pub type Mat4 = nalgebra::Matrix4<f32>;
 pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
-
-ng_pod_impl!(AMat3, AMat4, PMat3, PMat4, Mat2, Mat3, Mat4, Mat3x4);
 
 pub type Ray = rapier3d::geometry::Ray;
 pub type AABB = rapier3d::geometry::Aabb;

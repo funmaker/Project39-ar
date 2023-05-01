@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::mem::size_of;
 use std::sync::Arc;
 use std::time::Duration;
 use nalgebra::UnitQuaternion;
@@ -7,10 +6,11 @@ use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
 use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::DeviceSize;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
+use vulkano::command_buffer::CopyBufferInfo;
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
+use vulkano::memory::allocator::MemoryUsage;
 
 pub mod pipeline;
 pub mod shared;
@@ -23,7 +23,7 @@ mod overrides;
 use crate::debug;
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::application::{Application, Entity};
-use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, NgPod};
+use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, IntoInfo, SubbufferAllocatorEx};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI, Vec3};
 use super::ModelError;
@@ -31,7 +31,7 @@ pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
 pub use bone::{BoneConnection, MMDBone};
 pub use rigid_body::MMDRigidBody;
 use shared::MMDModelShared;
-use vulkano::command_buffer::{CopyBufferInfo, FillBufferInfo};
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 
 pub struct MMDModelState {
 	pub bones: Vec<MMDBone>,
@@ -47,12 +47,13 @@ pub struct MMDModel {
 	#[inner] inner: ComponentInner,
 	pub state: RefCell<MMDModelState>,
 	shared: Arc<MMDModelShared>,
-	bones_ubo: Arc<DeviceLocalBuffer<[NgPod<Mat4>]>>,
-	morphs_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
-	offsets_ubo: Arc<DeviceLocalBuffer<[NgPod<IVec4>]>>,
+	bones_ubo: Subbuffer<[Mat4]>,
+	morphs_ubo: Subbuffer<[IVec4]>,
+	offsets_ubo: Subbuffer<[IVec4]>,
 	morphs_set: Arc<PersistentDescriptorSet>,
 	model_set: Arc<PersistentDescriptorSet>,
 	model_edge_set: Option<Arc<PersistentDescriptorSet>>,
+	upload_allocator: SubbufferAllocator,
 }
 
 #[allow(dead_code)]
@@ -61,35 +62,30 @@ impl MMDModel {
 		let bones = shared.default_bones.clone();
 		let bones_count = bones.len();
 		let bones_mats = Vec::with_capacity(bones_count);
-		let bones_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
-		                                         (size_of::<AMat4>() * bones_count) as DeviceSize,
-		                                         BufferUsage {
-			                                         transfer_dst: true,
-			                                         storage_buffer: true,
-			                                         ..BufferUsage::empty()
-		                                         },
-		                                         Some(renderer.queue.queue_family_index()))?;
+		let bones_ubo = Buffer::new_slice(&renderer.memory_allocator,
+		                                  (BufferUsage::TRANSFER_DST | BufferUsage::STORAGE_BUFFER).into_info(),
+		                                  MemoryUsage::DeviceOnly.into_info(),
+		                                  bones_count as u64)?;
 		
 		let morphs = vec![0.0; shared.morphs_sizes.len()];
 		let morphs_vec_count = (shared.morphs_sizes.len() + 1) / 2;
 		let morphs_vec = Vec::with_capacity(morphs_vec_count);
-		let morphs_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
-		                                          morphs_vec_count as DeviceSize,
-		                                          BufferUsage {
-			                                          transfer_dst: true,
-			                                          storage_buffer: true,
-			                                          ..BufferUsage::empty()
-		                                          },
-		                                          Some(renderer.queue.queue_family_index()))?;
+		let morphs_ubo = Buffer::new_slice(&renderer.memory_allocator,
+		                                   (BufferUsage::TRANSFER_DST | BufferUsage::STORAGE_BUFFER).into_info(),
+		                                   MemoryUsage::DeviceOnly.into_info(),
+		                                   morphs_vec_count as u64)?;
 		
-		let offsets_ubo = DeviceLocalBuffer::array(&renderer.memory_allocator,
-		                                           shared.vertices.len(),
-		                                           BufferUsage {
-			                                           transfer_dst: true,
-			                                           storage_buffer: true,
-			                                           ..BufferUsage::empty()
-		                                           },
-		                                           Some(renderer.queue.queue_family_index()))?;
+		let offsets_ubo = Buffer::new_slice(&renderer.memory_allocator,
+		                                    (BufferUsage::TRANSFER_DST | BufferUsage::STORAGE_BUFFER).into_info(),
+		                                    MemoryUsage::DeviceOnly.into_info(),
+		                                    shared.vertices.len() as u64)?;
+		
+		let upload_allocator = SubbufferAllocator::new(renderer.memory_allocator.clone(),
+		                                               SubbufferAllocatorCreateInfo {
+			                                               buffer_usage: BufferUsage::TRANSFER_SRC,
+			                                               memory_usage: MemoryUsage::Upload,
+			                                               ..SubbufferAllocatorCreateInfo::default()
+		                                               });
 		
 		let compute_layout = shared.morphs_pipeline
 		                           .layout()
@@ -139,6 +135,7 @@ impl MMDModel {
 			offsets_ubo,
 			model_set,
 			model_edge_set,
+			upload_allocator,
 		})
 	}
 	
@@ -334,11 +331,11 @@ impl Component for MMDModel {
 			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
-		let bone_buf = self.shared.bones_pool.from_iter(state.bones_mats.drain(..).map(|mat| {
+		let bone_buf = self.upload_allocator.from_iter(state.bones_mats.drain(..).map(|mat| {
 			let mut mat = mat.to_homogeneous();
 			let rot = UnitQuaternion::from_matrix(&mat.fixed_resize(0.0)).inverse();
 			mat.set_row(3, &rot.coords.transpose());
-			mat.into()
+			mat
 		}))?;
 		
 		context.builder.copy_buffer(CopyBufferInfo::buffers(bone_buf, self.bones_ubo.clone()))?;
@@ -366,14 +363,14 @@ impl Component for MMDModel {
 		}
 		
 		if state.morphs_vec.is_empty() {
-			context.builder.fill_buffer(FillBufferInfo::dst_buffer(self.offsets_ubo.clone()))?;
+			context.builder.fill_buffer(self.offsets_ubo.as_bytes().clone().cast_aligned(), 0)?;
 		} else {
 			let groups = (max_size + MORPH_GROUP_SIZE - 1) / MORPH_GROUP_SIZE;
 			
-			let morph_buf = self.shared.morphs_pool.from_iter(state.morphs_vec.iter().copied().map(Into::into))?;
+			let morph_buf = self.upload_allocator.from_iter(state.morphs_vec.iter().copied())?;
 			
 			context.builder.copy_buffer(CopyBufferInfo::buffers(morph_buf, self.morphs_ubo.clone()))?
-			               .fill_buffer(FillBufferInfo::dst_buffer(self.offsets_ubo.clone()))?
+			               .fill_buffer(self.offsets_ubo.as_bytes().clone().cast_aligned(), 0)?
 			               .bind_pipeline_compute(self.shared.morphs_pipeline.clone())
 			               .bind_descriptor_sets(PipelineBindPoint::Compute,
 			                                     self.shared.morphs_pipeline.layout().clone(),

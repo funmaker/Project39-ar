@@ -3,35 +3,34 @@ use std::cell::{RefCell, RefMut};
 use err_derive::Error;
 use vulkano::{command_buffer, memory};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, allocator::StandardCommandBufferAllocator};
-use vulkano::buffer::{CpuBufferPool, BufferUsage, TypedBufferAccess};
 use vulkano::device::Queue;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use vulkano::descriptor_set::{PersistentDescriptorSet, allocator::StandardDescriptorSetAllocator};
 use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
+use vulkano::buffer::BufferUsage;
 use nalgebra::Unit;
 
 mod text_cache;
 
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
-use crate::utils::AutoCommandBufferBuilderEx;
+use crate::utils::{AutoCommandBufferBuilderEx, SubbufferAllocatorEx, SubbufferAllocatorExError};
 use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, ShapePc, Vertex, TexturedVertex};
 use super::pipelines::{Pipelines, PipelineError};
-use super::Renderer;
+use super::assets_manager::TextureAsset;
+use super::{Renderer, RenderContext};
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
-use crate::renderer::assets_manager::TextureAsset;
-use crate::renderer::RenderContext;
 
 pub struct DebugRenderer {
 	text_cache: RefCell<TextCache>,
 	pipeline: Arc<GraphicsPipeline>,
 	text_pipeline: Arc<GraphicsPipeline>,
 	shape_pipeline: Arc<GraphicsPipeline>,
-	vertices_pool: CpuBufferPool<Vertex>,
-	text_vertices_pool: CpuBufferPool<TexturedVertex>,
-	indexes_pool: CpuBufferPool<u32>,
+	vertices_allocator: SubbufferAllocator,
+	indexes_allocator: SubbufferAllocator,
 	vertices: Vec<Vertex>,
 	text_vertices: Vec<TexturedVertex>,
 	indexes: Vec<u32>,
@@ -54,9 +53,19 @@ impl DebugRenderer {
 		let text_pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		let shape_pipeline = pipelines.get::<DebugShapePipeline>()?;
 		
-		let vertices_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { vertex_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
-		let text_vertices_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { vertex_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
-		let indexes_pool = CpuBufferPool::new(memory_allocator.clone(), BufferUsage { index_buffer: true, ..BufferUsage::empty() }, MemoryUsage::Upload);
+		let vertices_allocator = SubbufferAllocator::new(memory_allocator.clone(),
+		                                                 SubbufferAllocatorCreateInfo {
+			                                                 memory_usage: MemoryUsage::Upload,
+			                                                 buffer_usage: BufferUsage::VERTEX_BUFFER,
+			                                                 ..SubbufferAllocatorCreateInfo::default()
+		                                                 });
+		
+		let indexes_allocator = SubbufferAllocator::new(memory_allocator.clone(),
+		                                                SubbufferAllocatorCreateInfo {
+			                                                memory_usage: MemoryUsage::Upload,
+			                                                buffer_usage: BufferUsage::INDEX_BUFFER,
+			                                                ..SubbufferAllocatorCreateInfo::default()
+		                                                });
 		
 		let text_cache = RefCell::new(TextCache::new(queue, memory_allocator, command_buffer_allocator, descriptor_set_allocator, pipelines)?);
 		
@@ -64,9 +73,8 @@ impl DebugRenderer {
 			pipeline,
 			text_pipeline,
 			shape_pipeline,
-			vertices_pool,
-			text_vertices_pool,
-			indexes_pool,
+			vertices_allocator,
+			indexes_allocator,
 			vertices: vec![],
 			text_vertices: vec![],
 			indexes: vec![],
@@ -128,8 +136,8 @@ impl DebugRenderer {
 		});
 		
 		if !self.vertices.is_empty() {
-			let vertex_buffer = self.vertices_pool.from_iter(self.vertices.drain(..))?;
-			let index_buffer = self.indexes_pool.from_iter(self.indexes.drain(..))?;
+			let vertex_buffer = self.vertices_allocator.from_iter(self.vertices.drain(..))?;
+			let index_buffer = self.indexes_allocator.from_iter(self.indexes.drain(..))?;
 			let index_count = index_buffer.len();
 			
 			context.builder.bind_pipeline_graphics(self.pipeline.clone())
@@ -153,8 +161,8 @@ impl DebugRenderer {
 				if text.size <= 0.0 || text.text.is_empty() {
 					continue;
 				} else if let Some(set) = self.draw_text(text, &viewproj, &context.pixel_scale)? {
-					let vertex_buffer = self.text_vertices_pool.from_iter(self.text_vertices.drain(..))?;
-					let index_buffer = self.indexes_pool.from_iter(self.indexes.drain(..))?;
+					let vertex_buffer = self.vertices_allocator.from_iter(self.text_vertices.drain(..))?;
+					let index_buffer = self.indexes_allocator.from_iter(self.indexes.drain(..))?;
 					let index_count = index_buffer.len();
 					
 					context.builder.bind_index_buffer(index_buffer)
@@ -538,6 +546,7 @@ pub enum DebugRendererError {
 #[derive(Debug, Error)]
 pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
+	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
 	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::PipelineExecutionError),
 }
@@ -545,4 +554,5 @@ pub enum DebugRendererRenderError {
 #[derive(Debug, Error)]
 pub enum DebugRendererPreRenderError {
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
 }

@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 use egui::Ui;
-use vulkano::buffer::{BufferUsage, DeviceLocalBuffer, TypedBufferAccess};
+use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImageAccess;
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
@@ -11,7 +11,7 @@ mod pipeline;
 
 use crate::renderer::assets_manager::TextureAsset;
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{ExUi, FenceCheck};
+use crate::utils::{BufferEx, IntoInfo, ExUi, FenceCheck};
 use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::application::{Application, Entity};
@@ -28,7 +28,7 @@ pub struct Billboard {
 	rotation: Cell<f32>,
 	last_rot: Cell<Rot3>,
 	pipeline: Arc<GraphicsPipeline>,
-	vertices: Arc<DeviceLocalBuffer<[Vertex]>>,
+	vertices: Subbuffer<[Vertex]>,
 	set: Arc<PersistentDescriptorSet>,
 	fence: FenceCheck,
 }
@@ -55,10 +55,10 @@ impl Billboard {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            square.iter().cloned(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   square.iter().cloned(),
+		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
 		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [

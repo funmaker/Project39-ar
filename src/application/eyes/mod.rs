@@ -4,12 +4,12 @@ use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use openvr::compositor::Texture;
 use vulkano::{command_buffer, sync};
 use vulkano::command_buffer::{CopyImageInfo, ImageCopy};
-use vulkano::image::{AttachmentImage, ImageAccess, ImageSubresourceLayers, ImageUsage, SampleCount};
+use vulkano::image::{AttachmentImage, ImageAccess, ImageDimensions, ImageSubresourceLayers, ImageUsage, SampleCount, StorageImage, ImageCreateFlags};
 use vulkano::format::ClearValue;
 use vulkano::sync::GpuFuture;
 
 pub mod camera;
-mod openvr_cb;
+// mod openvr_cb;
 mod background;
 mod pipeline;
 
@@ -20,13 +20,13 @@ use crate::config::NovrConfig;
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RendererCreateFramebufferError, RenderTarget, RenderTargetContext};
 use super::VR;
 use camera::Camera;
-use openvr_cb::OpenVRCommandBuffer;
+// use openvr_cb::OpenVRCommandBuffer;
 use background::{Background, BackgroundError, BackgroundRenderError, BackgroundLoadError};
 
 
 pub struct Eyes {
 	fb: FramebufferBundle,
-	side_image: Arc<AttachmentImage>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
+	side_image: Arc<StorageImage>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
 	textures: (Texture, Texture),
 	view: (AMat4, AMat4),
 	projection: (PMat4, PMat4),
@@ -80,16 +80,18 @@ impl Eyes {
 		
 		let dimensions = fb.framebuffer.extent();
 		
-		let side_image = AttachmentImage::multisampled_with_usage(&renderer.memory_allocator,
-		                                                          dimensions,
-		                                                          SampleCount::Sample1,
-		                                                          IMAGE_FORMAT,
-		                                                          ImageUsage {
-			                                                          transfer_src: true,
-			                                                          transfer_dst: true,
-			                                                          sampled: true,
-			                                                          ..ImageUsage::empty()
-		                                                          })?;
+		let side_image = StorageImage::with_usage(&renderer.memory_allocator,
+		                                          ImageDimensions::Dim2d {
+			                                          width: dimensions[0],
+			                                          height: dimensions[1],
+			                                          array_layers: 1
+		                                          },
+		                                          IMAGE_FORMAT,
+		                                          ImageUsage::TRANSFER_SRC
+			                                          | ImageUsage::TRANSFER_DST
+			                                          | ImageUsage::SAMPLED,
+		                                          ImageCreateFlags::empty(),
+		                                          Some(renderer.queue.queue_family_index()))?;
 		
 		let handle_defs = vulkan::Texture {
 			image: 0,
@@ -209,27 +211,45 @@ impl RenderTarget for Eyes {
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let vr = vr.lock().unwrap();
-			let queue = renderer.queue.clone();
-			let command_buffer_allocator = renderer.command_buffer_allocator.clone();
 			
-			renderer.try_enqueue::<EyesRenderTargetError, _>(queue.clone(), |future| {
-				// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
-				unsafe {
-					let f = future.then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
-					              .then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?;
-					f.flush()?;
-					
-					let debug = debug::debug();
-					if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
-					vr.compositor.submit(openvr::Eye::Left,  &self.textures.0, None, Some(self.hmd_pose))?;
-					vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
-					if debug { debug::set_debug(true); }
-					
-					Ok(f.then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
-					    .then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?
-					    .boxed())
-				}
-			})?;
+			// TODO: find way to change image layouts
+			unsafe {
+				let debug = debug::debug();
+				if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
+				vr.compositor.submit(openvr::Eye::Left,  &self.textures.0, None, Some(self.hmd_pose))?;
+				vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
+				if debug { debug::set_debug(true); }
+			}
+			
+			// let queue = renderer.queue.clone();
+			// let command_buffer_allocator = renderer.command_buffer_allocator.clone();
+			//
+			// renderer.try_enqueue::<EyesRenderTargetError, _>(queue.clone(), |future| {
+			// 	// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
+			// 	let result = try { unsafe {
+			// 		let f = future.then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
+			// 		              .then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?;
+			// 		f.flush()?;
+			//
+			// 		// let debug = debug::debug();
+			// 		// if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
+			// 		vr.compositor.submit(openvr::Eye::Left,  &self.textures.0, None, Some(self.hmd_pose))?;
+			// 		vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
+			// 		// if debug { debug::set_debug(true); }
+			//
+			// 		println!("End of VR enqueue");
+			//
+			// 		f.then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
+			// 		 .then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?
+			// 		 .boxed()
+			// 	}};
+			//
+			// 	if let Err(error) = result {
+			// 		panic!("Error while submitting VR frame!\n{}", error);
+			// 	}
+			//
+			// 	result
+			// })?;
 		}
 		
 		Ok(())

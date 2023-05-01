@@ -95,12 +95,11 @@ pub trait InspectObject: Inspect + Sized {
 	
 	fn selection_scroll(&self, ui: &mut Ui, options: &Self::Options<'_>) {
 		let self_id = self.inspect_uid(options);
-		let mut data = ui.data();
-		let last_scroll = data.get_persisted_mut_or_default(Id::new("LastScroll"));
+		let last_scroll = ui.data_mut(|d| {
+			std::mem::replace(d.get_persisted_mut_or_default(Id::new("LastScroll")), Some(self_id))
+		});
 		
-		if *last_scroll != Some(self_id) {
-			*last_scroll = Some(self_id);
-			drop(data); // Prevents deadlock
+		if last_scroll != Some(self_id) {
 			ui.scroll_to_cursor(Some(Align::Min));
 		}
 	}

@@ -1,6 +1,6 @@
 use std::io::Cursor;
 use image::{DynamicImage, ImageFormat};
-use vulkano::buffer::{DeviceLocalBuffer, BufferUsage, CpuBufferPool};
+use vulkano::buffer::{Buffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::format::Format;
@@ -8,7 +8,7 @@ use vulkano::format::Format;
 use crate::component::model::{ModelError, VertexIndex};
 use crate::component::model::mmd::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::renderer::Renderer;
-use crate::utils::{ImageEx, FenceCheck};
+use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
 use crate::math::{IVec4, Vec3};
 use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
@@ -72,15 +72,15 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let vertices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                            self.vertices.into_iter(),
-		                                            BufferUsage{ vertex_buffer: true, ..BufferUsage::empty() },
-		                                            &mut upload_buffer)?;
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   self.vertices.into_iter(),
+		                                   &mut upload_buffer)?;
 		
-		let indices = DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-		                                           self.indices.into_iter(),
-		                                           BufferUsage{ index_buffer: true, ..BufferUsage::empty() },
-		                                           &mut upload_buffer)?;
+		let indices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                  BufferUsage::INDEX_BUFFER.into_info(),
+		                                  self.indices.into_iter(),
+		                                  &mut upload_buffer)?;
 		
 		let default_tex = {
 			let texture_reader = Cursor::new(&include_bytes!("../default_tex.png")[..]);
@@ -135,10 +135,10 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 				sphere_mode: desc.sphere_mode,
 			};
 			
-			let material_buffer = DeviceLocalBuffer::from_data(&renderer.memory_allocator,
-			                                                   material_info,
-			                                                   BufferUsage{ uniform_buffer: true, ..BufferUsage::empty() },
-			                                                   &mut upload_buffer)?;
+			let material_buffer = Buffer::upload_data(&renderer.memory_allocator,
+			                                          BufferUsage::UNIFORM_BUFFER.into_info(),
+			                                          material_info,
+			                                          &mut upload_buffer)?;
 			
 			let sub_mesh = SubMesh::new(desc.range, material_buffer, texture, toon, sphere_map, desc.opaque, desc.no_cull, desc.edge, renderer)?;
 			
@@ -146,7 +146,6 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		}
 		
 		let default_bones = self.bones;
-		let bones_pool = CpuBufferPool::upload(renderer.memory_allocator.clone());
 		
 		// Create fake null morph if there is no morphs
 		if self.morphs.is_empty() {
@@ -171,13 +170,12 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 				}
 			}
 			
-			DeviceLocalBuffer::from_iter(&renderer.memory_allocator,
-			                             offsets.into_iter(),
-			                             BufferUsage{ storage_buffer: true, uniform_buffer: true, ..BufferUsage::empty() },
-			                             &mut upload_buffer)?
+			Buffer::upload_iter(&renderer.memory_allocator,
+			                    (BufferUsage::STORAGE_BUFFER | BufferUsage::UNIFORM_BUFFER).into_info(),
+			                    offsets.into_iter(),
+			                    &mut upload_buffer)?
 		};
 		
-		let morphs_pool = CpuBufferPool::upload(renderer.memory_allocator.clone());
 		let morphs_pipeline = renderer.pipelines.get::<MMDPipelineMorphs>()?;
 		
 		let upload_future = upload_buffer.build()?
@@ -190,11 +188,9 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			indices: indices.into(),
 			sub_meshes,
 			default_bones,
-			bones_pool,
 			morphs_offsets,
 			morphs_sizes,
 			morphs_max_size,
-			morphs_pool,
 			morphs_pipeline,
 			fence,
 			colliders: self.colliders,
