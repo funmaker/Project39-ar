@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use std::time::{Instant, Duration};
 use std::thread;
+use std::time::{Instant, Duration};
 
-use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 use crate::math::Isometry3;
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+
 
 lazy_static!(
 	static ref FRAME: Vec<u8> = [ 57,  45,  45, 255].iter()

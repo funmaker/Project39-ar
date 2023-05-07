@@ -1,11 +1,12 @@
 use std::time::Duration;
 use egui::Ui;
 
+use crate::debug;
 use crate::application::{Entity, Application, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Point3, Color};
-use crate::debug;
 use crate::utils::ExUi;
+
 
 #[derive(ComponentBase)]
 pub struct Rope {

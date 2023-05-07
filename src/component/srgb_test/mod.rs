@@ -19,6 +19,7 @@ use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
 use super::{Component, ComponentBase, ComponentInner, ComponentError};
 use pipeline::{SrgbTestPipeline, Vertex, Pc};
 
+
 #[derive(ComponentBase)]
 pub struct SrgbTest {
 	#[inner] inner: ComponentInner,

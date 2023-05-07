@@ -1,7 +1,9 @@
 use std::convert::TryInto;
 use vulkano::buffer::BufferContents;
 use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
-use crate::math::{IntoArray};
+
+use crate::math::IntoArray;
+
 
 #[repr(C)]
 #[derive(Default, Copy, Clone, BufferContents, VertexTy)]

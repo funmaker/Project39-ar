@@ -1,17 +1,18 @@
 #![allow(dead_code)]
 
-use std::time::{Instant, Duration};
 use std::sync::Arc;
+use std::time::{Instant, Duration};
+use ::openvr_sys as sys;
 use err_derive::Error;
-use openvr_sys as sys;
-use simba::scalar::SupersetOf;
 use openvr::property;
 use openvr::system::TrackedPropertyError;
+use simba::scalar::SupersetOf;
 
-use super::{Camera, CameraCaptureError};
+use crate::{debug, config};
 use crate::application::vr::{VR, FrameType, TrackedCameraError, CameraService};
 use crate::math::{VRSlice, Isometry3, AMat4};
-use crate::{debug, config};
+use super::{Camera, CameraCaptureError};
+
 
 pub const CAPTURE_INDEX: u32 = 0;
 

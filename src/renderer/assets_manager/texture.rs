@@ -1,20 +1,21 @@
-use std::sync::Arc;
-use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
+use std::path::{PathBuf, Path};
+use std::sync::Arc;
 use err_derive::Error;
 use image::{ImageFormat, DynamicImage, ImageDecoder, AnimationDecoder, RgbaImage, imageops};
 use image::codecs::gif::GifDecoder;
 use vulkano::{command_buffer, sampler, sync};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::format::Format;
+use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 
 use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImageEx};
 use super::{AssetError, AssetKey, AssetsManager};
+
 
 #[derive(Clone, Hash, Debug)]
 pub struct TextureAsset {

@@ -6,6 +6,7 @@ use vulkano::image::AttachmentImage;
 use crate::math::Isometry3;
 use crate::renderer::{RenderTargetContext, Renderer, RenderContext};
 
+
 pub trait RenderTarget {
 	type RenderError: Error;
 	

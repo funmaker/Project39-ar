@@ -1,13 +1,14 @@
-use std::collections::HashMap;
-use std::sync::Arc;
 use std::any::{Any, TypeId};
+use std::collections::HashMap;
 use std::fmt::Debug;
+use std::sync::Arc;
 use err_derive::Error;
 use vulkano::pipeline::graphics::color_blend::{AttachmentBlend, BlendFactor, BlendOp};
 use vulkano::render_pass::RenderPass;
 
-pub mod default;
 pub mod debug;
+pub mod default;
+
 
 pub trait PipelineConstructor: 'static {
 	type PipeType: Any + Send + Sync;

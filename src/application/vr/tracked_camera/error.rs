@@ -1,8 +1,9 @@
 use std::{error, fmt};
 use std::ffi::CStr;
-use openvr_sys as sys;
+use ::openvr_sys as sys;
 
 use super::FnTable;
+
 
 pub struct InitError(pub sys::EVRInitError);
 

@@ -6,6 +6,7 @@ use crate::application::{Entity, Application, Physics};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::utils::{ExUi, get_user_data};
 
+
 #[derive(ComponentBase)]
 pub struct ColliderComponent {
 	#[inner] inner: ComponentInner,

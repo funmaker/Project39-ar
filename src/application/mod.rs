@@ -11,43 +11,42 @@ use openvr::tracked_device_index::HMD;
 use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::prelude::ColliderBuilder;
 
-pub mod vr;
 pub mod entity;
-pub mod physics;
 pub mod input;
-mod eyes;
-mod window;
-mod gui;
+pub mod physics;
+pub mod vr;
 mod bench;
+mod eyes;
+mod gui;
+mod window;
 
-use crate::component::Component;
-use crate::component::ComponentError;
+use crate::{config, debug};
+use crate::component::{Component, ComponentError};
+use crate::component::glow::Glow;
+use crate::component::hand::HandComponent;
+use crate::component::miku::Miku;
+use crate::component::model::{MMDModel, ModelError};
+use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
+use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
-use crate::component::pov::PoV;
-use crate::component::vr::{VrIk, VrRoot};
-use crate::component::miku::Miku;
-use crate::component::hand::HandComponent;
 use crate::component::physics::joint::JointComponent;
-use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
-use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
-use crate::component::model::{MMDModel, ModelError};
+use crate::component::pov::PoV;
 use crate::component::toolgun::ToolGun;
-use crate::component::glow::Glow;
-use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget, pipelines::PipelineError};
+use crate::component::vr::{VrIk, VrRoot};
+use crate::config::CameraAPI;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
-use crate::config::{self, CameraAPI};
+use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget};
+use crate::renderer::pipelines::PipelineError;
 use crate::utils::default_wait_poses;
-use crate::debug;
-
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
 pub use vr::{VR, VRError};
-use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
-use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
-use gui::{ApplicationGui, GuiSelection};
 use bench::Benchmark;
+use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
+use gui::{ApplicationGui, GuiSelection};
+use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
 
 
 pub struct Application {

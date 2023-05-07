@@ -4,6 +4,7 @@ use std::iter::FromIterator;
 use std::time::Instant;
 use egui::Ui;
 
+
 const FONT_SIZE: f32 = 16.0;
 
 pub struct Benchmark {

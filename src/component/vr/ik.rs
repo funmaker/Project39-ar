@@ -4,11 +4,12 @@ use egui::Ui;
 use rapier3d::dynamics::{RigidBodyBuilder, RigidBodyType};
 use rapier3d::prelude::{ColliderBuilder, RigidBodyHandle};
 
+use crate::debug;
 use crate::application::{Entity, Application, EntityRef, Physics};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::debug;
 use crate::math::{Isometry3, Vec3, PI, to_euler, from_euler, Color, Point3, face_towards_lossy, Rot3};
 use crate::utils::{ExUi, get_user_data};
+
 
 // Based on Mathias Parger's
 // Inverse Kinematics for Virtual Reality

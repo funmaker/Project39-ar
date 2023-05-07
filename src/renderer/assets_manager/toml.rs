@@ -1,14 +1,15 @@
-use std::path::{PathBuf, Path};
-use std::marker::PhantomData;
-use std::fmt::{Display, Formatter};
 use std::fs;
+use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io::ErrorKind;
-use serde::de::DeserializeOwned;
+use std::marker::PhantomData;
+use std::path::{PathBuf, Path};
 use err_derive::Error;
+use serde::de::DeserializeOwned;
 
 use crate::renderer::Renderer;
 use super::{AssetKey, AssetsManager, AssetError};
+
 
 #[derive(Clone, Debug)]
 pub struct TomlAsset<T> {

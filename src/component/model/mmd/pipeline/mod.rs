@@ -1,3 +1,5 @@
+pub use morph_comp::Pc as MorphPc;
+pub use outline_vert::Pc;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 
@@ -5,8 +7,7 @@ use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 mod vertex;
 
 pub use vertex::Vertex;
-pub use outline_vert::Pc;
-pub use morph_comp::Pc as MorphPc;
+
 
 mmd_shaders!(
 	"vertex" base_vert = "src/component/model/mmd/pipeline/base_vert.glsl";

@@ -3,17 +3,20 @@ use std::sync::Arc;
 use err_derive::Error;
 use unifont::Glyph;
 use vulkano::{command_buffer, descriptor_set, sampler};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract, allocator::StandardCommandBufferAllocator};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet, allocator::StandardDescriptorSetAllocator};
-use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions, view::ImageView};
-use vulkano::pipeline::{Pipeline, GraphicsPipeline};
-use vulkano::memory::allocator::StandardMemoryAllocator;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
+use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Queue;
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
+use vulkano::image::view::ImageView;
+use vulkano::memory::allocator::StandardMemoryAllocator;
+use vulkano::pipeline::{Pipeline, GraphicsPipeline};
+use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
 
+use crate::renderer::pipelines::{Pipelines, PipelineError};
 use crate::renderer::pipelines::debug::DebugTexturedPipeline;
-use crate::renderer::pipelines::Pipelines;
-use crate::renderer::pipelines::PipelineError;
+
 
 pub struct TextCache {
 	pipeline: Arc<GraphicsPipeline>,

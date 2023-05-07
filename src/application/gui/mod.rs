@@ -1,15 +1,16 @@
 use std::collections::HashSet;
 use egui::*;
 
-mod selection;
 mod main_tab;
 mod physics_tab;
+mod selection;
 
 use super::{Application, Key};
 pub use selection::GuiSelection;
-use selection::GuiTab;
 use main_tab::main_ui;
 use physics_tab::physics_ui;
+use selection::GuiTab;
+
 
 pub struct ApplicationGui {
 	id: Id,

@@ -1,21 +1,21 @@
 use std::sync::Arc;
-use vulkano::render_pass::RenderPass;
+pub use shape_vert::Pc as ShapePc;
 use vulkano::device::DeviceOwned;
+use vulkano::image::SampleCount;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
-use vulkano::image::SampleCount;
+use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::render_pass::RenderPass;
 
 mod vertex;
 
 use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
 pub use vertex::{Vertex, TexturedVertex};
 
-pub use shape_vert::Pc as ShapePc;
 
 type DefaultPipelineVertex = super::default::Vertex;
 

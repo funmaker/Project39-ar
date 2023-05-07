@@ -2,8 +2,9 @@
 
 use err_derive::Error;
 
-use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 use crate::math::Isometry3;
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+
 
 pub const CAPTURE_INDEX: usize = 0;
 

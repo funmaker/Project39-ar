@@ -2,15 +2,16 @@ use std::io::Cursor;
 use image::{DynamicImage, ImageFormat};
 use vulkano::buffer::{Buffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use vulkano::format::Format;
+use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 
 use crate::component::model::{ModelError, VertexIndex};
 use crate::component::model::mmd::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
+use crate::math::{IVec4, Vec3};
 use crate::renderer::Renderer;
 use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
-use crate::math::{IVec4, Vec3};
 use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
+
 
 pub struct MMDModelSharedBuilder<VI: VertexIndex> {
 	vertices: Vec<Vertex>,

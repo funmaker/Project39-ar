@@ -1,21 +1,22 @@
 use std::sync::Arc;
+use vulkano::buffer::Subbuffer;
 use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::pipeline::{ComputePipeline, Pipeline};
-use vulkano::buffer::Subbuffer;
 
 mod builder;
-mod rigid_body;
 mod joint;
+mod rigid_body;
 mod sub_mesh;
 
 use crate::component::model::{ModelError, VertexIndex};
-use crate::utils::{FenceCheck, IndexSubbuffer};
 use crate::math::IVec4;
+use crate::utils::{FenceCheck, IndexSubbuffer};
 use super::{MMDBone, Vertex};
 pub use builder::MMDModelSharedBuilder;
-pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
-pub use rigid_body::ColliderDesc;
 pub use joint::JointDesc;
+pub use rigid_body::ColliderDesc;
+pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
+
 
 pub struct MMDModelShared {
 	pub vertices: Subbuffer<[Vertex]>,

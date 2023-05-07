@@ -1,35 +1,33 @@
 use std::error::Error;
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{Instant, Duration};
-use std::fmt::Debug;
 use err_derive::Error;
 use simba::scalar::SubsetOf;
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{WindowBuilder, Fullscreen, CursorGrabMode};
-use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::window::Window as WinitWindow;
-use vulkano_win::VkSurfaceBuild;
 use vulkano::{command_buffer, swapchain, sync};
-use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError, SwapchainPresentInfo};
-use vulkano::image::{AttachmentImage, ImageSubresourceLayers, SwapchainImage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageInfo, CommandBufferUsage, ImageBlit, ImageCopy};
 use vulkano::format::ClearValue;
+use vulkano::image::{AttachmentImage, ImageSubresourceLayers, SwapchainImage, ImageAccess};
 use vulkano::sampler::Filter;
+use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError, SwapchainPresentInfo};
 use vulkano::sync::GpuFuture;
-use vulkano::image::ImageAccess;
+use vulkano_win::VkSurfaceBuild;
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::error::ExternalError;
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::window::{WindowBuilder, Fullscreen, CursorGrabMode, Window as WinitWindow};
 
 mod gui;
 
-use crate::renderer::{Renderer, RenderTarget, RendererSwapchainError};
 use crate::config;
 use crate::math::{Isometry3, Perspective3, projective_clip, Vec2, PI};
-use crate::renderer::{RenderContext, RendererCreateFramebufferError, RenderTargetContext};
+use crate::renderer::{Renderer, RenderTarget, RendererSwapchainError, RenderContext, RendererCreateFramebufferError, RenderTargetContext};
 use crate::utils::FramebufferBundle;
 use super::Input;
 use gui::{WindowGui, WindowGuiError, WindowGuiRegenFramebufferError, WindowGuiPaintError};
+
 
 const FOV: f32 = 110.0;
 

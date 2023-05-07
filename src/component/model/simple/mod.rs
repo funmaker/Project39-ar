@@ -1,22 +1,23 @@
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::sync::GpuFuture;
 
 pub mod asset;
 
 pub use crate::renderer::pipelines::default::Vertex;
-use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::renderer::pipelines::default::{DefaultPipeline, Pc};
-use crate::renderer::assets_manager::TextureBundle;
 use crate::application::Entity;
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::utils::{AutoCommandBufferBuilderEx, BufferEx, IntoInfo, FenceCheck, IndexSubbuffer};
 use crate::math::{AABB, aabb_from_points, Color, Point3, Similarity3};
+use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::renderer::assets_manager::TextureBundle;
+use crate::renderer::pipelines::default::{DefaultPipeline, Pc};
+use crate::utils::{AutoCommandBufferBuilderEx, BufferEx, IntoInfo, FenceCheck, IndexSubbuffer};
 use super::{ModelError, VertexIndex};
 pub use asset::{ObjAsset, ObjLoadError};
+
 
 #[derive(ComponentBase, Clone)]
 pub struct SimpleModel {

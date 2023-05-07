@@ -1,7 +1,8 @@
 use std::cell::Cell;
 
-use crate::application::{Application};
+use crate::application::Application;
 use super::Entity;
+
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct EntityRef {

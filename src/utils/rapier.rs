@@ -1,9 +1,10 @@
-use rapier3d::prelude::Collider;
 use rapier3d::dynamics::RigidBody;
+use rapier3d::prelude::Collider;
 
-use crate::component::physics::collider::ColliderComponent;
 use crate::application::{Application, Entity, EntityRef};
 use crate::component::ComponentRef;
+use crate::component::physics::collider::ColliderComponent;
+
 
 pub trait ColliderEx {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent>;

@@ -1,31 +1,32 @@
-use openvr::compositor::WaitPoses;
 use openvr::{TrackedDevicePose, MAX_TRACKED_DEVICE_COUNT};
+use openvr::compositor::WaitPoses;
 use openvr_sys::{TrackedDevicePose_t, HmdMatrix34_t, HmdVector3_t, ETrackedDeviceClass_TrackedDeviceClass_Invalid};
 
 pub mod from_args;
-mod fps_counter;
-mod vulkan;
-mod images;
-mod id_gen;
 mod fence_check;
-mod input;
-mod rapier;
+mod fps_counter;
+mod gui;
+mod id_gen;
+mod images;
 mod index_buffer;
+mod input;
 mod mut_mark;
 mod pattern;
-mod gui;
+mod rapier;
+mod vulkan;
 
-pub use fps_counter::*;
-pub use vulkan::*;
-pub use images::*;
-pub use id_gen::*;
 pub use fence_check::*;
-pub use input::*;
-pub use rapier::*;
+pub use fps_counter::*;
+pub use gui::*;
+pub use id_gen::*;
+pub use images::*;
 pub use index_buffer::*;
+pub use input::*;
 pub use mut_mark::*;
 pub use pattern::*;
-pub use gui::*;
+pub use rapier::*;
+pub use vulkan::*;
+
 
 pub trait IntoBoxed<T: ?Sized>: 'static {
 	fn into(self) -> Box<T>;

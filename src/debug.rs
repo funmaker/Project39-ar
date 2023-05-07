@@ -1,10 +1,11 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::any::Any;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use std::cell::RefCell;
-use std::any::Any;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4, Isometry3, Vec3, Similarity3, Translation3};
+
 
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {

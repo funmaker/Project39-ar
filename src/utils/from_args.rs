@@ -1,12 +1,12 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+pub use project39_ar_derive::FromArgs;
 use err_derive::Error;
 use getopts::{Options, Matches};
 use nalgebra::{Matrix, Scalar, DefaultAllocator, DimName};
 use nalgebra::allocator::Allocator;
 
-pub use project39_ar_derive::FromArgs;
 
 pub trait FromArgs {
 	fn hint(&self) -> String {

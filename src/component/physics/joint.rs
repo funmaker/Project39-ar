@@ -6,6 +6,7 @@ use crate::application::{Entity, Application, Physics, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::utils::ExUi;
 
+
 #[derive(ComponentBase)]
 pub struct JointComponent {
 	#[inner] inner: ComponentInner,

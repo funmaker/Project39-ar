@@ -1,31 +1,32 @@
 use std::any::Any;
 use std::cell::Cell;
-use std::time::Duration;
-use std::marker::PhantomData;
 use std::fmt::{Formatter, Debug};
+use std::marker::PhantomData;
+use std::time::Duration;
+pub use project39_ar_derive::ComponentBase;
 use egui::{Grid, Ui};
 use enumflags2::BitFlags;
-pub use project39_ar_derive::ComponentBase;
 
+pub mod comedy;
 pub mod example;
-pub mod model;
-pub mod miku;
-pub mod vr;
-pub mod pov;
-pub mod pc_controlled;
-pub mod toolgun;
-pub mod parent;
-pub mod physics;
 pub mod glow;
 pub mod hand;
+pub mod miku;
+pub mod model;
+pub mod parent;
+pub mod pc_controlled;
+pub mod physics;
+pub mod pov;
 pub mod seat;
-pub mod thruster;
-pub mod comedy;
 pub mod srgb_test;
+pub mod thruster;
+pub mod toolgun;
+pub mod vr;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{next_uid, IntoBoxed, ExUi};
+
 
 pub type ComponentError = Box<dyn std::error::Error>;
 

@@ -1,9 +1,8 @@
-use std::sync::Arc;
 use std::convert::TryFrom;
-use winit::window::Window as WinitWindow;
-use err_derive::Error;
+use std::sync::Arc;
 use egui::{Context, TextStyle};
 use egui_winit_vulkano::{Gui, GuiConfig};
+use err_derive::Error;
 use vulkano::{command_buffer, render_pass};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassContents};
 use vulkano::format::ClearValue;
@@ -14,9 +13,11 @@ use vulkano::render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass, Subpa
 use vulkano::swapchain::Surface;
 use winit::event::WindowEvent;
 use winit::event_loop::EventLoop;
+use winit::window::Window as WinitWindow;
 
 use crate::renderer::{IMAGE_FORMAT, Renderer};
 use crate::utils::FramebufferBundle;
+
 
 pub struct WindowGui {
 	gui: Gui,

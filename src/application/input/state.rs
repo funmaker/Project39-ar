@@ -1,5 +1,6 @@
 use std::ops::BitOr;
 
+
 #[derive(Debug, Copy, Clone, Default)]
 pub struct InputState {
 	pub down: bool,

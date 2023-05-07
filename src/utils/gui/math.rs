@@ -3,6 +3,7 @@ use egui::*;
 use crate::math::{Color, from_euler, Isometry2, Isometry3, PI, Point2, Point3, Point4, Rot2, Rot3, to_euler, Vec2, Vec3, Vec4};
 use super::*;
 
+
 impl SimpleInspect for Vec2 {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		ui.columns(2, |ui| {

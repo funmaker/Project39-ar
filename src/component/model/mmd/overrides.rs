@@ -7,6 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::math::Vec3;
 use super::asset::MMDIndexConfig;
 
+
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct MMDConfig {
 	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,

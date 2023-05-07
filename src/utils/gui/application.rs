@@ -4,6 +4,7 @@ use crate::application::{Application, Entity, EntityRef, Hand};
 use crate::component::{Component, ComponentRef};
 use super::*;
 
+
 impl SimpleInspect for Hand {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		use egui::*;

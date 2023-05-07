@@ -5,9 +5,9 @@ use std::sync::Arc;
 use arc_swap::ArcSwapOption;
 use egui::*;
 
-mod physics;
-mod math;
 mod application;
+mod math;
+mod physics;
 
 
 pub fn id_fmt(id: impl Display, prefix: impl Display) -> RichText {

@@ -1,3 +1,4 @@
+
 macro_rules! mmd_shaders {
 	( $( $type:literal $name:ident = $source:literal; )* ) => { $(
 		mod $name {

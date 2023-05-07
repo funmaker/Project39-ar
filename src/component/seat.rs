@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use crate::application::{Entity, Application};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::math::{AABB, Point3, Rot3, Vec3};
 use crate::component::parent::Parent;
+use crate::math::{AABB, Point3, Rot3, Vec3};
+
 
 #[derive(ComponentBase)]
 pub struct Seat {

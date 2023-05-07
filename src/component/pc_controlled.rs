@@ -4,6 +4,7 @@ use crate::application::{Entity, Application, Key};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Vec3, Isometry3, PI, to_euler, from_euler};
 
+
 #[derive(ComponentBase)]
 pub struct PCControlled {
 	#[inner] inner: ComponentInner,

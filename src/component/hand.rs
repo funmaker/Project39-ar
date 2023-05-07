@@ -1,18 +1,19 @@
-use std::time::{Duration, Instant};
 use std::cell::Cell;
 use std::ops::DerefMut;
+use std::time::{Duration, Instant};
 use egui::Ui;
-use rapier3d::prelude::ColliderHandle;
 use rapier3d::geometry::Ball;
 use rapier3d::pipeline::QueryFilter;
+use rapier3d::prelude::ColliderHandle;
 
+use crate::debug;
 use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::parent::Parent;
-use crate::utils::{ColliderEx, ExUi};
-use crate::math::{Point3, Color, Translation3};
-use crate::debug;
 use crate::component::vr::VrTracked;
+use crate::math::{Point3, Color, Translation3};
+use crate::utils::{ColliderEx, ExUi};
+
 
 const GRAB_DIST: f32 = 0.1;
 const WALK_SPEED: f32 = 1.5;

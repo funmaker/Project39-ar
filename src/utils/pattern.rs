@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 
+
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct PatternMatcher {
 	parts: Vec<String>,

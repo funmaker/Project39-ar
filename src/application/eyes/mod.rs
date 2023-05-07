@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use err_derive::Error;
-use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use openvr::compositor::Texture;
+use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use vulkano::{command_buffer, sync};
 use vulkano::command_buffer::{CopyImageInfo, ImageCopy};
-use vulkano::image::{AttachmentImage, ImageAccess, ImageDimensions, ImageSubresourceLayers, ImageUsage, SampleCount, StorageImage, ImageCreateFlags};
 use vulkano::format::ClearValue;
+use vulkano::image::{AttachmentImage, ImageAccess, ImageDimensions, ImageSubresourceLayers, ImageUsage, SampleCount, StorageImage, ImageCreateFlags};
 use vulkano::sync::GpuFuture;
 
 pub mod camera;
@@ -13,13 +13,13 @@ mod background;
 mod pipeline;
 
 use crate::debug;
-use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
-use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice};
 use crate::config::NovrConfig;
+use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice};
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RendererCreateFramebufferError, RenderTarget, RenderTargetContext};
+use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
 use super::VR;
-use camera::Camera;
 use background::{Background, BackgroundError, BackgroundRenderError, BackgroundLoadError};
+use camera::Camera;
 
 
 pub struct Eyes {

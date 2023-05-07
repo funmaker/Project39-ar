@@ -8,6 +8,7 @@ mod state;
 pub use device::InputDevice;
 pub use state::InputState;
 
+
 pub type Key = winit::event::VirtualKeyCode;
 pub type MouseButton = winit::event::MouseButton;
 

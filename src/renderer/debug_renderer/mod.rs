@@ -1,28 +1,31 @@
-use std::sync::Arc;
 use std::cell::{RefCell, RefMut};
+use std::sync::Arc;
 use err_derive::Error;
-use vulkano::command_buffer;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, allocator::StandardCommandBufferAllocator};
-use vulkano::device::Queue;
-use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
-use vulkano::descriptor_set::{PersistentDescriptorSet, allocator::StandardDescriptorSetAllocator};
-use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
-use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
-use vulkano::buffer::BufferUsage;
 use nalgebra::Unit;
+use vulkano::command_buffer;
+use vulkano::buffer::BufferUsage;
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
+use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
+use vulkano::device::Queue;
+use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
+use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 mod text_cache;
 
-use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
-use crate::utils::{AutoCommandBufferBuilderEx, SubbufferAllocatorEx, SubbufferAllocatorExError};
-use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
-use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
 use crate::component::model::SimpleModel;
-use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, ShapePc, Vertex, TexturedVertex};
-use super::pipelines::{Pipelines, PipelineError};
-use super::assets_manager::TextureAsset;
+use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
+use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
+use crate::utils::{AutoCommandBufferBuilderEx, SubbufferAllocatorEx, SubbufferAllocatorExError};
 use super::{Renderer, RenderContext};
+use super::assets_manager::TextureAsset;
+use super::pipelines::{Pipelines, PipelineError};
+use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, ShapePc, Vertex, TexturedVertex};
 pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
+
 
 pub struct DebugRenderer {
 	text_cache: RefCell<TextCache>,

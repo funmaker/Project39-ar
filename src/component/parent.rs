@@ -7,6 +7,7 @@ use crate::component::{Component, ComponentBase, ComponentInner, ComponentError}
 use crate::math::{Isometry3, Vec3};
 use crate::utils::ExUi;
 
+
 #[derive(ComponentBase)]
 pub struct Parent {
 	#[inner] inner: ComponentInner,

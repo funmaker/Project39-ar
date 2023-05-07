@@ -1,4 +1,5 @@
-use openvr_sys as sys;
+use ::openvr_sys as sys;
+
 
 pub type FnTable = &'static sys::VR_IVRTrackedCamera_FnTable;
 pub type TrackedCameraHandle = openvr_sys::TrackedCameraHandle_t;

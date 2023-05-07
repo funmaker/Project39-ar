@@ -1,8 +1,8 @@
+use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut, Cell};
 use std::collections::HashMap;
-use std::time::Duration;
-use std::any::Any;
 use std::fmt::{Display, Formatter};
+use std::time::Duration;
 use egui::Ui;
 use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
 
@@ -10,14 +10,15 @@ mod builder;
 mod entity_ref;
 
 use crate::debug;
-use crate::math::{Color, Isometry3, Point3, Vec3};
+use crate::application::Hand;
 use crate::component::{ComponentRef, ComponentError};
-use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject};
+use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject};
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
-use crate::application::Hand;
+
 
 pub struct EntityState {
 	pub position: MutMark<Isometry3>,

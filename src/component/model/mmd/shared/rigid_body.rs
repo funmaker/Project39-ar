@@ -1,5 +1,6 @@
 use rapier3d::geometry::Collider;
 
+
 pub type PhysicsMode = mmd::pmx::rigid_body::PhysicsMode;
 
 #[derive(Clone)]

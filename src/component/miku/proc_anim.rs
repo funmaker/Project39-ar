@@ -6,6 +6,7 @@ use rand::{Rng, thread_rng};
 
 use crate::math::Rot3;
 
+
 #[derive(Debug, Clone)]
 pub struct ProcAnim<V> {
 	from: V,

@@ -2,12 +2,12 @@ use std::cell::RefMut;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
-use std::sync::Arc;
 use std::iter::FromIterator;
+use std::sync::Arc;
 use colored::Colorize;
 use err_derive::Error;
-use vulkano::buffer::{BufferContents, BufferError};
 use vulkano::{command_buffer, device, instance, render_pass, swapchain, sync, Version, VulkanLibrary};
+use vulkano::buffer::{BufferContents, BufferError, Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
@@ -23,13 +23,12 @@ use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{AttachmentDescription, AttachmentReference, Framebuffer, FramebufferCreateInfo, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
 use vulkano::sync::future::GpuFuture;
-use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 
-pub mod pipelines;
-pub mod debug_renderer;
 pub mod assets_manager;
-pub mod render_target;
 pub mod context;
+pub mod debug_renderer;
+pub mod pipelines;
+pub mod render_target;
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
@@ -38,9 +37,9 @@ use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
 pub use context::{RenderContext, RenderTargetContext, RenderType};
 pub use render_target::RenderTarget;
+use assets_manager::{AssetKey, AssetsManager};
 use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererPreRenderError, DebugRendererRenderError, TextCache};
 use pipelines::Pipelines;
-use assets_manager::{AssetKey, AssetsManager};
 
 
 #[allow(dead_code)]

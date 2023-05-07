@@ -4,8 +4,9 @@ use crate::application::{Hand, Application, EntityRef};
 use crate::component::physics::rope::Rope;
 use crate::math::{Ray, Point3};
 use crate::utils::ColliderEx;
-use super::tool::{Tool, ToolError};
 use super::ToolGun;
+use super::tool::{Tool, ToolError};
+
 
 pub struct RopeTool {
 	selected: EntityRef,

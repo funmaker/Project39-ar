@@ -1,17 +1,18 @@
+use std::any::Any;
 use std::cell::{RefCell, Cell};
 use std::collections::HashMap;
-use std::any::Any;
 use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
-use rapier3d::prelude::RigidBodyBuilder;
 use rapier3d::geometry::{Collider, ColliderBuilder};
+use rapier3d::prelude::RigidBodyBuilder;
 
-use crate::math::{Isometry3, Vec3, Point3, Rot3};
-use crate::component::Component;
-use super::Entity;
-use crate::utils::{MutMark, next_uid};
 use crate::application::entity::EntityState;
-use crate::component::physics::collider::ColliderComponent;
+use crate::component::Component;
 use crate::component::model::SimpleModel;
+use crate::component::physics::collider::ColliderComponent;
+use crate::math::{Isometry3, Vec3, Point3, Rot3};
+use crate::utils::{MutMark, next_uid};
+use super::Entity;
+
 
 pub struct EntityBuilder {
 	pub name: String,

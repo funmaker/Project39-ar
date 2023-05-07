@@ -1,14 +1,15 @@
-use std::sync::Mutex;
 use std::ops::Deref;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use err_derive::Error;
 use openvr::{Context, System, Compositor, RenderModels};
 
-mod tracked_camera;
 mod camera_service;
+mod tracked_camera;
 
+pub use camera_service::CameraService;
 pub use tracked_camera::{TrackedCamera, FrameType, TrackedCameraError};
-pub use camera_service::{CameraService};
+
 
 static VR_CREATED: AtomicBool = AtomicBool::new(false);
 

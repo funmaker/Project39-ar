@@ -3,8 +3,9 @@ use rapier3d::prelude::QueryFilter;
 use crate::application::{Hand, Application};
 use crate::math::Ray;
 use crate::utils::ColliderEx;
-use super::tool::{Tool, ToolError};
 use super::ToolGun;
+use super::tool::{Tool, ToolError};
+
 
 pub struct Remover;
 

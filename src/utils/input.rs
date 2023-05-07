@@ -1,5 +1,6 @@
 use crate::application::Key;
 
+
 pub fn num_key(num: usize) -> Key {
 	match num {
 		0 => Key::Key0,

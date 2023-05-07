@@ -5,6 +5,7 @@ use crate::debug;
 use crate::application::Application;
 use crate::utils::ExUi;
 
+
 pub fn main_ui(ui: &mut Ui, application: &Application) {
 	CollapsingHeader::new("Debug Flags")
 		.default_open(true)

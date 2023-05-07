@@ -10,6 +10,7 @@ use crate::component::pc_controlled::PCControlled;
 use crate::math::Isometry3;
 use crate::utils::ExUi;
 
+
 #[derive(ComponentBase)]
 pub struct PoV {
 	#[inner] inner: ComponentInner,

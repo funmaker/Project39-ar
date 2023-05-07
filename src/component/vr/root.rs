@@ -1,27 +1,27 @@
-use std::time::Duration;
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::time::Duration;
 use egui::Ui;
-use rapier3d::dynamics::RigidBodyType;
-use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole};
-use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
-use rapier3d::prelude::RigidBodyBuilder;
 use image::{DynamicImage, ImageBuffer};
-use openvr::render_models;
+use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole, render_models};
+use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
+use rapier3d::dynamics::RigidBodyType;
 use rapier3d::geometry::{ColliderBuilder, InteractionGroups};
+use rapier3d::prelude::RigidBodyBuilder;
 
 use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::comedy::Comedy;
-use crate::component::model::simple::{SimpleModel, Vertex};
-use crate::component::pov::PoV;
 use crate::component::hand::HandComponent;
+use crate::component::model::simple::{SimpleModel, Vertex};
 use crate::component::parent::Parent;
+use crate::component::pov::PoV;
 use crate::component::vr::VrIk;
-use crate::renderer::assets_manager::TextureBundle;
 use crate::math::Isometry3;
+use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::ExUi;
 use super::VrTracked;
+
 
 #[derive(ComponentBase)]
 pub struct VrRoot {

@@ -1,20 +1,20 @@
+use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::any::{Any, TypeId};
-use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader, ErrorKind, Seek};
-use std::fs::File;
-use std::fmt::{Debug, Display, Formatter};
 use std::ffi::{OsStr, OsString};
+use std::fmt::{Debug, Display, Formatter};
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io::{BufRead, BufReader, ErrorKind, Seek};
+use std::path::{Path, PathBuf};
 
 mod texture;
 mod toml;
 
-pub use texture::{TextureAsset, TextureBundle, TextureLoadError};
-pub use self::toml::{TomlAsset, TomlLoadError};
-
 use crate::renderer::Renderer;
+pub use self::toml::{TomlAsset, TomlLoadError};
+pub use texture::{TextureAsset, TextureBundle, TextureLoadError};
+
 
 pub struct AssetsManager {
 	cache: HashMap<u64, Box<dyn Any>>,

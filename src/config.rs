@@ -1,14 +1,15 @@
-use std::ops::Deref;
-use std::sync::Arc;
-use std::str::FromStr;
-use std::fmt::{Display, Formatter};
 use std::env;
+use std::fmt::{Display, Formatter};
+use std::ops::Deref;
+use std::str::FromStr;
+use std::sync::Arc;
 use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
 use crate::math::{IVec2, Vec2, Vec4, Vec3};
+use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
+
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct Config {

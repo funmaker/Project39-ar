@@ -3,22 +3,23 @@ use std::sync::Arc;
 use std::time::Duration;
 use egui::Ui;
 use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImageAccess;
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
+use vulkano::sync::GpuFuture;
 
 mod pipeline;
 
-use crate::renderer::assets_manager::TextureAsset;
-use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{BufferEx, IntoInfo, ExUi, FenceCheck};
-use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::application::{Application, Entity};
+use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
+use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
+use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::renderer::assets_manager::TextureAsset;
+use crate::utils::{BufferEx, IntoInfo, ExUi, FenceCheck};
 use super::ModelError;
 use pipeline::{FoodPipeline, Vertex, Pc};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::sync::GpuFuture;
+
 
 #[derive(ComponentBase, Clone)]
 pub struct Billboard {

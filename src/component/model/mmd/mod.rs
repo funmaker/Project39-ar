@@ -6,32 +6,33 @@ use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
 use rapier3d::geometry::Collider;
 use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::pipeline::{Pipeline, PipelineBindPoint};
-use vulkano::command_buffer::CopyBufferInfo;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
+use vulkano::command_buffer::CopyBufferInfo;
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::memory::allocator::MemoryUsage;
+use vulkano::pipeline::{Pipeline, PipelineBindPoint};
 
+pub mod asset;
 pub mod pipeline;
 pub mod shared;
-pub mod asset;
 pub mod test;
 mod bone;
-mod rigid_body;
 mod overrides;
+mod rigid_body;
 
 use crate::debug;
-use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::application::{Application, Entity};
-use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, IntoInfo, SubbufferAllocatorEx};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI, Vec3};
+use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, IntoInfo, SubbufferAllocatorEx};
 use super::ModelError;
-pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
 pub use bone::{BoneConnection, MMDBone};
+pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
 pub use rigid_body::MMDRigidBody;
 use shared::MMDModelShared;
-use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
+
 
 pub struct MMDModelState {
 	pub bones: Vec<MMDBone>,

@@ -10,28 +10,29 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, Prim
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 
-mod pipeline;
-mod spawner;
-mod remover;
 mod axis;
-mod thruster;
-mod weld;
-mod tool;
+mod pipeline;
 mod prop_manager;
+mod remover;
 mod rope;
+mod spawner;
+mod thruster;
+mod tool;
+mod weld;
 
-use crate::application::{Application, Entity};
-use crate::component::parent::Parent;
 use crate::debug;
-use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
-use crate::renderer::pipelines::PipelineError;
-use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
+use crate::application::{Application, Entity};
 use crate::component::hand::HandComponent;
+use crate::component::parent::Parent;
+use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
+use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::renderer::pipelines::PipelineError;
+use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
+use pipeline::{ToolGunTextPipeline, Vertex, Pc};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};
-use pipeline::{ToolGunTextPipeline, Vertex, Pc};
+
 
 const MENU_SPACING: f32 = 0.1;
 const MENU_DISTANCE: f32 = 0.1;

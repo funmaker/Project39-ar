@@ -7,6 +7,7 @@ use crate::application::{Application, EntityRef};
 use crate::math::{Color, Point3, Rot3, Vec3};
 use crate::utils::{RigidBodyEx, ColliderEx};
 
+
 pub struct Physics {
 	pub rigid_body_set: RigidBodySet,
 	pub collider_set: ColliderSet,

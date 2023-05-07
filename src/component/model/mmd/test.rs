@@ -1,11 +1,13 @@
-use std::io::BufReader;
 use std::fs::File;
+use std::io::BufReader;
 use std::sync::Arc;
 use image::ImageFormat;
 
-use crate::renderer::Renderer;
 use crate::math::{Color, Vec3};
-use super::{MMDModel, Vertex, MMDBone, BoneConnection, shared::MMDModelShared, shared::SubMeshDesc};
+use crate::renderer::Renderer;
+use super::{MMDModel, Vertex, MMDBone, BoneConnection};
+use super::shared::{MMDModelShared, SubMeshDesc};
+
 
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel {

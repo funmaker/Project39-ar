@@ -1,28 +1,28 @@
 use std::thread;
-use std::sync::Arc;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use err_derive::Error;
 use vulkano::{memory, command_buffer};
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage, CopyBufferToImageInfo};
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
-use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::device::Queue;
 use vulkano::format::Format;
+use vulkano::image::{AttachmentImage, ImageUsage};
 use vulkano::memory::allocator::StandardMemoryAllocator;
 
+mod dummy;
 #[cfg(windows)] mod escapi;
 #[cfg(feature = "opencv-camera")] mod opencv;
 mod openvr;
-mod dummy;
 
-#[cfg(windows)] pub use self::escapi::{Escapi, EscapiCameraError};
-#[cfg(feature = "opencv-camera")] pub use self::opencv::{OpenCV, OpenCVCameraError};
-pub use self::openvr::{OpenVR, OpenVRCameraError};
-pub use self::dummy::Dummy;
 use crate::debug;
 use crate::math::Isometry3;
 use crate::utils::{FpsCounter, SubbufferAllocatorEx, SubbufferAllocatorExError};
+pub use self::dummy::Dummy;
+#[cfg(windows)] pub use self::escapi::{Escapi, EscapiCameraError};
+#[cfg(feature = "opencv-camera")] pub use self::opencv::{OpenCV, OpenCVCameraError};
+pub use self::openvr::{OpenVR, OpenVRCameraError};
+
 
 pub const CAPTURE_WIDTH: u32 = 1920;
 pub const CAPTURE_HEIGHT: u32 = 960;

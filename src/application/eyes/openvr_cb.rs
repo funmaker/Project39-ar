@@ -3,18 +3,16 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use parking_lot::{Mutex, MutexGuard};
 use vulkano::{DeviceSize, OomError, SafeDeref, VulkanObject};
-use vulkano::command_buffer::allocator::{CommandBufferAlloc, CommandBufferAllocator, StandardCommandBufferAlloc, StandardCommandBufferAllocator};
-use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc};
-use vulkano::command_buffer::sys::{CommandBufferBeginInfo, UnsafeCommandBuffer, UnsafeCommandBufferBuilder};
 use vulkano::command_buffer::{CommandBufferLevel, CommandBufferUsage, CommandBufferExecError, PrimaryCommandBufferAbstract, CommandBufferExecFuture, CommandBufferState, CommandBufferResourcesUsage};
-use vulkano::device::{Device, DeviceOwned, Queue};
-use vulkano::image::{sys::Image, AttachmentImage, ImageLayout, ImageAccess};
-use vulkano::sync::{DependencyInfo, ImageMemoryBarrier};
-use vulkano::sync::future::{GpuFuture, NowFuture};
-use vulkano::sync::PipelineStages;
+use vulkano::command_buffer::allocator::{CommandBufferAlloc, CommandBufferAllocator, StandardCommandBufferAlloc, StandardCommandBufferAllocator, CommandBufferBuilderAlloc};
+use vulkano::command_buffer::pool::{CommandPool, CommandPoolAlloc};
 use vulkano::command_buffer::synced::{SyncCommandBuffer, SyncCommandBufferBuilder};
-use vulkano::command_buffer::allocator::CommandBufferBuilderAlloc;
-use vulkano::sync::AccessFlags;
+use vulkano::command_buffer::sys::{CommandBufferBeginInfo, UnsafeCommandBuffer, UnsafeCommandBufferBuilder};
+use vulkano::device::{Device, DeviceOwned, Queue};
+use vulkano::image::{AttachmentImage, ImageLayout, ImageAccess};
+use vulkano::image::sys::Image;
+use vulkano::sync::{DependencyInfo, ImageMemoryBarrier, PipelineStages, AccessFlags};
+use vulkano::sync::future::{GpuFuture, NowFuture};
 
 
 pub struct OpenVRCommandBuffer<A = StandardCommandBufferAlloc> {

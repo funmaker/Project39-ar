@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+
 pub struct FpsCounter<const N: usize> {
 	measurements: [Instant; N],
 	current: usize,

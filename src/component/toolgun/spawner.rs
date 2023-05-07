@@ -1,14 +1,15 @@
 use rapier3d::dynamics::RigidBodyType;
 use rapier3d::pipeline::QueryFilter;
 
-use crate::application::{Hand, Application};
-use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, face_upwards_lossy};
-use crate::application::entity::EntityBuilder;
 use crate::debug;
-use super::tool::{Tool, ToolError};
-use super::ToolGun;
+use crate::application::{Hand, Application};
+use crate::application::entity::EntityBuilder;
 use crate::component::seat::Seat;
+use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, face_upwards_lossy};
 use crate::renderer::RenderContext;
+use super::ToolGun;
+use super::tool::{Tool, ToolError};
+
 
 const MENU_SCALE: f32 = 0.2;
 const MENU_SPACING: f32 = 0.25;

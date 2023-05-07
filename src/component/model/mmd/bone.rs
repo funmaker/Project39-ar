@@ -1,5 +1,6 @@
 use crate::math::{Color, Point3, Vec3, Similarity3, Translation3};
 
+
 #[derive(Debug, Clone)]
 pub struct MMDBone {
 	pub name: String,

@@ -1,13 +1,14 @@
 use std::time::Duration;
 use egui::Ui;
-use simba::scalar::SupersetOf;
 use openvr::TrackedDeviceIndex;
+use simba::scalar::SupersetOf;
 
 use crate::application::{Entity, Application};
-use crate::math::{AMat4, Similarity3, VRSlice};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::vr::VrRoot;
+use crate::math::{AMat4, Similarity3, VRSlice};
 use crate::utils::ExUi;
+
 
 #[derive(ComponentBase)]
 pub struct VrTracked {

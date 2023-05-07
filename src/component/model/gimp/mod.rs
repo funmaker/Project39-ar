@@ -2,9 +2,9 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::sync::GpuFuture;
 
 pub mod asset;
@@ -12,14 +12,15 @@ mod pipeline;
 
 use crate::application::{Application, Entity, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::{FenceCheck, IndexSubbuffer, AutoCommandBufferBuilderEx, BufferEx, IntoInfo};
-use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
 use super::{ModelError, VertexIndex};
 pub use asset::{GimpAsset, GimpLoadError};
 pub use pipeline::Vertex;
 use pipeline::{GimpPipeline, Pc};
+
 
 #[derive(ComponentBase, Clone)]
 pub struct GimpModel {

@@ -1,25 +1,25 @@
 use std::sync::{Arc, mpsc};
-use err_derive::Error;
 use bytemuck::{Zeroable, Pod};
+use err_derive::Error;
 use vulkano::{sync, command_buffer, sampler, memory, descriptor_set, buffer};
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage, BufferContents};
-use vulkano::device::Queue;
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::image::view::ImageView;
-use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::device::Queue;
+use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryUsage};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
+use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::sync::GpuFuture;
 
-use crate::math::{Vec4, Vec2, Mat3, Isometry3};
-use crate::utils::{FenceCheck, IntoInfo};
 use crate::config;
-use crate::application::eyes::camera::CameraStartError;
-use crate::application::eyes::camera::Camera;
+use crate::application::eyes::camera::{CameraStartError, Camera};
+use crate::math::{Vec4, Vec2, Mat3, Isometry3};
 use crate::renderer::Renderer;
 use crate::renderer::pipelines::PipelineError;
+use crate::utils::{FenceCheck, IntoInfo};
 use super::pipeline::{BackgroundPipeline, Vertex, Pc};
+
 
 #[allow(dead_code)]
 #[repr(C)]

@@ -1,13 +1,14 @@
 use err_derive::Error;
-use serde_derive::Deserialize;
-use rapier3d::geometry::{Collider, ColliderBuilder, ColliderShape};
 use linked_hash_map::LinkedHashMap;
+use rapier3d::geometry::{Collider, ColliderBuilder, ColliderShape};
+use serde_derive::Deserialize;
 
 use crate::component::model::SimpleModel;
-use crate::renderer::Renderer;
-use crate::math::{PI, Vec3, AABB};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::math::{PI, Vec3, AABB};
+use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{TomlAsset, TomlLoadError};
+
 
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq)]
 enum PropCollider {

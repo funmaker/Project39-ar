@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use openvr::{TrackedDeviceIndex, TrackedDevicePose};
 
-use super::{VR, TrackedCameraError, FrameType, tracked_camera::TrackedCameraHandle};
+use super::{VR, TrackedCameraError, FrameType};
+use super::tracked_camera::TrackedCameraHandle;
+
 
 pub struct CameraService {
 	vr: Arc<VR>,

@@ -1,20 +1,21 @@
 use std::convert::TryInto;
 use std::sync::Arc;
-use vulkano::render_pass::{RenderPass, Subpass};
+pub use frag::Pc;
 use vulkano::device::DeviceOwned;
+use vulkano::image::SampleCount;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::graphics::multisample::MultisampleState;
+use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
-use vulkano::image::SampleCount;
+use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::render_pass::{RenderPass, Subpass};
 
 mod vertex;
 
 use crate::renderer::pipelines::{PipelineConstructor, PipelineError};
 pub use vertex::Vertex;
-pub use frag::Pc;
+
 
 mod vert {
 	vulkano_shaders::shader! {

@@ -3,15 +3,17 @@ use std::sync::Arc;
 use err_derive::Error;
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
 use vulkano::{buffer, VulkanObject, Handle, command_buffer, memory};
-use vulkano::buffer::allocator::SubbufferAllocator;
 use vulkano::buffer::{BufferContents, BufferCreateInfo, Subbuffer, Buffer, BufferUsage};
+use vulkano::buffer::allocator::SubbufferAllocator;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo, PrimaryAutoCommandBuffer};
-use vulkano::instance::Instance;
-use vulkano::device::{Device, Queue, physical::PhysicalDevice};
+use vulkano::device::{Device, Queue};
+use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::ClearValue;
-use vulkano::render_pass::Framebuffer;
 use vulkano::image::{AttachmentImage, ImageAccess, StorageImage, ImmutableImage};
+use vulkano::instance::Instance;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryAllocator, MemoryUsage};
+use vulkano::render_pass::Framebuffer;
+
 
 pub fn vulkan_device_extensions_required(compositor: &Compositor, physical: &PhysicalDevice) -> Vec<CString> {
 	unsafe { compositor.vulkan_device_extensions_required(physical.as_ptr()) }

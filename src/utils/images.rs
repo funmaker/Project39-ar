@@ -1,5 +1,6 @@
 use image::DynamicImage;
 
+
 pub trait ImageEx {
 	fn into_lin_pre_mul_iter(self) -> std::vec::IntoIter<u8>;
 	fn into_pre_mul_iter(self) -> std::vec::IntoIter<u8>;

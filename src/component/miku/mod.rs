@@ -7,13 +7,14 @@ mod enums;
 mod proc_anim;
 
 use crate::application::{Entity, Application};
-use crate::component::model::mmd::asset::PmxAsset;
-use crate::component::model::MMDModel;
-use crate::utils::num_key;
 use crate::math::Rot3;
+use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
+use super::model::MMDModel;
+use super::model::mmd::asset::PmxAsset;
 pub use enums::{Bones, Morphs, RigidBodies};
 use proc_anim::{ProcAnim, Easing};
+
 
 const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 	(1, &[Morphs::Embarrassment]),

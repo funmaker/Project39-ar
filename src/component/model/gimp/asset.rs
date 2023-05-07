@@ -1,13 +1,14 @@
-use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
+use std::path::{PathBuf, Path};
 use err_derive::Error;
 use obj::Obj;
 
+use crate::component::model::ModelError;
 use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager, TextureAsset, TextureLoadError};
-use crate::component::model::ModelError;
 use super::{GimpModel, Vertex};
+
 
 #[derive(Clone, Hash, Debug)]
 pub struct GimpAsset {

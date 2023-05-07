@@ -1,8 +1,9 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 
 use super::state::InputState;
+
 
 #[derive(Debug)]
 pub struct InputDevice<Key> {

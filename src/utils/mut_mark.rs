@@ -4,6 +4,7 @@ use egui::Ui;
 
 use crate::utils::{InspectMut, Inspect};
 
+
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub struct MutMark<T> {
 	pub mutated: bool,

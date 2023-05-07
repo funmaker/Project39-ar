@@ -1,27 +1,28 @@
 use std::{fs, mem};
-use std::sync::Arc;
 use std::convert::TryInto;
 use std::ffi::OsStr;
-use std::path::{PathBuf, Path};
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
+use std::path::{PathBuf, Path};
+use std::sync::Arc;
 use err_derive::Error;
 use image::ImageFormat;
 use mmd::WeightDeform;
-use mmd::pmx::morph::Offsets;
 use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
+use mmd::pmx::morph::Offsets;
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups};
 
-use crate::renderer::Renderer;
 use crate::{config, debug};
-use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::component::model::ModelError;
+use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
+use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager, AssetError, TomlAsset, TomlLoadError};
 use crate::utils::PatternMatcher;
+use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
-use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
+
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
 

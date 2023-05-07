@@ -1,9 +1,10 @@
 use err_derive::Error;
+use opencv::{videoio, imgproc, core};
 use opencv::prelude::*;
-use opencv::{ videoio, imgproc, core };
 
-use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
 use crate::math::Isometry3;
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+
 
 pub const CAPTURE_INDEX: i32 = 0;
 

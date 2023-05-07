@@ -10,30 +10,29 @@
 #![feature(path_file_prefix)]
 #![feature(array_chunks)]
 #![feature(int_roundings)]
+
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 extern crate core;
 
+use std::{fs, panic};
 use std::fmt::Debug;
-use std::fs;
-use std::panic;
 use std::panic::PanicInfo;
-
 use err_derive::Error;
 use native_dialog::{MessageDialog, MessageType};
 
-use application::{Application, ApplicationCreationError, ApplicationRunError};
-use config::Config;
-use utils::from_args::ArgsError;
-use crate::config::Color;
-
 #[macro_use] #[allow(dead_code)] mod debug;
-#[allow(dead_code)] mod math;
 #[macro_use] mod utils;
-mod renderer;
 mod application;
-mod config;
 #[allow(dead_code)] mod component;
+mod config;
+#[allow(dead_code)] mod math;
+mod renderer;
+
+use application::{Application, ApplicationCreationError, ApplicationRunError};
+use config::{Config, Color};
+use utils::from_args::ArgsError;
+
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));

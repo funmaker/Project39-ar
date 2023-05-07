@@ -1,12 +1,13 @@
 use std::any::Any;
+use egui::*;
 use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
 use rapier3d::parry::partitioning::IndexedData;
-use egui::*;
 
 use crate::application::Application;
 use crate::utils::{from_user_data, InspectCollapsing, InspectObject};
 use super::*;
+
 
 impl SimpleInspect for RigidBodyType {
 	fn inspect_ui(&mut self, ui: &mut Ui) {

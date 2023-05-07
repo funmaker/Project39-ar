@@ -1,11 +1,12 @@
+use ::openvr_sys as sys;
 use openvr::{Context, TrackedDeviceIndex};
-use openvr_sys as sys;
 
 mod error;
 mod utils;
 
 pub use error::*;
 pub use utils::*;
+
 
 #[derive(Copy, Clone)]
 pub struct TrackedCamera(FnTable);

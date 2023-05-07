@@ -2,6 +2,7 @@ use rapier3d::prelude::{ColliderHandle, ImpulseJointHandle, RigidBodyHandle};
 
 use crate::math::Isometry3;
 
+
 pub struct MMDRigidBody {
 	pub name: String,
 	pub parent: Option<usize>,
