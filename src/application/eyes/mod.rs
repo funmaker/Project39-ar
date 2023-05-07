@@ -9,7 +9,6 @@ use vulkano::format::ClearValue;
 use vulkano::sync::GpuFuture;
 
 pub mod camera;
-// mod openvr_cb;
 mod background;
 mod pipeline;
 
@@ -20,7 +19,6 @@ use crate::config::NovrConfig;
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RendererCreateFramebufferError, RenderTarget, RenderTargetContext};
 use super::VR;
 use camera::Camera;
-// use openvr_cb::OpenVRCommandBuffer;
 use background::{Background, BackgroundError, BackgroundRenderError, BackgroundLoadError};
 
 
@@ -207,7 +205,7 @@ impl RenderTarget for Eyes {
 		Ok(())
 	}
 	
-	fn after_execute(&mut self, renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
+	fn after_execute(&mut self, _renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let vr = vr.lock().unwrap();
@@ -261,7 +259,6 @@ pub enum EyesCreationError {
 	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
 	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
-	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 }
 
 pub type EyesLoadBackgroundError = BackgroundLoadError;
@@ -269,9 +266,6 @@ pub type EyesLoadBackgroundError = BackgroundLoadError;
 #[derive(Debug, Error)]
 pub enum EyesRenderTargetError {
 	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
 }

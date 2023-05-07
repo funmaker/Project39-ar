@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::cell::{RefCell, RefMut};
 use err_derive::Error;
-use vulkano::{command_buffer, memory};
+use vulkano::command_buffer;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, allocator::StandardCommandBufferAllocator};
 use vulkano::device::Queue;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
@@ -547,12 +547,10 @@ pub enum DebugRendererError {
 pub enum DebugRendererRenderError {
 	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
 	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::PipelineExecutionError),
 }
 
 #[derive(Debug, Error)]
 pub enum DebugRendererPreRenderError {
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
 }

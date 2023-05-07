@@ -2544,7 +2544,8 @@ dependencies = [
 [[package]]
 name = "vulkano"
 version = "0.33.0"
-source = "git+https://github.com/funmaker/vulkano?rev=3c8f6f44f812c6bdc96de961d2c898ffd2979253#3c8f6f44f812c6bdc96de961d2c898ffd2979253"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e1f15eeb9d93a05eb3c237332a10806eac1eb82444e54485bfcc1859c483c23"
 dependencies = [
  "ahash",
  "ash",
@@ -2572,7 +2573,8 @@ dependencies = [
 [[package]]
 name = "vulkano-macros"
 version = "0.33.0"
-source = "git+https://github.com/funmaker/vulkano?rev=3c8f6f44f812c6bdc96de961d2c898ffd2979253#3c8f6f44f812c6bdc96de961d2c898ffd2979253"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "895b8a2cac1e7650d2d0552f2392da0970a358515ac11a34adaf19bfdc771b98"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2583,7 +2585,8 @@ dependencies = [
 [[package]]
 name = "vulkano-shaders"
 version = "0.33.0"
-source = "git+https://github.com/funmaker/vulkano?rev=3c8f6f44f812c6bdc96de961d2c898ffd2979253#3c8f6f44f812c6bdc96de961d2c898ffd2979253"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f8cf18e9becbc6d39f1c39e26bcf69546c93989553eb5748cd734a8a697a6e5"
 dependencies = [
  "ahash",
  "heck",
@@ -2597,7 +2600,8 @@ dependencies = [
 [[package]]
 name = "vulkano-win"
 version = "0.33.0"
-source = "git+https://github.com/funmaker/vulkano?rev=3c8f6f44f812c6bdc96de961d2c898ffd2979253#3c8f6f44f812c6bdc96de961d2c898ffd2979253"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "666c77efe5ea82837781961a6bcd957ee2e926777e8de0005f580335d6eaefe7"
 dependencies = [
  "core-graphics-types",
  "objc",

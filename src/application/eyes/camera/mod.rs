@@ -87,7 +87,6 @@ pub enum CameraCaptureError {
 
 #[derive(Debug, Error)]
 pub enum CameraStartError {
-	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
 }
 
@@ -96,9 +95,7 @@ pub enum CaptureLoopError {
 	#[error(display = "Quitting")] Quitting,
 	#[error(display = "{}", _0)] CaptureError(#[error(source)] CameraCaptureError),
 	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 }

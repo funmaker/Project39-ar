@@ -7,7 +7,7 @@ use std::iter::FromIterator;
 use colored::Colorize;
 use err_derive::Error;
 use vulkano::buffer::{BufferContents, BufferError};
-use vulkano::{command_buffer, device, instance, memory, render_pass, swapchain, sync, Version, VulkanLibrary};
+use vulkano::{command_buffer, device, instance, render_pass, swapchain, sync, Version, VulkanLibrary};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
@@ -652,7 +652,6 @@ pub enum RendererError {
 	#[error(display = "{}", _0)] DebugUtilsMessengerCreationError(#[error(source)] instance::debug::DebugUtilsMessengerCreationError),
 	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
 	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 }
 
 #[derive(Debug, Error)]
@@ -665,7 +664,6 @@ pub enum RendererSwapchainError {
 #[derive(Debug, Error)]
 pub enum RendererCreateFramebufferError {
 	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
-	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
 	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),

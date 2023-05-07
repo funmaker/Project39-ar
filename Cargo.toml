@@ -47,9 +47,9 @@ colored = "2.0.0"
 escapi = "4.0.0"
 
 [patch.crates-io]
-vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
 #rapier3d = { git = "https://github.com/funmaker/rapier", rev = "8c5f88738dd9be9ca3458d610c34d39a85956d23" }
 
 #vulkano = { path = "../vulkano/vulkano" }

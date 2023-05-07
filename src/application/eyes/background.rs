@@ -253,13 +253,8 @@ pub enum BackgroundError {
 	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
 	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
 	#[error(display = "{}", _0)] CameraStartError(#[error(source)] CameraStartError),
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
 	#[error(display = "{}", _0)] BufferError(#[error(source)] buffer::BufferError),
 }

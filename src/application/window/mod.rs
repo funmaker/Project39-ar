@@ -481,18 +481,14 @@ pub enum WindowMirrorFromError {
 	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
 	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }
 
 #[derive(Debug, Error)]
 pub enum WindowRenderTargetError {
 	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
-	#[error(display = "{}", _0)] WindowMirrorFromError(#[error(source)] WindowMirrorFromError),
 	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
 	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 }

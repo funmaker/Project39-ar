@@ -520,13 +520,10 @@ pub enum ApplicationCreationError {
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] EyesCreationError(#[error(source)] EyesCreationError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
 	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
-	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 }
 
 #[derive(Debug, Error)]

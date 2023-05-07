@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use egui::Vec2;
 use err_derive::Error;
-use vulkano::{command_buffer, descriptor_set, memory, sync};
+use vulkano::{command_buffer, descriptor_set, sync};
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -109,7 +109,6 @@ pub enum SrgbTestError {
 	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
 	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
 	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
 	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
 	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
 	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
