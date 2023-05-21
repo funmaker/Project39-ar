@@ -208,8 +208,8 @@ impl<C: ?Sized + 'static> ComponentRef<C> {
 		}
 	}
 	
-	pub fn set(&self, other: Self) {
-		self.inner.swap(&other.inner);
+	pub fn set(&self, other: impl Into<Self>) {
+		self.inner.swap(&other.into().inner);
 	}
 	
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a C> where C: Sized {
@@ -301,6 +301,15 @@ impl<C: ?Sized> Clone for ComponentRef<C> {
 	fn clone(&self) -> Self {
 		ComponentRef {
 			inner: self.inner.clone(),
+			phantom: PhantomData,
+		}
+	}
+}
+
+impl<C: Component> From<ComponentRef<C>> for ComponentRef<dyn Component> {
+	fn from(value: ComponentRef<C>) -> Self {
+		ComponentRef {
+			inner: value.inner.clone(),
 			phantom: PhantomData,
 		}
 	}

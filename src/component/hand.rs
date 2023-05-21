@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use egui::Ui;
+use rapier3d::dynamics::FixedJoint;
 use rapier3d::geometry::Ball;
 use rapier3d::pipeline::QueryFilter;
 use rapier3d::prelude::ColliderHandle;
@@ -10,8 +11,9 @@ use crate::debug;
 use crate::application::{Entity, Application, Hand};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
 use crate::component::parent::Parent;
+use crate::component::physics::joint::JointComponent;
 use crate::component::vr::VrTracked;
-use crate::math::{Point3, Color, Translation3};
+use crate::math::{Point3, Color, Translation3, Isometry3};
 use crate::utils::{ColliderEx, ExUi};
 
 
@@ -29,7 +31,7 @@ struct FreezeAnim {
 pub struct HandComponent {
 	#[inner] inner: ComponentInner,
 	pub hand: Hand,
-	target_parent: ComponentRef<Parent>,
+	grab: ComponentRef<dyn Component>,
 	sticky: Cell<bool>,
 	freeze_anim: Cell<Option<FreezeAnim>>,
 }
@@ -38,7 +40,7 @@ impl HandComponent {
 	pub fn new(hand: Hand) -> Self {
 		HandComponent {
 			inner: ComponentInner::new_norender(),
-			target_parent: ComponentRef::null(),
+			grab: ComponentRef::null(),
 			hand,
 			sticky: Cell::new(false),
 			freeze_anim: Cell::new(None),
@@ -48,8 +50,8 @@ impl HandComponent {
 
 impl Component for HandComponent {
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
-		if let Some(item_parent) = self.target_parent.get(application) {
-			let item = item_parent.entity(application);
+		if let Some(grab) = self.grab.get_dyn(application) {
+			let item = grab.entity(application);
 			
 			if application.input.use3_btn(self.hand).down {
 				item.freeze(application.physics.borrow_mut().deref_mut());
@@ -65,11 +67,12 @@ impl Component for HandComponent {
 			if item.tag::<ComponentRef<HandComponent>>("Grabbed") != Some(self.as_cref())
 			|| (!self.sticky.get() && application.input.use_btn(self.hand).up) {
 				item.unset_tag("Grabbed");
-				item_parent.remove();
+				grab.remove();
 				entity.state_mut().hidden = false;
 			}
 		} else if application.input.use_btn(self.hand).down || application.input.use3_btn(self.hand).down {
 			let mut target = None;
+			let mut dynamic = false;
 			
 			{
 				let physics = application.physics.borrow_mut();
@@ -86,6 +89,11 @@ impl Component for HandComponent {
 					}
 					
 					target = Some(ent);
+					
+					dynamic = col.parent()
+					             .and_then(|rb| physics.rigid_body_set.get(rb))
+					             .map(|rb| rb.is_dynamic())
+					             .unwrap_or(false);
 					false
 				};
 				
@@ -111,7 +119,16 @@ impl Component for HandComponent {
 					
 					target.set_tag("Grabbed", self.as_cref());
 					self.sticky.set(target.tag("GrabSticky").unwrap_or_default());
-					self.target_parent.set(target.add_component(Parent::new(entity, grab_pos)));
+					if dynamic {
+						self.grab.set(target.add_component(JointComponent::new(
+							*FixedJoint::new()
+								.set_local_frame1(Isometry3::identity())
+								.set_local_frame2(grab_pos),
+							entity,
+						)));
+					} else {
+						self.grab.set(target.add_component(Parent::new(entity, grab_pos)));
+					}
 					entity.state_mut().hidden = true;
 				}
 			}
@@ -144,7 +161,7 @@ impl Component for HandComponent {
 	
 	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
 		ui.inspect_row("Hand", format!("{:?}", self.hand), ());
-		ui.inspect_row("Grabbed", &self.target_parent, application);
+		ui.inspect_row("Grabbed", &self.grab, application);
 		ui.inspect_row("Sticky", &self.sticky, ());
 	}
 }

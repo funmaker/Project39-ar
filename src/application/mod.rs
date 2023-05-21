@@ -217,22 +217,85 @@ impl Application {
 			// 		.build()
 			// );
 			
+			// application.add_entity(
+			// 	Entity::builder("初音ミク")
+			// 		.translation(point!(-0.5, 0.0, 0.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+			// 		.build()
+			// );
+			
 			application.add_entity(
-				Entity::builder("初音ミク")
-					.translation(point!(-0.5, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(0.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(100.0)
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
 					.build()
 			);
 			
-			// application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(0.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("cube/cube.obj", "cube/cube.png"))?)
-			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::Dynamic)
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(1.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(100.0)
+					.rigid_body_type(RigidBodyType::KinematicVelocityBased)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(2.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(100.0)
+					.rigid_body_type(RigidBodyType::Fixed)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(3.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(10.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(4.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(100.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(5.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(1000.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(6.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(10000.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
+			
+			application.add_entity(
+				Entity::builder("Box")
+					.position(Isometry3::new(vector!(7.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.collider_from_aabb(100000.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
 			
 			// let box1 = application.add_entity(
 			// 	Entity::builder("Box")
