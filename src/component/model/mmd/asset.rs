@@ -194,8 +194,8 @@ impl AssetKey for PmxAsset {
 			model.add_bone(MMDBone::new(name,
 			                            parent,
 			                            color,
-			                            &model_pos,
-			                            &local_pos,
+			                            model_pos,
+			                            local_pos,
 			                            display,
 			                            connection));
 		}

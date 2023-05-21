@@ -123,20 +123,20 @@ impl Component for Miku {
 		
 		let mut anims = self.anims.borrow_mut();
 		
-		let physics = &mut *application.physics.borrow_mut();
-		
-		if let Some(rb) = physics.rigid_body_set.get(model.rigid_bodies[RigidBodies::LeftForelock as usize].handle) {
-			if rb.linvel().magnitude() > 0.075 {
-				anims.1.get_mut(&Morphs::Embarrassment).unwrap().play();
-				anims.1.get_mut(&Morphs::Smiling).unwrap().play();
-				if !anims.1.get_mut(&Morphs::Blink).unwrap().stopped() {
-					anims.1.get_mut(&Morphs::Blink).unwrap().overdrive(
-						ProcAnim::new(0.0)
-						         .anim(1.0, 0.3, Easing::EaseIn)
-						         .wait(3.0)
-						         .anim(0.0, 0.3, Easing::EaseOut)
-						         .wait(3.0)
-					);
+		for bone in model.bones.iter() {
+			if let Some(rb) = bone.rigid_body.get(application) {
+				if rb.name == "Forelock1" && rb.state().velocity.magnitude() > 0.075 {
+					anims.1.get_mut(&Morphs::Embarrassment).unwrap().play();
+					anims.1.get_mut(&Morphs::Smiling).unwrap().play();
+					if !anims.1.get_mut(&Morphs::Blink).unwrap().stopped() {
+						anims.1.get_mut(&Morphs::Blink).unwrap().overdrive(
+							ProcAnim::new(0.0)
+								.anim(1.0, 0.3, Easing::EaseIn)
+								.wait(3.0)
+								.anim(0.0, 0.3, Easing::EaseOut)
+								.wait(3.0)
+						);
+					}
 				}
 			}
 		}

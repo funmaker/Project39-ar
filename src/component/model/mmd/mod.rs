@@ -1,8 +1,9 @@
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 use nalgebra::UnitQuaternion;
-use rapier3d::dynamics::{JointAxis, RigidBodyBuilder, RigidBodyType};
+use rapier3d::dynamics::{JointAxis, RigidBodyType};
 use rapier3d::geometry::Collider;
 use rapier3d::prelude::GenericJoint;
 use simba::scalar::SubsetOf;
@@ -19,24 +20,23 @@ pub mod shared;
 pub mod test;
 mod bone;
 mod overrides;
-mod rigid_body;
 
 use crate::debug;
 use crate::application::{Application, Entity};
 use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI, Vec3};
+use crate::component::physics::collider::ColliderComponent;
+use crate::component::physics::joint::JointComponent;
+use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{AutoCommandBufferBuilderEx, get_user_data, IntoInfo, SubbufferAllocatorEx};
+use crate::utils::{AutoCommandBufferBuilderEx, IntoInfo, SubbufferAllocatorEx};
 use super::ModelError;
 pub use bone::{BoneConnection, MMDBone};
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
-pub use rigid_body::MMDRigidBody;
 use shared::MMDModelShared;
 
 
 pub struct MMDModelState {
 	pub bones: Vec<MMDBone>,
-	pub rigid_bodies: Vec<MMDRigidBody>,
 	pub morphs: Vec<f32>,
 	
 	bones_mats: Vec<AMat4>,
@@ -126,7 +126,6 @@ impl MMDModel {
 				bones,
 				morphs,
 				bones_mats,
-				rigid_bodies: vec![],
 				morphs_vec,
 			}),
 			shared,
@@ -174,16 +173,10 @@ impl MMDModel {
 
 impl Component for MMDModel {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		let physics = &mut *application.physics.borrow_mut();
-		let ent_state = entity.state();
 		let state = &mut *self.state.borrow_mut();
+		let ent_pos = *entity.state().position;
 		
-		let root_pos = Isometry3::new(state.bones[0].origin().coords, Vec3::zeros());
-		state.rigid_bodies.push(MMDRigidBody::new("Root",
-		                                          entity.rigid_body,
-		                                          0,
-		                                          root_pos,
-		                                          root_pos.inverse()));
+		let mut rigid_bodies = BTreeMap::new();
 		
 		for desc in self.shared.joints.iter() {
 			let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
@@ -195,44 +188,41 @@ impl Component for MMDModel {
 				continue;
 			}
 			
-			let position = *ent_state.position * desc.position;
-			let inv_bone_pos = desc.position.inverse() * state.bones[bone_id].inv_model_transform.inverse();
-			
-			let rb = RigidBodyBuilder::new(RigidBodyType::Dynamic)
-			                          .position(position)
-			                          .gravity_scale(0.05)
-			                          .sleeping(false)
-			                          .can_sleep(false)
-			                          .user_data(get_user_data(entity.id, self.id()))
-			                          .build();
-			
-			let handle = physics.rigid_body_set.insert(rb);
-			
-			state.rigid_bodies.push(MMDRigidBody::new(&desc.name, handle, bone_id, desc.position, inv_bone_pos))
+			rigid_bodies.insert(
+				bone_id,
+				Entity::builder(&desc.name)
+					.position(ent_pos * desc.position)
+					.gravity_scale(0.05)
+					.rigid_body_type(RigidBodyType::Dynamic)
+					.build()
+			);
 		}
 		
-		state.rigid_bodies.sort_by(|a, b| a.bone.cmp(&b.bone));
-		
 		for desc in self.shared.colliders.iter() {
-			let rb_id = state.find_rb_index(desc.bone);
-			let rigid_body = &mut state.rigid_bodies[rb_id];
+			let rb = state.bone_ancestors_iter(desc.bone)
+			              .find(|bone| rigid_bodies.contains_key(bone))
+			              .and_then(|bone| rigid_bodies.get(&bone))
+			              .unwrap_or(entity);
 			
 			let mut collider: Collider = desc.collider.clone();
 			collider.set_position(
-				rigid_body.rest_pos.inverse() *
+				rb.state().position.inverse() *
+				ent_pos *
 				collider.position()
 			);
-			collider.user_data = get_user_data(entity.id, self.id());
 			
-			let handle = physics.collider_set.insert_with_parent(collider, rigid_body.handle, &mut physics.rigid_body_set);
-			rigid_body.colliders.push(handle);
+			rb.add_component(ColliderComponent::new(collider));
 		}
 		
 		for desc in self.shared.joints.iter() {
-			let bone_a = self.shared.colliders[desc.collider_a].bone;
-			let bone_b = self.shared.colliders[desc.collider_b].bone;
-			let rb_a_id = state.find_rb_index(bone_a);
-			let rb_b_id = state.find_rb_index(bone_b);
+			let rb_a = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
+			                .find(|bone| rigid_bodies.contains_key(bone))
+			                .and_then(|bone| rigid_bodies.get(&bone))
+			                .unwrap_or(entity);
+			let rb_b = state.bone_ancestors_iter(self.shared.colliders[desc.collider_b].bone)
+			                .find(|bone| rigid_bodies.contains_key(bone))
+			                .and_then(|bone| rigid_bodies.get(&bone))
+			                .unwrap_or(entity);
 			
 			// {
 			// 	let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
@@ -245,64 +235,56 @@ impl Component for MMDModel {
 			// 	}
 			// }
 			
-			let handle = {
-				let rb_a = &state.rigid_bodies[rb_a_id];
-				let rb_b = &state.rigid_bodies[rb_b_id];
-				
-				let mut joint = GenericJoint::default();
-				
-				joint.set_local_frame1(rb_a.rest_pos.inverse() * desc.position)
-				     .set_local_frame2(rb_b.rest_pos.inverse() * desc.position);
-				
-				fn limit(mut joint: GenericJoint, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> GenericJoint {
-					if max - min >= max_limit || min > max {
-						// free
-					} else if min != max {
-						joint.set_limits(axis, [min, max]);
-					} else {
-						joint.lock_axes(axis.into());
-					}
-					
-					joint
+			let mut joint = GenericJoint::default();
+			
+			joint.set_local_frame1(rb_a.state().position.inverse() * ent_pos * desc.position)
+			     .set_local_frame2(rb_b.state().position.inverse() * ent_pos * desc.position);
+			
+			fn limit(mut joint: GenericJoint, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> GenericJoint {
+				if max - min >= max_limit || min > max {
+					// free
+				} else if min != max {
+					joint.set_limits(axis, [min, max]);
+				} else {
+					joint.lock_axes(axis.into());
 				}
 				
-				joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x, 100.0);
-				joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
-				joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
-				
-				joint = limit(joint, JointAxis::AngX,  desc.rotation_min.x,  desc.rotation_max.x, PI * 2.0);
-				joint = limit(joint, JointAxis::AngY, -desc.rotation_max.y, -desc.rotation_min.y, PI * 2.0);
-				joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
-				
-				physics.impulse_joint_set.insert(rb_a.handle,
-				                                 rb_b.handle,
-				                                 joint,
-				                                 true)
-			};
-			
-			if bone_a > bone_b {
-				state.rigid_bodies[rb_a_id].joint = handle;
-			} else {
-				state.rigid_bodies[rb_b_id].joint = handle;
+				joint
 			}
+			
+			joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x, 100.0);
+			joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
+			joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
+			
+			joint = limit(joint, JointAxis::AngX,  desc.rotation_min.x,  desc.rotation_max.x, PI * 2.0);
+			joint = limit(joint, JointAxis::AngY, -desc.rotation_max.y, -desc.rotation_min.y, PI * 2.0);
+			joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
+			
+			rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()));
+		}
+		
+		state.bones[0].attach_rigid_body(entity.as_ref(), Isometry3::identity());
+		
+		for (bone_id, rb) in rigid_bodies {
+			let offset = entity.state().position.inverse() * *rb.state().position;
+			state.bones[bone_id].attach_rigid_body(application.add_entity(rb), offset);
 		}
 		
 		Ok(())
 	}
 	
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
-		let physics = &mut *application.physics.borrow_mut();
 		let state = &mut *self.state.borrow_mut();
 		let inv_ent_pos = entity.state().position.inverse();
 		
-		for rb in state.rigid_bodies.iter() {
-			let rrb = physics.rigid_body_set.get_mut(rb.handle).unwrap();
-			state.bones[rb.bone].transform_override = Some((
-				inv_ent_pos *
-				rrb.position() *
-				rb.inv_bone_pos
-			).to_superset());
-			rrb.wake_up(true);
+		for bone in state.bones.iter_mut() {
+			if let Some(rb) = bone.rigid_body.get(application) {
+				bone.transform_override = Some((
+					inv_ent_pos *
+					*rb.state().position *
+					bone.inv_rigid_body_transform
+				).to_superset());
+			}
 		}
 		
 		Ok(())
@@ -470,28 +452,15 @@ impl Component for MMDModel {
 
 impl MMDModelState {
 	fn bone_ancestors_iter(&self, mut bone_id: usize) -> impl Iterator<Item = usize> + '_ {
-		std::iter::from_fn(move || {
-			if let Some(parent_id) = self.bones[bone_id].parent {
-				bone_id = parent_id;
-				Some(parent_id)
-			} else {
-				None
-			}
-		})
-	}
-	
-	fn find_rb_index(&self, mut bone_id: usize) -> usize {
-		loop {
-			if let Some((index, _)) = self.rigid_bodies.iter()
-			                                           .enumerate()
-			                                           .find(|(_, rb)| rb.bone == bone_id) {
-				return index;
-			} else if let Some(parent_id) = self.bones[bone_id].parent {
-				bone_id = parent_id;
-			} else {
-				return 0;
-			}
-		}
+		Some(bone_id).into_iter()
+		             .chain(std::iter::from_fn(move || {
+			             if let Some(parent_id) = self.bones[bone_id].parent {
+				             bone_id = parent_id;
+				             Some(parent_id)
+			             } else {
+				             None
+			             }
+		             }))
 	}
 	
 	// fn find_rb(&self, mut bone_id: usize) -> &MMDRigidBody {

@@ -217,13 +217,13 @@ impl Application {
 			// 		.build()
 			// );
 			
-			// application.add_entity(
-			// 	Entity::builder("初音ミク")
-			// 		.translation(point!(-0.5, 0.0, 0.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("初音ミク")
+					.translation(point!(-0.5, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+					.build()
+			);
 			
 			application.add_entity(
 				Entity::builder("Box")
