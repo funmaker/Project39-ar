@@ -5,9 +5,7 @@ use egui::Ui;
 use crate::application::{Entity, Application, Key, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::component::model::simple::ObjAsset;
-use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
-use crate::math::Isometry3;
 use crate::utils::ExUi;
 
 
@@ -38,9 +36,10 @@ impl Component for PoV {
 			} else {
 				self.detached.set(application.add_entity(
 					Entity::builder("Detached PoV")
+					       .position(*entity.state().position)
+					       .parent(entity.as_ref(), true)
 					       .component(application.renderer.borrow_mut().load(ObjAsset::at("camera/camera.obj", "camera/camera.png"))?)
 					       .component(DetachedPoV::new())
-					       .component(Parent::new(entity, Isometry3::identity()))
 					       .collider_from_aabb(1000.0)
 					       .build()
 				));
@@ -82,19 +81,14 @@ impl Component for DetachedPoV {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		application.detached_pov.set(entity.as_ref());
 		
-		if !self.free.get() && (
+		if entity.parent().get(application).is_some() && (
 			application.input.keyboard.down(Key::W) ||
 			application.input.keyboard.down(Key::S) ||
 			application.input.keyboard.down(Key::A) ||
 			application.input.keyboard.down(Key::D)
 		) {
-			if let Some(parent) = entity.find_component_by_type::<Parent>() {
-				parent.remove();
-			}
-			
+			entity.unset_parent(application);
 			entity.add_component(PCControlled::new());
-			
-			self.free.set(true);
 		}
 		
 		Ok(())

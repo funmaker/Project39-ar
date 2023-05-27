@@ -212,6 +212,18 @@ impl Inspect for String {
 	}
 }
 
+impl<T: InspectMut> InspectMut for Option<T> {
+	type Options<'a> = T::Options<'a>;
+	
+	fn inspect_ui(&mut self, ui: &mut Ui, options: Self::Options<'_>) {
+		if let Some(inner) = self {
+			ui.inspect(inner, options)
+		} else {
+			ui.label(RichText::new("NONE").monospace().italics());
+		}
+	}
+}
+
 impl<T: InspectMut + Copy + PartialEq> Inspect for &Cell<T> {
 	type Options<'a> = T::Options<'a>;
 	

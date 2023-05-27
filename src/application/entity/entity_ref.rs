@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::ops::{Deref, DerefMut};
 
 use crate::application::Application;
 use super::Entity;
@@ -40,6 +41,10 @@ impl EntityRef {
 		}
 		
 		None
+	}
+	
+	pub fn raw(&self) -> Option<u64> {
+		self.inner.get()
 	}
 }
 

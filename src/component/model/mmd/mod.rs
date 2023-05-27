@@ -224,17 +224,6 @@ impl Component for MMDModel {
 			                .and_then(|bone| rigid_bodies.get(&bone))
 			                .unwrap_or(entity);
 			
-			// {
-			// 	let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
-			// 	let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
-			//
-			// 	// Check if joint divides the bone tree
-			// 	if state.bone_ancestors_iter(bone_id)
-			// 	        .all(|id| parent_bone_id != id) {
-			// 		continue;
-			// 	}
-			// }
-			
 			let mut joint = GenericJoint::default();
 			
 			joint.set_local_frame1(rb_a.state().position.inverse() * ent_pos * desc.position)
@@ -261,6 +250,18 @@ impl Component for MMDModel {
 			joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
 			
 			rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()));
+			
+			let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
+			let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
+			
+			if state.bone_ancestors_iter(bone_id)
+			        .any(|id| parent_bone_id == id) {
+				if self.shared.colliders[desc.collider_a].bone < self.shared.colliders[desc.collider_b].bone {
+					rb_b.set_parent(rb_a.as_ref(), false, application);
+				} else {
+					rb_a.set_parent(rb_b.as_ref(), false, application);
+				}
+			}
 		}
 		
 		state.bones[0].attach_rigid_body(entity.as_ref(), Isometry3::identity());

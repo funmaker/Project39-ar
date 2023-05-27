@@ -14,7 +14,6 @@ use crate::component::{Component, ComponentBase, ComponentInner, ComponentError,
 use crate::component::comedy::Comedy;
 use crate::component::hand::HandComponent;
 use crate::component::model::simple::{SimpleModel, Vertex};
-use crate::component::parent::Parent;
 use crate::component::pov::PoV;
 use crate::component::vr::VrIk;
 use crate::math::Isometry3;
@@ -107,11 +106,12 @@ impl Component for VrRoot {
 								application.add_entity(
 									Entity::builder("Eye")
 										.rigid_body_type(RigidBodyType::KinematicPositionBased)
+										.position(Isometry3::translation(0.06, 0.02, -0.085))
+										.parent(entity.clone(), true)
 										.collider(ColliderBuilder::ball(0.05)
 											.collision_groups(InteractionGroups::none())
 											.build())
 										.component(Comedy::new(renderer)?)
-										.component(Parent::new(entity.clone(), Isometry3::translation(0.06, 0.02, -0.085)))
 										.tag("CloseHide", true)
 										.build()
 								);
@@ -119,11 +119,12 @@ impl Component for VrRoot {
 								application.add_entity(
 									Entity::builder("Eye")
 										.rigid_body_type(RigidBodyType::KinematicPositionBased)
+										.position(Isometry3::translation(-0.06, 0.02, -0.085))
+										.parent(entity.clone(), true)
 										.collider(ColliderBuilder::ball(0.05)
 											.collision_groups(InteractionGroups::none())
 											.build())
 										.component(Comedy::new(renderer)?)
-										.component(Parent::new(entity.clone(), Isometry3::translation(-0.06, 0.02, -0.085)))
 										.tag("CloseHide", true)
 										.build()
 								);

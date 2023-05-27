@@ -1,16 +1,15 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
 use std::time::{Duration, Instant};
-use egui::Ui;
+use egui::{RichText, Ui};
 use rapier3d::dynamics::FixedJoint;
 use rapier3d::geometry::Ball;
 use rapier3d::pipeline::QueryFilter;
 use rapier3d::prelude::ColliderHandle;
 
 use crate::debug;
-use crate::application::{Entity, Application, Hand};
+use crate::application::{Entity, Application, Hand, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::component::parent::Parent;
 use crate::component::physics::joint::JointComponent;
 use crate::component::vr::VrTracked;
 use crate::math::{Point3, Color, Translation3, Isometry3};
@@ -27,11 +26,18 @@ struct FreezeAnim {
 	dir: f32,
 }
 
+#[derive(Debug, Clone)]
+enum Grab {
+	None,
+	Dynamic(ComponentRef<JointComponent>),
+	Kinematic(EntityRef),
+}
+
 #[derive(ComponentBase, Debug)]
 pub struct HandComponent {
 	#[inner] inner: ComponentInner,
 	pub hand: Hand,
-	grab: ComponentRef<dyn Component>,
+	grab: RefCell<Grab>,
 	sticky: Cell<bool>,
 	freeze_anim: Cell<Option<FreezeAnim>>,
 }
@@ -40,19 +46,25 @@ impl HandComponent {
 	pub fn new(hand: Hand) -> Self {
 		HandComponent {
 			inner: ComponentInner::new_norender(),
-			grab: ComponentRef::null(),
+			grab: RefCell::new(Grab::None),
 			hand,
 			sticky: Cell::new(false),
 			freeze_anim: Cell::new(None),
+		}
+	}
+	
+	pub fn grabbed_entity(&self) -> EntityRef {
+		match &*self.grab.borrow() {
+			Grab::None => EntityRef::null(),
+			Grab::Dynamic(joint) => joint.entity(),
+			Grab::Kinematic(entity) => entity.clone(),
 		}
 	}
 }
 
 impl Component for HandComponent {
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
-		if let Some(grab) = self.grab.get_dyn(application) {
-			let item = grab.entity(application);
-			
+		if let Some(item) = self.grabbed_entity().get(application) {
 			if application.input.use3_btn(self.hand).down {
 				item.freeze(application.physics.borrow_mut().deref_mut());
 				item.unset_tag("Grabbed");
@@ -67,8 +79,23 @@ impl Component for HandComponent {
 			if item.tag::<ComponentRef<HandComponent>>("Grabbed") != Some(self.as_cref())
 			|| (!self.sticky.get() && application.input.use_btn(self.hand).up) {
 				item.unset_tag("Grabbed");
-				grab.remove();
 				entity.state_mut().hidden = false;
+				
+				match &*self.grab.borrow() {
+					Grab::None => {},
+					Grab::Dynamic(joint) => {
+						if let Some(joint) = joint.get(application) {
+							joint.remove();
+						}
+					},
+					Grab::Kinematic(_) => {
+						if item.parent() == entity {
+							item.unset_parent(application);
+						}
+					},
+				}
+				
+				self.grab.replace(Grab::None);
 			}
 		} else if application.input.use_btn(self.hand).down || application.input.use3_btn(self.hand).down {
 			let mut target = None;
@@ -120,14 +147,18 @@ impl Component for HandComponent {
 					target.set_tag("Grabbed", self.as_cref());
 					self.sticky.set(target.tag("GrabSticky").unwrap_or_default());
 					if dynamic {
-						self.grab.set(target.add_component(JointComponent::new(
+						self.grab.replace(Grab::Dynamic(target.add_component(JointComponent::new(
 							*FixedJoint::new()
 								.set_local_frame1(Isometry3::identity())
 								.set_local_frame2(grab_pos),
 							entity,
-						)));
+						))));
 					} else {
-						self.grab.set(target.add_component(Parent::new(entity, grab_pos)));
+						let root = target.root(application);
+						
+						root.set_parent_and_offset(entity.as_ref(), Some(grab_pos), application);
+						
+						self.grab.replace(Grab::Kinematic(root.as_ref()));
 					}
 					entity.state_mut().hidden = true;
 				}
@@ -161,8 +192,16 @@ impl Component for HandComponent {
 	
 	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
 		ui.inspect_row("Hand", format!("{:?}", self.hand), ());
-		ui.inspect_row("Grabbed", &self.grab, application);
 		ui.inspect_row("Sticky", &self.sticky, ());
+		ui.label("Grabbed");
+		match &*self.grab.borrow() {
+			Grab::None => {
+				ui.label(RichText::new("NONE").monospace().italics());
+				ui.end_row();
+			},
+			Grab::Dynamic(joint) => ui.inspect(joint, application),
+			Grab::Kinematic(entity) => ui.inspect(entity, application),
+		}
 	}
 }
 

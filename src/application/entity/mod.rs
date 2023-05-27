@@ -14,7 +14,7 @@ use crate::application::Hand;
 use crate::component::{ComponentRef, ComponentError};
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet};
 use super::{Application, Component, Physics};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
@@ -32,12 +32,17 @@ pub struct Entity {
 	pub name: String,
 	pub rigid_body: RigidBodyHandle,
 	pub tags: RefCell<HashMap<String, Box<dyn Any>>>,
-	rigid_body_template: RigidBody,
+	parent: EntityRef,
+	parent_offset: Cell<Option<Isometry3>>,
+	children: RefCell<Vec<EntityRef>>,
 	state: RefCell<EntityState>,
+	initialized: Cell<bool>,
 	removed: Cell<bool>,
+	persist: Cell<bool>,
 	frozen: Cell<bool>,
 	components: HashMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
+	rigid_body_template: RigidBody,
 }
 
 impl Entity {
@@ -45,22 +50,23 @@ impl Entity {
 		EntityBuilder::new(name)
 	}
 	
-	pub fn remove(&self) -> bool {
-		for component in self.components.values() {
-			component.remove();
+	pub fn initialize(&mut self, application: &Application) {
+		{
+			let mut physics = application.physics.borrow_mut();
+			let state = self.state.get_mut();
+			let mut rb = self.rigid_body_template.clone();
+			
+			rb.user_data = get_user_data(self.id, 0);
+			rb.set_position(*state.position, true);
+			rb.set_linvel(*state.velocity, true);
+			rb.set_angvel(*state.angular_velocity, true);
+			
+			self.rigid_body = physics.rigid_body_set.insert(rb);
 		}
 		
-		!self.removed.replace(true)
-	}
-	
-	pub fn setup_physics(&mut self, physics: &mut Physics) {
-		let state = self.state.get_mut();
-		let mut rb = self.rigid_body_template.clone();
-		rb.user_data = get_user_data(self.id, 0);
-		rb.set_position(*state.position, true);
-		rb.set_linvel(*state.velocity, true);
-		rb.set_angvel(*state.angular_velocity, true);
-		self.rigid_body = physics.rigid_body_set.insert(rb);
+		self.initialized.set(true);
+		
+		self.set_parent(self.parent.clone(), self.parent_offset.get().is_some(), application);
 	}
 	
 	pub fn add_new_components(&mut self) -> bool {
@@ -90,22 +96,51 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn before_physics(&self, physics: &mut Physics) {
-		let state = self.state();
+	pub fn before_physics(&self, application: &Application, physics: &mut Physics) {
+		let mut state = self.state_mut();
 		let rigid_body = self.rigid_body_mut(physics);
 		
 		if state.position.mutated {
+			if self.parent_offset.get().is_some() {
+				if let Some(parent) = self.parent.get(application) {
+					self.parent_offset.set(Some(parent.state().position.inverse() * *state.position));
+				}
+			}
+			
 			rigid_body.set_position(*state.position, true);
+		} else if let Some(parent_offset) = self.parent_offset.get() {
+			if let Some(parent) = self.parent.get(application) {
+				if parent.state().position.mutated {
+					*state.position = *parent.state().position * parent_offset;
+					
+					rigid_body.set_position(*state.position, true);
+				}
+			}
 		}
+		
 		if state.velocity.mutated {
 			rigid_body.set_linvel(*state.velocity, true);
 		}
+		
 		if state.angular_velocity.mutated {
 			rigid_body.set_angvel(*state.angular_velocity, true);
 		}
 	}
 	
-	pub fn after_physics(&self, physics: &mut Physics) {
+	pub fn after_physics(&self, application: &Application, physics: &mut Physics) {
+		if let Some(parent) = self.parent.get(application) {
+			if let Some(parent_offset) = self.parent_offset.get() {
+				let parent_sleeping = parent.rigid_body(physics).is_sleeping();
+				let rigid_body = self.rigid_body_mut(physics);
+				
+				if !parent_sleeping {
+					self.rigid_body_mut(physics).set_position(*parent.state().position * parent_offset, true);
+				} else if !rigid_body.is_sleeping() {
+					self.rigid_body_mut(physics).sleep();
+				}
+			}
+		}
+		
 		let mut state = self.state_mut();
 		let rigid_body = self.rigid_body(physics);
 		
@@ -120,6 +155,14 @@ impl Entity {
 	}
 	
 	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
+		if let Some(parent) = self.parent.get(application) {
+			if let Some(parent_offset) = self.parent_offset.get() {
+				if parent.state().position.mutated {
+					*self.state_mut().position = *parent.state().position * parent_offset;
+				}
+			}
+		}
+		
 		for component in self.components.values() {
 			component.tick(&self, &application, delta_time)?;
 		}
@@ -217,6 +260,11 @@ impl Entity {
 						ui.inspect_row("Position", &mut state.position, ());
 						ui.inspect_row("Velocity", &mut state.velocity, ());
 						ui.inspect_row("Angular Velocity", &mut state.angular_velocity, ());
+						ui.inspect_row("Follow Parent", GetSet(|| (
+							self.parent_offset.get().is_some(),
+							|follow| self.set_parent(self.parent.clone(), follow, application),
+						)), ());
+						ui.inspect_row("Parent Offset", &self.parent_offset, ());
 					});
 			});
 		
@@ -258,10 +306,6 @@ impl Entity {
 		self.into()
 	}
 	
-	pub fn is_being_removed(&self) -> bool {
-		self.removed.get()
-	}
-	
 	pub fn component<C: Sized + 'static>(&self, id: u64) -> Option<&C> {
 		self.components
 		    .get(&id)
@@ -296,6 +340,81 @@ impl Entity {
 		
 		ComponentRef::new(self.id, id)
 	}
+	
+	pub fn is_being_removed(&self) -> bool {
+		self.removed.get()
+	}
+	
+	pub fn remove(&self) -> bool {
+		for component in self.components.values() {
+			component.remove();
+		}
+		
+		!self.removed.replace(true)
+	}
+	
+	pub fn parent(&self) -> EntityRef {
+		self.parent.clone()
+	}
+	
+	pub fn root<'a, 'b: 'a>(&'b self, application: &'a Application) -> &'a Entity {
+		let mut parent = self;
+		
+		while let Some(grand_parent) = parent.parent().get(application) {
+			parent = grand_parent;
+		}
+		
+		parent
+	}
+	
+	pub fn set_parent_and_offset(&self, parent: EntityRef, parent_offset: Option<Isometry3>, application: &Application) {
+		self.unset_parent(application);
+		
+		self.parent.set(parent.clone());
+		self.parent_offset.set(parent_offset);
+		
+		if let Some(new_parent) = parent.get(application) {
+			new_parent.children.borrow_mut().push(self.as_ref());
+		}
+	}
+	
+	pub fn set_parent(&self, parent: EntityRef, follow: bool, application: &Application) {
+		self.unset_parent(application);
+		
+		self.parent.set(parent.clone());
+		
+		if self.initialized.get() {
+			if let Some(new_parent) = parent.get(application) {
+				new_parent.children.borrow_mut().push(self.as_ref());
+				
+				if follow {
+					self.parent_offset.set(Some(new_parent.state().position.inverse() * *self.state().position));
+				} else {
+					self.parent_offset.set(None);
+				}
+			}
+		} else {
+			self.parent_offset.set(follow.then_some(Isometry3::identity()));
+		}
+	}
+	
+	pub fn unset_parent(&self, application: &Application) {
+		if let Some(old_parent) = self.parent.get(application) {
+			old_parent.children.borrow_mut().drain_filter(|entity| entity == self);
+		}
+		
+		self.parent.set(EntityRef::null());
+	}
+	
+	pub fn children(&self) -> Ref<Vec<EntityRef>> {
+		self.children.borrow()
+	}
+	
+	pub fn persists(&self) -> bool {
+		self.persist.get()
+	}
+	
+	pub fn set_persist(&self, persist: bool) { self.persist.set(persist) }
 	
 	pub fn state(&self) -> Ref<EntityState> {
 		self.state.borrow()

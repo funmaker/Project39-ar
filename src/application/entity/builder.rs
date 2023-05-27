@@ -5,6 +5,7 @@ use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderBuilder};
 use rapier3d::prelude::RigidBodyBuilder;
 
+use crate::application::EntityRef;
 use crate::application::entity::EntityState;
 use crate::component::Component;
 use crate::component::model::SimpleModel;
@@ -16,6 +17,9 @@ use super::Entity;
 
 pub struct EntityBuilder {
 	pub name: String,
+	pub parent: EntityRef,
+	pub parent_follow: bool,
+	pub persist: bool,
 	pub rigid_body: RigidBody,
 	pub position: Isometry3,
 	pub velocity: Vec3,
@@ -29,6 +33,9 @@ impl EntityBuilder {
 	pub fn new(name: impl Into<String>) -> Self {
 		EntityBuilder {
 			name: name.into(),
+			parent: EntityRef::null(),
+			parent_follow: false,
+			persist: false,
 			rigid_body: RigidBodyBuilder::fixed().build(),
 			position: Isometry3::identity(),
 			velocity: Vec3::zeros(),
@@ -37,6 +44,17 @@ impl EntityBuilder {
 			components: vec![],
 			tags: HashMap::new(),
 		}
+	}
+	
+	pub fn parent(mut self, parent: EntityRef, follow: bool) -> Self {
+		self.parent = parent;
+		self.parent_follow = follow;
+		self
+	}
+	
+	pub fn persist(mut self) -> Self {
+		self.persist = true;
+		self
 	}
 	
 	pub fn rigid_body(mut self, rigid_body: RigidBody) -> Self {
@@ -121,6 +139,9 @@ impl EntityBuilder {
 		let entity = Entity {
 			id: next_uid(),
 			name: self.name,
+			parent: self.parent,
+			parent_offset: Cell::new(self.parent_follow.then_some(Isometry3::identity())), // will be set on Entity::initialize
+			children: RefCell::new(vec![]),
 			tags: RefCell::new(self.tags),
 			state: RefCell::new(EntityState {
 				position: MutMark::new(self.position),
@@ -128,7 +149,9 @@ impl EntityBuilder {
 				angular_velocity: MutMark::new(self.angular_velocity),
 				hidden: self.hidden,
 			}),
+			initialized: Cell::new(false),
 			removed: Cell::new(false),
+			persist: Cell::new(self.persist),
 			frozen: Cell::new(false),
 			components: HashMap::new(),
 			new_components: RefCell::new(self.components),

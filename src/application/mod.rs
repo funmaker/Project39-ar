@@ -1,7 +1,8 @@
 #![allow(unused_imports)]
 
+use std::iter;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use err_derive::Error;
@@ -10,6 +11,7 @@ use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index::HMD;
 use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::prelude::ColliderBuilder;
+use smallvec::SmallVec;
 
 pub mod entity;
 pub mod input;
@@ -28,10 +30,10 @@ use crate::component::miku::Miku;
 use crate::component::model::{MMDModel, ModelError};
 use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
 use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
-use crate::component::parent::Parent;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::physics::joint::JointComponent;
 use crate::component::pov::PoV;
+use crate::component::test::TestComponent;
 use crate::component::toolgun::ToolGun;
 use crate::component::vr::{VrIk, VrRoot};
 use crate::config::CameraAPI;
@@ -60,7 +62,7 @@ pub struct Application {
 	eyes: Option<Eyes>,
 	window: Option<Window>,
 	entities: HashMap<u64, Entity>,
-	new_entities: RefCell<Vec<Entity>>,
+	new_entities: RefCell<VecDeque<Entity>>,
 	bench: RefCell<Benchmark>,
 	gui: RefCell<ApplicationGui>,
 	gui_selection: RefCell<GuiSelection>,
@@ -108,7 +110,7 @@ impl Application {
 			eyes: Some(eyes),
 			window: Some(window),
 			entities: HashMap::new(),
-			new_entities: RefCell::new(Vec::new()),
+			new_entities: RefCell::new(VecDeque::new()),
 			gui: RefCell::new(ApplicationGui::new()),
 			gui_selection: RefCell::new(GuiSelection::default()),
 		};
@@ -152,9 +154,9 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
+						.position(Isometry3::new(vector!(-0.2, 1.3, 1.1).into(), vector!(PI * 0.25, 0.0, 0.0)))
+						.parent(pov.clone(), true)
 						.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
-						.component(Parent::new(&pov, Isometry3::new(vector!(-0.2, -0.2, -0.4).into(),
-						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Left))
 						.collider_from_aabb(1000.0)
 						.tag("Hand", Hand::Left)
@@ -163,9 +165,9 @@ impl Application {
 				
 				application.add_entity(
 					Entity::builder("Hand")
+						.position(Isometry3::new(vector!(0.2, 1.3, 1.1).into(), vector!(PI * 0.25, 0.0, 0.0)))
+						.parent(pov.clone(), true)
 						.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
-						.component(Parent::new(&pov, Isometry3::new(vector!(0.2, -0.2, -0.4).into(),
-						                                            vector!(PI * 0.25, 0.0, 0.0))))
 						.component(HandComponent::new(Hand::Right))
 						.collider_from_aabb(1000.0)
 						.tag("Hand", Hand::Right)
@@ -206,16 +208,16 @@ impl Application {
 			// 	);
 			// }
 			
-			// application.add_entity(
-			// 	Entity::builder("ToolGun")
-			// 		.translation(point!(0.0, 1.0, 1.0))
-			// 		.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
-			// 		.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
-			// 		                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
-			// 		                        renderer).unwrap())
-			// 		.collider_from_aabb(100.0)
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("ToolGun")
+					.translation(point!(0.0, 1.0, 1.0))
+					.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
+					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
+					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
+					                        renderer).unwrap())
+					.collider_from_aabb(100.0)
+					.build()
+			);
 			
 			application.add_entity(
 				Entity::builder("初音ミク")
@@ -225,106 +227,45 @@ impl Application {
 					.build()
 			);
 			
-			application.add_entity(
+			let parent = application.add_entity(
 				Entity::builder("Box")
-					.position(Isometry3::new(vector!(0.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
+					.position(Isometry3::new(vector!(3.0, 1.0, -2.0), vector!(0.0, 0.0, 0.0)))
 					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
 					.collider_from_aabb(100.0)
 					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.component(TestComponent::new(false, 1.0))
 					.build()
 			);
 			
-			application.add_entity(
+			let parent = application.add_entity(
 				Entity::builder("Box")
-					.position(Isometry3::new(vector!(1.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.position(Isometry3::new(vector!(3.0, 1.1, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
 					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::KinematicVelocityBased)
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.parent(parent, true)
 					.build()
 			);
 			
-			application.add_entity(
+			let parent = application.add_entity(
 				Entity::builder("Box")
-					.position(Isometry3::new(vector!(2.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.position(Isometry3::new(vector!(3.0, 1.2, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
 					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::Fixed)
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.parent(parent, true)
 					.build()
 			);
 			
 			application.add_entity(
 				Entity::builder("Box")
-					.position(Isometry3::new(vector!(3.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-					.collider_from_aabb(10.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(4.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+					.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
+					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
 					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
+					.rigid_body_type(RigidBodyType::KinematicPositionBased)
+					.parent(parent, true)
 					.build()
 			);
-			
-			application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(5.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-					.collider_from_aabb(1000.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(6.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-					.collider_from_aabb(10000.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(7.0, 0.5, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-					.collider_from_aabb(100000.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
-			
-			// let box1 = application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(0.0, 1.875, 1.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-			// 		.component(Glow::new(Color::magenta(), 0.1, renderer)?)
-			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::Dynamic)
-			// 		.build()
-			// );
-			//
-			// let mut joint = GenericJoint::new(JointAxesMask::X | JointAxesMask::Y | JointAxesMask::Z);
-			//
-			// joint.set_local_frame1(Isometry3::new(vector!(0.0, 0.125, 0.0), vector!(0.0, 0.0, 0.0)))
-			//      .set_local_frame2(Isometry3::new(vector!(0.0, -0.625, 0.0), vector!(0.0, 0.0, 0.0)))
-			//      .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-			//      .set_limits(JointAxis::AngY, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI])
-			//      .set_limits(JointAxis::AngZ, [-30.0 / 180.0 * PI, 30.0 / 180.0 * PI]);
-			//
-			// application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(0.0, 1.0, 1.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_1x1x1.obj", "shapes/textures/box.png"))?)
-			// 		.component(Glow::new(Color::magenta(), 0.1, renderer)?)
-			// 		.component(JointComponent::new(joint, box1))
-			// 		.collider_from_aabb(1000.0)
-			// 		.rigid_body_type(RigidBodyType::Dynamic)
-			// 		.build()
-			// );
 		}
 		
 		Ok(application)
@@ -368,16 +309,16 @@ impl Application {
 			self.bench.get_mut().tick("Setup");
 			
 			{
-				let physics = self.physics.get_mut();
+				let mut physics = self.physics.borrow_mut();
 				
-				for entity in self.entities.values() {
-					entity.before_physics(physics);
+				for entity in self.dfs_entities() {
+					entity.before_physics(&self, &mut physics);
 				}
 				
-				physics.step(Duration::from_millis(1000 / 140));
+				physics.step(Duration::from_millis(1000 / 140)); // TODO: use deltaTime?
 				
-				for entity in self.entities.values() {
-					entity.after_physics(physics);
+				for entity in self.dfs_entities() {
+					entity.after_physics(&self, &mut physics);
 				}
 			}
 			
@@ -396,7 +337,7 @@ impl Application {
 			
 			self.bench.get_mut().tick("Gui");
 			
-			for entity in self.entities.values() {
+			for entity in self.dfs_entities() {
 				entity.tick(delta_time, &self)?;
 			}
 			
@@ -460,7 +401,7 @@ impl Application {
 	pub fn add_entity(&self, entity: Entity) -> EntityRef {
 		let entity_ref = entity.as_ref();
 		
-		self.new_entities.borrow_mut().push(entity);
+		self.new_entities.borrow_mut().push_back(entity);
 		
 		entity_ref
 	}
@@ -490,6 +431,38 @@ impl Application {
 		self.find_all_entities(predicate).next()
 	}
 	
+	pub fn root_entities(&self) -> impl Iterator<Item = &Entity> {
+		self.entities
+			.values()
+			.filter(move |entity| entity.parent().get(self).is_none())
+	}
+	
+	pub fn dfs_entities(&self) -> impl Iterator<Item = &Entity> {
+		let mut stack = SmallVec::<[(&Entity, usize); 32]>::new();
+		let mut root_entities = self.root_entities();
+		
+		iter::from_fn(move || {
+			while let Some((entity, cid)) = stack.pop() {
+				if let Some(cref) = entity.children().get(cid) {
+					if let Some(child) = cref.get(self) {
+						stack.push((entity, cid + 1));
+						stack.push((child, 0));
+						return Some(child)
+					} else {
+						stack.push((entity, cid + 1));
+					}
+				}
+			}
+			
+			if let Some(root) = root_entities.next() {
+				stack.push((root, 0));
+				Some(root)
+			} else {
+				None
+			}
+		})
+	}
+	
 	pub fn select(&self, target: impl Into<GuiSelection>) {
 		self.gui_selection.replace(target.into());
 	}
@@ -503,11 +476,10 @@ impl Application {
 		while !clean {
 			clean = true;
 			
-			for mut entity in self.new_entities.get_mut().drain(..) {
+			while let Some(mut entity) = self.new_entities.get_mut().pop_front() {
+				entity.initialize(self);
+				
 				let id = entity.id;
-				
-				entity.setup_physics(self.physics.get_mut());
-				
 				let old = self.entities.insert(id, entity);
 				assert!(old.is_none(), "Entity id {} already taken!", id);
 			}
@@ -536,6 +508,19 @@ impl Application {
 			for entity in self.entities.values() {
 				if entity.end_components(self)? {
 					clean = false;
+				}
+				
+				if entity.is_being_removed() {
+					entity.unset_parent(self);
+					
+					for cid in entity.children().iter() {
+						if let Some(child) = cid.get(self) {
+							if !child.is_being_removed() && !child.persists() {
+								child.remove();
+								clean = false;
+							}
+						}
+					}
 				}
 			}
 			

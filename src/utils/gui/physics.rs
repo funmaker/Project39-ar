@@ -63,8 +63,14 @@ impl InspectMut for RigidBody {
 			.show(ui, |ui| {
 				ui.inspect_row("ID", handle, application);
 				ui.inspect_row("Owner", UserData(self.user_data), application);
-				ui.inspect_row("Body Type", GetSet(|| (self.body_type(), |bt| self.set_body_type(bt, true))), ());
-				ui.inspect_row("Sleeping", GetSet(|| (self.is_sleeping(), |sleep| if sleep { self.sleep() })), ());
+				ui.inspect_row("Body Type", GetSet(|| (
+					self.body_type(),
+					|bt| self.set_body_type(bt, true),
+				)), ());
+				ui.inspect_row("Sleeping", GetSet(|| (
+					self.is_sleeping(),
+					|sleep| if sleep { self.sleep() },
+				)), ());
 			});
 		
 		ui.collapsing("Kinematics", |ui| {
@@ -72,9 +78,18 @@ impl InspectMut for RigidBody {
 				.num_columns(2)
 				.min_col_width(100.0)
 				.show(ui, |ui| {
-					ui.inspect_row("Position", GetSet(|| (*self.position(), |pos| self.set_position(pos, true))), ());
-					ui.inspect_row("Velocity", GetSet(|| (*self.linvel(), |vel| self.set_linvel(vel, true))), ());
-					ui.inspect_row("Angular Velocity", GetSet(|| (*self.angvel(), |angvel| self.set_angvel(angvel, true))), ());
+					ui.inspect_row("Position", GetSet(|| (
+						*self.position(),
+						|pos| self.set_position(pos, true),
+					)), ());
+					ui.inspect_row("Velocity", GetSet(|| (
+						*self.linvel(),
+						|vel| self.set_linvel(vel, true),
+					)), ());
+					ui.inspect_row("Angular Velocity", GetSet(|| (
+						*self.angvel(),
+						|angvel| self.set_angvel(angvel, true),
+					)), ());
 				});
 		});
 		
@@ -201,9 +216,15 @@ impl InspectMut for Collider {
 				ui.inspect_row("Rigid Body", self.parent().unwrap_or(RigidBodyHandle::invalid()), application);
 				
 				if let Some(&pos_wrt_parent) = self.position_wrt_parent() {
-					ui.inspect_row("Position", GetSet(|| (pos_wrt_parent, |pos| self.set_position_wrt_parent(pos))), ());
+					ui.inspect_row("Position", GetSet(|| (
+						pos_wrt_parent,
+						|pos| self.set_position_wrt_parent(pos),
+					)), ());
 				} else {
-					ui.inspect_row("Position", GetSet(|| (*self.position(), |pos| self.set_position(pos))), ());
+					ui.inspect_row("Position", GetSet(|| (
+						*self.position(),
+						|pos| self.set_position(pos),
+					)), ());
 				}
 				
 				ui.inspect_row("Shape", format!("{:?}", self.shape().shape_type()), ());

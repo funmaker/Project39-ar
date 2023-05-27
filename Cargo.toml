@@ -42,6 +42,7 @@ egui = "0.21.0"
 egui_winit_vulkano = "0.24.0"
 parking_lot = "0.12.1"
 colored = "2.0.0"
+smallvec = "1.10.0"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"

@@ -23,7 +23,6 @@ mod weld;
 use crate::debug;
 use crate::application::{Application, Entity};
 use crate::component::hand::HandComponent;
-use crate::component::parent::Parent;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::pipelines::PipelineError;
@@ -59,7 +58,6 @@ pub struct ToolGun {
 	state: RefCell<ToolGunState>,
 	anim: Cell<Option<ToolGunAnim>>,
 	prop_collection: PropCollection,
-	parent: ComponentRef<Parent>,
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
@@ -111,7 +109,6 @@ impl ToolGun {
 		
 		Ok(ToolGun {
 			inner: ComponentInner::from_render_type(RenderType::Transparent),
-			parent: ComponentRef::null(),
 			state: RefCell::new(state),
 			anim: Cell::new(None),
 			prop_collection: prop_manager,
@@ -279,16 +276,6 @@ impl Component for ToolGun {
 		if state.render_tool {
 			if let Some(tool) = tool {
 				tool.render(self, context)?;
-			}
-		}
-		
-		Ok(())
-	}
-	
-	fn end(&self, _entity: &Entity, application: &Application) -> Result<(), ComponentError> {
-		if let Some(parent) = self.parent.get(application) {
-			if let Some(controller) = parent.target.get(application) {
-				controller.state_mut().hidden = false;
 			}
 		}
 		

@@ -1810,6 +1810,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "simba",
+ "smallvec",
  "toml",
  "unifont",
  "vulkano",
