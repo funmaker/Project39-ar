@@ -10,6 +10,7 @@ pub use selection::GuiSelection;
 use main_tab::main_ui;
 use physics_tab::physics_ui;
 use selection::GuiTab;
+use crate::utils::ExUi;
 
 
 pub struct ApplicationGui {
@@ -48,6 +49,7 @@ impl ApplicationGui {
 				.show(&ctx, |ui| {
 					ui.horizontal(|ui| {
 						self.show_tab_label(ui, GuiTab::Main, application);
+						self.show_tab_label(ui, GuiTab::Miku, application);
 						self.show_tab_label(ui, GuiTab::Physics, application);
 						self.show_tab_label(ui, GuiTab::Benchmark, application);
 						self.show_tab_label(ui, GuiTab::Settings, application);
@@ -127,6 +129,7 @@ fn show_tab(ui: &mut Ui, tab: GuiTab, application: &Application) {
 	
 	match tab {
 		GuiTab::Main => main_ui(ui, application),
+		GuiTab::Miku => if let Some(miku) = application.miku.get(application) { ui.inspect(miku, application); },
 		GuiTab::Physics => if let Ok(mut physics) = application.physics.try_borrow_mut() { physics_ui(&mut *physics, ui, application); },
 		GuiTab::Benchmark => application.bench.borrow_mut().on_gui(ui),
 		GuiTab::Settings => ctx.settings_ui(ui),

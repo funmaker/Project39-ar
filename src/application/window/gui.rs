@@ -54,6 +54,24 @@ impl WindowGui {
 			gui.egui_ctx.set_style(style);
 		}
 		
+		{
+			let mut fonts = egui::FontDefinitions::default();
+			
+			fonts.font_data.insert("unifont".to_owned(), egui::FontData::from_static(include_bytes!("./unifont-15.0.04.otf")));
+			
+			fonts.families
+			     .entry(egui::FontFamily::Proportional)
+			     .or_default()
+			     .push("unifont".to_owned());
+			
+			fonts.families
+			     .entry(egui::FontFamily::Monospace)
+			     .or_default()
+			     .insert(0, "unifont".to_owned());
+			
+			gui.egui_ctx.set_fonts(fonts);
+		}
+		
 		let framebuffer = Framebuffer::new(render_pass.clone(), FramebufferCreateInfo {
 			attachments: vec![ImageView::new_default(fb.main_image.clone())?],
 			extent: fb.main_image.dimensions().width_height(),

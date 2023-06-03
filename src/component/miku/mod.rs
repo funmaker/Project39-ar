@@ -100,6 +100,8 @@ impl Component for Miku {
 		let model = application.renderer.borrow_mut().load(self.asset.clone())?;
 		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
+		application.miku.set(self.as_cref());
+		
 		Ok(())
 	}
 	

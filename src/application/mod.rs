@@ -23,7 +23,7 @@ mod gui;
 mod window;
 
 use crate::{config, debug};
-use crate::component::{Component, ComponentError};
+use crate::component::{Component, ComponentError, ComponentRef};
 use crate::component::glow::Glow;
 use crate::component::hand::HandComponent;
 use crate::component::miku::Miku;
@@ -57,6 +57,7 @@ pub struct Application {
 	pub physics: RefCell<Physics>,
 	pub vr_poses: WaitPoses,
 	pub pov: EntityRef,
+	pub miku: ComponentRef<Miku>,
 	pub detached_pov: EntityRef,
 	pub input: Input,
 	eyes: Option<Eyes>,
@@ -104,6 +105,7 @@ impl Application {
 			physics: RefCell::new(Physics::new()),
 			vr_poses: default_wait_poses(),
 			pov: EntityRef::null(),
+			miku: ComponentRef::null(),
 			detached_pov: EntityRef::null(),
 			input: Input::new(),
 			bench: RefCell::new(Benchmark::new()),

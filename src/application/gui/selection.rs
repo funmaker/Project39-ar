@@ -8,6 +8,7 @@ use crate::component::{Component, ComponentBase, ComponentRef};
 #[derive(Debug, Hash, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 pub enum GuiTab {
 	Main,
+	Miku,
 	Physics,
 	Benchmark,
 	Settings,
@@ -19,6 +20,7 @@ impl GuiTab {
 	pub fn label(self) -> &'static str {
 		match self {
 			GuiTab::Main => "Project 39",
+			GuiTab::Miku => "Miku",
 			GuiTab::Physics => "Physics",
 			GuiTab::Benchmark => "Benchmark",
 			GuiTab::Settings => "UI Settings",
