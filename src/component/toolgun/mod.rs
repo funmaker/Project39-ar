@@ -170,7 +170,7 @@ impl Component for ToolGun {
 		if let Some((_, intersection)) = result {
 			let hit = ray.point_at(intersection);
 			
-			debug::draw_point(hit, 32.0, Color::cyan());
+			debug::draw_point(hit, 32.0, Color::CYAN);
 		}
 		
 		state.render_tool = false;
@@ -190,9 +190,9 @@ impl Component for ToolGun {
 					let text_box_pos = menu_pos.transform_point(&point!(0.0, (state.tool_id as f32 - tool_id as f32) * MENU_SPACING, 0.0));
 					
 					let color = if Some(tool_id as isize) == select_id {
-						Color::yellow()
+						Color::YELLOW
 					} else {
-						Color::white()
+						Color::WHITE
 					};
 					
 					debug::draw_text(tool.name(), text_box_pos, debug::DebugOffset::center(0.0, 0.0), 128.0, color);
@@ -223,8 +223,8 @@ impl Component for ToolGun {
 		if let Some(anim) = self.anim.get() {
 			let elapsed = anim.start.elapsed().as_secs_f32();
 			
-			debug::draw_line(anim.origin, anim.target, 10.0 - elapsed * 50.0, Color::cyan().opactiy(elapsed * 5.0));
-			debug::draw_point(anim.target, anim.scale * elapsed * 1000.0, Color::white().opactiy(1.0 - elapsed * 5.0));
+			debug::draw_line(anim.origin, anim.target, 10.0 - elapsed * 50.0, Color::CYAN.opactiy(elapsed * 5.0));
+			debug::draw_point(anim.target, anim.scale * elapsed * 1000.0, Color::WHITE.opactiy(1.0 - elapsed * 5.0));
 			
 			if elapsed > 2.0 {
 				self.anim.set(None);

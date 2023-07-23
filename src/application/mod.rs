@@ -303,7 +303,7 @@ impl Application {
 			
 			let inputs = format!("{}", self.input);
 			for (id, line) in inputs.split("\n").enumerate() {
-				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::cyan());
+				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
 			}
 			
 			self.setup_loop()?;

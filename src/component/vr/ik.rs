@@ -106,8 +106,8 @@ impl VrIk {
 		
 		let position = Isometry3::from_parts(translation.into(), rotation);
 		
-		debug::draw_line(hmd_pos, neck_pos, 6.0, Color::dred());
-		debug::draw_line(neck_pos, position, 6.0, Color::dred());
+		debug::draw_line(hmd_pos, neck_pos, 6.0, Color::D_RED);
+		debug::draw_line(neck_pos, position, 6.0, Color::D_RED);
 		
 		position
 	}
@@ -243,17 +243,17 @@ impl Component for VrIk {
 		
 		let physics = &mut *application.physics.borrow_mut();
 		
-		debug::draw_point(hmd_pos, 16.0, Color::red());
-		debug::draw_point(hand_left, 16.0, Color::green());
-		debug::draw_point(hand_right, 16.0, Color::blue());
+		debug::draw_point(hmd_pos, 16.0, Color::RED);
+		debug::draw_point(hand_left, 16.0, Color::GREEN);
+		debug::draw_point(hand_right, 16.0, Color::BLUE);
 		
 		let torso_pos = self.torso_pos(hmd_pos, hand_left, hand_right);
 		let shoulder_length = self.arm_length.get() * self.arm_shoulder.get();
-		let shoulder_left = self.shoulder_pos(torso_pos, Isometry3::translation(-shoulder_length, 0.0, 0.0), hand_left, Color::dgreen());
-		let shoulder_right = self.shoulder_pos(torso_pos, Isometry3::translation(shoulder_length, 0.0, 0.0), hand_right, Color::dblue());
+		let shoulder_left = self.shoulder_pos(torso_pos, Isometry3::translation(-shoulder_length, 0.0, 0.0), hand_left, Color::D_GREEN);
+		let shoulder_right = self.shoulder_pos(torso_pos, Isometry3::translation(shoulder_length, 0.0, 0.0), hand_right, Color::D_BLUE);
 		
-		let (upper_left_pos, lower_left_pos) = self.arm_pos(shoulder_left, hand_left, true, Color::dgreen());
-		let (upper_right_pos, lower_right_pos) = self.arm_pos(shoulder_right, hand_right, false, Color::dblue());
+		let (upper_left_pos, lower_left_pos) = self.arm_pos(shoulder_left, hand_left, true, Color::D_GREEN);
+		let (upper_right_pos, lower_right_pos) = self.arm_pos(shoulder_right, hand_right, false, Color::D_BLUE);
 		
 		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_torso.get())           { rb.set_position(torso_pos, true); }
 		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_left_upper_arm.get())  { rb.set_position(upper_left_pos, true); }

@@ -54,7 +54,7 @@ impl Component for Rope {
 			physics.rigid_body_set.get_mut(other.rigid_body).unwrap().add_force(offset.normalize() * force, /*other_pos,*/ true);
 		}
 		
-		debug::draw_line(self_pos, other_pos, 8.0, Color::dblack());
+		debug::draw_line(self_pos, other_pos, 8.0, Color::D_BLACK);
 		
 		Ok(())
 	}

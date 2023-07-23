@@ -90,7 +90,7 @@ impl Tool for Axis {
 	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost) = &self.ghost {
 			if let Some(ghost_pos) = self.ghost_pos {
-				ghost.render_impl(Similarity3::from_isometry(ghost_pos * self.target_local_pos.inverse(), 1.0), Color::full_white().opactiy(0.25), context)?;
+				ghost.render_impl(Similarity3::from_isometry(ghost_pos * self.target_local_pos.inverse(), 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;
 			}
 		}
 		

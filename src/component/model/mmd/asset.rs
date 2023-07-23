@@ -163,15 +163,15 @@ impl AssetKey for PmxAsset {
 			let display = def.bone_flags.contains(BoneFlags::Display);
 			
 			let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
-				Color::green()
+				Color::GREEN
 			} else if def.bone_flags.contains(BoneFlags::Rotatable) && def.bone_flags.contains(BoneFlags::Movable) {
-				Color::magenta()
+				Color::MAGENTA
 			} else if def.bone_flags.contains(BoneFlags::Rotatable) {
-				Color::blue().lightness(1.5)
+				Color::BLUE.lightness(1.5)
 			} else if def.bone_flags.contains(BoneFlags::Movable) {
-				Color::dyellow()
+				Color::D_YELLOW
 			} else {
-				Color::dwhite()
+				Color::D_WHITE
 			};
 			
 			if !def.bone_flags.contains(BoneFlags::CanOperate) {

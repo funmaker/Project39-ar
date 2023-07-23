@@ -70,7 +70,7 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 	
 	model.add_bone(MMDBone::new("Root",
 	                            None,
-	                            Color::cyan(),
+	                            Color::CYAN,
 	                            vector!(0.0, 0.0, 0.0),
 	                            vector!(0.0, 0.0, 0.0),
 	                            true,
@@ -79,7 +79,7 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 	for id in 1..=bones_num {
 		model.add_bone(MMDBone::new("Bend",
 		                            Some(id - 1),
-		                            Color::cyan(),
+		                            Color::CYAN,
 		                            vector!(0.0, height / (bones_num + 1) as f32 * id as f32, 0.0),
 		                            vector!(0.0, height / (bones_num + 1) as f32, 0.0),
 		                            true,
@@ -88,7 +88,7 @@ pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 	
 	model.add_bone(MMDBone::new("Tip",
 	                            Some(bones_num),
-	                            Color::cyan(),
+	                            Color::CYAN,
 	                            vector!(0.0, height, 0.0),
 	                            vector!(0.0, height / (bones_num + 1) as f32, 0.0),
 	                            true,

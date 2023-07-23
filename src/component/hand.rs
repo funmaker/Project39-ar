@@ -183,7 +183,7 @@ impl Component for HandComponent {
 			if (elapsed * anim.dir * 4.0).abs() > 1.0 {
 				self.freeze_anim.set(None);
 			} else {
-				debug::draw_point(anim.origin, prog * 200.0, Color::cyan().opactiy(1.0 - prog));
+				debug::draw_point(anim.origin, prog * 200.0, Color::CYAN.opactiy(1.0 - prog));
 			}
 		}
 		

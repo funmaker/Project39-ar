@@ -193,11 +193,11 @@ impl Entity {
 		if debug::get_flag_or_default("DebugEntityDraw") && context.render_type == RenderType::Opaque {
 			let pos = *state.position;
 			
-			debug::draw_point(pos, 32.0, Color::magenta());
-			debug::draw_line(pos, pos * Point3::from(Vec3::x() * 0.3), 4.0, Color::red());
-			debug::draw_line(pos, pos * Point3::from(Vec3::y() * 0.3), 4.0, Color::green());
-			debug::draw_line(pos, pos * Point3::from(Vec3::z() * 0.3), 4.0, Color::blue());
-			debug::draw_text(&self.name, pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::magenta());
+			debug::draw_point(pos, 32.0, Color::MAGENTA);
+			debug::draw_line(pos, pos * Point3::from(Vec3::x() * 0.3), 4.0, Color::RED);
+			debug::draw_line(pos, pos * Point3::from(Vec3::y() * 0.3), 4.0, Color::GREEN);
+			debug::draw_line(pos, pos * Point3::from(Vec3::z() * 0.3), 4.0, Color::BLUE);
+			debug::draw_text(&self.name, pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::MAGENTA);
 		}
 		
 		for component in self.components.values() {

@@ -82,8 +82,8 @@ impl Component for Comedy {
 	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
 		let base_pos = *entity.state().position;
 		
-		self.model.render_impl(Similarity3::from_isometry(self.iris_pos.get(), 0.6 * SCALE), Color::full_black(), context)?;
-		self.model.render_impl(Similarity3::from_isometry(base_pos, 1.0 * SCALE), Color::full_white().opactiy(0.6), context)?;
+		self.model.render_impl(Similarity3::from_isometry(self.iris_pos.get(), 0.6 * SCALE), Color::FULL_BLACK, context)?;
+		self.model.render_impl(Similarity3::from_isometry(base_pos, 1.0 * SCALE), Color::FULL_WHITE.opactiy(0.6), context)?;
 		
 		Ok(())
 	}

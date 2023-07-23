@@ -119,7 +119,7 @@ impl Component for SimpleModel {
 	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
 		let base_pos = *entity.state().position;
 		
-		self.render_impl(Similarity3::from_isometry(base_pos, 1.0), Color::full_white(), context)?;
+		self.render_impl(Similarity3::from_isometry(base_pos, 1.0), Color::FULL_WHITE, context)?;
 		
 		Ok(())
 	}

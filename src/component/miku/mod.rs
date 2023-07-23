@@ -1,13 +1,14 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
+use egui::Ui;
 use simba::scalar::SubsetOf;
 
 mod enums;
 mod proc_anim;
 
 use crate::application::{Entity, Application};
-use crate::math::Rot3;
+use crate::math::{Color, Rot3};
 use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
 use super::model::MMDModel;
@@ -154,5 +155,23 @@ impl Component for Miku {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect(&self, _entity: &Entity, _ui: &mut Ui, _application: &Application) {
+	
+	}
+	
+	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, _application: &Application) {
+		ui.separator();
+		
+		ui.vertical_centered(|ui| {
+			let width = ui.available_width().clamp(128.0, 512.0);
+			let (_id, rect) = ui.allocate_space([width, width * 0.75].into());
+			
+			ui.painter_at(rect)
+			  .rect_filled(rect.shrink(16.0), 0.0, Color::MAGENTA);
+		});
+		
+		ui.label("End");
 	}
 }

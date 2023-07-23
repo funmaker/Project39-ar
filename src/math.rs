@@ -215,27 +215,27 @@ pub struct Color(Vec4);
 impl Color {
 	pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self { Color(vector!(r, g, b, a)) }
 	
-	pub fn dblack()   -> Self { Color(vector!(0.0, 0.0, 0.0, 1.0)) }
-	pub fn dred()     -> Self { Color(vector!(0.5, 0.0, 0.0, 1.0)) }
-	pub fn dgreen()   -> Self { Color(vector!(0.0, 0.6, 0.0, 1.0)) }
-	pub fn dyellow()  -> Self { Color(vector!(0.1, 0.5, 0.0, 1.0)) }
-	pub fn dblue()    -> Self { Color(vector!(0.0, 0.0, 0.5, 1.0)) }
-	pub fn dmagenta() -> Self { Color(vector!(0.6, 0.0, 0.6, 1.0)) }
-	pub fn dcyan()    -> Self { Color(vector!(0.0, 0.6, 0.6, 1.0)) }
-	pub fn dwhite()   -> Self { Color(vector!(0.8, 0.8, 0.8, 1.0)) }
+	pub const D_BLACK: Self = Color(vector!(0.0, 0.0, 0.0, 1.0));
+	pub const D_RED: Self = Color(vector!(0.5, 0.0, 0.0, 1.0));
+	pub const D_GREEN: Self = Color(vector!(0.0, 0.6, 0.0, 1.0));
+	pub const D_YELLOW: Self = Color(vector!(0.1, 0.5, 0.0, 1.0));
+	pub const D_BLUE: Self = Color(vector!(0.0, 0.0, 0.5, 1.0));
+	pub const D_MAGENTA: Self = Color(vector!(0.6, 0.0, 0.6, 1.0));
+	pub const D_CYAN: Self = Color(vector!(0.0, 0.6, 0.6, 1.0));
+	pub const D_WHITE: Self = Color(vector!(0.8, 0.8, 0.8, 1.0));
 	
-	pub fn black()    -> Self { Color(vector!(0.5, 0.5, 0.5, 1.0)) }
-	pub fn red()      -> Self { Color(vector!(1.0, 0.0, 0.0, 1.0)) }
-	pub fn green()    -> Self { Color(vector!(0.0, 1.0, 0.0, 1.0)) }
-	pub fn yellow()   -> Self { Color(vector!(1.0, 1.0, 0.0, 1.0)) }
-	pub fn blue()     -> Self { Color(vector!(0.0, 0.0, 1.0, 1.0)) }
-	pub fn magenta()  -> Self { Color(vector!(1.0, 0.0, 1.0, 1.0)) }
-	pub fn cyan()     -> Self { Color(vector!(0.0, 1.0, 1.0, 1.0)) }
-	pub fn white()    -> Self { Color(vector!(1.0, 1.0, 1.0, 1.0)) }
+	pub const BLACK: Self = Color(vector!(0.5, 0.5, 0.5, 1.0));
+	pub const RED: Self = Color(vector!(1.0, 0.0, 0.0, 1.0));
+	pub const GREEN: Self = Color(vector!(0.0, 1.0, 0.0, 1.0));
+	pub const YELLOW: Self = Color(vector!(1.0, 1.0, 0.0, 1.0));
+	pub const BLUE: Self = Color(vector!(0.0, 0.0, 1.0, 1.0));
+	pub const MAGENTA: Self = Color(vector!(1.0, 0.0, 1.0, 1.0));
+	pub const CYAN: Self = Color(vector!(0.0, 1.0, 1.0, 1.0));
+	pub const WHITE: Self = Color(vector!(1.0, 1.0, 1.0, 1.0));
 	
-	pub fn full_black()  -> Self { Color(vector!(0.0, 0.0, 0.0, 1.0)) }
-	pub fn full_white()  -> Self { Color(vector!(1.0, 1.0, 1.0, 1.0)) }
-	pub fn transparent() -> Self { Color(vector!(0.0, 0.0, 0.0, 0.0)) }
+	pub const FULL_BLACK: Self = Color(vector!(0.0, 0.0, 0.0, 1.0));
+	pub const FULL_WHITE: Self = Color(vector!(1.0, 1.0, 1.0, 1.0));
+	pub const TRANSPARENT: Self = Color(vector!(0.0, 0.0, 0.0, 0.0));
 	
 	pub fn opactiy(self, opacity: f32) -> Self { Color(self.0 * opacity) }
 	pub fn lightness(self, lightness: f32) -> Self { Color(
@@ -264,6 +264,17 @@ impl DerefMut for Color {
 impl Into<[f32; 4]> for Color {
 	fn into(self) -> [f32; 4] {
 		self.0.into()
+	}
+}
+
+impl Into<egui::Color32> for Color {
+	fn into(self) -> egui::Color32 {
+		egui::Color32::from_rgba_premultiplied(
+			(self.x * 255.0) as u8,
+			(self.y * 255.0) as u8,
+			(self.z * 255.0) as u8,
+			(self.w * 255.0) as u8,
+		)
 	}
 }
 

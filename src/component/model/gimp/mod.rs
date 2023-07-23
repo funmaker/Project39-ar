@@ -159,7 +159,7 @@ impl Component for GimpModel {
 	}
 	
 	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
-		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::full_white(), context)?;
+		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::FULL_WHITE, context)?;
 		
 		Ok(())
 	}

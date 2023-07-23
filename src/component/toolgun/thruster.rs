@@ -65,7 +65,7 @@ impl Tool for ThrusterTool {
 			ThrusterDirection::Right => "⮫",
 		};
 		
-		debug::draw_text(dir_icon, toolgun_pos.transform_point(&point!(0.0, 0.12, -0.03)), debug::DebugOffset::center(0.0, 0.0), 128.0, Color::full_white());
+		debug::draw_text(dir_icon, toolgun_pos.transform_point(&point!(0.0, 0.12, -0.03)), debug::DebugOffset::center(0.0, 0.0), 128.0, Color::FULL_WHITE);
 		
 		let result = {
 			let physics = &*application.physics.borrow();
@@ -117,7 +117,7 @@ impl Tool for ThrusterTool {
 	
 	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
-			self.thruster_model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), context)?;
+			self.thruster_model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;
 		}
 		
 		Ok(())

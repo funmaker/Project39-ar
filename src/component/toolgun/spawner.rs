@@ -115,7 +115,7 @@ impl Tool for Spawner {
 	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
 		if let Some(ghost_pos) = self.ghost_pos {
 			if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
-				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::full_white().opactiy(0.25), context)?;
+				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;
 			}
 		}
 		
@@ -135,9 +135,9 @@ impl Tool for Spawner {
 				let transform = menu_pos * Similarity3::from_parts(pos.into(), Rot3::from_euler_angles(0.0, 0.0, 0.0), size);
 				
 				let color = if self.select_idx == Some(id) {
-					Color::cyan()
+					Color::CYAN
 				} else {
-					Color::dwhite().opactiy(0.75)
+					Color::D_WHITE.opactiy(0.75)
 				};
 				
 				prop.model.render_impl(transform, color, context)?;

@@ -389,7 +389,7 @@ impl Component for MMDModel {
 			                               0,
 			                               Pc {
 				                               model: model_matrix.into(),
-				                               color: Color::white().into(),
+				                               color: Color::WHITE.into(),
 				                               scale: 1.0,
 			                               })
 			               .draw_indexed(sub_mesh.range.len() as u32,
@@ -411,7 +411,7 @@ impl Component for MMDModel {
 				                               0,
 				                               Pc {
 					                               model: model_matrix.into(),
-					                               color: Color::white().into(),
+					                               color: Color::WHITE.into(),
 					                               scale: 1.0,
 				                               })
 				               .draw_indexed(sub_mesh.range.len() as u32,
