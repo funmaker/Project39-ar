@@ -72,6 +72,12 @@ impl EntityBuilder {
 		self
 	}
 	
+	pub fn damping(mut self, linear: f32, angular: f32) -> Self {
+		self.rigid_body.set_linear_damping(linear);
+		self.rigid_body.set_angular_damping(angular);
+		self
+	}
+	
 	pub fn position(mut self, position: Isometry3) -> Self {
 		self.position = position;
 		self

@@ -50,7 +50,7 @@ impl Component for VrRoot {
 		let vr = application.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		let mut entities = self.entities.borrow_mut();
 		
-		entities.drain_filter(|_, entref| entref.get(application).is_none());
+		entities.retain(|_, entref| entref.get(application).is_some());
 		
 		for tracked_id in 0..MAX_TRACKED_DEVICE_COUNT as u32 {
 			if vr.system.is_tracked_device_connected(tracked_id) {

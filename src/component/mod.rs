@@ -11,6 +11,7 @@ pub mod comedy;
 pub mod example;
 pub mod glow;
 pub mod hand;
+pub mod katamari;
 pub mod miku;
 pub mod model;
 pub mod pc_controlled;

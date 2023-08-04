@@ -148,7 +148,7 @@ impl Renderer {
 			layers.push("VK_LAYER_KHRONOS_validation".to_string());
 		}
 		
-		let removed = layers.drain_filter(|layer| layer_properties.iter().all(|al| al.name() != layer));
+		let removed = layers.extract_if(|layer| layer_properties.iter().all(|al| al.name() != layer));
 		
 		for layer in removed {
 			eprintln!("MISSING LAYER: {}", layer);

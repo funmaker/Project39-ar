@@ -112,7 +112,7 @@ impl TextCache {
 		}
 		
 		let max_stale = self.max_stale;
-		self.entries.drain_filter(|_, e| e.stale > max_stale);
+		self.entries.retain(|_, e| e.stale <= max_stale);
 		
 		if self.entries.len() > TARGET_SIZE && self.max_stale > 2 {
 			self.max_stale /= 2;

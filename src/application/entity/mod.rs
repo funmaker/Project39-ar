@@ -224,7 +224,7 @@ impl Entity {
 	}
 	
 	pub fn cleanup_ended_components(&mut self) {
-		self.components.drain_filter(|_, component| component.inner().is_dead());
+		self.components.retain(|_, component| !component.inner().is_dead());
 	}
 	
 	pub fn cleanup_physics(&mut self, physics: &mut Physics) {
@@ -332,6 +332,12 @@ impl Entity {
 			.and_then(|c| c.as_any().downcast_ref::<C>())
 	}
 	
+	pub fn iter_component_by_type<C: Sized + 'static>(&self) -> impl Iterator<Item = &C> {
+		self.components
+		    .values()
+		    .filter_map(|c| c.as_any().downcast_ref::<C>())
+	}
+	
 	pub fn add_component<C: IntoBoxed<dyn Component>>(&self, component: C) -> ComponentRef<C> {
 		let component = component.into();
 		let id = component.id();
@@ -400,7 +406,7 @@ impl Entity {
 	
 	pub fn unset_parent(&self, application: &Application) {
 		if let Some(old_parent) = self.parent.get(application) {
-			old_parent.children.borrow_mut().drain_filter(|entity| entity == self);
+			old_parent.children.borrow_mut().retain(|entity| entity != self);
 		}
 		
 		self.parent.set(EntityRef::null());

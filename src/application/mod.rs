@@ -26,6 +26,7 @@ use crate::{config, debug};
 use crate::component::{Component, ComponentError, ComponentRef};
 use crate::component::glow::Glow;
 use crate::component::hand::HandComponent;
+use crate::component::katamari::Katamari;
 use crate::component::miku::Miku;
 use crate::component::model::{MMDModel, ModelError};
 use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
@@ -226,46 +227,58 @@ impl Application {
 					.translation(point!(-0.5, 0.0, 0.0))
 					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
 					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+					.rigid_body_type(RigidBodyType::Dynamic)
 					.build()
 			);
 			
-			let parent = application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(3.0, 1.0, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.component(TestComponent::new(false, 1.0))
-					.build()
-			);
-			
-			let parent = application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(3.0, 1.1, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
-					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.parent(parent, true)
-					.build()
-			);
-			
-			let parent = application.add_entity(
-				Entity::builder("Box")
-					.position(Isometry3::new(vector!(3.0, 1.2, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
-					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.parent(parent, true)
-					.build()
-			);
+			// let parent = application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(3.0, 1.0, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
+			// 		.component(TestComponent::new(false, 1.0))
+			// 		.build()
+			// );
+			//
+			// let parent = application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(3.0, 1.1, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
+			// 		.parent(parent, true)
+			// 		.build()
+			// );
+			//
+			// let parent = application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(3.0, 1.2, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
+			// 		.parent(parent, true)
+			// 		.build()
+			// );
+			//
+			// application.add_entity(
+			// 	Entity::builder("Box")
+			// 		.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
+			// 		.collider_from_aabb(100.0)
+			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
+			// 		.parent(parent, true)
+			// 		.build()
+			// );
 			
 			application.add_entity(
-				Entity::builder("Box")
+				Entity::builder("Katamari")
 					.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
-					.collider_from_aabb(100.0)
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.parent(parent, true)
+					.component(renderer.load(ObjAsset::at("katamari/katamari_baked.obj", "katamari/katamari_baked.png"))?)
+					.component(Katamari::new())
+					.gravity_scale(10.0)
+					.damping(1.0, 0.0)
+					.rigid_body_type(RigidBodyType::Dynamic)
 					.build()
 			);
 		}
@@ -533,7 +546,7 @@ impl Application {
 			}
 		}
 		
-		for (_, mut entity) in self.entities.drain_filter(|_, entity| entity.is_being_removed()) {
+		for (_, mut entity) in self.entities.extract_if(|_, entity| entity.is_being_removed()) {
 			entity.cleanup_physics(self.physics.get_mut());
 		}
 		

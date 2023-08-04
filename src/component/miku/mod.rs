@@ -13,7 +13,7 @@ use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
 use super::model::MMDModel;
 use super::model::mmd::asset::PmxAsset;
-pub use enums::{Bones, Morphs, RigidBodies};
+pub use enums::{Bones, Morphs};
 use proc_anim::{ProcAnim, Easing};
 
 

@@ -23,6 +23,10 @@ impl ColliderComponent {
 		}
 	}
 	
+	pub fn handle(&self) -> ColliderHandle {
+		self.handle.get()
+	}
+	
 	pub fn inner<'p>(&self, physics: &'p Physics) -> &'p Collider {
 		physics.collider_set.get(self.handle.get()).unwrap()
 	}
