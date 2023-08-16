@@ -13,11 +13,11 @@ use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, S
 use vulkano::sync::GpuFuture;
 
 use crate::config;
-use crate::application::eyes::camera::{CameraStartError, Camera};
 use crate::math::{Vec4, Vec2, Mat3, Isometry3};
 use crate::renderer::Renderer;
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::{FenceCheck, IntoInfo};
+use super::camera::{CameraStartError, Camera};
 use super::pipeline::{BackgroundPipeline, Vertex, Pc};
 
 

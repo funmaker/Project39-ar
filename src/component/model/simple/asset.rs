@@ -4,9 +4,9 @@ use std::path::{PathBuf, Path};
 use err_derive::Error;
 use obj::Obj;
 
-use crate::component::model::ModelError;
 use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager, TextureAsset, TextureLoadError};
+use super::super::ModelError;
 use super::{SimpleModel, Vertex};
 
 

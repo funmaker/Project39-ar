@@ -10,16 +10,15 @@ use rapier3d::geometry::{ColliderBuilder, InteractionGroups};
 use rapier3d::prelude::RigidBodyBuilder;
 
 use crate::application::{Entity, EntityRef, Application, Hand};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::component::comedy::Comedy;
-use crate::component::hand::HandComponent;
-use crate::component::model::simple::{SimpleModel, Vertex};
-use crate::component::pov::PoV;
-use crate::component::vr::VrIk;
 use crate::math::Isometry3;
 use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::ExUi;
-use super::VrTracked;
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::super::comedy::Comedy;
+use super::super::hand::HandComponent;
+use super::super::model::simple::{SimpleModel, Vertex};
+use super::super::pov::PoV;
+use super::{VrTracked, VrIk};
 
 
 #[derive(ComponentBase)]

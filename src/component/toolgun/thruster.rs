@@ -5,17 +5,16 @@ use rapier3d::pipeline::QueryFilter;
 use crate::debug;
 use crate::application::{Application, Hand, Key};
 use crate::application::entity::EntityBuilder;
-use crate::component::ComponentBase;
-use crate::component::model::SimpleModel;
-use crate::component::model::simple::asset::ObjAsset;
-use crate::component::physics::joint::JointComponent;
-use crate::component::thruster::{Thruster, ThrusterDirection};
-use crate::component::toolgun::ToolGun;
-use crate::component::toolgun::tool::ToolError;
 use crate::math::{Color, face_upwards_lossy, Isometry3, Ray, Similarity3};
 use crate::renderer::{RenderContext, Renderer};
 use crate::utils::ColliderEx;
-use super::tool::Tool;
+use super::super::ComponentBase;
+use super::super::model::SimpleModel;
+use super::super::model::simple::asset::ObjAsset;
+use super::super::physics::joint::JointComponent;
+use super::super::thruster::{Thruster, ThrusterDirection};
+use super::ToolGun;
+use super::tool::{Tool, ToolError};
 
 
 pub struct ThrusterTool {

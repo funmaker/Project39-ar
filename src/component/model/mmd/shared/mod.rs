@@ -8,9 +8,9 @@ mod joint;
 mod rigid_body;
 mod sub_mesh;
 
-use crate::component::model::{ModelError, VertexIndex};
 use crate::math::IVec4;
 use crate::utils::{FenceCheck, IndexSubbuffer};
+use super::super::{ModelError, VertexIndex};
 use super::{MMDBone, Vertex};
 pub use builder::MMDModelSharedBuilder;
 pub use joint::JointDesc;

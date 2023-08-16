@@ -6,13 +6,13 @@ use rapier3d::dynamics::RigidBodyType;
 use rapier3d::prelude::{ColliderBuilder, InteractionGroups, RevoluteJoint};
 
 use crate::application::{Entity, Application, EntityRef};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::component::model::SimpleModel;
-use crate::component::model::simple::{ObjAsset, ObjLoadError};
-use crate::component::physics::joint::JointComponent;
 use crate::math::{Color, Isometry3, Similarity3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::ExUi;
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::model::SimpleModel;
+use super::model::simple::{ObjAsset, ObjLoadError};
+use super::physics::joint::JointComponent;
 
 
 const SCALE: f32 = 0.5;

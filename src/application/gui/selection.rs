@@ -1,8 +1,8 @@
 use rapier3d::dynamics::{ImpulseJointHandle, RigidBodyHandle};
 use rapier3d::geometry::ColliderHandle;
 
-use crate::application::{Entity, EntityRef};
 use crate::component::{Component, ComponentBase, ComponentRef};
+use super::super::{Entity, EntityRef};
 
 
 #[derive(Debug, Hash, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]

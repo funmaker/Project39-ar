@@ -3,10 +3,10 @@ use std::time::Duration;
 use egui::Ui;
 
 use crate::application::{Entity, Application, Key, EntityRef};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
-use crate::component::model::simple::ObjAsset;
-use crate::component::pc_controlled::PCControlled;
 use crate::utils::ExUi;
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::model::simple::ObjAsset;
+use super::pc_controlled::PCControlled;
 
 
 #[derive(ComponentBase)]

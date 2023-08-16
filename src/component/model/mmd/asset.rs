@@ -14,11 +14,11 @@ use mmd::pmx::morph::Offsets;
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups};
 
 use crate::{config, debug};
-use crate::component::model::ModelError;
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager, AssetError, TomlAsset, TomlLoadError};
 use crate::utils::PatternMatcher;
+use super::super::ModelError;
 use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};

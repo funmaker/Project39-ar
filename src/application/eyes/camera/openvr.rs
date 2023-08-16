@@ -9,8 +9,8 @@ use openvr::system::TrackedPropertyError;
 use simba::scalar::SupersetOf;
 
 use crate::{debug, config};
-use crate::application::vr::{VR, FrameType, TrackedCameraError, CameraService};
 use crate::math::{VRSlice, Isometry3, AMat4};
+use super::super::super::vr::{VR, FrameType, TrackedCameraError, CameraService};
 use super::{Camera, CameraCaptureError};
 
 

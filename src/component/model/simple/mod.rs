@@ -9,12 +9,12 @@ pub mod asset;
 
 pub use crate::renderer::pipelines::default::Vertex;
 use crate::application::Entity;
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{AABB, aabb_from_points, Color, Point3, Similarity3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureBundle;
 use crate::renderer::pipelines::default::{DefaultPipeline, Pc};
 use crate::utils::{AutoCommandBufferBuilderEx, BufferEx, IntoInfo, FenceCheck, IndexSubbuffer};
+use super::super::{Component, ComponentBase, ComponentError, ComponentInner};
 use super::{ModelError, VertexIndex};
 pub use asset::{ObjAsset, ObjLoadError};
 

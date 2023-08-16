@@ -7,7 +7,7 @@ use std::path::{PathBuf, Path};
 use err_derive::Error;
 use serde::de::DeserializeOwned;
 
-use crate::renderer::Renderer;
+use super::super::Renderer;
 use super::{AssetKey, AssetsManager, AssetError};
 
 

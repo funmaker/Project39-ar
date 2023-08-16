@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use crate::application::{Entity, Application, EntityRef};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{AABB, Point3, Rot3, Vec3};
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 #[derive(ComponentBase)]

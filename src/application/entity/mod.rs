@@ -10,12 +10,11 @@ mod builder;
 mod entity_ref;
 
 use crate::debug;
-use crate::application::Hand;
 use crate::component::{ComponentRef, ComponentError};
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet};
-use super::{Application, Component, Physics};
+use super::{Application, Component, Physics, Hand};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
 

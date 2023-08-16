@@ -4,9 +4,9 @@ use rapier3d::pipeline::QueryFilter;
 use crate::debug;
 use crate::application::{Hand, Application};
 use crate::application::entity::EntityBuilder;
-use crate::component::seat::Seat;
 use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_plane, face_upwards_lossy};
 use crate::renderer::RenderContext;
+use super::super::seat::Seat;
 use super::ToolGun;
 use super::tool::{Tool, ToolError};
 

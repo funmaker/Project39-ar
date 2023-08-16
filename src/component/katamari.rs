@@ -3,11 +3,11 @@ use rapier3d::geometry::ColliderBuilder;
 use rapier3d::prelude::{RigidBodyType, SharedShape};
 use smallvec::SmallVec;
 
-use crate::math::PI;
 use crate::application::{Entity, Application};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::component::physics::collider::ColliderComponent;
+use crate::math::PI;
 use crate::utils::ColliderEx;
+use super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::physics::collider::ColliderComponent;
 
 
 #[derive(ComponentBase)]

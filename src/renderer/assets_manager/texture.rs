@@ -12,8 +12,8 @@ use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
 use vulkano::image::view::ImageView;
 use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 
-use crate::renderer::Renderer;
 use crate::utils::{FenceCheck, ImageEx};
+use super::super::Renderer;
 use super::{AssetError, AssetKey, AssetsManager};
 
 

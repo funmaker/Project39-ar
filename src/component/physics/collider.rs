@@ -3,8 +3,8 @@ use egui::Ui;
 use rapier3d::prelude::*;
 
 use crate::application::{Entity, Application, Physics};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::utils::{ExUi, get_user_data};
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 #[derive(ComponentBase)]

@@ -4,13 +4,13 @@ use egui::Ui;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 use crate::application::{Application, Entity};
-use crate::component::model::SimpleModel;
 use crate::math::{Similarity3, Color};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::pipelines::PipelineError;
 use crate::renderer::pipelines::default::{DefaultGlowPipeline, GlowPc};
 use crate::utils::{AutoCommandBufferBuilderEx, ExUi};
 use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::model::SimpleModel;
 
 
 #[derive(ComponentBase)]

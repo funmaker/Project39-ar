@@ -4,10 +4,10 @@ use openvr::TrackedDeviceIndex;
 use simba::scalar::SupersetOf;
 
 use crate::application::{Entity, Application};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::component::vr::VrRoot;
 use crate::math::{AMat4, Similarity3, VRSlice};
 use crate::utils::ExUi;
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::VrRoot;
 
 
 #[derive(ComponentBase)]

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::application::{Entity, Application};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 #[derive(ComponentBase)]

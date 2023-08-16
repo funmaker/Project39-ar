@@ -14,8 +14,8 @@ use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline};
 use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
 
-use crate::renderer::pipelines::{Pipelines, PipelineError};
-use crate::renderer::pipelines::debug::DebugTexturedPipeline;
+use super::super::pipelines::{Pipelines, PipelineError};
+use super::super::pipelines::debug::DebugTexturedPipeline;
 
 
 pub struct TextCache {

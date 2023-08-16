@@ -7,10 +7,10 @@ use vulkano::image::view::ImageView;
 use vulkano::pipeline::{GraphicsPipeline, Pipeline};
 use vulkano::sampler::{Sampler, SamplerCreateInfo};
 
-use crate::component::model::ModelError;
-use crate::component::model::mmd::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 use crate::math::{Vec3, Vec4};
 use crate::renderer::Renderer;
+use super::super::super::ModelError;
+use super::super::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 
 
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<PersistentDescriptorSet>);

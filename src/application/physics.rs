@@ -3,9 +3,9 @@ use nalgebra::Quaternion;
 use rapier3d::prelude::*;
 
 use crate::debug;
-use crate::application::{Application, EntityRef};
 use crate::math::{Color, Point3, Rot3, Vec3};
 use crate::utils::{RigidBodyEx, ColliderEx};
+use super::{Application, EntityRef};
 
 
 pub struct Physics {

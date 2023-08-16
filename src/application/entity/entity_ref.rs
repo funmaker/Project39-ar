@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 
-use crate::application::Application;
+use super::super::Application;
 use super::Entity;
 
 

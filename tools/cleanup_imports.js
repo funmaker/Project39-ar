@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 
 const SRC_FILES = path.resolve(__dirname, "../src");
 
@@ -13,10 +14,11 @@ function getFiles(dir) {
 }
 
 const files = getFiles(SRC_FILES).filter(file => file.endsWith(".rs"));
+const EOL = os.EOL;
 
 for(const file of files) {
 	const content = fs.readFileSync(file, "utf-8");
-	const lines = content.split("\n");
+	const lines = content.split(/\r?\n/);
 	const modules = {};
 	const imports = {};
 	const fileMeta = [];
@@ -56,8 +58,8 @@ for(const file of files) {
 	}
 	
 	const selfPath = file.slice(SRC_FILES.length + 1)
-	                     .split("/")
-	                     .filter(p => p !== "mod.rs");
+											 .split(path.sep)
+											 .filter(p => p !== "mod.rs");
 	
 	normalizeImports(imports, Object.keys(modules), selfPath);
 	
@@ -72,14 +74,14 @@ for(const file of files) {
 	const externalImports = importLines.filter(line => !line.internal);
 	const internalImports = importLines.filter(line => line.internal);
 	
-	if(fileMeta.length > 0) output += fileMeta.join("\n") + "\n\n";
-	if(externCrates.length > 0) output += externCrates.join("\n") + "\n\n";
-	if(externalImports.length > 0) output += externalImports.map(line => line.rendered).join("\n") + "\n\n";
-	if(modulesLines.length > 0) output += modulesLines.map(line => line.rendered).join("\n") + "\n\n";
-	if(internalImports.length > 0) output += internalImports.map(line => line.rendered).join("\n") + "\n\n";
+	if(fileMeta.length > 0) output += fileMeta.join(EOL) + EOL + EOL;
+	if(externCrates.length > 0) output += externCrates.join(EOL) + EOL + EOL;
+	if(externalImports.length > 0) output += externalImports.map(line => line.rendered).join(EOL) + EOL + EOL;
+	if(modulesLines.length > 0) output += modulesLines.map(line => line.rendered).join(EOL) + EOL + EOL;
+	if(internalImports.length > 0) output += internalImports.map(line => line.rendered).join(EOL) + EOL + EOL;
 	
-	output += "\n" + lines.slice(parsed).join("\n");
-
+	output += EOL + lines.slice(parsed).join(EOL);
+	
 	fs.writeFileSync(file, output, "utf-8");
 }
 
@@ -90,7 +92,7 @@ function parseImport(path, output, prop) {
 		if(!path.endsWith("}")) throw new Error(`Path \`${path}\` starts with { but doesn't end with }!`);
 		
 		const elements = path.slice(1, -1)
-		                     .split(",");
+												 .split(",");
 		
 		for(let element of elements) {
 			parseImport(element, output, prop);

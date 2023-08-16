@@ -23,12 +23,12 @@ mod overrides;
 
 use crate::debug;
 use crate::application::{Application, Entity};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
-use crate::component::physics::collider::ColliderComponent;
-use crate::component::physics::joint::JointComponent;
 use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{AutoCommandBufferBuilderEx, IntoInfo, SubbufferAllocatorEx};
+use super::super::{Component, ComponentBase, ComponentError, ComponentInner};
+use super::super::physics::collider::ColliderComponent;
+use super::super::physics::joint::JointComponent;
 use super::ModelError;
 pub use bone::{BoneConnection, MMDBone};
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};

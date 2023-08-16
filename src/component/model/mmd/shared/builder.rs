@@ -5,11 +5,11 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, Prim
 use vulkano::format::Format;
 use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 
-use crate::component::model::{ModelError, VertexIndex};
-use crate::component::model::mmd::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use crate::math::{IVec4, Vec3};
 use crate::renderer::Renderer;
 use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
+use super::super::super::{ModelError, VertexIndex};
+use super::super::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
 

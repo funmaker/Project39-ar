@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 mod texture;
 mod toml;
 
-use crate::renderer::Renderer;
+use super::Renderer;
 pub use self::toml::{TomlAsset, TomlLoadError};
 pub use texture::{TextureAsset, TextureBundle, TextureLoadError};
 

@@ -3,9 +3,9 @@ use egui::Ui;
 
 use crate::debug;
 use crate::application::{Entity, Application, EntityRef};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Point3, Color};
 use crate::utils::ExUi;
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 #[derive(ComponentBase)]

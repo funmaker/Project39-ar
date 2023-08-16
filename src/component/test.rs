@@ -3,9 +3,9 @@ use std::time::Duration;
 use egui::Ui;
 
 use crate::application::{Entity, Application};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Isometry3, Translation3};
 use crate::utils::ExUi;
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 #[derive(ComponentBase)]

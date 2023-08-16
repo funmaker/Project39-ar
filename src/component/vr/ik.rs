@@ -6,9 +6,9 @@ use rapier3d::prelude::{ColliderBuilder, RigidBodyHandle};
 
 use crate::debug;
 use crate::application::{Entity, Application, EntityRef, Physics};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Isometry3, Vec3, PI, to_euler, from_euler, Color, Point3, face_towards_lossy, Rot3};
 use crate::utils::{ExUi, get_user_data};
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 // Based on Mathias Parger's

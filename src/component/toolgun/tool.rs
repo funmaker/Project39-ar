@@ -1,10 +1,10 @@
 use crate::application::{Application, Hand};
-use crate::component::toolgun::rope::RopeTool;
 use crate::math::Ray;
 use crate::renderer::{RenderContext, Renderer};
 use super::ToolGun;
 use super::axis::Axis;
 use super::remover::Remover;
+use super::rope::RopeTool;
 use super::spawner::Spawner;
 use super::thruster::ThrusterTool;
 use super::weld::Weld;

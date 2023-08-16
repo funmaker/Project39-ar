@@ -5,7 +5,7 @@ use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
 use rapier3d::parry::partitioning::IndexedData;
 
 use crate::application::Application;
-use crate::utils::{from_user_data, InspectCollapsing, InspectObject};
+use super::super::{from_user_data, InspectCollapsing, InspectObject};
 use super::*;
 
 

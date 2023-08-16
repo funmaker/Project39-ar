@@ -12,11 +12,11 @@ use vulkano::sync::GpuFuture;
 mod pipeline;
 
 use crate::application::{Application, Entity};
-use crate::component::{Component, ComponentBase, ComponentError, ComponentInner};
 use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureAsset;
 use crate::utils::{BufferEx, IntoInfo, ExUi, FenceCheck};
+use super::super::{Component, ComponentBase, ComponentError, ComponentInner};
 use super::ModelError;
 use pipeline::{FoodPipeline, Vertex, Pc};
 

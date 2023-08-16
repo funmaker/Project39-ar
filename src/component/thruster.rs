@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::application::{Entity, Application, Hand};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner, ComponentError};
 
 
 const FORCE: f32 = 1000.0;

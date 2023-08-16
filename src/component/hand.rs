@@ -9,11 +9,11 @@ use rapier3d::prelude::ColliderHandle;
 
 use crate::debug;
 use crate::application::{Entity, Application, Hand, EntityRef};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
-use crate::component::physics::joint::JointComponent;
-use crate::component::vr::VrTracked;
 use crate::math::{Point3, Color, Translation3, Isometry3};
 use crate::utils::{ColliderEx, ExUi};
+use super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::physics::joint::JointComponent;
+use super::vr::VrTracked;
 
 
 const GRAB_DIST: f32 = 0.1;

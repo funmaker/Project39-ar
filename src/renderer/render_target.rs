@@ -4,7 +4,7 @@ use vulkano::format::ClearValue;
 use vulkano::image::AttachmentImage;
 
 use crate::math::Isometry3;
-use crate::renderer::{RenderTargetContext, Renderer, RenderContext};
+use super::{RenderTargetContext, Renderer, RenderContext};
 
 
 pub trait RenderTarget {

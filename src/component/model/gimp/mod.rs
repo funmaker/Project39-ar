@@ -11,11 +11,11 @@ pub mod asset;
 mod pipeline;
 
 use crate::application::{Application, Entity, Hand};
-use crate::component::{Component, ComponentBase, ComponentInner, ComponentError};
 use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::{FenceCheck, IndexSubbuffer, AutoCommandBufferBuilderEx, BufferEx, IntoInfo};
+use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 use super::{ModelError, VertexIndex};
 pub use asset::{GimpAsset, GimpLoadError};
 pub use pipeline::Vertex;

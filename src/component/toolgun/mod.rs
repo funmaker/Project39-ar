@@ -22,12 +22,12 @@ mod weld;
 
 use crate::debug;
 use crate::application::{Application, Entity};
-use crate::component::hand::HandComponent;
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
 use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
+use super::hand::HandComponent;
 use pipeline::{ToolGunTextPipeline, Vertex, Pc};
 use prop_manager::{PropCollection, PropManagerError};
 use tool::{get_all_tools, Tool};

@@ -5,12 +5,12 @@ mod main_tab;
 mod physics_tab;
 mod selection;
 
+use crate::utils::ExUi;
 use super::{Application, Key};
 pub use selection::GuiSelection;
 use main_tab::main_ui;
 use physics_tab::physics_ui;
 use selection::GuiTab;
-use crate::utils::ExUi;
 
 
 pub struct ApplicationGui {

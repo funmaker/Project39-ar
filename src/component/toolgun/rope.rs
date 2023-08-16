@@ -1,9 +1,9 @@
 use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Hand, Application, EntityRef};
-use crate::component::physics::rope::Rope;
 use crate::math::{Ray, Point3};
 use crate::utils::ColliderEx;
+use super::super::physics::rope::Rope;
 use super::ToolGun;
 use super::tool::{Tool, ToolError};
 

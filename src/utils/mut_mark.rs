@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Deref, DerefMut};
 use egui::Ui;
 
-use crate::utils::{InspectMut, Inspect};
+use super::{InspectMut, Inspect};
 
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
