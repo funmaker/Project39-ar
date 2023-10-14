@@ -19,9 +19,9 @@ use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager, AssetError, TomlAsset, TomlLoadError};
 use crate::utils::PatternMatcher;
 use super::super::ModelError;
-use super::{Vertex, MMDModelShared, BoneConnection, MMDBone};
+use super::Vertex;
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
-use super::shared::{SubMeshDesc, JointDesc, ColliderDesc};
+use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, JointDesc, ColliderDesc};
 
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
@@ -191,13 +191,13 @@ impl AssetKey for PmxAsset {
 				model_pos - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE
 			};
 			
-			model.add_bone(MMDBone::new(name,
-			                            parent,
-			                            color,
-			                            model_pos,
-			                            local_pos,
-			                            display,
-			                            connection));
+			model.add_bone(BoneDesc::new(name,
+			                             parent,
+			                             color,
+			                             model_pos,
+			                             local_pos,
+			                             display,
+			                             connection));
 		}
 		
 		let mut morphs_reader = mmd::MorphReader::new(bones_reader)?;

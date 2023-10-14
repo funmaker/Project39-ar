@@ -4,17 +4,19 @@ use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::pipeline::{ComputePipeline, Pipeline};
 
 mod builder;
+mod bone;
 mod joint;
-mod rigid_body;
+mod collider;
 mod sub_mesh;
 
 use crate::math::IVec4;
 use crate::utils::{FenceCheck, IndexSubbuffer};
 use super::super::{ModelError, VertexIndex};
-use super::{MMDBone, Vertex};
+use super::Vertex;
 pub use builder::MMDModelSharedBuilder;
 pub use joint::JointDesc;
-pub use rigid_body::ColliderDesc;
+pub use bone::{BoneDesc, BoneConnection};
+pub use collider::ColliderDesc;
 pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
 
 
@@ -22,7 +24,7 @@ pub struct MMDModelShared {
 	pub vertices: Subbuffer<[Vertex]>,
 	pub indices: IndexSubbuffer,
 	pub sub_meshes: Vec<SubMesh>,
-	pub default_bones: Vec<MMDBone>,
+	pub default_bones: Vec<BoneDesc>,
 	pub morphs_offsets: Subbuffer<[IVec4]>,
 	pub morphs_sizes: Vec<usize>,
 	pub morphs_max_size: usize,

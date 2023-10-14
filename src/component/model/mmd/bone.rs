@@ -1,5 +1,6 @@
 use crate::application::EntityRef;
-use crate::math::{Color, Point3, Vec3, Similarity3, Translation3, Isometry3};
+use crate::math::{Color, Point3, Similarity3, Translation3, Isometry3};
+use super::shared::{BoneDesc, BoneConnection};
 
 
 #[derive(Debug, Clone)]
@@ -18,22 +19,6 @@ pub struct MMDBone {
 }
 
 impl MMDBone {
-	pub fn new(name: impl Into<String>, parent: Option<usize>, color: Color, model_pos: Vec3, local_pos: Vec3, display: bool, connection: BoneConnection) -> Self {
-		MMDBone {
-			name: name.into(),
-			parent,
-			color,
-			inv_model_transform: (-model_pos).into(),
-			local_transform: local_pos.into(),
-			anim_transform: Similarity3::identity(),
-			transform_override: None,
-			display,
-			connection,
-			rigid_body: EntityRef::null(),
-			inv_rigid_body_transform: Isometry3::identity(),
-		}
-	}
-	
 	pub fn origin(&self) -> Point3 {
 		self.inv_model_transform.inverse_transform_point(&Point3::origin())
 	}
@@ -45,9 +30,20 @@ impl MMDBone {
 	}
 }
 
-#[derive(Debug, Clone)]
-pub enum BoneConnection {
-	None,
-	Bone(usize),
-	Offset(Vec3),
+impl From<&BoneDesc> for MMDBone {
+	fn from(desc: &BoneDesc) -> Self {
+		MMDBone {
+			name: desc.name.clone(),
+			parent: desc.parent,
+			color: desc.color,
+			inv_model_transform: (-desc.model_pos).into(),
+			local_transform: desc.local_pos.into(),
+			anim_transform: Similarity3::identity(),
+			transform_override: None,
+			display: desc.display,
+			connection: desc.connection,
+			rigid_body: EntityRef::null(),
+			inv_rigid_body_transform: Isometry3::identity(),
+		}
+	}
 }

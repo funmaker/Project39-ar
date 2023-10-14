@@ -10,6 +10,7 @@ use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 #[derive(ComponentBase)]
 pub struct JointComponent {
 	#[inner] inner: ComponentInner,
+	name: String,
 	template: GenericJoint,
 	target: EntityRef,
 	handle: Cell<ImpulseJointHandle>,
@@ -19,10 +20,20 @@ impl JointComponent {
 	pub fn new(joint: impl Into<GenericJoint>, target: impl Into<EntityRef>) -> Self {
 		JointComponent {
 			inner: ComponentInner::new_norender(),
+			name: "Joint".into(),
 			template: joint.into(),
 			target: target.into(),
 			handle: Cell::new(ImpulseJointHandle::invalid()),
 		}
+	}
+	
+	pub fn named(mut self, name: impl Into<String>) -> Self {
+		self.name = name.into();
+		self
+	}
+	
+	pub fn other<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
+		self.target.get(application)
 	}
 	
 	pub fn inner<'p>(&self, physics: &'p Physics) -> &'p ImpulseJoint {

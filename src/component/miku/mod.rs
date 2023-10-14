@@ -9,7 +9,7 @@ mod gui;
 mod proc_anim;
 
 use crate::application::{Entity, Application};
-use crate::math::{Color, Rot3};
+use crate::math::Rot3;
 use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
 use super::model::MMDModel;
@@ -127,9 +127,9 @@ impl Component for Miku {
 		
 		let mut anims = self.anims.borrow_mut();
 		
-		for bone in model.bones.iter() {
-			if let Some(rb) = bone.rigid_body.get(application) {
-				if rb.name == "Forelock1" && rb.state().velocity.magnitude() > 0.075 {
+		for rb in model.rigid_bodies.iter() {
+			if let Some(rb) = rb.entity().get(application) {
+				if rb.name != "ForeLock1" && rb.state().velocity.magnitude() > 0.075 {
 					anims.1.get_mut(&Morphs::Embarrassment).unwrap().play();
 					anims.1.get_mut(&Morphs::Smiling).unwrap().play();
 					if !anims.1.get_mut(&Morphs::Blink).unwrap().stopped() {

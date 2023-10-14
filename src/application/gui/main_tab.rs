@@ -2,7 +2,7 @@ use std::hash::Hash;
 use egui::*;
 
 use crate::debug;
-use crate::utils::ExUi;
+use crate::utils::{end_row_interact, ExUi, id_fmt};
 use super::super::{Application, Entity, EntityRef};
 
 
@@ -56,24 +56,6 @@ fn debug_flag_checkbox(ui: &mut Ui, flag: &str, label: impl Into<WidgetText>) {
 	}
 }
 
-// Hack but will do until egui supports hovering over grid
-fn end_row_interact(ui: &mut Ui, id: impl Hash) -> Response {
-	let rect = Rect::from_min_max(
-		[
-			ui.min_rect().min.x + 16.0,
-			ui.cursor().min.y,
-		].into(),
-		[
-			ui.cursor().min.x,
-			ui.min_rect().max.y,
-		].into()
-	);
-	
-	ui.end_row();
-	
-	ui.interact(rect, Id::new(id), Sense::click())
-}
-
 fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, sel_ent: &EntityRef, level: usize, default_open: bool) {
 	let id = Id::new(entity.id);
 	let mut open = ui.ctx().data_mut(|d| d.get_persisted(id).unwrap_or(default_open));
@@ -95,10 +77,10 @@ fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, sel_ent:
 	let name = "|    ".to_string().repeat(level) + &entity.name;
 	
 	if entity == sel_ent {
-		ui.label(RichText::new(format!("{:04}", entity.id)).monospace().strong());
+		ui.label(id_fmt(entity.id, "").strong());
 		ui.label(RichText::new(name).strong());
 	} else {
-		ui.label(RichText::new(format!("{:04}", entity.id)).monospace());
+		ui.label(id_fmt(entity.id, ""));
 		ui.label(RichText::new(name));
 	}
 	

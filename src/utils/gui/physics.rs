@@ -172,7 +172,7 @@ impl InspectObject for RigidBodyHandle {
 	}
 	
 	fn inspect_uid(&self, _options: &Self::Options<'_>) -> u64 {
-		use std::hash::{Hash, Hasher};
+		use std::hash::Hasher;
 		use std::collections::hash_map::DefaultHasher;
 		
 		let mut s = DefaultHasher::new();
@@ -283,7 +283,7 @@ impl InspectObject for ColliderHandle {
 	}
 	
 	fn inspect_uid(&self, _options: &Self::Options<'_>) -> u64 {
-		use std::hash::{Hash, Hasher};
+		use std::hash::Hasher;
 		use std::collections::hash_map::DefaultHasher;
 		
 		let mut s = DefaultHasher::new();
@@ -369,7 +369,7 @@ impl InspectObject for ImpulseJointHandle {
 	}
 	
 	fn inspect_uid(&self, _options: &Self::Options<'_>) -> u64 {
-		use std::hash::{Hash, Hasher};
+		use std::hash::Hasher;
 		use std::collections::hash_map::DefaultHasher;
 		
 		let mut s = DefaultHasher::new();

@@ -10,7 +10,7 @@ use crate::renderer::Renderer;
 use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
 use super::super::super::{ModelError, VertexIndex};
 use super::super::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
-use super::{MMDModelShared, Vertex, MMDBone, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
+use super::{MMDModelShared, Vertex, BoneDesc, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
 
 pub struct MMDModelSharedBuilder<VI: VertexIndex> {
@@ -18,7 +18,7 @@ pub struct MMDModelSharedBuilder<VI: VertexIndex> {
 	indices: Vec<VI>,
 	textures: Vec<DynamicImage>,
 	sub_meshes: Vec<SubMeshDesc>,
-	bones: Vec<MMDBone>,
+	bones: Vec<BoneDesc>,
 	morphs: Vec<Vec<(VI, Vec3)>>,
 	colliders: Vec<ColliderDesc>,
 	joints: Vec<JointDesc>,
@@ -48,7 +48,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn add_bone(&mut self, bone: MMDBone) -> &mut Self {
+	pub fn add_bone(&mut self, bone: BoneDesc) -> &mut Self {
 		self.bones.push(bone);
 		self
 	}

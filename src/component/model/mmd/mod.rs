@@ -20,23 +20,27 @@ pub mod shared;
 pub mod test;
 mod bone;
 mod overrides;
+mod rigid_body;
 
 use crate::debug;
 use crate::application::{Application, Entity};
 use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{AutoCommandBufferBuilderEx, IntoInfo, SubbufferAllocatorEx};
-use super::super::{Component, ComponentBase, ComponentError, ComponentInner};
+use super::super::{Component, ComponentBase, ComponentRef, ComponentError, ComponentInner};
 use super::super::physics::collider::ColliderComponent;
 use super::super::physics::joint::JointComponent;
 use super::ModelError;
-pub use bone::{BoneConnection, MMDBone};
+pub use bone::MMDBone;
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
-use shared::MMDModelShared;
+use shared::{MMDModelShared, BoneConnection};
+use crate::component::model::mmd::rigid_body::MMDRigidBody;
 
 
 pub struct MMDModelState {
 	pub bones: Vec<MMDBone>,
+	pub rigid_bodies: Vec<ComponentRef<MMDRigidBody>>,
+	pub joints: Vec<ComponentRef<JointComponent>>,
 	pub morphs: Vec<f32>,
 	
 	bones_mats: Vec<AMat4>,
@@ -60,7 +64,7 @@ pub struct MMDModel {
 #[allow(dead_code)]
 impl MMDModel {
 	pub fn new(shared: Arc<MMDModelShared>, renderer: &mut Renderer) -> Result<MMDModel, ModelError> {
-		let bones = shared.default_bones.clone();
+		let bones = shared.default_bones.iter().map(Into::into).collect::<Vec<_>>();
 		let bones_count = bones.len();
 		let bones_mats = Vec::with_capacity(bones_count);
 		let bones_ubo = Buffer::new_slice(&renderer.memory_allocator,
@@ -124,6 +128,8 @@ impl MMDModel {
 			inner: ComponentInner::from_render_type(RenderType::Transparent),
 			state: RefCell::new(MMDModelState {
 				bones,
+				rigid_bodies: vec![],
+				joints: vec![],
 				morphs,
 				bones_mats,
 				morphs_vec,
@@ -188,14 +194,13 @@ impl Component for MMDModel {
 				continue;
 			}
 			
-			rigid_bodies.insert(
-				bone_id,
-				Entity::builder(&desc.name)
-					.position(ent_pos * desc.position)
-					.gravity_scale(0.05)
-					.rigid_body_type(RigidBodyType::Dynamic)
-					.build()
-			);
+			let rb_ent = Entity::builder(&desc.name)
+				.position(ent_pos * desc.position)
+				.gravity_scale(0.05)
+				.rigid_body_type(RigidBodyType::Dynamic)
+				.build();
+			
+			rigid_bodies.insert(bone_id, rb_ent);
 		}
 		
 		for desc in self.shared.colliders.iter() {
@@ -214,15 +219,17 @@ impl Component for MMDModel {
 			rb.add_component(ColliderComponent::new(collider));
 		}
 		
+		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, ComponentRef::null())));
+		
 		for desc in self.shared.joints.iter() {
-			let rb_a = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
-			                .find(|bone| rigid_bodies.contains_key(bone))
-			                .and_then(|bone| rigid_bodies.get(&bone))
-			                .unwrap_or(entity);
-			let rb_b = state.bone_ancestors_iter(self.shared.colliders[desc.collider_b].bone)
-			                .find(|bone| rigid_bodies.contains_key(bone))
-			                .and_then(|bone| rigid_bodies.get(&bone))
-			                .unwrap_or(entity);
+			let (bone_a, rb_a) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
+			                          .find(|bone| rigid_bodies.contains_key(bone))
+			                          .and_then(|bone| rigid_bodies.get(&bone).map(|rb| (bone, rb)))
+			                          .unwrap_or((0, entity));
+			let (bone_b, rb_b) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_b].bone)
+			                          .find(|bone| rigid_bodies.contains_key(bone))
+			                          .and_then(|bone| rigid_bodies.get(&bone).map(|rb| (bone, rb)))
+			                          .unwrap_or((0, entity));
 			
 			let mut joint = GenericJoint::default();
 			
@@ -249,17 +256,21 @@ impl Component for MMDModel {
 			joint = limit(joint, JointAxis::AngY, -desc.rotation_max.y, -desc.rotation_min.y, PI * 2.0);
 			joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
 			
-			rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()));
+			let joint_ref = rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()).named(&desc.name));
 			
-			let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
-			let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
+			state.joints.push(joint_ref.clone());
+			
+			let parent_bone_id = bone_a.min(bone_b);
+			let bone_id = bone_a.max(bone_b);
 			
 			if state.bone_ancestors_iter(bone_id)
 			        .any(|id| parent_bone_id == id) {
-				if self.shared.colliders[desc.collider_a].bone < self.shared.colliders[desc.collider_b].bone {
+				if bone_a < bone_b {
 					rb_b.set_parent(rb_a.as_ref(), false, application);
+					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, joint_ref)));
 				} else {
 					rb_a.set_parent(rb_b.as_ref(), false, application);
+					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, joint_ref)));
 				}
 			}
 		}
@@ -462,6 +473,7 @@ impl MMDModelState {
 				             None
 			             }
 		             }))
+		             .chain(Some(0))
 	}
 	
 	// fn find_rb(&self, mut bone_id: usize) -> &MMDRigidBody {

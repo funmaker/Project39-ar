@@ -1,5 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::fmt::Display;
+use std::hash::Hash;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use arc_swap::ArcSwapOption;
@@ -12,6 +13,24 @@ mod physics;
 
 pub fn id_fmt(id: impl Display, prefix: impl Display) -> RichText {
 	RichText::new(format!("{}{:04}", prefix, id)).monospace()
+}
+
+// Hack but will do until egui supports hovering over grid
+pub fn end_row_interact(ui: &mut Ui, id: impl Hash) -> Response {
+	let rect = Rect::from_min_max(
+		[
+			ui.min_rect().min.x + 16.0,
+			ui.cursor().min.y,
+		].into(),
+		[
+			ui.cursor().min.x,
+			ui.min_rect().max.y,
+		].into()
+	);
+	
+	ui.end_row();
+	
+	ui.interact(rect, Id::new(id), Sense::click())
 }
 
 pub trait ExUi {
