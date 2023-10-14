@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut, Cell};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
 use egui::Ui;
@@ -39,7 +39,7 @@ pub struct Entity {
 	removed: Cell<bool>,
 	persist: Cell<bool>,
 	frozen: Cell<bool>,
-	components: HashMap<u64, Box<dyn Component>>,
+	components: BTreeMap<u64, Box<dyn Component>>,
 	new_components: RefCell<Vec<Box<dyn Component>>>,
 	rigid_body_template: RigidBody,
 }

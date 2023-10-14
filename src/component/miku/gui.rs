@@ -14,12 +14,12 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	};
 	
 	let id = Id::new(&miku.entity(application).name).with("Miku Gui");
-	let selected_bone: Option<usize> = ui.ctx().data_mut(|d| d.get_persisted(id).unwrap_or_default());
+	let selected_bone = miku.gui_selection.get();
 	
 	let new_selection = ui.columns(3, |ui| {
 		[
 			list(&mut ui[0],
-			     "Bone List",
+			     id.with("bones"),
 			     selected_bone,
 			     model.state.borrow()
 			          .bones
@@ -28,7 +28,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 			          .enumerate()),
 			ragdoll(&mut ui[1], selected_bone),
 			list(&mut ui[2],
-			     "RigidBody List",
+			     id.with("rigidbodies"),
 			     selected_bone,
 			     model.state.borrow()
 			          .rigid_bodies
@@ -43,7 +43,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	});
 	
 	if let Some(new_selection) = new_selection {
-		ui.ctx().data_mut(|d| d.insert_persisted(id, Some(new_selection)));
+		miku.gui_selection.set(Some(new_selection));
 	}
 	
 	ui.label("End");
@@ -85,13 +85,14 @@ fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: impl 
 }
 
 fn ragdoll(ui: &mut Ui, selected: Option<usize>) -> Option<usize> {
+	let mut new_selection = None;
 	let width = ui.available_width().max(16.0);
 	let height = (width * 4.0).clamp(128.0, 384.0);
 	let (id, rect) = ui.allocate_space([width, height].into());
 	let painter = ui.painter_at(rect);
 	
 	let mut part_id = 0;
-	let mut part = |x1: f32, y1: f32, x2: f32, y2: f32| {
+	let mut part = |bone: usize, x1: f32, y1: f32, x2: f32, y2: f32| {
 		part_id += 1;
 		
 		let half_width = rect.width() / 2.0;
@@ -109,33 +110,43 @@ fn ragdoll(ui: &mut Ui, selected: Option<usize>) -> Option<usize> {
 		);
 		
 		let response = ui.interact(rect, id.with(part_id), egui::Sense::click());
-		let color = if response.hovered() { Color::D_WHITE } else { Color::BLACK };
+		let color = if Some(bone) == selected && response.hovered() {
+			Color::WHITE
+		} else if Some(bone) == selected || response.hovered() {
+			Color::D_WHITE
+		} else {
+			Color::BLACK
+		};
+		
+		if response.clicked() {
+			new_selection = Some(bone);
+		}
 		
 		painter.rect_filled(rect, half_height * 0.0125, color);
 	};
 	
-	part(-0.10, -0.40,  0.10, -0.10);
-	part(-0.15, -0.60,  0.15, -0.45);
-	part(-0.15, -0.05,  0.15,  0.10);
+	part(0, -0.10, -0.40,  0.10, -0.10);
+	part(1, -0.15, -0.60,  0.15, -0.45);
+	part(2, -0.15, -0.05,  0.15,  0.10);
 	
-	part(-0.10, -0.95,  0.10, -0.75);
-	part(-0.05, -0.70,  0.05, -0.65);
+	part(3, -0.10, -0.95,  0.10, -0.75);
+	part(4, -0.05, -0.70,  0.05, -0.65);
 	
-	part(-0.25, -0.60, -0.20, -0.25);
-	part(-0.25, -0.20, -0.20,  0.15);
-	part(-0.25,  0.20, -0.20,  0.30);
+	part(5, -0.25, -0.60, -0.20, -0.25);
+	part(6, -0.25, -0.20, -0.20,  0.15);
+	part(7, -0.25,  0.20, -0.20,  0.30);
 	
-	part( 0.20, -0.60,  0.25, -0.25);
-	part( 0.20, -0.20,  0.25,  0.15);
-	part( 0.20,  0.20,  0.25,  0.30);
+	part(8,  0.20, -0.60,  0.25, -0.25);
+	part(9,  0.20, -0.20,  0.25,  0.15);
+	part(10,  0.20,  0.20,  0.25,  0.30);
 	
-	part(-0.10,  0.15, -0.05,  0.40);
-	part(-0.10,  0.45, -0.05,  0.80);
-	part(-0.10,  0.85, -0.05,  0.95);
+	part(11, -0.10,  0.15, -0.05,  0.40);
+	part(12, -0.10,  0.45, -0.05,  0.80);
+	part(13, -0.10,  0.85, -0.05,  0.95);
 	
-	part( 0.05,  0.15,  0.10,  0.40);
-	part( 0.05,  0.45,  0.10,  0.80);
-	part( 0.05,  0.85,  0.10,  0.95);
+	part(14,  0.05,  0.15,  0.10,  0.40);
+	part(15,  0.05,  0.45,  0.10,  0.80);
+	part(16,  0.05,  0.85,  0.10,  0.95);
 	
-	None
+	new_selection
 }

@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::cell::{RefCell, Cell};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderBuilder};
 use rapier3d::prelude::RigidBodyBuilder;
@@ -158,7 +158,7 @@ impl EntityBuilder {
 			removed: Cell::new(false),
 			persist: Cell::new(self.persist),
 			frozen: Cell::new(false),
-			components: HashMap::new(),
+			components: BTreeMap::new(),
 			new_components: RefCell::new(self.components),
 			rigid_body: RigidBodyHandle::invalid(),
 			rigid_body_template: self.rigid_body,

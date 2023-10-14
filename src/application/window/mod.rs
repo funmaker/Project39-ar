@@ -338,7 +338,7 @@ impl Window {
 			}
 			
 			Event::WindowEvent {
-				event: WindowEvent::MouseInput {
+				event: mut window_event @ WindowEvent::MouseInput {
 					button: MouseButton::Left,
 					state: ElementState::Pressed, ..
 				}, ..
@@ -349,6 +349,12 @@ impl Window {
 				let size = window.inner_size();
 				let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
 				window.set_cursor_position(center)?;
+				
+				// When cursor is grabbed, egui stops receiving events. Let's fake button release so it doesn't think it's constantly pressed.
+				if let WindowEvent::MouseInput { state, .. } = &mut window_event {
+					*state = ElementState::Released;
+				}
+				self.gui.on_event(&window_event);
 			}
 			
 			Event::WindowEvent {

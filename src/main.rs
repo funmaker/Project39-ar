@@ -6,6 +6,7 @@
 #![feature(negative_impls)]
 #![feature(extract_if)]
 #![feature(hash_extract_if)]
+#![feature(btree_extract_if)]
 #![feature(path_file_prefix)]
 #![feature(array_chunks)]
 #![feature(int_roundings)]

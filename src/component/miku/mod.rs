@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::Duration;
 use egui::Ui;
@@ -36,6 +36,7 @@ pub struct Miku {
 	#[inner] inner: ComponentInner,
 	asset: PmxAsset,
 	model: ComponentRef<MMDModel>,
+	pub gui_selection: Cell<Option<usize>>,
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
 		HashMap<Morphs, ProcAnim<f32>>,
@@ -48,6 +49,7 @@ impl Miku {
 			inner: ComponentInner::new_norender(),
 			asset,
 			model: ComponentRef::null(),
+			gui_selection: Cell::new(None),
 			anims: RefCell::new((
 				collection!(
 					Bones::UpperBody2 => ProcAnim::new(Rot3::identity())

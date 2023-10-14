@@ -1,5 +1,5 @@
 use std::cell::RefMut;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::error::Error;
 use std::iter::FromIterator;
@@ -510,7 +510,7 @@ impl Renderer {
 		Ok(())
 	}
 	
-	pub fn render<RT>(&mut self, camera_pos: Isometry3, scene: &mut HashMap<u64, Entity>, render_target: &mut RT)
+	pub fn render<RT>(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, render_target: &mut RT)
 	                  -> Result<(), RendererRenderError<RT::RenderError>>
 	                  where RT: RenderTarget {
 		let rt_context = match render_target.create_context(camera_pos) {

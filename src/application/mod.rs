@@ -2,7 +2,7 @@
 
 use std::iter;
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use err_derive::Error;
@@ -63,7 +63,7 @@ pub struct Application {
 	pub input: Input,
 	eyes: Option<Eyes>,
 	window: Option<Window>,
-	entities: HashMap<u64, Entity>,
+	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<VecDeque<Entity>>,
 	bench: RefCell<Benchmark>,
 	gui: RefCell<ApplicationGui>,
@@ -112,7 +112,7 @@ impl Application {
 			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
 			window: Some(window),
-			entities: HashMap::new(),
+			entities: BTreeMap::new(),
 			new_entities: RefCell::new(VecDeque::new()),
 			gui: RefCell::new(ApplicationGui::new()),
 			gui_selection: RefCell::new(GuiSelection::default()),

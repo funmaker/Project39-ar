@@ -79,7 +79,7 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 	fn into(self) -> RigidBody<MMDIndexConfig> {
 		let mut rb = RigidBody {
 			local_name: "New RigidBody".into(),
-			universal_name: "New RigidBody".into(),
+			universal_name: "".into(),
 			bone_index: 0,
 			group_id: 0,
 			non_collision_mask: 0xFFFF,
@@ -101,7 +101,7 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 	}
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDJointOverride {
 	pub id: Option<usize>,
 	pub pattern: Option<String>,
@@ -220,7 +220,7 @@ impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
 	fn into(self) -> Joint<MMDIndexConfig> {
 		let mut joint = Joint {
 			local_name: "New Joint".into(),
-			universal_name: "New Joint".into(),
+			universal_name: "".into(),
 			joint_type: JointType::SpringFree,
 			rigid_body_a: 0,
 			rigid_body_b: 0,
