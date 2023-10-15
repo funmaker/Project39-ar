@@ -49,7 +49,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 	}
 	
 	pub fn add_bone(&mut self, bone: BoneDesc) -> &mut Self {
-		self.bones.push(bone);
+		self.bones.push(bone.id(self.bones.len()));
 		self
 	}
 	

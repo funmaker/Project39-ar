@@ -1,9 +1,10 @@
 use egui::{Grid, Id, RichText, ScrollArea, Ui};
 
 use crate::application::Application;
-use crate::component::ComponentBase;
 use crate::math::Color;
-use crate::utils::{end_row_interact, id_fmt};
+use crate::utils::{end_row_interact, ExUi, id_fmt};
+use super::super::ComponentBase;
+use super::super::model::mmd::BodyPart;
 use super::Miku;
 
 
@@ -13,8 +14,8 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 		None => return,
 	};
 	
-	let id = Id::new(&miku.entity(application).name).with("Miku Gui");
-	let selected_bone = miku.gui_selection.get();
+	let id = ui.id().with(&miku.entity(application).name).with("Miku Gui");
+	let selected_bone = application.get_selection().mmd_bone();
 	
 	let new_selection = ui.columns(3, |ui| {
 		[
@@ -26,7 +27,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 			          .iter()
 			          .map(|bone| bone.name.as_str().into())
 			          .enumerate()),
-			ragdoll(&mut ui[1], selected_bone),
+			ragdoll(&mut ui[1], selected_bone, miku, application),
 			list(&mut ui[2],
 			     id.with("rigidbodies"),
 			     selected_bone,
@@ -42,11 +43,39 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 		 .find_map(|&x| x)
 	});
 	
-	if let Some(new_selection) = new_selection {
-		miku.gui_selection.set(Some(new_selection));
+	ui.separator();
+	
+	if let Some(selected_bone) = selected_bone {
+		if let Ok(mut model_state) = model.state.try_borrow_mut() {
+			if let Some(bone) = model_state.bones.get_mut(selected_bone) {
+				ui.inspect_collapsing()
+				  .default_open(true)
+				  .title("Bone")
+				  .show(ui, bone, application);
+			}
+		} else {
+			ui.label("Can't borrow model state.");
+		}
+		
+		if let Some(rb) = model.state.borrow()
+		                             .rigid_bodies
+		                             .iter()
+		                             .filter_map(|rb| rb.get(application))
+		                             .find(|rb| rb.bone == selected_bone) {
+			if let Some(joint) = rb.joint.get(application) {
+				ui.inspect_collapsing()
+				  .title("Joint")
+				  .default_open(true)
+				  .show(ui, joint.handle(), application);
+			}
+			
+			ui.collapsing("Entity", |ui| ui.inspect(&mut *rb.entity(application).state_mut(), ()));
+		}
 	}
 	
-	ui.label("End");
+	if let Some(bone) = new_selection {
+		application.select((model.as_cref(), bone));
+	}
 }
 
 fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: impl Iterator<Item=(usize, RichText)>) -> Option<usize> {
@@ -84,7 +113,7 @@ fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: impl 
 	new_selection
 }
 
-fn ragdoll(ui: &mut Ui, selected: Option<usize>) -> Option<usize> {
+fn ragdoll(ui: &mut Ui, selected: Option<usize>, miku: &Miku, application: &Application) -> Option<usize> {
 	let mut new_selection = None;
 	let width = ui.available_width().max(16.0);
 	let height = (width * 4.0).clamp(128.0, 384.0);
@@ -92,7 +121,7 @@ fn ragdoll(ui: &mut Ui, selected: Option<usize>) -> Option<usize> {
 	let painter = ui.painter_at(rect);
 	
 	let mut part_id = 0;
-	let mut part = |bone: usize, x1: f32, y1: f32, x2: f32, y2: f32| {
+	let mut part = |body_part: BodyPart, x1: f32, y1: f32, x2: f32, y2: f32| {
 		part_id += 1;
 		
 		let half_width = rect.width() / 2.0;
@@ -109,44 +138,50 @@ fn ragdoll(ui: &mut Ui, selected: Option<usize>) -> Option<usize> {
 			].into(),
 		);
 		
+		let bone = miku.body_part(body_part, application)
+		               .map(|rb| rb.bone);
+		
 		let response = ui.interact(rect, id.with(part_id), egui::Sense::click());
-		let color = if Some(bone) == selected && response.hovered() {
-			Color::WHITE
-		} else if Some(bone) == selected || response.hovered() {
-			Color::D_WHITE
+		let hover_opacity = if response.hovered() { 1.0 } else { 0.8 };
+		let color = if bone.is_none() {
+			Color::BLACK.opactiy(0.3)
+		} else if bone == selected {
+			Color::WHITE.opactiy(hover_opacity)
 		} else {
-			Color::BLACK
+			Color::BLACK.opactiy(hover_opacity)
 		};
 		
-		if response.clicked() {
-			new_selection = Some(bone);
+		if let Some(bone) = bone {
+			if response.clicked() {
+				new_selection = Some(bone);
+			}
 		}
 		
 		painter.rect_filled(rect, half_height * 0.0125, color);
 	};
 	
-	part(0, -0.10, -0.40,  0.10, -0.10);
-	part(1, -0.15, -0.60,  0.15, -0.45);
-	part(2, -0.15, -0.05,  0.15,  0.10);
+	part(BodyPart::Abdomen, -0.10, -0.40,  0.10, -0.10);
+	part(BodyPart::Torso, -0.15, -0.60,  0.15, -0.45);
+	part(BodyPart::Hip, -0.15, -0.05,  0.15,  0.10);
 	
-	part(3, -0.10, -0.95,  0.10, -0.75);
-	part(4, -0.05, -0.70,  0.05, -0.65);
+	part(BodyPart::Head, -0.10, -0.95,  0.10, -0.75);
+	part(BodyPart::Neck, -0.05, -0.70,  0.05, -0.65);
 	
-	part(5, -0.25, -0.60, -0.20, -0.25);
-	part(6, -0.25, -0.20, -0.20,  0.15);
-	part(7, -0.25,  0.20, -0.20,  0.30);
+	part(BodyPart::LeftArm, -0.25, -0.60, -0.20, -0.25);
+	part(BodyPart::LeftForearm, -0.25, -0.20, -0.20,  0.15);
+	part(BodyPart::LeftHand, -0.25,  0.20, -0.20,  0.30);
 	
-	part(8,  0.20, -0.60,  0.25, -0.25);
-	part(9,  0.20, -0.20,  0.25,  0.15);
-	part(10,  0.20,  0.20,  0.25,  0.30);
+	part(BodyPart::RightArm,  0.20, -0.60,  0.25, -0.25);
+	part(BodyPart::RightForearm,  0.20, -0.20,  0.25,  0.15);
+	part(BodyPart::RightHand,  0.20,  0.20,  0.25,  0.30);
 	
-	part(11, -0.10,  0.15, -0.05,  0.40);
-	part(12, -0.10,  0.45, -0.05,  0.80);
-	part(13, -0.10,  0.85, -0.05,  0.95);
+	part(BodyPart::LeftThigh, -0.10,  0.15, -0.05,  0.40);
+	part(BodyPart::LeftCalf, -0.10,  0.45, -0.05,  0.80);
+	part(BodyPart::LeftFoot, -0.10,  0.85, -0.05,  0.95);
 	
-	part(14,  0.05,  0.15,  0.10,  0.40);
-	part(15,  0.05,  0.45,  0.10,  0.80);
-	part(16,  0.05,  0.85,  0.10,  0.95);
+	part(BodyPart::RightThigh,  0.05,  0.15,  0.10,  0.40);
+	part(BodyPart::RightCalf,  0.05,  0.45,  0.10,  0.80);
+	part(BodyPart::RightFoot,  0.05,  0.85,  0.10,  0.95);
 	
 	new_selection
 }

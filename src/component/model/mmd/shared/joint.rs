@@ -1,4 +1,5 @@
 use crate::math::{Isometry3, Vec3};
+use super::super::BodyPart;
 
 
 pub type JointType = mmd::pmx::joint::JointType;
@@ -16,6 +17,7 @@ pub struct JointDesc {
 	pub rotation_max: Vec3,
 	pub position_spring: Vec3,
 	pub rotation_spring: Vec3,
+	pub body_part: Option<BodyPart>,
 }
 
 impl JointDesc {
@@ -29,7 +31,8 @@ impl JointDesc {
 	           rotation_min: Vec3,
 	           rotation_max: Vec3,
 	           position_spring: Vec3,
-	           rotation_spring: Vec3) -> Self {
+	           rotation_spring: Vec3,
+	           body_part: Option<BodyPart>) -> Self {
 		JointDesc {
 			name: name.into(),
 			joint_type,
@@ -42,6 +45,7 @@ impl JointDesc {
 			rotation_max,
 			position_spring,
 			rotation_spring,
+			body_part,
 		}
 	}
 }

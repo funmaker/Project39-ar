@@ -2,6 +2,8 @@ use rapier3d::dynamics::{ImpulseJointHandle, RigidBodyHandle};
 use rapier3d::geometry::ColliderHandle;
 
 use crate::component::{Component, ComponentBase, ComponentRef};
+use crate::component::model::MMDModel;
+use crate::component::model::mmd::MMDBone;
 use super::super::{Entity, EntityRef};
 
 
@@ -38,6 +40,7 @@ pub enum GuiSelection {
 	RigidBody(RigidBodyHandle),
 	Collider(ColliderHandle),
 	ImpulseJoint(ImpulseJointHandle),
+	MMDBone(ComponentRef<MMDModel>, usize),
 }
 
 impl GuiSelection {
@@ -49,6 +52,7 @@ impl GuiSelection {
 			GuiSelection::RigidBody(_) |
 			GuiSelection::Collider(_) |
 			GuiSelection::ImpulseJoint(_) => GuiTab::Physics,
+			GuiSelection::MMDBone(_, _) => GuiTab::Miku,
 		}
 	}
 	
@@ -63,6 +67,7 @@ impl GuiSelection {
 		match self {
 			GuiSelection::Entity(eref) => eref.clone(),
 			GuiSelection::Component(cref) => cref.entity(),
+			GuiSelection::MMDBone(cref, _) => cref.entity(),
 			_ => EntityRef::null(),
 		}
 	}
@@ -70,6 +75,7 @@ impl GuiSelection {
 	pub fn component(&self) -> ComponentRef<dyn Component> {
 		match self {
 			GuiSelection::Component(cref) => cref.clone(),
+			GuiSelection::MMDBone(cref, _) => cref.clone().into(),
 			_ => ComponentRef::null(),
 		}
 	}
@@ -92,6 +98,13 @@ impl GuiSelection {
 		match self {
 			GuiSelection::ImpulseJoint(joint) => joint.clone(),
 			_ => ImpulseJointHandle::invalid(),
+		}
+	}
+	
+	pub fn mmd_bone(&self) -> Option<usize> {
+		match self {
+			GuiSelection::MMDBone(_, bone) => Some(*bone),
+			_ => None,
 		}
 	}
 }
@@ -135,6 +148,18 @@ impl From<&Entity> for GuiSelection {
 impl From<&EntityRef> for GuiSelection {
 	fn from(eref: &EntityRef) -> Self {
 		Self::Entity(eref.clone())
+	}
+}
+
+impl From<&MMDBone> for GuiSelection {
+	fn from(bone: &MMDBone) -> Self {
+		Self::MMDBone(bone.model.clone(), bone.id)
+	}
+}
+
+impl From<(ComponentRef<MMDModel>, usize)> for GuiSelection {
+	fn from((model, bone): (ComponentRef<MMDModel>, usize)) -> Self {
+		Self::MMDBone(model, bone)
 	}
 }
 

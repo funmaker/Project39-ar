@@ -9,7 +9,8 @@ collision_mask = 0b1011111011111100
 
 
 [[joints]]
-name = 'Arm L'
+name = 'Arm Left'
+body_part = 'left_arm'
 using_bone = 38
 rotation_min = [
     -0.5,
@@ -23,7 +24,8 @@ rotation_max = [
 ]
 
 [[joints]]
-name = 'Arm R'
+name = 'Arm Right'
+body_part = 'right_arm'
 using_bone = 43
 rotation_min = [
     -0.5,
@@ -37,7 +39,8 @@ rotation_max = [
 ]
 
 [[joints]]
-name = 'Elbow L'
+name = 'Forearm Left'
+body_part = 'left_forearm'
 using_bone = 48
 rotation_min = [
      0.0,
@@ -51,7 +54,8 @@ rotation_max = [
 ]
 
 [[joints]]
-name = 'Elbow R'
+name = 'Forearm Rright'
+body_part = 'right_forearm'
 using_bone = 53
 rotation_min = [
      0.0,
@@ -65,7 +69,8 @@ rotation_max = [
 ]
 
 [[joints]]
-name = 'Hand L'
+name = 'Hand Left'
+body_part = 'left_hand'
 using_bone = 58
 rotation_min = [
     -0.5,
@@ -79,7 +84,8 @@ rotation_max = [
 ]
 
 [[joints]]
-name = 'Hand R'
+name = 'Hand Right'
+body_part = 'right_hand'
 using_bone = 60
 rotation_min = [
     -0.5,

@@ -3,20 +3,20 @@ use vulkano::buffer::Subbuffer;
 use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::pipeline::{ComputePipeline, Pipeline};
 
-mod builder;
 mod bone;
-mod joint;
+mod builder;
 mod collider;
+mod joint;
 mod sub_mesh;
 
 use crate::math::IVec4;
 use crate::utils::{FenceCheck, IndexSubbuffer};
 use super::super::{ModelError, VertexIndex};
 use super::Vertex;
-pub use builder::MMDModelSharedBuilder;
-pub use joint::JointDesc;
 pub use bone::{BoneDesc, BoneConnection};
+pub use builder::MMDModelSharedBuilder;
 pub use collider::ColliderDesc;
+pub use joint::JointDesc;
 pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
 
 

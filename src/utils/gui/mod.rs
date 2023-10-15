@@ -163,6 +163,11 @@ impl InspectCollapsing {
 		self
 	}
 	
+	pub fn maybe_title(mut self, text: Option<impl Into<WidgetText>>) -> Self {
+		self.title = text.map(Into::into);
+		self
+	}
+	
 	pub fn default_open(mut self, default_open: bool) -> Self {
 		self.default_open = default_open;
 		self

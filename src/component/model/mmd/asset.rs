@@ -3,12 +3,14 @@ use std::convert::TryInto;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
+use std::ops::{Deref, DerefMut};
 use std::path::{PathBuf, Path};
 use std::sync::Arc;
 use err_derive::Error;
 use image::ImageFormat;
 use mmd::WeightDeform;
 use mmd::pmx::bone::{BoneFlags, Connection};
+use mmd::pmx::joint::Joint;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::morph::Offsets;
 use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups};
@@ -19,7 +21,7 @@ use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager, AssetError, TomlAsset, TomlLoadError};
 use crate::utils::PatternMatcher;
 use super::super::ModelError;
-use super::Vertex;
+use super::{Vertex, BodyPart};
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, JointDesc, ColliderDesc};
 
@@ -307,30 +309,31 @@ impl AssetKey for PmxAsset {
 		
 		let mut joints_reader = mmd::JointReader::new(rigid_body_reader)?;
 		let mut joints_defs = joints_reader.iter::<MMDIndexConfig>()
+		                                   .map(|res| res.map(Into::into))
 		                                   .collect::<Result<Vec<_>, _>>()?;
 		
 		if let Some(overrides) = &mut overrides {
-			for mut rb in overrides.joints.drain(..) {
-				if let Err(err) = rb.normalize(&bone_defs, &rigid_body_defs) {
+			for mut joint in overrides.joints.drain(..) {
+				if let Err(err) = joint.normalize(&bone_defs, &rigid_body_defs) {
 					eprintln!("{}", err);
 					continue;
 				}
 				
-				if let Some(id) = rb.id {
+				if let Some(id) = joint.id {
 					if id >= joints_defs.len() {
 						eprintln!("Model {} has no joint id {}", self.path.to_string_lossy(), id);
 						continue
 					}
 					
-					rb.apply_to(&mut joints_defs[id]);
-				} else if let Some(pattern) = &rb.pattern {
+					joint.apply_to(&mut joints_defs[id]);
+				} else if let Some(pattern) = &joint.pattern {
 					let pattern = PatternMatcher::new(pattern);
 					
 					let mut matched = false;
 					for desc in joints_defs.iter_mut() {
 						if pattern.matches(&desc.local_name) || pattern.matches(&desc.universal_name) {
 							matched = true;
-							rb.apply_to(desc);
+							joint.apply_to(desc);
 						}
 					}
 					
@@ -338,7 +341,7 @@ impl AssetKey for PmxAsset {
 						eprintln!("Model {} has no joints matching pattern {}", self.path.to_string_lossy(), pattern);
 					}
 				} else {
-					joints_defs.push(rb.into());
+					joints_defs.push(joint.into());
 				}
 			}
 		}
@@ -374,7 +377,8 @@ impl AssetKey for PmxAsset {
 			                               joint.rotation_min,
 			                               joint.rotation_max,
 			                               joint.position_spring,
-			                               joint.rotation_spring));
+			                               joint.rotation_spring,
+			                               joint.body_part));
 		}
 		
 		if let Some(dump_config) = &dump_config {
@@ -452,6 +456,50 @@ impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 			bones_weights,
 			sdef,
 		)
+	}
+}
+
+pub struct JointEx<C: mmd::Config> {
+	joint: Joint<C>,
+	pub body_part: Option<BodyPart>,
+}
+
+impl<C: mmd::Config> Deref for JointEx<C> {
+	type Target = Joint<C>;
+	
+	fn deref(&self) -> &Self::Target {
+		&self.joint
+	}
+}
+
+impl<C: mmd::Config> DerefMut for JointEx<C> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.joint
+	}
+}
+
+impl<C: mmd::Config> From<Joint<C>> for JointEx<C> {
+	fn from(joint: Joint<C>) -> Self {
+		Self {
+			joint,
+			body_part: None,
+		}
+	}
+}
+
+
+impl<C: mmd::Config> Display for JointEx<C>
+	where C::RigidbodyIndex: Display {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+		self.joint.fmt(f)?;
+		
+		if let Some(body_part) = &self.body_part {
+			write!(f, "\nbody part: {:?}", body_part)?
+		} else {
+			write!(f, "\nbody part: None")?
+		}
+		
+		Ok(())
 	}
 }
 

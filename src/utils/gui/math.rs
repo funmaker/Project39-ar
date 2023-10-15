@@ -1,6 +1,6 @@
 use egui::*;
 
-use crate::math::{Color, from_euler, Isometry2, Isometry3, PI, Point2, Point3, Point4, Rot2, Rot3, to_euler, Vec2, Vec3, Vec4};
+use crate::math::{Color, from_euler, Isometry2, Isometry3, PI, Point2, Point3, Point4, Rot2, Rot3, Similarity2, Similarity3, to_euler, Translation2, Translation3, Vec2, Vec3, Vec4};
 use super::*;
 
 
@@ -82,6 +82,18 @@ impl SimpleInspect for Rot3 {
 	}
 }
 
+impl SimpleInspect for Translation2 {
+	fn inspect_ui(&mut self, ui: &mut Ui) {
+		ui.inspect(&mut self.vector, ())
+	}
+}
+
+impl SimpleInspect for Translation3 {
+	fn inspect_ui(&mut self, ui: &mut Ui) {
+		ui.inspect(&mut self.vector, ())
+	}
+}
+
 impl SimpleInspect for Isometry2 {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		ui.vertical(|ui| {
@@ -96,6 +108,32 @@ impl SimpleInspect for Isometry3 {
 		ui.vertical(|ui| {
 			ui.inspect(&mut self.translation.vector, ());
 			ui.inspect(&mut self.rotation, ());
+		});
+	}
+}
+
+impl SimpleInspect for Similarity2 {
+	fn inspect_ui(&mut self, ui: &mut Ui) {
+		ui.vertical(|ui| {
+			ui.inspect(&mut self.isometry.translation.vector, ());
+			ui.inspect(&mut self.isometry.rotation, ());
+			ui.inspect(GetSet(|| (
+				self.scaling(),
+				|scaling| self.set_scaling(scaling),
+			)), (0.1, 0.0..=10.0));
+		});
+	}
+}
+
+impl SimpleInspect for Similarity3 {
+	fn inspect_ui(&mut self, ui: &mut Ui) {
+		ui.vertical(|ui| {
+			ui.inspect(&mut self.isometry.translation.vector, ());
+			ui.inspect(&mut self.isometry.rotation, ());
+			ui.inspect(GetSet(|| (
+				self.scaling(),
+				|scaling| self.set_scaling(scaling),
+			)), (0.1, 0.001..=10.0));
 		});
 	}
 }

@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
+use egui::Ui;
 use nalgebra::UnitQuaternion;
 use rapier3d::dynamics::{JointAxis, RigidBodyType};
 use rapier3d::geometry::Collider;
@@ -26,15 +27,16 @@ use crate::debug;
 use crate::application::{Application, Entity};
 use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{AutoCommandBufferBuilderEx, IntoInfo, SubbufferAllocatorEx};
+use crate::utils::{AutoCommandBufferBuilderEx, ExUi, IntoInfo, SubbufferAllocatorEx};
 use super::super::{Component, ComponentBase, ComponentRef, ComponentError, ComponentInner};
 use super::super::physics::collider::ColliderComponent;
 use super::super::physics::joint::JointComponent;
 use super::ModelError;
 pub use bone::MMDBone;
+pub use overrides::BodyPart;
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
+pub use rigid_body::MMDRigidBody;
 use shared::{MMDModelShared, BoneConnection};
-use crate::component::model::mmd::rigid_body::MMDRigidBody;
 
 
 pub struct MMDModelState {
@@ -182,6 +184,10 @@ impl Component for MMDModel {
 		let state = &mut *self.state.borrow_mut();
 		let ent_pos = *entity.state().position;
 		
+		for bone in &mut state.bones {
+			bone.model = self.as_cref();
+		}
+		
 		let mut rigid_bodies = BTreeMap::new();
 		
 		for desc in self.shared.joints.iter() {
@@ -219,7 +225,7 @@ impl Component for MMDModel {
 			rb.add_component(ColliderComponent::new(collider));
 		}
 		
-		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, ComponentRef::null())));
+		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Hip), ComponentRef::null())));
 		
 		for desc in self.shared.joints.iter() {
 			let (bone_a, rb_a) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
@@ -267,10 +273,10 @@ impl Component for MMDModel {
 			        .any(|id| parent_bone_id == id) {
 				if bone_a < bone_b {
 					rb_b.set_parent(rb_a.as_ref(), false, application);
-					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, joint_ref)));
+					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, desc.body_part, joint_ref)));
 				} else {
 					rb_a.set_parent(rb_b.as_ref(), false, application);
-					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, joint_ref)));
+					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, desc.body_part, joint_ref)));
 				}
 			}
 		}
@@ -459,6 +465,56 @@ impl Component for MMDModel {
 		}
 		
 		Ok(())
+	}
+	
+	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
+		use egui::*;
+		
+		if let Ok(mut state) = self.state.try_borrow_mut() {
+			CollapsingHeader::new(format!("Bones ({})", state.bones.len()))
+				.id_source("Bones")
+				.show(ui, |ui| {
+					for bone in &mut state.bones {
+						ui.inspect_collapsing()
+						  .show(ui, bone, application)
+					}
+				});
+			
+			CollapsingHeader::new(format!("Rigid Bodies ({})", state.rigid_bodies.len()))
+				.id_source("Rigid Bodies")
+				.show(ui, |ui| {
+					for rb in &state.rigid_bodies {
+						ui.inspect_collapsing()
+						  .maybe_title(rb.entity().get(application).map(|rb| &rb.name))
+						  .show(ui, rb, application)
+					}
+				});
+			
+			CollapsingHeader::new(format!("Joints ({})", state.joints.len()))
+				.id_source("Joints")
+				.show(ui, |ui| {
+					for joint in &state.joints {
+						ui.inspect_collapsing()
+						  .maybe_title(joint.get(application).map(|joint| &joint.name))
+						  .show(ui, joint, application)
+					}
+				});
+			
+			CollapsingHeader::new(format!("Morphs ({})", state.morphs.len()))
+				.id_source("Morphs")
+				.show(ui, |ui| {
+					Grid::new("Morphs")
+						.min_col_width(100.0)
+						.num_columns(2)
+						.show(ui, |ui| {
+							for (id, morph) in state.morphs.iter_mut().enumerate() {
+								ui.inspect_row(format!("{}", id), morph, (0.1, 0.0..=1.0))
+							}
+						});
+				});
+		} else {
+			ui.label("Can't borrow state.");
+		}
 	}
 }
 

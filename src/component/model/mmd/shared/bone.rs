@@ -1,6 +1,8 @@
 use crate::math::{Color, Vec3};
 
+
 pub struct BoneDesc {
+	pub id: usize,
 	pub name: String,
 	pub parent: Option<usize>,
 	pub color: Color,
@@ -20,6 +22,7 @@ pub enum BoneConnection {
 impl BoneDesc {
 	pub fn new(name: impl Into<String>, parent: Option<usize>, color: Color, model_pos: Vec3, local_pos: Vec3, display: bool, connection: BoneConnection) -> Self {
 		BoneDesc {
+			id: 0,
 			name: name.into(),
 			parent,
 			color,
@@ -27,6 +30,13 @@ impl BoneDesc {
 			local_pos,
 			display,
 			connection,
+		}
+	}
+	
+	pub fn id(self, id: usize) -> Self {
+		BoneDesc {
+			id,
+			..self
 		}
 	}
 }

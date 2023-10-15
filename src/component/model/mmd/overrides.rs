@@ -5,7 +5,7 @@ use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::math::Vec3;
-use super::asset::MMDIndexConfig;
+use super::asset::{MMDIndexConfig, JointEx};
 
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -101,6 +101,28 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 	}
 }
 
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BodyPart {
+	Hip,
+	Abdomen,
+	Torso,
+	Neck,
+	Head,
+	LeftThigh,
+	RightThigh,
+	LeftCalf,
+	RightCalf,
+	LeftFoot,
+	RightFoot,
+	LeftForearm,
+	RightForearm,
+	LeftArm,
+	RightArm,
+	LeftHand,
+	RightHand,
+}
+
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDJointOverride {
 	pub id: Option<usize>,
@@ -119,30 +141,32 @@ pub struct MMDJointOverride {
 	pub rotation_max: Option<Vec3>,
 	pub position_spring: Option<Vec3>,
 	pub rotation_spring: Option<Vec3>,
+	pub body_part: Option<BodyPart>,
 }
 
 impl MMDJointOverride {
-	pub fn from_mmd(rb: &Joint<MMDIndexConfig>, id: usize) -> MMDJointOverride {
+	pub fn from_mmd(joint: &JointEx<MMDIndexConfig>, id: usize) -> MMDJointOverride {
 		MMDJointOverride {
 			id: Some(id),
 			pattern: None,
 			using_bone: None,
-			name: Some(rb.local_name.clone()),
-			translation: Some(rb.universal_name.clone()),
-			rigid_body_a: Some(rb.rigid_body_a),
-			rigid_body_b: Some(rb.rigid_body_b),
-			position: Some(rb.position),
-			rotation: Some(rb.rotation),
-			position_min: Some(rb.position_min),
-			position_max: Some(rb.position_max),
-			rotation_min: Some(rb.rotation_min),
-			rotation_max: Some(rb.rotation_max),
-			position_spring: Some(rb.position_spring),
-			rotation_spring: Some(rb.rotation_spring),
+			name: Some(joint.local_name.clone()),
+			translation: Some(joint.universal_name.clone()),
+			rigid_body_a: Some(joint.rigid_body_a),
+			rigid_body_b: Some(joint.rigid_body_b),
+			position: Some(joint.position),
+			rotation: Some(joint.rotation),
+			position_min: Some(joint.position_min),
+			position_max: Some(joint.position_max),
+			rotation_min: Some(joint.rotation_min),
+			rotation_max: Some(joint.rotation_max),
+			position_spring: Some(joint.position_spring),
+			rotation_spring: Some(joint.rotation_spring),
+			body_part: joint.body_part,
 		}
 	}
 	
-	pub fn apply_to(&self, joint: &mut Joint<MMDIndexConfig>) {
+	pub fn apply_to(&self, joint: &mut JointEx<MMDIndexConfig>) {
 		if let Some(value) = &self.name           { joint.local_name = value.clone(); }
 		if let Some(value) = &self.translation    { joint.universal_name = value.clone(); }
 		if let Some(value) = self.rigid_body_a    { joint.rigid_body_a = value; }
@@ -155,6 +179,7 @@ impl MMDJointOverride {
 		if let Some(value) = self.rotation_max    { joint.rotation_max = value; }
 		if let Some(value) = self.position_spring { joint.position_spring = value; }
 		if let Some(value) = self.rotation_spring { joint.rotation_spring = value; }
+		if let Some(value) = self.body_part       { joint.body_part = Some(value); }
 	}
 	
 	pub fn normalize(&mut self, bones: &[Bone<MMDIndexConfig>], rigid_bodies: &[RigidBody<MMDIndexConfig>]) -> Result<(), MMDOverrideError> {
@@ -216,8 +241,8 @@ impl MMDJointOverride {
 	}
 }
 
-impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
-	fn into(self) -> Joint<MMDIndexConfig> {
+impl Into<JointEx<MMDIndexConfig>> for MMDJointOverride {
+	fn into(self) -> JointEx<MMDIndexConfig> {
 		let mut joint = Joint {
 			local_name: "New Joint".into(),
 			universal_name: "".into(),
@@ -232,7 +257,7 @@ impl Into<Joint<MMDIndexConfig>> for MMDJointOverride {
 			rotation_max: vector!(0.0, 0.0, 0.0),
 			position_spring: vector!(0.0, 0.0, 0.0),
 			rotation_spring: vector!(0.0, 0.0, 0.0),
-		};
+		}.into();
 		
 		self.apply_to(&mut joint);
 		

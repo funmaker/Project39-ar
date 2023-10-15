@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 use egui::Ui;
@@ -13,6 +13,7 @@ use crate::math::Rot3;
 use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
 use super::model::MMDModel;
+use super::model::mmd::{BodyPart, MMDRigidBody};
 use super::model::mmd::asset::PmxAsset;
 pub use enums::{Bones, Morphs};
 use proc_anim::{ProcAnim, Easing};
@@ -36,7 +37,6 @@ pub struct Miku {
 	#[inner] inner: ComponentInner,
 	asset: PmxAsset,
 	model: ComponentRef<MMDModel>,
-	pub gui_selection: Cell<Option<usize>>,
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
 		HashMap<Morphs, ProcAnim<f32>>,
@@ -49,7 +49,6 @@ impl Miku {
 			inner: ComponentInner::new_norender(),
 			asset,
 			model: ComponentRef::null(),
-			gui_selection: Cell::new(None),
 			anims: RefCell::new((
 				collection!(
 					Bones::UpperBody2 => ProcAnim::new(Rot3::identity())
@@ -96,6 +95,16 @@ impl Miku {
 				)
 			)),
 		}
+	}
+	
+	pub fn body_part<'a>(&self, body_part: BodyPart, application: &'a Application) -> Option<&'a MMDRigidBody> {
+		self.model
+			.get(application)
+			.and_then(|model| model.state.try_borrow().ok())
+			.iter()
+			.flat_map(|state| state.rigid_bodies.iter())
+			.filter_map(|rb| rb.get(application))
+			.find(|rb| rb.body_part == Some(body_part))
 	}
 }
 

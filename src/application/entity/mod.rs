@@ -13,7 +13,7 @@ use crate::debug;
 use crate::component::{ComponentRef, ComponentError};
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect};
 use super::{Application, Component, Physics, Hand};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
@@ -248,23 +248,19 @@ impl Entity {
 			.show(ui, |ui| {
 				ui.reset_style();
 				
-				Grid::new("Entity State")
+				Grid::new("Entity Parent")
 					.num_columns(2)
 					.min_col_width(100.0)
 					.show(ui, |ui| {
-						let state = &mut *self.state_mut();
-						
 						ui.inspect_row("ID", &self.as_ref(), application);
-						ui.inspect_row("Hidden", &mut state.hidden, ());
-						ui.inspect_row("Position", &mut state.position, ());
-						ui.inspect_row("Velocity", &mut state.velocity, ());
-						ui.inspect_row("Angular Velocity", &mut state.angular_velocity, ());
 						ui.inspect_row("Follow Parent", GetSet(|| (
 							self.parent_offset.get().is_some(),
 							|follow| self.set_parent(self.parent.clone(), follow, application),
 						)), ());
 						ui.inspect_row("Parent Offset", &self.parent_offset, ());
 					});
+				
+				ui.inspect(&mut *self.state_mut(), ());
 			});
 		
 		ui.reset_style();
@@ -491,5 +487,22 @@ impl Eq for &Entity {}
 impl Display for Entity {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}({})", self.name, self.id)
+	}
+}
+
+impl SimpleInspect for EntityState {
+	fn inspect_ui(&mut self, ui: &mut Ui) {
+		use crate::utils::ExUi;
+		use egui::*;
+		
+		Grid::new("Entity State")
+			.num_columns(2)
+			.min_col_width(100.0)
+			.show(ui, |ui| {
+				ui.inspect_row("Hidden", &mut self.hidden, ());
+				ui.inspect_row("Position", &mut self.position, ());
+				ui.inspect_row("Velocity", &mut self.velocity, ());
+				ui.inspect_row("Angular Velocity", &mut self.angular_velocity, ());
+			});
 	}
 }
