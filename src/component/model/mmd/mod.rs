@@ -47,6 +47,7 @@ pub struct MMDModelState {
 	
 	bones_mats: Vec<AMat4>,
 	morphs_vec: Vec<IVec4>,
+	selected_bone: Option<usize>,
 }
 
 #[derive(ComponentBase)]
@@ -135,6 +136,7 @@ impl MMDModel {
 				morphs,
 				bones_mats,
 				morphs_vec,
+				selected_bone: None,
 			}),
 			shared,
 			bones_ubo,
@@ -151,23 +153,29 @@ impl MMDModel {
 		self.shared.fence.check()
 	}
 	
-	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4]) {
+	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4], selected: Option<usize>) {
 		for (id, bone) in bones.iter().enumerate() {
 			if bone.display {
 				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.origin()));
 				
-				debug::draw_point(pos, 10.0, bone.color.clone());
-				debug::draw_text(&bone.name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, bone.color.clone());
+				let color = if selected.is_none() || Some(id) == selected {
+					bone.color
+				} else {
+					Color::BLACK.opactiy(0.5)
+				};
+				
+				debug::draw_point(pos, 10.0, color);
+				debug::draw_text(&bone.name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, color);
 				
 				match &bone.connection {
 					BoneConnection::None => {}
 					BoneConnection::Bone(con) => {
 						let cpos = model_matrix.transform_point(&bones_mats[*con].transform_point(&bones[*con].origin()));
-						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
+						debug::draw_line(pos, cpos, 3.0, color);
 					}
 					BoneConnection::Offset(cpos) => {
 						let cpos = model_matrix.transform_point(&bones_mats[id].transform_point(&(&bone.origin() + cpos)));
-						debug::draw_line(pos, cpos, 3.0, bone.color.clone());
+						debug::draw_line(pos, cpos, 3.0, color);
 					}
 				}
 			}
@@ -305,6 +313,12 @@ impl Component for MMDModel {
 			}
 		}
 		
+		if application.get_selection().mmd_model() == self.as_cref() {
+			state.selected_bone = application.get_selection().mmd_bone();
+		} else {
+			state.selected_bone = None;
+		}
+		
 		Ok(())
 	}
 	
@@ -329,7 +343,7 @@ impl Component for MMDModel {
 		}
 		
 		if debug::get_flag_or_default("DebugBonesDraw") {
-			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
+			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats, state.selected_bone);
 		}
 		
 		let bone_buf = self.upload_allocator.from_iter(state.bones_mats.drain(..).map(|mat| {

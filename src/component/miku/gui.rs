@@ -167,21 +167,21 @@ fn ragdoll(ui: &mut Ui, selected: Option<usize>, miku: &Miku, application: &Appl
 	part(BodyPart::Head, -0.10, -0.95,  0.10, -0.75);
 	part(BodyPart::Neck, -0.05, -0.70,  0.05, -0.65);
 	
-	part(BodyPart::LeftArm, -0.25, -0.60, -0.20, -0.25);
-	part(BodyPart::LeftForearm, -0.25, -0.20, -0.20,  0.15);
-	part(BodyPart::LeftHand, -0.25,  0.20, -0.20,  0.30);
+	part(BodyPart::RightArm, -0.25, -0.60, -0.20, -0.25);
+	part(BodyPart::RightForearm, -0.25, -0.20, -0.20,  0.15);
+	part(BodyPart::RightHand, -0.25,  0.20, -0.20,  0.30);
 	
-	part(BodyPart::RightArm,  0.20, -0.60,  0.25, -0.25);
-	part(BodyPart::RightForearm,  0.20, -0.20,  0.25,  0.15);
-	part(BodyPart::RightHand,  0.20,  0.20,  0.25,  0.30);
+	part(BodyPart::LeftArm,  0.20, -0.60,  0.25, -0.25);
+	part(BodyPart::LeftForearm,  0.20, -0.20,  0.25,  0.15);
+	part(BodyPart::LeftHand,  0.20,  0.20,  0.25,  0.30);
 	
-	part(BodyPart::LeftThigh, -0.10,  0.15, -0.05,  0.40);
-	part(BodyPart::LeftCalf, -0.10,  0.45, -0.05,  0.80);
-	part(BodyPart::LeftFoot, -0.10,  0.85, -0.05,  0.95);
+	part(BodyPart::RightThigh, -0.10,  0.15, -0.05,  0.40);
+	part(BodyPart::RightCalf, -0.10,  0.45, -0.05,  0.80);
+	part(BodyPart::RightFoot, -0.10,  0.85, -0.05,  0.95);
 	
-	part(BodyPart::RightThigh,  0.05,  0.15,  0.10,  0.40);
-	part(BodyPart::RightCalf,  0.05,  0.45,  0.10,  0.80);
-	part(BodyPart::RightFoot,  0.05,  0.85,  0.10,  0.95);
+	part(BodyPart::LeftThigh,  0.05,  0.15,  0.10,  0.40);
+	part(BodyPart::LeftCalf,  0.05,  0.45,  0.10,  0.80);
+	part(BodyPart::LeftFoot,  0.05,  0.85,  0.10,  0.95);
 	
 	new_selection
 }

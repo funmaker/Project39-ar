@@ -101,6 +101,13 @@ impl GuiSelection {
 		}
 	}
 	
+	pub fn mmd_model(&self) -> ComponentRef<MMDModel> {
+		match self {
+			GuiSelection::MMDBone(model, _) => model.clone(),
+			_ => ComponentRef::null(),
+		}
+	}
+	
 	pub fn mmd_bone(&self) -> Option<usize> {
 		match self {
 			GuiSelection::MMDBone(_, bone) => Some(*bone),

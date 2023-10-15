@@ -129,7 +129,16 @@ fn show_tab(ui: &mut Ui, tab: GuiTab, application: &Application) {
 	
 	match tab {
 		GuiTab::Main => main_ui(ui, application),
-		GuiTab::Miku => if let Some(miku) = application.miku.get(application) { ui.inspect(miku, application); },
+		GuiTab::Miku => {
+			if let Some(miku) = application.get_selection()
+			                               .mmd_model()
+			                               .entity()
+			                               .get(application)
+			                               .and_then(|miku| miku.find_component_by_type())
+			                               .or_else(|| application.miku.get(application)) {
+				ui.inspect(miku, application);
+			}
+		},
 		GuiTab::Physics => if let Ok(mut physics) = application.physics.try_borrow_mut() { physics_ui(&mut *physics, ui, application); },
 		GuiTab::Benchmark => application.bench.borrow_mut().on_gui(ui),
 		GuiTab::Settings => ctx.settings_ui(ui),
