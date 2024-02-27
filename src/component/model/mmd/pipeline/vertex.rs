@@ -6,7 +6,7 @@ use crate::math::IntoArray;
 
 
 #[repr(C)]
-#[derive(Default, Copy, Clone, BufferContents, VertexTy)]
+#[derive(Default, Copy, Clone, BufferContents, VertexTy, Debug)]
 pub struct Vertex {
 	#[format(R32G32B32_SFLOAT)]
 	pos: [f32; 3],
@@ -15,7 +15,7 @@ pub struct Vertex {
 	#[format(R32G32_SFLOAT)]
 	uv: [f32; 2],
 	#[format(R32_SFLOAT)]
-	edge_scale: f32,
+	pub edge_scale: f32,
 	#[format(R32G32B32A32_UINT)]
 	bones_indices: [u32; 4],
 	#[format(R32G32B32A32_SFLOAT)]

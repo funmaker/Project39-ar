@@ -236,6 +236,14 @@ impl Inspect for String {
 	}
 }
 
+impl Inspect for RichText {
+	type Options<'a> = ();
+	
+	fn inspect_ui(self, ui: &mut Ui, _: Self::Options<'_>) {
+		ui.label(self);
+	}
+}
+
 impl<T: InspectMut> InspectMut for Option<T> {
 	type Options<'a> = T::Options<'a>;
 	

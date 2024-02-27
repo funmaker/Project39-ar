@@ -1,9 +1,9 @@
 use std::time::Duration;
-use nalgebra::Quaternion;
+use nalgebra::{Quaternion, Unit};
 use rapier3d::prelude::*;
 
 use crate::debug;
-use crate::math::{Color, Point3, Rot3, Vec3};
+use crate::math::{Color, Isometry3, Point3, Rot3, Vec3, PI};
 use crate::utils::{RigidBodyEx, ColliderEx};
 use super::{Application, EntityRef};
 
@@ -166,9 +166,9 @@ impl Physics {
 			            || joint.body2 == sel_rb
 			            || (sel_rb != RigidBodyHandle::invalid() && sel_joint != ImpulseJointHandle::invalid());
 			
-			if !selected {
-				continue;
-			}
+			// if !selected {
+			// 	continue;
+			// }
 			
 			let rb1 = self.rigid_body_set.get(joint.body1).unwrap();
 			let rb2 = self.rigid_body_set.get(joint.body2).unwrap();
@@ -176,46 +176,73 @@ impl Physics {
 			let frame1 = rb1.position() * joint.data.local_frame1;
 			let frame2 = rb2.position() * joint.data.local_frame2;
 			
-			debug::draw_point(frame1, 5.0, Color::D_MAGENTA);
-			debug::draw_point(frame2, 5.0, Color::MAGENTA);
+			let scale = 1.0;
 			
-			// if joint.data.limit_axes.contains(JointAxesMask::X) {
-			// 	debug::draw_line(frame1 * point!(-1.0, 0.0, 0.0), frame1 * point!(1.0, 0.0, 0.0), 1.0, Color::D_RED);
-			// }
-			// if joint.data.limit_axes.contains(JointAxesMask::Y) {
-			// 	debug::draw_line(frame1 * point!(0.0, -1.0, 0.0), frame1 * point!(0.0, 1.0, 0.0), 1.0, Color::D_GREEN);
-			// }
-			// if joint.data.limit_axes.contains(JointAxesMask::Z) {
-			// 	debug::draw_line(frame1 * point!(0.0, 0.0, -1.0), frame1 * point!(0.0, 0.0, 1.0), 1.0, Color::D_BLUE);
-			// }
+			let limited = joint.data.limit_axes & !joint.data.locked_axes & !joint.data.coupled_axes & JointAxesMask::ANG_AXES;
+			let coupled = joint.data.limit_axes & !joint.data.locked_axes & joint.data.coupled_axes & JointAxesMask::ANG_AXES;
 			
-			let rot = frame2.rotation / frame1.rotation;
-			let dir = frame1 * Vec3::y_axis();
-			let ra = rot.vector();
-			let p = ra.dot(&dir) * *dir;
-			let twist = Rot3::new_normalize(Quaternion::new(rot.w, p.x, p.y, p.z));
-			let swing = rot * twist.conjugate();
+			let diff = (frame1.rotation.inverse() * frame2.rotation).imag() * frame1.rotation.dot(&frame2.rotation).signum();
+			let ang_err = diff.map(f32::asin) * 2.0;
 			
-			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X) {
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].min) * point!(0.0, 0.03, 0.0), 2.0, Color::D_GREEN);
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::x_axis() * joint.data.limits[3].max) * point!(0.0, 0.03, 0.0), 2.0, Color::D_GREEN);
+			debug::draw_point(frame2, 5.0, Color::D_MAGENTA);
+			debug::draw_point(frame1, 8.0, Color::MAGENTA);
+			
+			fn arc(steps: usize, width: f32, color: Color, pos: impl Fn(f32) -> Point3) {
+				let mut from = pos(0.0);
+				for step in 0..steps {
+					let to = pos(step as f32 / (steps - 1) as f32);
+					debug::draw_line(from, to, width, color);
+					from = to;
+				}
 			}
 			
-			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Z) {
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].min) * point!(0.0, 0.03, 0.0), 2.0, Color::D_GREEN);
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::z_axis() * joint.data.limits[5].max) * point!(0.0, 0.03, 0.0), 2.0, Color::D_GREEN);
-			}
+			let single_axis = |axis: Unit<Vec3>, forward: Unit<Vec3>, err: f32, limits: JointLimits<f32>, color: Color| {
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.min).transform_vector(&forward.scale(scale))), 6.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.max).transform_vector(&forward.scale(scale))), 6.0, color.lightness(0.5));
+				
+				arc(f32::ceil(32.0 * (limits.max - limits.min) / PI / 2.0).max(2.0) as usize,
+				    6.0,
+				    color.lightness(0.5),
+				    |t| frame2 * Point3::from(Rot3::from_axis_angle(&-axis, (limits.max - limits.min) * t + limits.min).transform_vector(&forward.scale(scale))));
+				
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, err).transform_vector(&forward.scale(scale * 1.5))), 6.0, color);
+			};
 			
-			if joint.data.limit_axes.intersects(JointAxesMask::ANG_X | JointAxesMask::ANG_Z) {
-				debug::draw_line(frame1, frame1 * point!(0.0, 0.03, 0.0), 2.0, Color::D_GREEN);
-				debug::draw_line(frame1, frame1.translation * swing * frame1.rotation * point!(0.0, 0.03, 0.0), 2.0, Color::GREEN);
-			}
+			let double_axis = |axis1: Unit<Vec3>, axis2: Unit<Vec3>, forward: Unit<Vec3>, limits: (JointLimits<f32>, JointLimits<f32>), color: Color| {
+				let forward_point = Point3::origin() + forward.scale(scale);
+				let limit = (limits.0.max.powi(2) + limits.1.max.powi(2)).sqrt();
+				
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, -limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, -limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				
+				arc(32,
+				    6.0,
+				    color.lightness(0.5),
+					|t| frame2 * (Rot3::from_axis_angle(&forward, t * PI * 2.0) * Rot3::from_axis_angle(&axis1, limit)).transform_point(&forward_point));
+				
+				debug::draw_line(frame1, frame1 * Point3::from(forward.scale(scale * 1.5)), 6.0, color);
+			};
 			
-			if joint.data.limit_axes.intersects(JointAxesMask::ANG_Y) {
-				debug::draw_line(frame1, frame1 * point!(0.03, 0.0, 0.0), 2.0, Color::D_RED);
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].min) * point!(0.03, 0.0, 0.0), 2.0, Color::D_RED);
-				debug::draw_line(frame1, frame1 * Rot3::new(*Vector::y_axis() * joint.data.limits[4].max) * point!(0.03, 0.0, 0.0), 2.0, Color::D_RED);
-				debug::draw_line(frame1, frame1.translation * twist * frame1.rotation * point!(0.03, 0.0, 0.0), 2.0, Color::RED);
+			if limited.contains(JointAxesMask::ANG_X) { single_axis(Vec3::x_axis(), -Vec3::y_axis(), ang_err.x, joint.data.limits[JointAxis::AngX as usize], Color::RED); }
+			if limited.contains(JointAxesMask::ANG_Y) { single_axis(Vec3::y_axis(), Vec3::z_axis(), ang_err.y, joint.data.limits[JointAxis::AngY as usize], Color::GREEN); }
+			if limited.contains(JointAxesMask::ANG_Z) { single_axis(Vec3::z_axis(), -Vec3::y_axis(), ang_err.z, joint.data.limits[JointAxis::AngZ as usize], Color::BLUE); }
+			
+			if coupled.contains(JointAxesMask::ANG_X | JointAxesMask::ANG_Y) {
+				double_axis(Vec3::x_axis(), Vec3::y_axis(), Vec3::z_axis(),
+				            (joint.data.limits[JointAxis::AngX as usize], joint.data.limits[JointAxis::AngY as usize]),
+				            Color::YELLOW);
+			}
+			if coupled.contains(JointAxesMask::ANG_Y | JointAxesMask::ANG_Z) {
+				double_axis(Vec3::y_axis(), Vec3::z_axis(), Vec3::x_axis(),
+				            (joint.data.limits[JointAxis::AngY as usize], joint.data.limits[JointAxis::AngZ as usize]),
+				            Color::CYAN);
+			}
+			if coupled.contains(JointAxesMask::ANG_Z | JointAxesMask::ANG_X) {
+				double_axis(Vec3::z_axis(), Vec3::x_axis(), -Vec3::y_axis(),
+				            (joint.data.limits[JointAxis::AngZ as usize], joint.data.limits[JointAxis::AngX as usize]),
+				            Color::MAGENTA);
 			}
 		}
 	}

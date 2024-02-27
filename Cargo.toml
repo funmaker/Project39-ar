@@ -58,8 +58,8 @@ escapi = "4.0.0"
 #vulkano-win = { path = "../vulkano/vulkano-win" }
 #rapier3d = { path = "../rapier/crates/rapier3d" }
 
-[profile.dev.package.rapier3d]
-opt-level = 3
+#[profile.dev.package.rapier3d]
+#opt-level = 3
 
 [profile.dev.package.image]
 opt-level = 3

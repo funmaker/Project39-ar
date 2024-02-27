@@ -46,12 +46,21 @@ impl mmd::Config for MMDIndexConfig {
 #[derive(Clone, Hash, Debug)]
 pub struct PmxAsset {
 	path: PathBuf,
+	overrides: bool,
 }
 
 impl PmxAsset {
 	pub fn at(model_path: impl AsRef<Path>) -> Self {
 		PmxAsset {
 			path: model_path.as_ref().to_path_buf(),
+			overrides: true,
+		}
+	}
+	
+	pub fn no_overrides(self) -> Self {
+		Self {
+			overrides: false,
+			..self
 		}
 	}
 }
@@ -68,9 +77,13 @@ impl AssetKey for PmxAsset {
 		
 		// dprintln!("{}", header);
 		
-		let mut overrides: Option<MMDConfig> = match assets_manager.load(TomlAsset::at(&root.join("model.toml")), renderer) {
-			Err(err) if err.kind() == ErrorKind::NotFound => None,
-			overrides => Some(overrides?),
+		let mut overrides: Option<MMDConfig> = if self.overrides {
+			match assets_manager.load(TomlAsset::at(&root.join("model.toml")), renderer) {
+				Err(err) if err.kind() == ErrorKind::NotFound => None,
+				overrides => Some(overrides?),
+			}
+		} else {
+			None
 		};
 		
 		let mut vertices_reader = mmd::VertexReader::new(header)?;
@@ -161,7 +174,7 @@ impl AssetKey for PmxAsset {
 			
 			let parent = if def.parent < 0 { None } else { Some(def.parent as usize) };
 			
-			let model_pos = Vec3::from(def.position).flip_x() * MMD_UNIT_SIZE;
+			let model_pos = def.position.from_mmd();
 			let display = def.bone_flags.contains(BoneFlags::Display);
 			
 			let mut color = if def.bone_flags.contains(BoneFlags::InverseKinematics) {
@@ -181,16 +194,16 @@ impl AssetKey for PmxAsset {
 			}
 			
 			let connection = match def.connection {
-				Connection::Index(id) if id <= 0 => BoneConnection::None,
+				Connection::Index(id) if id < 0 => BoneConnection::None,
 				Connection::Index(id) => BoneConnection::Bone(id as usize),
-				Connection::Position(pos) => BoneConnection::Offset(Vec3::from(pos).flip_x() * MMD_UNIT_SIZE),
+				Connection::Position(pos) => BoneConnection::Offset(pos.from_mmd()),
 			};
 			
 			let local_pos = if def.parent < 0 {
 				model_pos
 			} else {
 				let parent = &bone_defs[def.parent as usize];
-				model_pos - Vec3::from(parent.position).flip_x() * MMD_UNIT_SIZE
+				model_pos - parent.position.from_mmd()
 			};
 			
 			model.add_bone(BoneDesc::new(name,
@@ -209,7 +222,7 @@ impl AssetKey for PmxAsset {
 			
 			if let Offsets::Vertex(offsets) = morph.offsets {
 				model.add_morph(offsets.iter()
-				                       .map(|offset| (offset.vertex, Vec3::from(offset.offset).flip_x() * MMD_UNIT_SIZE))
+				                       .map(|offset| (offset.vertex, offset.offset.from_mmd()))
 				                       .collect());
 			}
 		}
@@ -264,10 +277,10 @@ impl AssetKey for PmxAsset {
 				&rigid_body.local_name
 			};
 			
-			let translation = rigid_body.shape_position.flip_x() * MMD_UNIT_SIZE;
+			let translation = rigid_body.shape_position.from_mmd();
 			let rotation = Rot3::from_axis_angle(&Vec3::y_axis(), -rigid_body.shape_rotation.y)
-			             * Rot3::from_axis_angle(&Vec3::x_axis(),  rigid_body.shape_rotation.x)
-			             * Rot3::from_axis_angle(&Vec3::z_axis(), -rigid_body.shape_rotation.z);
+			             * Rot3::from_axis_angle(&Vec3::x_axis(), -rigid_body.shape_rotation.x)
+			             * Rot3::from_axis_angle(&Vec3::z_axis(),  rigid_body.shape_rotation.z);
 			let position = Isometry3::from_parts(translation.into(), rotation);
 			
 			let volume;
@@ -359,13 +372,16 @@ impl AssetKey for PmxAsset {
 				&joint.local_name
 			};
 			
-			let translation = joint.position.flip_x() * MMD_UNIT_SIZE;
+			let translation = joint.position.from_mmd();
 			let rotation = Rot3::from_axis_angle(&Vec3::y_axis(), -joint.rotation.y)
-			             * Rot3::from_axis_angle(&Vec3::x_axis(),  joint.rotation.x)
-			             * Rot3::from_axis_angle(&Vec3::z_axis(), -joint.rotation.z);
+			             * Rot3::from_axis_angle(&Vec3::x_axis(), -joint.rotation.x)
+			             * Rot3::from_axis_angle(&Vec3::z_axis(),  joint.rotation.z);
+			println!("{} {:?}", name, joint.rotation);
 			let position = Isometry3::from_parts(translation.into(), rotation);
-			let position_min = joint.position_min * MMD_UNIT_SIZE;
-			let position_max = joint.position_max * MMD_UNIT_SIZE;
+			let position_min = joint.position_min.from_mmd_scale();
+			let position_max = joint.position_max.from_mmd_scale();
+			let rotation_min = vector!(joint.rotation_min.x, -joint.rotation_max.y, -joint.rotation_max.z);
+			let rotation_max = vector!(joint.rotation_max.x, -joint.rotation_min.y, -joint.rotation_min.z);
 			
 			model.add_joint(JointDesc::new(name,
 			                               joint.joint_type,
@@ -374,8 +390,8 @@ impl AssetKey for PmxAsset {
 			                               position,
 			                               position_min,
 			                               position_max,
-			                               joint.rotation_min,
-			                               joint.rotation_max,
+			                               rotation_min,
+			                               rotation_max,
 			                               joint.position_spring,
 			                               joint.rotation_spring,
 			                               joint.body_part));
@@ -411,8 +427,6 @@ fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoa
 	})
 }
 
-const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
-
 impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 	fn from(vertex: mmd::Vertex<MMDIndexConfig>) -> Self {
 		let (bones, bones_weights, sdef) = match vertex.weight_deform {
@@ -435,17 +449,17 @@ impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 				[sdef.bone_1_index, sdef.bone_2_index, 0, 0],
 				[sdef.bone_1_weight, 1.0-sdef.bone_1_weight, 0.0, 0.0],
 				Some([
-					sdef.c.flip_x() * MMD_UNIT_SIZE,
-					sdef.r0.flip_x() * MMD_UNIT_SIZE,
-					sdef.r1.flip_x() * MMD_UNIT_SIZE,
+					sdef.c.from_mmd(),
+					sdef.r0.from_mmd(),
+					sdef.r1.from_mmd(),
 				]),
 			),
 			WeightDeform::Qdef(_) => unimplemented!("QDEF deforms are not supported."),
 		};
 		
 		let bones_indices = [bones[0].max(0) as u32, bones[1].max(0) as u32, bones[2].max(0) as u32, bones[3].max(0) as u32];
-		let pos = vertex.position.flip_x() * MMD_UNIT_SIZE;
-		let normal = vertex.normal.flip_x();
+		let pos = vertex.position.from_mmd();
+		let normal = vertex.normal.from_mmd_normal();
 		
 		Vertex::new(
 			pos,
@@ -503,13 +517,25 @@ impl<C: mmd::Config> Display for JointEx<C>
 	}
 }
 
-trait FlipX {
-	fn flip_x(self) -> Self;
+const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
+
+trait FromMMD {
+	fn from_mmd(self) -> Self;
+	fn from_mmd_normal(self) -> Self;
+	fn from_mmd_scale(self) -> Self;
 }
 
-impl FlipX for Vec3 {
-	fn flip_x(self) -> Self {
-		vector!(-self.x, self.y, self.z)
+impl FromMMD for Vec3 {
+	fn from_mmd(self) -> Self {
+		self.from_mmd_normal().from_mmd_scale()
+	}
+	
+	fn from_mmd_normal(self) -> Self {
+		vector!(self.x, self.y, -self.z)
+	}
+	
+	fn from_mmd_scale(self) -> Self {
+		self * MMD_UNIT_SIZE
 	}
 }
 

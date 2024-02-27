@@ -2,7 +2,7 @@ use egui::{Grid, RichText, Ui, WidgetText};
 
 use crate::application::{Application, EntityRef};
 use crate::math::{Color, Point3, Similarity3, Translation3, Isometry3};
-use crate::utils::{ExUi, id_fmt, InspectMut, InspectObject};
+use crate::utils::{ExUi, id_fmt, Inspect, InspectMut, InspectObject};
 use super::super::super::ComponentRef;
 use super::MMDModel;
 use super::shared::{BoneDesc, BoneConnection};
@@ -15,24 +15,24 @@ pub struct MMDBone {
 	pub name: String,
 	pub parent: Option<usize>,
 	pub color: Color,
-	pub inv_model_transform: Translation3,
+	pub rigid_body: EntityRef,
+	pub model_transform: Translation3,
 	pub local_transform: Translation3,
 	pub anim_transform: Similarity3,
-	pub transform_override: Option<Similarity3>,
+	pub override_transform: Option<Similarity3>,
+	pub rigid_body_transform: Isometry3,
 	pub display: bool,
 	pub connection: BoneConnection,
-	pub rigid_body: EntityRef,
-	pub inv_rigid_body_transform: Isometry3,
 }
 
 impl MMDBone {
 	pub fn origin(&self) -> Point3 {
-		self.inv_model_transform.inverse_transform_point(&Point3::origin())
+		self.model_transform * Point3::origin()
 	}
 	
 	pub fn attach_rigid_body(&mut self, rigid_body: EntityRef, model_pos: Isometry3) -> &mut Self {
 		self.rigid_body = rigid_body;
-		self.inv_rigid_body_transform = (self.inv_model_transform * model_pos).inverse();
+		self.rigid_body_transform = self.model_transform.inverse() * model_pos;
 		self
 	}
 }
@@ -45,14 +45,14 @@ impl From<&BoneDesc> for MMDBone {
 			name: desc.name.clone(),
 			parent: desc.parent,
 			color: desc.color,
-			inv_model_transform: (-desc.model_pos).into(),
+			rigid_body: EntityRef::null(),
+			model_transform: desc.model_pos.into(),
 			local_transform: desc.local_pos.into(),
 			anim_transform: Similarity3::identity(),
-			transform_override: None,
+			override_transform: None,
+			rigid_body_transform: Isometry3::identity(),
 			display: desc.display,
 			connection: desc.connection,
-			rigid_body: EntityRef::null(),
-			inv_rigid_body_transform: Isometry3::identity(),
 		}
 	}
 }
@@ -65,38 +65,30 @@ impl InspectMut for MMDBone {
 			.num_columns(2)
 			.min_col_width(100.0)
 			.show(ui, |ui| {
-				ui.label("ID");
-				bone_button(self.model.clone(), self.id, ui, application);
-				ui.end_row();
-				
+				ui.inspect_row("ID", (self.model.clone(), self.id), application);
 				ui.inspect_row("Model", &self.model, application);
 				ui.inspect_row("Name", &self.name, ());
 				
-				ui.label("Parent");
 				if let Some(parent) = self.parent {
-					bone_button(self.model.clone(), parent, ui, application);
+					ui.inspect_row("Parent", (self.model.clone(), parent), application);
 				} else {
-					ui.label(RichText::new("NULL").monospace().italics());
+					ui.inspect_row("Parent", RichText::new("NULL").monospace().italics(), ());
 				}
-				ui.end_row();
 				
 				ui.inspect_row("Color", &mut self.color, ());
-				ui.inspect_row("Inv Model", &mut self.inv_model_transform, ());
-				ui.inspect_row("Local", &mut self.local_transform, ());
-				ui.inspect_row("Animation", &mut self.anim_transform, ());
-				ui.inspect_row("Override", &mut self.transform_override, ());
+				ui.inspect_row("Rigid Body", &self.rigid_body, application);
+				ui.inspect_row("Model Tr", &mut self.model_transform, ());
+				ui.inspect_row("Local Tr", &mut self.local_transform, ());
+				ui.inspect_row("Animation Tr", &mut self.anim_transform, ());
+				ui.inspect_row("Override Tr", &mut self.override_transform, ());
+				ui.inspect_row("Body Tr", &mut self.rigid_body_transform, ());
 				ui.inspect_row("Display", &mut self.display, ());
 				
-				ui.label("Connection");
 				match &mut self.connection {
-					BoneConnection::None => { ui.label(RichText::new("NONE").monospace().italics()); },
-					BoneConnection::Bone(bone) => bone_button(self.model.clone(), *bone, ui, application),
-					BoneConnection::Offset(offset) => ui.inspect(offset, ()),
+					BoneConnection::None =>           ui.inspect_row("Connection", RichText::new("NULL").monospace().italics(), ()),
+					BoneConnection::Bone(bone) =>     ui.inspect_row("Connection", (self.model.clone(), *bone), application),
+					BoneConnection::Offset(offset) => ui.inspect_row("Connection", offset, ()),
 				}
-				ui.end_row();
-				
-				ui.inspect_row("Rigid Body", &self.rigid_body, application);
-				ui.inspect_row("Inv Body", &mut self.inv_rigid_body_transform, ());
 			});
 	}
 }
@@ -124,8 +116,12 @@ impl InspectObject for &mut MMDBone {
 	}
 }
 
-fn bone_button(model: ComponentRef<MMDModel>, bone: usize, ui: &mut Ui, application: &Application) {
-	if ui.button(id_fmt(bone, "MB ")).clicked() {
-		application.select((model, bone));
+impl Inspect for (ComponentRef<MMDModel>, usize) {
+	type Options<'a> = &'a Application;
+	
+	fn inspect_ui(self, ui: &mut Ui, application: Self::Options<'_>) {
+		if ui.button(id_fmt(self.1, "MB ")).clicked() {
+			application.select(self);
+		}
 	}
 }

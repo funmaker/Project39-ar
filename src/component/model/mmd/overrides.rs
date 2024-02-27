@@ -4,17 +4,17 @@ use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::math::Vec3;
+use crate::math::{Vec3, PI};
 use super::asset::{MMDIndexConfig, JointEx};
 
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDConfig {
 	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,
 	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub joints: Vec<MMDJointOverride>,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDRigidBodyOverride {
 	pub id: Option<usize>,
 	pub pattern: Option<String>,
@@ -158,8 +158,8 @@ impl MMDJointOverride {
 			rotation: Some(joint.rotation),
 			position_min: Some(joint.position_min),
 			position_max: Some(joint.position_max),
-			rotation_min: Some(joint.rotation_min),
-			rotation_max: Some(joint.rotation_max),
+			rotation_min: Some(joint.rotation_min / PI * 180.0),
+			rotation_max: Some(joint.rotation_max / PI * 180.0),
 			position_spring: Some(joint.position_spring),
 			rotation_spring: Some(joint.rotation_spring),
 			body_part: joint.body_part,
@@ -175,8 +175,8 @@ impl MMDJointOverride {
 		if let Some(value) = self.rotation        { joint.rotation = value; }
 		if let Some(value) = self.position_min    { joint.position_min = value; }
 		if let Some(value) = self.position_max    { joint.position_max = value; }
-		if let Some(value) = self.rotation_min    { joint.rotation_min = value; }
-		if let Some(value) = self.rotation_max    { joint.rotation_max = value; }
+		if let Some(value) = self.rotation_min    { joint.rotation_min = value * PI / 180.0; }
+		if let Some(value) = self.rotation_max    { joint.rotation_max = value * PI / 180.0; }
 		if let Some(value) = self.position_spring { joint.position_spring = value; }
 		if let Some(value) = self.rotation_spring { joint.rotation_spring = value; }
 		if let Some(value) = self.body_part       { joint.body_part = Some(value); }
@@ -187,32 +187,36 @@ impl MMDJointOverride {
 			let bone = bones.get(bone_id)
 			                .ok_or(MMDOverrideError::BoneNotFound(bone_id))?;
 			
-			self.position = Some(bone.position);
+			if self.position.is_none() {
+				self.position = Some(bone.position);
+			}
 			
-			let offset = match &bone.connection {
-				Connection::Index(con_id) => {
-					if *con_id < 0 { return Err(MMDOverrideError::InvalidOffset(bone_id)) }
-					
-					let position = bones.get(*con_id as usize)
-					                    .ok_or(MMDOverrideError::BoneNotFound(*con_id as usize))?
-					                    .position;
-					
-					position - bone.position
-				},
-				Connection::Position(offset) => {
-					if offset.magnitude_squared() < f32::EPSILON { return Err(MMDOverrideError::InvalidOffset(bone_id)); }
-					
-					*offset
-				},
-			};
-			
-			let offset = -offset.normalize();
-			
-			self.rotation = Some(Vec3::new(
-				-offset.y.acos(),
-				f32::atan2(-offset.x, -offset.z),
-				0.0,
-			));
+			if self.rotation.is_none() {
+				let offset = match &bone.connection {
+					Connection::Index(con_id) => {
+						if *con_id < 0 { return Err(MMDOverrideError::InvalidOffset(bone_id)) }
+						
+						let position = bones.get(*con_id as usize)
+						                    .ok_or(MMDOverrideError::BoneNotFound(*con_id as usize))?
+							.position;
+						
+						position - bone.position
+					},
+					Connection::Position(offset) => {
+						if offset.magnitude_squared() < f32::EPSILON { return Err(MMDOverrideError::InvalidOffset(bone_id)); }
+						
+						*offset
+					},
+				};
+				
+				let offset = -offset.normalize();
+				
+				self.rotation = Some(Vec3::new(
+					-offset.y.asin(),
+					f32::atan2(-offset.x, -offset.z),
+					0.0,
+				));
+			}
 			
 			for (rb_id, rb) in rigid_bodies.iter().enumerate() {
 				if rb.bone_index == bone_id as i32 {

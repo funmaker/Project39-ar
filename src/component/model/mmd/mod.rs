@@ -6,7 +6,7 @@ use egui::Ui;
 use nalgebra::UnitQuaternion;
 use rapier3d::dynamics::{JointAxis, RigidBodyType};
 use rapier3d::geometry::Collider;
-use rapier3d::prelude::GenericJoint;
+use rapier3d::prelude::{FixedJoint, GenericJoint};
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
@@ -192,6 +192,11 @@ impl Component for MMDModel {
 		let state = &mut *self.state.borrow_mut();
 		let ent_pos = *entity.state().position;
 		
+		if let Some(world) = application.find_entity(|ent| ent.tag("World").unwrap_or_default()) {
+			entity.add_component(JointComponent::new(FixedJoint::new().set_local_frame1(ent_pos.inverse()).set_local_frame2(world.state().position.inverse()).data, world.as_ref()));
+			entity.rigid_body_mut(&mut *application.physics.borrow_mut()).set_body_type(RigidBodyType::Dynamic, true);
+		}
+		
 		for bone in &mut state.bones {
 			bone.model = self.as_cref();
 		}
@@ -233,7 +238,7 @@ impl Component for MMDModel {
 			rb.add_component(ColliderComponent::new(collider));
 		}
 		
-		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Hip), ComponentRef::null())));
+		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Hip), Isometry3::identity(), ComponentRef::null(), self.as_cref())));
 		
 		for desc in self.shared.joints.iter() {
 			let (bone_a, rb_a) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
@@ -266,9 +271,9 @@ impl Component for MMDModel {
 			joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
 			joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
 			
-			joint = limit(joint, JointAxis::AngX,  desc.rotation_min.x,  desc.rotation_max.x, PI * 2.0);
-			joint = limit(joint, JointAxis::AngY, -desc.rotation_max.y, -desc.rotation_min.y, PI * 2.0);
-			joint = limit(joint, JointAxis::AngZ, -desc.rotation_max.z, -desc.rotation_min.z, PI * 2.0);
+			joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x, PI * 2.0);
+			joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y, PI * 2.0);
+			joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z, PI * 2.0);
 			
 			let joint_ref = rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()).named(&desc.name));
 			
@@ -281,10 +286,10 @@ impl Component for MMDModel {
 			        .any(|id| parent_bone_id == id) {
 				if bone_a < bone_b {
 					rb_b.set_parent(rb_a.as_ref(), false, application);
-					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, desc.body_part, joint_ref)));
+					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, desc.body_part, ent_pos.inverse() * (*rb_b.state().position), joint_ref, self.as_cref())));
 				} else {
 					rb_a.set_parent(rb_b.as_ref(), false, application);
-					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, desc.body_part, joint_ref)));
+					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, desc.body_part, ent_pos.inverse() * (*rb_a.state().position), joint_ref, self.as_cref())));
 				}
 			}
 		}
@@ -305,10 +310,10 @@ impl Component for MMDModel {
 		
 		for bone in state.bones.iter_mut() {
 			if let Some(rb) = bone.rigid_body.get(application) {
-				bone.transform_override = Some((
+				bone.override_transform = Some((
 					inv_ent_pos *
 					*rb.state().position *
-					bone.inv_rigid_body_transform
+					bone.rigid_body_transform.inverse()
 				).to_superset());
 			}
 		}
@@ -326,7 +331,7 @@ impl Component for MMDModel {
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {
-			let transform = if let Some(transform) = bone.transform_override {
+			let transform = if let Some(transform) = bone.override_transform {
 				transform.to_superset()
 			} else if let Some(id) = bone.parent {
 				&state.bones_mats[id] * &bone.local_transform * &bone.anim_transform
@@ -339,7 +344,7 @@ impl Component for MMDModel {
 		}
 		
 		for (id, mat) in state.bones_mats.iter_mut().enumerate() {
-			*mat = *mat * &state.bones[id].inv_model_transform;
+			*mat = *mat * state.bones[id].model_transform.inverse();
 		}
 		
 		if debug::get_flag_or_default("DebugBonesDraw") {

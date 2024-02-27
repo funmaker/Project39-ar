@@ -178,109 +178,43 @@ impl Application {
 				);
 			}
 			
-			// {
-			// 	let head = application.add_entity(
-			// 		Entity::builder("Dummy Head")
-			// 			.component(renderer.load(ObjAsset::at("musk/elon.obj", "musk/musk.png"))?)
-			// 			.translation(point!(1.0, 1.7, 0.0))
-			// 			.collider_from_aabb(1000.0)
-			// 			.build()
-			// 	);
-			//
-			// 	let left = application.add_entity(
-			// 		Entity::builder("Dummy Hand Left")
-			// 			.component(renderer.load(ObjAsset::at("hand/hand_l.obj", "hand/hand_l.png"))?)
-			// 			.translation(point!(0.6, 1.0, 0.0))
-			// 			.collider_from_aabb(1000.0)
-			// 			.build()
-			// 	);
-			//
-			// 	let right = application.add_entity(
-			// 		Entity::builder("Dummy Hand Right")
-			// 			.component(renderer.load(ObjAsset::at("hand/hand_r.obj", "hand/hand_r.png"))?)
-			// 			.translation(point!(1.4, 1.0, 0.0))
-			// 			.collider_from_aabb(1000.0)
-			// 			.build()
-			// 	);
-			//
-			// 	application.add_entity(
-			// 		Entity::builder("Dummy")
-			// 			.component(VrIk::new(head, left, right))
-			// 			.translation(point!(1.0, 0.0, 0.0))
-			// 			.build()
-			// 	);
-			// }
-			
-			application.add_entity(
-				Entity::builder("ToolGun")
-					.translation(point!(0.0, 1.0, 1.0))
-					.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
-					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
-					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
-					                        renderer).unwrap())
-					.collider_from_aabb(100.0)
-					.build()
-			);
-			
-			application.add_entity(
-				Entity::builder("初音ミク")
-					.translation(point!(-0.5, 0.0, 0.0))
-					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
-					.rigid_body_type(RigidBodyType::KinematicPositionBased)
-					.build()
-			);
-			
-			// let parent = application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(3.0, 1.0, -2.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/Textures/box.png"))?)
-			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
-			// 		.component(TestComponent::new(false, 1.0))
-			// 		.build()
-			// );
-			//
-			// let parent = application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(3.0, 1.1, -2.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
-			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
-			// 		.parent(parent, true)
-			// 		.build()
-			// );
-			//
-			// let parent = application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(3.0, 1.2, -2.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
-			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
-			// 		.parent(parent, true)
-			// 		.build()
-			// );
-			//
 			// application.add_entity(
-			// 	Entity::builder("Box")
-			// 		.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
-			// 		.component(renderer.load(ObjAsset::at("shapes/box/box_2x2x2.obj", "shapes/floor.png"))?)
+			// 	Entity::builder("ToolGun")
+			// 		.translation(point!(0.0, 1.0, 1.0))
+			// 		.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
+			// 		.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
+			// 		                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
+			// 		                        renderer).unwrap())
 			// 		.collider_from_aabb(100.0)
-			// 		.rigid_body_type(RigidBodyType::KinematicPositionBased)
-			// 		.parent(parent, true)
+			// 		.build()
+			// );
+			
+			// application.add_entity(
+			// 	Entity::builder("初音ミク")
+			// 		.translation(point!(3.0, 0.0, 0.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
 			// 		.build()
 			// );
 			
 			application.add_entity(
-				Entity::builder("Katamari")
-					.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
-					.component(renderer.load(ObjAsset::at("katamari/katamari_baked.obj", "katamari/katamari_baked.png"))?)
-					.component(Katamari::new())
-					.gravity_scale(10.0)
-					.damping(1.0, 0.0)
-					.rigid_body_type(RigidBodyType::Dynamic)
+				Entity::builder("test 2")
+					.translation(point!(-0.5, 4.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+					.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test22.pmx").no_overrides())?, renderer)?)
 					.build()
 			);
+			
+			// application.add_entity(
+			// 	Entity::builder("Katamari")
+			// 		.position(Isometry3::new(vector!(3.0, 1.3, -2.0), vector!(0.0, 0.0, 0.0)))
+			// 		.component(renderer.load(ObjAsset::at("katamari/katamari_baked.obj", "katamari/katamari_baked.png"))?)
+			// 		.component(Katamari::new())
+			// 		.gravity_scale(10.0)
+			// 		.damping(1.0, 0.0)
+			// 		.rigid_body_type(RigidBodyType::Dynamic)
+			// 		.build()
+			// );
 		}
 		
 		Ok(application)
@@ -581,7 +515,9 @@ pub enum ApplicationCreationError {
 	#[error(display = "OpenvR unavailable. You can't use openvr background with --novr flag.")] OpenVRCameraInNoVR,
 	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
 	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
+	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
 	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
+	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
 	#[error(display = "{}", _0)] EyesCreationError(#[error(source)] EyesCreationError),
 	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
 	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
