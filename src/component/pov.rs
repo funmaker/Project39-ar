@@ -3,6 +3,7 @@ use std::time::Duration;
 use egui::Ui;
 
 use crate::application::{Entity, Application, Key, EntityRef};
+use crate::debug;
 use crate::utils::ExUi;
 use super::{Component, ComponentBase, ComponentInner, ComponentError};
 use super::model::simple::ObjAsset;
@@ -29,6 +30,7 @@ impl PoV {
 impl Component for PoV {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
 		application.pov.set(entity.as_ref());
+		debug::set_flag("DebugGizmoPoV", *entity.state().position);
 		
 		if self.detachable && application.input.keyboard.down(Key::Back) {
 			if let Some(detached) = self.detached.get(application) {

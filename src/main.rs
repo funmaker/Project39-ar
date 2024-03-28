@@ -1,7 +1,6 @@
 #![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(trace_macros)]
-#![feature(type_name_of_val)]
 #![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
 #![feature(extract_if)]
@@ -87,8 +86,9 @@ fn run_application() -> Result<(), RunError> {
 		Color::Never => colored::control::set_override(false),
 		Color::Always => colored::control::set_override(true),
 	}
-	
+
 	debug::set_debug(config.debug);
+	debug::setup_default_flags();
 	config::set(config);
 	
 	let application = Application::new()?;

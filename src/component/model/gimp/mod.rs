@@ -17,7 +17,6 @@ use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::{FenceCheck, IndexSubbuffer, AutoCommandBufferBuilderEx, BufferEx, IntoInfo};
 use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
 use super::{ModelError, VertexIndex};
-pub use asset::{GimpAsset, GimpLoadError};
 pub use pipeline::Vertex;
 use pipeline::{GimpPipeline, Pc};
 

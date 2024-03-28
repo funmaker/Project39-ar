@@ -376,7 +376,6 @@ impl AssetKey for PmxAsset {
 			let rotation = Rot3::from_axis_angle(&Vec3::y_axis(), -joint.rotation.y)
 			             * Rot3::from_axis_angle(&Vec3::x_axis(), -joint.rotation.x)
 			             * Rot3::from_axis_angle(&Vec3::z_axis(),  joint.rotation.z);
-			println!("{} {:?}", name, joint.rotation);
 			let position = Isometry3::from_parts(translation.into(), rotation);
 			let position_min = joint.position_min.from_mmd_scale();
 			let position_max = joint.position_max.from_mmd_scale();

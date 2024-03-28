@@ -210,12 +210,10 @@ impl MMDJointOverride {
 				};
 				
 				let offset = -offset.normalize();
+				let pitch = offset.y.asin();
+				let yaw = if offset.x.abs() + offset.z.abs() < f32::EPSILON { PI } else { f32::atan2(-offset.x, -offset.z) };
 				
-				self.rotation = Some(Vec3::new(
-					-offset.y.asin(),
-					f32::atan2(-offset.x, -offset.z),
-					0.0,
-				));
+				self.rotation = Some(Vec3::new(pitch, yaw, 0.0));
 			}
 			
 			for (rb_id, rb) in rigid_bodies.iter().enumerate() {

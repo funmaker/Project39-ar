@@ -161,10 +161,10 @@ impl Physics {
 		let sel_joint = application.get_selection().joint();
 		
 		for (handle, joint) in self.impulse_joint_set.iter() {
-			let selected = handle == sel_joint
-			            || joint.body1 == sel_rb
-			            || joint.body2 == sel_rb
-			            || (sel_rb != RigidBodyHandle::invalid() && sel_joint != ImpulseJointHandle::invalid());
+			let _selected = handle == sel_joint
+			             || joint.body1 == sel_rb
+			             || joint.body2 == sel_rb
+			             || (sel_rb != RigidBodyHandle::invalid() && sel_joint != ImpulseJointHandle::invalid());
 			
 			// if !selected {
 			// 	continue;
@@ -176,7 +176,7 @@ impl Physics {
 			let frame1 = rb1.position() * joint.data.local_frame1;
 			let frame2 = rb2.position() * joint.data.local_frame2;
 			
-			let scale = 1.0;
+			let scale = debug::gizmo_scale(frame2) * 0.3;
 			
 			let limited = joint.data.limit_axes & !joint.data.locked_axes & !joint.data.coupled_axes & JointAxesMask::ANG_AXES;
 			let coupled = joint.data.limit_axes & !joint.data.locked_axes & joint.data.coupled_axes & JointAxesMask::ANG_AXES;
@@ -197,15 +197,15 @@ impl Physics {
 			}
 			
 			let single_axis = |axis: Unit<Vec3>, forward: Unit<Vec3>, err: f32, limits: JointLimits<f32>, color: Color| {
-				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.min).transform_vector(&forward.scale(scale))), 6.0, color.lightness(0.5));
-				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.max).transform_vector(&forward.scale(scale))), 6.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.min).transform_vector(&forward.scale(scale))), 4.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, limits.max).transform_vector(&forward.scale(scale))), 4.0, color.lightness(0.5));
 				
 				arc(f32::ceil(32.0 * (limits.max - limits.min) / PI / 2.0).max(2.0) as usize,
-				    6.0,
+				    3.0,
 				    color.lightness(0.5),
 				    |t| frame2 * Point3::from(Rot3::from_axis_angle(&-axis, (limits.max - limits.min) * t + limits.min).transform_vector(&forward.scale(scale))));
 				
-				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, err).transform_vector(&forward.scale(scale * 1.5))), 6.0, color);
+				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, err).transform_vector(&forward.scale(scale * 1.5))), 5.0, color);
 			};
 			
 			let double_axis = |axis1: Unit<Vec3>, axis2: Unit<Vec3>, forward: Unit<Vec3>, limits: (JointLimits<f32>, JointLimits<f32>), color: Color| {
@@ -225,12 +225,12 @@ impl Physics {
 				debug::draw_line(frame1, frame1 * Point3::from(forward.scale(scale * 1.5)), 6.0, color);
 			};
 			
-			if limited.contains(JointAxesMask::ANG_X) { single_axis(Vec3::x_axis(), -Vec3::y_axis(), ang_err.x, joint.data.limits[JointAxis::AngX as usize], Color::RED); }
-			if limited.contains(JointAxesMask::ANG_Y) { single_axis(Vec3::y_axis(), Vec3::z_axis(), ang_err.y, joint.data.limits[JointAxis::AngY as usize], Color::GREEN); }
-			if limited.contains(JointAxesMask::ANG_Z) { single_axis(Vec3::z_axis(), -Vec3::y_axis(), ang_err.z, joint.data.limits[JointAxis::AngZ as usize], Color::BLUE); }
+			if limited.contains(JointAxesMask::ANG_X) { single_axis(Vec3::x_axis(), -Vec3::z_axis(), ang_err.x, joint.data.limits[JointAxis::AngX as usize], Color::RED); }
+			if limited.contains(JointAxesMask::ANG_Y) { single_axis(Vec3::y_axis(), -Vec3::z_axis(), ang_err.y, joint.data.limits[JointAxis::AngY as usize], Color::GREEN); }
+			if limited.contains(JointAxesMask::ANG_Z) { single_axis(Vec3::z_axis(), -Vec3::x_axis(), ang_err.z, joint.data.limits[JointAxis::AngZ as usize], Color::BLUE); }
 			
 			if coupled.contains(JointAxesMask::ANG_X | JointAxesMask::ANG_Y) {
-				double_axis(Vec3::x_axis(), Vec3::y_axis(), Vec3::z_axis(),
+				double_axis(Vec3::x_axis(), Vec3::y_axis(), -Vec3::z_axis(),
 				            (joint.data.limits[JointAxis::AngX as usize], joint.data.limits[JointAxis::AngY as usize]),
 				            Color::YELLOW);
 			}

@@ -6,6 +6,7 @@ use crate::component::ComponentRef;
 use crate::component::physics::collider::ColliderComponent;
 
 
+#[allow(dead_code)]
 pub trait ColliderEx {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent>;
 	
@@ -30,6 +31,7 @@ impl ColliderEx for Collider {
 	}
 }
 
+#[allow(dead_code)]
 pub trait RigidBodyEx {
 	fn entity_ref(&self) -> EntityRef;
 	

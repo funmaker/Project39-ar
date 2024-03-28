@@ -15,7 +15,6 @@ use crate::renderer::assets_manager::TextureLoadError;
 use crate::renderer::pipelines::PipelineError;
 use crate::utils::UploadError;
 pub use self::mmd::MMDModel;
-pub use billboard::Billboard;
 pub use simple::SimpleModel;
 
 

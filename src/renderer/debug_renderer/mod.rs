@@ -237,7 +237,7 @@ impl DebugRenderer {
 	}
 	
 	fn draw_ring(&mut self, point: &DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
-		let edges = (point.radius.ln() * 9.0).max(4.0) as u32;
+		let edges = (point.radius.ln() * 9.0).max(4.0).min(128.0) as u32;
 		let center = point.position.project(viewproj);
 		
 		let start = self.vertices.len() as u32;

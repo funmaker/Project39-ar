@@ -1,4 +1,5 @@
 use std::hash::Hash;
+use std::ops::RangeInclusive;
 use egui::*;
 
 use crate::debug;
@@ -17,6 +18,9 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 				debug_flag_checkbox(&mut ui[1], "DebugJointsDraw", "Draw Joints");
 				debug_flag_checkbox(&mut ui[1], "DebugRigidBodiesDraw", "Draw Rigid Bodies");
 			});
+
+			debug_flag_slider(ui, "DebugGizmoSize", 0.0..=2.0, "Gizmo Size");
+			debug_flag_slider(ui, "DebugGizmoFallOff", 0.0..=3.0, "Gizmo Size Fall Off");
 		});
 	
 	ui.separator();
@@ -52,6 +56,13 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 fn debug_flag_checkbox(ui: &mut Ui, flag: &str, label: impl Into<WidgetText>) {
 	let mut value = debug::get_flag_or_default(flag);
 	if Checkbox::new(&mut value, label).ui(ui).changed() {
+		debug::set_flag(flag, value);
+	}
+}
+
+fn debug_flag_slider(ui: &mut Ui, flag: &str, range: RangeInclusive<f32>, label: impl Into<WidgetText>) {
+	let mut value: f32 = debug::get_flag_or_default(flag);
+	if Slider::new(&mut value, range).text(label).ui(ui).changed() {
 		debug::set_flag(flag, value);
 	}
 }

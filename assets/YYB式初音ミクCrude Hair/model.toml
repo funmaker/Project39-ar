@@ -13,14 +13,14 @@ name = 'Arm Left'
 body_part = 'left_arm'
 using_bone = 38
 rotation_min = [
-    -0.5,
-    -0.5,
-    -0.5,
+    -30,
+    -30,
+    -30,
 ]
 rotation_max = [
-    1.0,
-    0.5,
-    1.0,
+    60,
+    30,
+    60,
 ]
 
 [[joints]]
@@ -28,14 +28,14 @@ name = 'Arm Right'
 body_part = 'right_arm'
 using_bone = 43
 rotation_min = [
-    -0.5,
-    -0.5,
-    -0.5,
+    -30,
+    -30,
+    -30,
 ]
 rotation_max = [
-    1.0,
-    0.5,
-    1.0,
+    60,
+    30,
+    60,
 ]
 
 [[joints]]
@@ -43,14 +43,14 @@ name = 'Forearm Left'
 body_part = 'left_forearm'
 using_bone = 48
 rotation_min = [
-     0.0,
-    -0.5,
-    -1.0,
+     0,
+    -30,
+    -60,
 ]
 rotation_max = [
-    0.0,
-    0.5,
-    0.0,
+    0,
+    30,
+    0,
 ]
 
 [[joints]]
@@ -58,14 +58,14 @@ name = 'Forearm Rright'
 body_part = 'right_forearm'
 using_bone = 53
 rotation_min = [
-     0.0,
-    -0.5,
-     0.0,
+     0,
+    -30,
+     0,
 ]
 rotation_max = [
-    0.0,
-    0.5,
-    1.0,
+    0,
+    30,
+    60,
 ]
 
 [[joints]]
@@ -73,14 +73,14 @@ name = 'Hand Left'
 body_part = 'left_hand'
 using_bone = 58
 rotation_min = [
-    -0.5,
-     0.0,
-    -0.5,
+    -30,
+     0,
+    -30,
 ]
 rotation_max = [
-    0.5,
-    0.0,
-    0.5,
+    30,
+    0,
+    30,
 ]
 
 [[joints]]
@@ -88,12 +88,12 @@ name = 'Hand Right'
 body_part = 'right_hand'
 using_bone = 60
 rotation_min = [
-    -0.5,
-     0.0,
-    -0.5,
+    -30,
+     0,
+    -30,
 ]
 rotation_max = [
-    0.5,
-    0.0,
-    0.5,
+    30,
+    0,
+    30,
 ]

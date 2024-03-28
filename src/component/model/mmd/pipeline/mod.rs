@@ -1,4 +1,3 @@
-pub use morph_comp::Pc as MorphPc;
 pub use outline_vert::Pc;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::pipeline::graphics::color_blend::ColorBlendState;

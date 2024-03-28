@@ -3,7 +3,7 @@ extern crate proc_macro;
 use std::iter::FromIterator;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{self, Data, Meta};
+use syn::{Data, Meta};
 
 #[proc_macro_derive(FromArgs, attributes(arg_short, arg_rename, arg_skip))]
 pub fn from_args_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

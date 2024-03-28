@@ -1,15 +1,11 @@
 use std::any::Any;
 use egui::*;
-use nalgebra::{Isometry3, Quaternion};
-use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, JointAxis, RigidBody, RigidBodyHandle, RigidBodyType};
+use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
 use rapier3d::parry::partitioning::IndexedData;
-use rapier3d::prelude::JointAxesMask;
 
-use crate::math::{PI, Rot3};
-use crate::application::{Application, EntityRef};
-use crate::utils::RigidBodyEx;
-use super::super::{from_user_data, InspectCollapsing, InspectObject};
+use crate::application::Application;
+use super::super::from_user_data;
 use super::*;
 
 
@@ -390,179 +386,8 @@ impl InspectObject for ImpulseJointHandle {
 		if let Ok(mut physics) = application.physics.try_borrow_mut() {
 			let physics = &mut *physics;
 			
-			if let Some(joint) = physics.impulse_joint_set.get_mut(self) {
-				joint.show_collapsing((self, application), ui, collapsing);
-				
-				ui.separator();
-				
-				let (frame1, frame2) = match (physics.rigid_body_set.get(joint.body1), physics.rigid_body_set.get(joint.body2)) {
-					(Some(body1), Some(body2)) => (body1.position() * joint.data.local_frame1, body2.position() * joint.data.local_frame2),
-					_ => return
-				};
-				
-				let entity = physics.rigid_body_set.get(joint.body1).map_or(EntityRef::null(), |rb| rb.entity_ref());
-				
-				Grid::new(self.inspect_uid(&application))
-					.min_col_width(100.0)
-					.num_columns(2)
-					.show(ui, |ui| {
-						{
-						
-						}
-						
-						ui.label("");
-						ui.columns(6, |ui| {
-							ui[0].label("MIN");
-							ui[1].label("CUR");
-							ui[2].label("MAX");
-						});
-						ui.end_row();
-						
-						let diff = frame1.inverse() * frame2;
-						let ang_sgn = frame1.rotation.dot(&frame2.rotation).signum();
-						let ang_err = diff.rotation.imag().scale(ang_sgn).map(f32::asin) * 2.0;
-						
-						let mut offsets = [
-							diff.translation.x,
-							diff.translation.y,
-							diff.translation.z,
-							ang_err.x,
-							ang_err.y,
-							ang_err.z,
-						];
-						let mut offset_changed = false;
-						
-						let mut inspect_axis = |axis: JointAxis| {
-							ui.label(format!("{axis:?}"));
-							ui.columns(7, |ui| {
-								let limit = &mut joint.data.limits[axis as usize];
-								let angle = JointAxesMask::ANG_AXES.contains(axis.into());
-								let scale = if angle { 180.0 / PI } else { 1.0 };
-								
-								let mut min = limit.min * scale;
-								let mut cur = offsets[axis as usize] * scale;
-								let mut max = limit.max * scale;
-								
-								let locked = joint.data.locked_axes.contains(axis.into());
-								let limited = joint.data.limit_axes.contains(axis.into());
-								let coupled = joint.data.coupled_axes.contains(axis.into());
-								
-								if !min.is_finite() || min <= -10_000.0 {
-									ui[0].label("NONE");
-								} else if locked || !limited {
-									ui[0].label(format!("{min:.3}"));
-								} else if ui[0].add(DragValue::new(&mut min).speed(0.01 * scale)).changed() {
-									limit.min = min / scale;
-								}
-								
-								if ui[1].add(DragValue::new(&mut cur).speed(0.01 * scale)).changed() {
-									if cur < min && limited { cur = min; }
-									if cur > max && limited { cur = max; }
-									offsets[axis as usize] = cur / scale;
-									offset_changed = true;
-								}
-								
-								if !max.is_finite() || max >= 10_000.0 {
-									ui[2].label("NONE");
-								} else if locked || !limited {
-									ui[2].label(format!("{max:.3}"));
-								} else if ui[2].add(DragValue::new(&mut max).speed(0.01 * scale)).changed() {
-									limit.max = max / scale;
-								}
-								
-								fn btn_col(active: bool) -> Color32 {
-									if active { Color32::LIGHT_BLUE }
-									else { Color32::GRAY }
-								}
-								
-								if ui[3].add(Button::new(RichText::new("Lock").color(btn_col(locked)))).clicked() {
-									joint.data.locked_axes.set(axis.into(), true);
-									
-									if angle && joint.data.coupled_axes.contains(axis.into()) {
-										joint.data.coupled_axes.set(JointAxesMask::ANG_AXES, false);
-									}
-								}
-								
-								if ui[4].add(Button::new(RichText::new("Limit").color(btn_col(!locked && limited)))).clicked() {
-									joint.data.locked_axes.set(axis.into(), false);
-									joint.data.limit_axes.set(axis.into(), true);
-									
-									if angle && joint.data.coupled_axes.contains(axis.into()) {
-										joint.data.coupled_axes.set(JointAxesMask::ANG_AXES, false);
-									}
-									
-									if limit.min < -10_000.0 || limit.max > 10_000.0 {
-										if angle {
-											limit.min = -PI / 4.0;
-											limit.max = PI / 4.0;
-										} else {
-											limit.min = cur - 1.0;
-											limit.max = cur + 1.0;
-										}
-									}
-								}
-								
-								if ui[5].add(Button::new(RichText::new("Free").color(btn_col(!locked && !limited)))).clicked() {
-									joint.data.locked_axes.set(axis.into(), false);
-									joint.data.limit_axes.set(axis.into(), false);
-								}
-								
-								if ui[6].add(Button::new(RichText::new("Couple").color(btn_col(coupled)))).clicked() {
-									if angle {
-										let free_angles = (joint.data.coupled_axes & JointAxesMask::ANG_AXES).is_empty();
-										
-										if free_angles {
-											let coupled = JointAxesMask::ANG_AXES.difference(axis.into());
-											
-											joint.data.coupled_axes.set(coupled, true);
-											joint.data.limit_axes.set(coupled, true);
-											joint.data.locked_axes.set(coupled, false);
-											
-											for axis in [JointAxis::AngX, JointAxis::AngY, JointAxis::AngZ] {
-												if !coupled.contains(axis.into()) { continue; }
-												
-												let limit = &mut joint.data.limits[axis as usize];
-												if limit.max > 10_000.0 {
-													limit.max = PI / 4.0;
-												}
-												
-												limit.min = limit.min.max(0.0);
-											}
-										} else {
-											joint.data.coupled_axes.set(JointAxesMask::ANG_AXES, false);
-										}
-									} else {
-										joint.data.coupled_axes.set(axis.into(), !coupled);
-									}
-								}
-							});
-							ui.end_row();
-						};
-						
-						inspect_axis(JointAxis::X);
-						inspect_axis(JointAxis::Y);
-						inspect_axis(JointAxis::Z);
-						
-						inspect_axis(JointAxis::AngX);
-						inspect_axis(JointAxis::AngY);
-						inspect_axis(JointAxis::AngZ);
-						
-						if offset_changed {
-							if let Some(entity) = entity.get(application) {
-								let i = (offsets[3] / 2.0).sin() * ang_sgn;
-								let j = (offsets[4] / 2.0).sin() * ang_sgn;
-								let k = (offsets[5] / 2.0).sin() * ang_sgn;
-								let w = (1.0 - i * i - j * j - k * k).max(0.0).sqrt();
-								
-								let new_diff = Isometry3::from_parts(
-									vector![offsets[0], offsets[1], offsets[2]].into(),
-									Rot3::new_normalize(Quaternion::new(w, i, j, k)),
-								);
-							
-								*entity.state_mut().position = frame2 * new_diff.inverse() * joint.data.local_frame1.inverse();
-							}
-						}
-					});
+			if let Some(col) = physics.impulse_joint_set.get_mut(self) {
+				col.show_collapsing((self, application), ui, collapsing);
 				
 				return;
 			}

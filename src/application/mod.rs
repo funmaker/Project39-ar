@@ -189,21 +189,29 @@ impl Application {
 			// 		.build()
 			// );
 			
-			// application.add_entity(
-			// 	Entity::builder("初音ミク")
-			// 		.translation(point!(3.0, 0.0, 0.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
-			// 		.build()
-			// );
-			
 			application.add_entity(
-				Entity::builder("test 2")
-					.translation(point!(-0.5, 4.0, 0.0))
+				Entity::builder("初音ミク")
+					.translation(point!(3.0, 0.0, 0.0))
 					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test22.pmx").no_overrides())?, renderer)?)
+					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
 					.build()
 			);
+			
+			// application.add_entity(
+			// 	Entity::builder("test 2")
+			// 		.translation(point!(3.0, 4.0, -2.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test22.pmx").no_overrides())?, renderer)?)
+			// 		.build()
+			// );
+
+			// application.add_entity(
+			// 	Entity::builder("test 2")
+			// 		.translation(point!(-3.0, 4.0, -2.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
+			// 		.build()
+			// );
 			
 			// application.add_entity(
 			// 	Entity::builder("Katamari")

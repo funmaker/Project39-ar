@@ -48,6 +48,11 @@ pub fn set_flag<T>(key: &str, value: T)
 	     .insert(key.to_string(), Box::new(value));
 }
 
+pub fn setup_default_flags() {
+	set_flag("DebugGizmoSize", 1.0_f32);
+	set_flag("DebugGizmoFallOff", 1.0_f32);
+}
+
 #[allow(unused_macros)]
 macro_rules! dprint {
 	($( $args:expr ),*) => { if crate::debug::debug() { print!( $( $args ),* ); } }
@@ -236,6 +241,18 @@ pub fn draw_capsule(point_a: Point3, point_b: Point3, radius: f32, color: Color,
 	DEBUG_CAPSULES.with(|capsules| {
 		capsules.borrow_mut().push(DebugCapsule{ point_a, point_b, radius, color, edge });
 	})
+}
+
+pub fn gizmo_scale(pos: impl Into<DebugPosition>) -> f32 {
+	let pos = pos.into();
+	let gizmo_size = get_flag("DebugGizmoSize").unwrap_or(1.0_f32);
+	let gizmo_fallout = get_flag("DebugGizmoFallOff").unwrap_or(1.0_f32);
+	let gizmo_pov = get_flag("DebugGizmoPoV").unwrap_or(Isometry3::identity());
+
+	match pos {
+		DebugPosition::Screen(_) => gizmo_size,
+		DebugPosition::World(pos) => gizmo_size / gizmo_pov.inverse_transform_point(&pos).coords.magnitude().powf(gizmo_fallout - 1.0),
+	}
 }
 
 fn split_comma(line: &str) -> Option<(&str, &str)> {

@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use egui::Ui;
 use nalgebra::UnitQuaternion;
-use rapier3d::dynamics::{JointAxis, RigidBodyType};
+use rapier3d::dynamics::RigidBodyType;
 use rapier3d::geometry::Collider;
-use rapier3d::prelude::{FixedJoint, GenericJoint};
+use rapier3d::prelude::FixedJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
@@ -25,7 +25,7 @@ mod rigid_body;
 
 use crate::debug;
 use crate::application::{Application, Entity};
-use crate::math::{AMat4, Color, Isometry3, IVec4, Mat4, PI};
+use crate::math::{AMat4, Color, face_towards_lossy, Isometry3, IVec4, Mat4};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{AutoCommandBufferBuilderEx, ExUi, IntoInfo, SubbufferAllocatorEx};
 use super::super::{Component, ComponentBase, ComponentRef, ComponentError, ComponentInner};
@@ -213,8 +213,15 @@ impl Component for MMDModel {
 				continue;
 			}
 			
+			let bone = &state.bones[bone_id];
+			let direction = match bone.connection {
+				BoneConnection::None => bone.model_transform.vector - state.bones[bone.parent.unwrap()].model_transform.vector,
+				BoneConnection::Bone(child_id) => state.bones[child_id].model_transform.vector - bone.model_transform.vector,
+				BoneConnection::Offset(direction) => direction,
+			};
+			
 			let rb_ent = Entity::builder(&desc.name)
-				.position(ent_pos * desc.position)
+				.position(ent_pos * bone.model_transform * face_towards_lossy(direction))
 				.gravity_scale(0.05)
 				.rigid_body_type(RigidBodyType::Dynamic)
 				.build();
@@ -250,32 +257,14 @@ impl Component for MMDModel {
 			                          .and_then(|bone| rigid_bodies.get(&bone).map(|rb| (bone, rb)))
 			                          .unwrap_or((0, entity));
 			
-			let mut joint = GenericJoint::default();
-			
-			joint.set_local_frame1(rb_a.state().position.inverse() * ent_pos * desc.position)
-			     .set_local_frame2(rb_b.state().position.inverse() * ent_pos * desc.position);
-			
-			fn limit(mut joint: GenericJoint, axis: JointAxis, min: f32, max: f32, max_limit: f32) -> GenericJoint {
-				if max - min >= max_limit || min > max {
-					// free
-				} else if min != max {
-					joint.set_limits(axis, [min, max]);
-				} else {
-					joint.lock_axes(axis.into());
-				}
-				
-				joint
-			}
-			
-			joint = limit(joint, JointAxis::X, desc.position_min.x, desc.position_max.x, 100.0);
-			joint = limit(joint, JointAxis::Y, desc.position_min.y, desc.position_max.y, 100.0);
-			joint = limit(joint, JointAxis::Z, desc.position_min.z, desc.position_max.z, 100.0);
-			
-			joint = limit(joint, JointAxis::AngX, desc.rotation_min.x, desc.rotation_max.x, PI * 2.0);
-			joint = limit(joint, JointAxis::AngY, desc.rotation_min.y, desc.rotation_max.y, PI * 2.0);
-			joint = limit(joint, JointAxis::AngZ, desc.rotation_min.z, desc.rotation_max.z, PI * 2.0);
-			
-			let joint_ref = rb_a.add_component(JointComponent::new(joint, rb_b.as_ref()).named(&desc.name));
+			let joint_ref = rb_a.add_component(
+				JointComponent::from_mmd(
+					rb_a.state().position.inverse() * ent_pos * desc.position,
+					rb_b.state().position.inverse() * ent_pos * desc.position,
+					desc.clone(),
+					rb_b.as_ref(),
+				).named(&desc.name),
+			);
 			
 			state.joints.push(joint_ref.clone());
 			
