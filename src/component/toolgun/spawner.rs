@@ -1,3 +1,4 @@
+use anyhow::Result;
 use rapier3d::dynamics::RigidBodyType;
 use rapier3d::pipeline::QueryFilter;
 
@@ -8,7 +9,7 @@ use crate::math::{Ray, Similarity3, Color, Rot3, Isometry3, Vec3, cast_ray_on_pl
 use crate::renderer::RenderContext;
 use super::super::seat::Seat;
 use super::ToolGun;
-use super::tool::{Tool, ToolError};
+use super::tool::Tool;
 
 
 const MENU_SCALE: f32 = 0.2;
@@ -38,7 +39,7 @@ impl Tool for Spawner {
 		"Spawner"
 	}
 	
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> {
 		self.ghost_pos = None;
 		self.select_idx = None;
 		
@@ -112,7 +113,7 @@ impl Tool for Spawner {
 		Ok(())
 	}
 	
-	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
+	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<()> {
 		if let Some(ghost_pos) = self.ghost_pos {
 			if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
 				prop.model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;

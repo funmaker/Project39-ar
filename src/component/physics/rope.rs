@@ -1,11 +1,12 @@
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 
 use crate::debug;
 use crate::application::{Entity, Application, EntityRef};
 use crate::math::{Point3, Color};
 use crate::utils::ExUi;
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::super::{Component, ComponentBase, ComponentInner};
 
 
 #[derive(ComponentBase)]
@@ -32,7 +33,7 @@ impl Rope {
 }
 
 impl Component for Rope {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		let other = match self.other.get(application) {
 			Some(other) => other,
 			None => {

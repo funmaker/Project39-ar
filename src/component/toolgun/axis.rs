@@ -1,3 +1,4 @@
+use anyhow::Result;
 use rapier3d::pipeline::QueryFilter;
 use rapier3d::prelude::RevoluteJoint;
 
@@ -8,7 +9,7 @@ use crate::utils::ColliderEx;
 use super::super::model::SimpleModel;
 use super::super::physics::joint::JointComponent;
 use super::ToolGun;
-use super::tool::{Tool, ToolError};
+use super::tool::Tool;
 
 
 pub struct Axis {
@@ -34,7 +35,7 @@ impl Tool for Axis {
 		"Axis"
 	}
 	
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> {
 		self.ghost_pos = None;
 		
 		let result = {
@@ -86,7 +87,7 @@ impl Tool for Axis {
 		Ok(())
 	}
 	
-	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
+	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<()> {
 		if let Some(ghost) = &self.ghost {
 			if let Some(ghost_pos) = self.ghost_pos {
 				ghost.render_impl(Similarity3::from_isometry(ghost_pos * self.target_local_pos.inverse(), 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;

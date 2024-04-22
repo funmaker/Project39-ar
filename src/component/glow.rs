@@ -1,15 +1,15 @@
 use std::cell::Cell;
 use std::sync::Arc;
+use anyhow::Result;
 use egui::Ui;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 use crate::application::{Application, Entity};
 use crate::math::{Similarity3, Color};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::renderer::pipelines::PipelineError;
 use crate::renderer::pipelines::default::{DefaultGlowPipeline, GlowPc};
 use crate::utils::{AutoCommandBufferBuilderEx, ExUi};
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 use super::model::SimpleModel;
 
 
@@ -22,7 +22,7 @@ pub struct Glow {
 }
 
 impl Glow {
-	pub fn new(color: Color, size: f32, renderer: &mut Renderer) -> Result<Self, PipelineError> {
+	pub fn new(color: Color, size: f32, renderer: &mut Renderer) -> Result<Self> {
 		let pipeline = renderer.pipelines.get::<DefaultGlowPipeline>()?;
 		
 		Ok(Glow {
@@ -35,7 +35,7 @@ impl Glow {
 }
 
 impl Component for Glow {
-	// fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+	// fn start(&self, entity: &Entity, _application: &Application) -> Result<()> {
 	// 	if let Some(model) = AnyModel::find(entity) {
 	// 		*self.model.borrow_mut() = Some(model);
 	// 	} else {
@@ -46,7 +46,7 @@ impl Component for Glow {
 	// 	Ok(())
 	// }
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		let pos = Similarity3::from_isometry(*entity.state().position, -1.0);
 		
 		if let Some(model) = entity.find_component_by_type::<SimpleModel>() {

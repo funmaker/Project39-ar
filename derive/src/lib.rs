@@ -104,13 +104,13 @@ pub fn from_args_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                 ret
             }
             
-            fn prepare_opts(&mut self, opts: &mut Options, _short: &str, path: &str, doc: &str) -> Result<(), ArgsError> {
+            fn prepare_opts(&mut self, opts: &mut Options, _short: &str, path: &str, doc: &str) -> Result<()> {
                 #prepare_opts
                 
                 Ok(())
             }
 				
-            fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<(), ArgsError> {
+            fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()> {
                 #apply_matches
                 
                 Ok(())

@@ -1,8 +1,7 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::str::FromStr;
 pub use project39_ar_derive::FromArgs;
-use err_derive::Error;
+use anyhow::{Result, Error};
 use getopts::{Options, Matches};
 use nalgebra::{Matrix, Scalar, DefaultAllocator, DimName};
 use nalgebra::allocator::Allocator;
@@ -23,12 +22,12 @@ pub trait FromArgs {
 		format!("\t{}--{} {}\t{}", short_flag, path, self.hint(), doc)
 	}
 	
-	fn prepare_opts(&mut self, opts: &mut Options, short: &str, path: &str, doc: &str) -> Result<(), ArgsError> {
+	fn prepare_opts(&mut self, opts: &mut Options, short: &str, path: &str, doc: &str) -> Result<()> {
 		opts.optopt(short, path, doc, &self.hint());
 		Ok(())
 	}
 	
-	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<(), ArgsError>;
+	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()>;
 }
 
 impl FromArgs for bool {
@@ -47,7 +46,7 @@ impl FromArgs for bool {
 		}
 	}
 	
-	fn prepare_opts(&mut self, opts: &mut Options, short: &str, path: &str, doc: &str) -> Result<(), ArgsError> {
+	fn prepare_opts(&mut self, opts: &mut Options, short: &str, path: &str, doc: &str) -> Result<()> {
 		let neg = format!("no-{}", path);
 		let short_neg = short.to_uppercase();
 		opts.optflag(short, path, doc);
@@ -55,7 +54,7 @@ impl FromArgs for bool {
 		Ok(())
 	}
 	
-	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<(), ArgsError> {
+	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()> {
 		let neg = format!("no-{}", path);
 		if matches.opt_present(path) { *self = true; }
 		if matches.opt_present(&neg) { *self = false; }
@@ -66,7 +65,7 @@ impl FromArgs for bool {
 impl<T, R: DimName, C: DimName> FromArgs for Matrix<T, R, C, <DefaultAllocator as Allocator<T, R, C>>::Buffer>
 	where T: Scalar + Display + FromStr,
 	      DefaultAllocator: Allocator<T, R, C>,
-	      <T as FromStr>::Err: Error {
+	      <T as FromStr>::Err: std::error::Error + Send + Sync {
 	
 	fn hint(&self) -> String {
 		let mut ret = String::new();
@@ -82,27 +81,27 @@ impl<T, R: DimName, C: DimName> FromArgs for Matrix<T, R, C, <DefaultAllocator a
 		ret
 	}
 	
-	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<(), ArgsError> {
+	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()> {
 		if let Some(str) = matches.opt_str(path) {
 			let rows: Vec<Vec<T>> = str.split(";")
 			                           .map(|row| row.split(",")
 			                                         .map(T::from_str)
 			                                         .collect::<Result<Vec<_>, _>>())
 			                           .collect::<Result<_, _>>()
-			                           .map_err(|err| ArgsError::BadArgument(path.to_string(), err.into()))?;
+			                           .map_err(|err| Error::new(err).context(format!("Failed to parse cli argument {}", path.to_string())))?;
 			
 			if rows.len() != R::dim() {
-				return Err(ArgsError::BadArgument(path.to_string(), MatrixParseError::boxed(format!("Wrong row count (expected {}, got {})", R::dim(), rows.len()))))
+				return Err(Error::msg(format!("Wrong row count (expected {}, got {})", R::dim(), rows.len())));
 			}
 			
 			for row in &rows {
 				if row.len() != rows[0].len() {
-					return Err(ArgsError::BadArgument(path.to_string(), MatrixParseError::boxed("Inconsistent row length")))
+					return Err(Error::msg("Inconsistent row length"));
 				}
 			}
 			
 			if rows[0].len() != C::dim() {
-				return Err(ArgsError::BadArgument(path.to_string(), MatrixParseError::boxed(format!("Wrong column count (expected {}, got {})", C::dim(), rows[0].len()))))
+				return Err(Error::msg(format!("Wrong column count (expected {}, got {})", C::dim(), rows[0].len())));
 			}
 			
 			*self = Self::from_iterator(rows.into_iter().flatten());
@@ -116,10 +115,10 @@ macro_rules! args_terminals {
 	{ $( $typ:ty )* } => {
 		$(
 			impl FromArgs for $typ {
-				fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<(), ArgsError> {
+				fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()> {
 					if let Some(str) = matches.opt_str(path) {
 						*self = str.parse::<Self>()
-						           .map_err(|err| ArgsError::BadArgument(path.to_string(), err.into()))?;
+						           .map_err(|err| anyhow::Error::new(err).context(format!("Failed to parse cli argument {}", path.to_string())))?;
 					}
 					Ok(())
 				}
@@ -131,26 +130,3 @@ macro_rules! args_terminals {
 pub(crate) use args_terminals;
 
 args_terminals! { f32 f64 u8 i8 u16 i16 u32 i32 u64 i64 usize isize }
-
-#[derive(Debug, Error)]
-pub enum ArgsError {
-	#[error(display = "{}", _0)] GetoptsError(#[error(source)] getopts::Fail),
-	#[error(display = "Failed to parse cli argument {}: {}", _0, _1)] BadArgument(String, Box<dyn Error>),
-}
-
-#[derive(Debug)]
-pub struct MatrixParseError(String);
-
-impl Display for MatrixParseError {
-	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		self.0.fmt(f)
-	}
-}
-
-impl Error for MatrixParseError {}
-
-impl MatrixParseError {
-	fn boxed(str: impl Into<String>) -> Box<dyn Error> {
-		Box::new(MatrixParseError(str.into()))
-	}
-}

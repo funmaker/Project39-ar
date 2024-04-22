@@ -1,3 +1,4 @@
+use anyhow::Result;
 use rapier3d::dynamics::{FixedJoint, RigidBodyType};
 use rapier3d::geometry::{ColliderBuilder, ColliderShape};
 use rapier3d::pipeline::QueryFilter;
@@ -14,7 +15,7 @@ use super::super::model::simple::asset::ObjAsset;
 use super::super::physics::joint::JointComponent;
 use super::super::thruster::{Thruster, ThrusterDirection};
 use super::ToolGun;
-use super::tool::{Tool, ToolError};
+use super::tool::Tool;
 
 
 pub struct ThrusterTool {
@@ -38,7 +39,7 @@ impl Tool for ThrusterTool {
 		"Thruster"
 	}
 	
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> {
 		self.ghost_pos = None;
 		
 		let (x, y) = application.input.controller(hand)
@@ -114,7 +115,7 @@ impl Tool for ThrusterTool {
 	}
 	
 	
-	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> {
+	fn render(&mut self, _toolgun: &ToolGun, context: &mut RenderContext) -> Result<()> {
 		if let Some(ghost_pos) = self.ghost_pos {
 			self.thruster_model.render_impl(Similarity3::from_isometry(ghost_pos, 1.0), Color::FULL_WHITE.opactiy(0.25), context)?;
 		}

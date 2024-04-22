@@ -1,5 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::f32::consts::PI;
+use anyhow::Result;
 use egui::{Button, Color32, DragValue, RichText, Ui};
 use nalgebra::{Quaternion, Unit};
 use rapier3d::prelude::*;
@@ -8,7 +9,7 @@ use crate::application::{Entity, Application, Physics, EntityRef};
 use crate::component::model::mmd::shared::JointDesc;
 use crate::math::{Isometry3, Rot3, Vec3};
 use crate::utils::ExUi;
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::super::{Component, ComponentBase, ComponentInner};
 
 #[derive(ComponentBase)]
 pub struct JointComponent {
@@ -67,7 +68,7 @@ impl JointComponent {
 }
 
 impl Component for JointComponent {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		if let Some(target) = self.target.get(application) {
@@ -77,7 +78,7 @@ impl Component for JointComponent {
 		Ok(())
 	}
 	
-	fn end(&self, _entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		physics.impulse_joint_set.remove(self.handle.get(), true);
@@ -91,7 +92,7 @@ impl Component for JointComponent {
 				if let Ok(mut physics) = application.physics.try_borrow_mut() {
 					if let Some(joint) = physics.impulse_joint_set.get_mut(self.handle.get()) {
 						mmd_desc.borrow_mut()
-						        .on_inspect(joint, entity, other, ui);
+						        .on_inspect(joint, entity, other, application, ui);
 					}
 				}
 			}
@@ -120,6 +121,7 @@ impl MMDDesc {
 	              joint: &mut ImpulseJoint,
 	              entity1: &Entity,
 	              entity2: &Entity,
+	              application: &Application,
 	              ui: &mut Ui) {
 		let frame1 = *entity1.state().position * self.local_frame1;
 		let frame2 = *entity2.state().position * self.local_frame2;
@@ -222,12 +224,19 @@ impl MMDDesc {
 			let k = (offsets[5] / 2.0).sin() * ang_sgn;
 			let w = (1.0 - i * i - j * j - k * k).max(0.0).sqrt();
 			
-			let new_diff = nalgebra::Isometry3::from_parts(
+			let new_diff = Isometry3::from_parts(
 				vector![offsets[0], offsets[1], offsets[2]].into(),
 				Rot3::new_normalize(Quaternion::new(w, i, j, k)),
 			);
 			
-			*entity1.state_mut().position = frame2 * new_diff.inverse() * joint.data.local_frame1.inverse();
+			let entity1_new_pos = frame2 * new_diff.inverse() * joint.data.local_frame1.inverse();
+			let transform = entity1_new_pos * entity1.state().position.inverse();
+			*entity1.state_mut().position = entity1_new_pos;
+			
+			for desc in entity1.descendants(application) {
+				let new_pos = transform * *desc.state().position;
+				*desc.state_mut().position = new_pos;
+			}
 		}
 		
 		if limits_changed {
@@ -258,10 +267,9 @@ impl MMDDesc {
 			let bias2 = (limit2.min + limit2.max) / 2.0;
 			
 			let avg = (limit1.max - bias1 + limit2.max - bias2) / 2.0;
-			let c_limit = avg / f32::sqrt(2.0); // inverse of the coupled angular axis limit equation from rapier
 			
-			joint.set_limits(axis1, [0.0, c_limit]);
-			joint.set_limits(axis2, [0.0, c_limit]);
+			joint.set_limits(axis1, [0.0, avg]);
+			joint.set_limits(axis2, [0.0, avg]);
 			
 			joint.coupled_axes |= axis1.into();
 			joint.coupled_axes |= axis2.into();

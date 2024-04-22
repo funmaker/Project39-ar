@@ -1,5 +1,5 @@
 use std::sync::Arc;
-pub use vert::Pc;
+use anyhow::Result;
 use vulkano::device::DeviceOwned;
 use vulkano::image::SampleCount;
 use vulkano::pipeline::GraphicsPipeline;
@@ -13,8 +13,9 @@ use vulkano::render_pass::RenderPass;
 
 mod vertex;
 
-use crate::renderer::pipelines::{pre_mul_alpha_blending, PipelineConstructor, PipelineError};
+use crate::renderer::pipelines::{pre_mul_alpha_blending, PipelineConstructor};
 pub use vertex::Vertex;
+pub use vert::Pc;
 
 
 mod vert {
@@ -38,7 +39,7 @@ pub struct ToolGunTextPipeline;
 impl PipelineConstructor for ToolGunTextPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
 		let vs = vert::load(device.clone()).unwrap();
 		let fs = frag::load(device.clone()).unwrap();

@@ -1,4 +1,5 @@
 use std::time::Duration;
+use anyhow::Result;
 use rapier3d::geometry::ColliderBuilder;
 use rapier3d::prelude::{RigidBodyType, SharedShape};
 use smallvec::SmallVec;
@@ -6,7 +7,7 @@ use smallvec::SmallVec;
 use crate::application::{Entity, Application};
 use crate::math::PI;
 use crate::utils::ColliderEx;
-use super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::physics::collider::ColliderComponent;
 
 
@@ -26,7 +27,7 @@ impl Katamari {
 }
 
 impl Component for Katamari {
-	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<()> {
 		self.collider.set(
 			entity.add_component(ColliderComponent::new(
 				ColliderBuilder::ball(0.6)
@@ -38,7 +39,7 @@ impl Component for Katamari {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		if let Some(collider) = self.collider.using(entity) {
 			let physics = &mut *application.physics.borrow_mut();
 			let volume = collider.inner(physics).volume();
@@ -46,7 +47,7 @@ impl Component for Katamari {
 			
 			let mut to_eat = SmallVec::<[_; 16]>::new();
 			
-			for contact in physics.narrow_phase.contacts_with(collider.handle()) {
+			for contact in physics.narrow_phase.contact_pairs_with(collider.handle()) {
 				let other = if contact.collider1 == collider.handle() { contact.collider2 } else { contact.collider1 };
 				
 				if let Some(other) = physics.collider_set.get(other) {

@@ -1,5 +1,6 @@
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use openvr::compositor::Texture;
 use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use vulkano::{command_buffer, sync};
@@ -15,10 +16,10 @@ mod pipeline;
 use crate::debug;
 use crate::config::NovrConfig;
 use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice};
-use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RendererCreateFramebufferError, RenderTarget, RenderTargetContext};
+use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RenderTarget, RenderTargetContext};
 use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
 use super::VR;
-use background::{Background, BackgroundError, BackgroundRenderError, BackgroundLoadError};
+use background::Background;
 use camera::Camera;
 
 
@@ -36,7 +37,7 @@ pub struct Eyes {
 
 
 impl Eyes {
-	pub fn new_novr(config: &NovrConfig, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes, EyesCreationError> {
+	pub fn new_novr(config: &NovrConfig, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let min_framebuffer_size = (config.frame_buffer_width, config.frame_buffer_height);
 		let aspect = config.frame_buffer_width as f32 / config.frame_buffer_height as f32;
 		let fovx = config.fov / 180.0 * PI;
@@ -49,7 +50,7 @@ impl Eyes {
 		Self::new(min_framebuffer_size, (view, view), (projection, projection), (raw, raw), None, camera, renderer)
 	}
 	
-	pub fn new_vr(vr: Arc<VR>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes, EyesCreationError> {
+	pub fn new_vr(vr: Arc<VR>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let vr_lock = vr.lock().unwrap();
 		let min_framebuffer_size = vr_lock.system.recommended_render_target_size();
 		
@@ -70,7 +71,7 @@ impl Eyes {
 		Self::new(min_framebuffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), Some(vr), camera, renderer)
 	}
 	
-	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes, EyesCreationError> {
+	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let background = camera.map(|camera| Background::new(camera, raw_projection, renderer))
 		                       .transpose()?;
 		
@@ -133,7 +134,7 @@ impl Eyes {
 		})
 	}
 	
-	pub fn load_background(&mut self, camera_pos: Isometry3, renderer: &mut Renderer) -> Result<(), EyesLoadBackgroundError> {
+	pub fn load_background(&mut self, camera_pos: Isometry3, renderer: &mut Renderer) -> Result<()> {
 		if let Some(background) = &mut self.background {
 			renderer.try_enqueue(renderer.load_queue.clone(), |future| background.load_camera(camera_pos, future))?;
 		}
@@ -151,9 +152,7 @@ impl Eyes {
 }
 
 impl RenderTarget for Eyes {
-	type RenderError = EyesRenderTargetError;
-	
-	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>, Self::RenderError> {
+	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>> {
 		let center_pos = camera_pos.inverse();
 		
 		Ok(Some(RenderTargetContext::new(self.fb.clone(),
@@ -173,7 +172,7 @@ impl RenderTarget for Eyes {
 		&self.fb.main_image
 	}
 	
-	fn early_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
+	fn early_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		if let Some(background) = &mut self.background {
 			background.render(context.camera_pos, context.builder)?;
 		}
@@ -181,7 +180,7 @@ impl RenderTarget for Eyes {
 		Ok(())
 	}
 	
-	fn after_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
+	fn after_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		let framebuffer_size = self.framebuffer_size();
 		
 		let mut copy_info = CopyImageInfo::images(self.fb.main_image.clone(), self.side_image.clone());
@@ -205,7 +204,7 @@ impl RenderTarget for Eyes {
 		Ok(())
 	}
 	
-	fn after_execute(&mut self, _renderer: &mut Renderer) -> Result<(), EyesRenderTargetError> {
+	fn after_execute(&mut self, _renderer: &mut Renderer) -> Result<()> {
 		// TODO: Explicit timing mode
 		if let Some(ref vr) = self.vr {
 			let vr = vr.lock().unwrap();
@@ -254,18 +253,3 @@ impl RenderTarget for Eyes {
 	}
 }
 
-#[derive(Debug, Error)]
-pub enum EyesCreationError {
-	#[error(display = "{}", _0)] BackgroundError(#[error(source)] BackgroundError),
-	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
-}
-
-pub type EyesLoadBackgroundError = BackgroundLoadError;
-
-#[derive(Debug, Error)]
-pub enum EyesRenderTargetError {
-	#[error(display = "{}", _0)] BackgroundRenderError(#[error(source)] BackgroundRenderError),
-	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
-}

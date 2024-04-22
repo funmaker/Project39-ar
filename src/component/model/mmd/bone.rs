@@ -94,9 +94,10 @@ impl InspectMut for MMDBone {
 }
 
 impl InspectObject for &mut MMDBone {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().component() == self.model
-			&& application.get_selection().mmd_bone() == Some(self.id)
+	fn is_selected(&self, _application: &Self::Options<'_>) -> bool {
+		// application.get_selection().component() == self.model
+		// 	&& application.get_selection().mmd_bone() == Some(self.id)
+		false
 	}
 	
 	fn inspect_header(&self, _application: &Self::Options<'_>) -> WidgetText {

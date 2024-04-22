@@ -2,11 +2,11 @@ use std::{fs, mem};
 use std::convert::TryInto;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Error as IoError};
 use std::ops::{Deref, DerefMut};
 use std::path::{PathBuf, Path};
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
 use image::ImageFormat;
 use mmd::WeightDeform;
 use mmd::pmx::bone::{BoneFlags, Connection};
@@ -18,9 +18,8 @@ use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroup
 use crate::{config, debug};
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
 use crate::renderer::Renderer;
-use crate::renderer::assets_manager::{AssetKey, AssetsManager, AssetError, TomlAsset, TomlLoadError};
+use crate::renderer::assets_manager::{AssetKey, AssetsManager, TomlAsset};
 use crate::utils::PatternMatcher;
-use super::super::ModelError;
 use super::{Vertex, BodyPart};
 use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
 use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, JointDesc, ColliderDesc};
@@ -67,9 +66,8 @@ impl PmxAsset {
 
 impl AssetKey for PmxAsset {
 	type Asset = Arc<MMDModelShared>;
-	type Error = MMDModelLoadError;
 	
-	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
+	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset> {
 		let mut root = PathBuf::from(&self.path);
 		root.pop();
 		
@@ -79,7 +77,7 @@ impl AssetKey for PmxAsset {
 		
 		let mut overrides: Option<MMDConfig> = if self.overrides {
 			match assets_manager.load(TomlAsset::at(&root.join("model.toml")), renderer) {
-				Err(err) if err.kind() == ErrorKind::NotFound => None,
+				Err(err) if err.downcast_ref::<IoError>().map(|err| err.kind()) == Some(ErrorKind::NotFound) => None,
 				overrides => Some(overrides?),
 			}
 		} else {
@@ -161,7 +159,7 @@ impl AssetKey for PmxAsset {
 		
 		let mut bones_reader = mmd::BoneReader::new(materials_reader)?;
 		let bone_defs = bones_reader.iter()
-		                            .collect::<Result<Vec<mmd::Bone<MMDIndexConfig>>, _>>()?;
+		                            .collect::<std::result::Result<Vec<mmd::Bone<MMDIndexConfig>>, _>>()?;
 		
 		for def in bone_defs.iter() {
 			let name = if def.universal_name.len() > 0 {
@@ -414,7 +412,7 @@ impl Display for PmxAsset {
 	}
 }
 
-fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat, MMDModelLoadError> {
+fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat> {
 	Ok(match imghdr::from_file(&path)? {
 		Some(imghdr::Type::Gif) => ImageFormat::Gif,
 		Some(imghdr::Type::Tiff) => ImageFormat::Tiff,
@@ -564,27 +562,6 @@ impl<T, const N: usize> FlattenArrayVec for Vec<[T; N]> {
 		unsafe {
 			let (ptr, len, cap) = self.into_raw_parts();
 			Vec::from_raw_parts(ptr as *mut T, len * N, cap * N)
-		}
-	}
-}
-
-#[derive(Debug, Error)]
-pub enum MMDModelLoadError {
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
-	#[error(display = "{}", _0)] TomlLoadError(#[error(source)] TomlLoadError),
-	#[error(display = "{}", _0)] IoError(#[error(source)] std::io::Error),
-	#[error(display = "{}", _0)] PmxError(#[error(source)] mmd::Error),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
-}
-
-impl MMDModelLoadError {
-	pub fn kind(&self) -> ErrorKind {
-		match self {
-			MMDModelLoadError::AssetError(err) => err.kind(),
-			MMDModelLoadError::TomlLoadError(err) => err.kind(),
-			MMDModelLoadError::IoError(err) => err.kind(),
-			_ => ErrorKind::Other,
 		}
 	}
 }

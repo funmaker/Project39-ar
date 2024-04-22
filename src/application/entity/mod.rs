@@ -3,6 +3,7 @@ use std::cell::{Ref, RefCell, RefMut, Cell};
 use std::collections::{HashMap, BTreeMap};
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
 
@@ -10,10 +11,10 @@ mod builder;
 mod entity_ref;
 
 use crate::debug;
-use crate::component::{ComponentRef, ComponentError};
+use crate::component::ComponentRef;
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect, ref_cell_iter};
 use super::{Application, Component, Physics, Hand};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
@@ -84,7 +85,7 @@ impl Entity {
 		did_work
 	}
 	
-	pub fn setup_new_components(&self, application: &Application) -> Result<(), ComponentError> {
+	pub fn setup_new_components(&self, application: &Application) -> Result<()> {
 		for component in self.components.values() {
 			if component.inner().is_new() {
 				component.inner().mark_started();
@@ -153,7 +154,7 @@ impl Entity {
 		state.angular_velocity.reset();
 	}
 	
-	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<(), ComponentError> {
+	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<()> {
 		if let Some(parent) = self.parent.get(application) {
 			if let Some(parent_offset) = self.parent_offset.get() {
 				if parent.state().position.mutated {
@@ -169,7 +170,7 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn before_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<bool, ComponentError> {
+	pub fn before_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<bool> {
 		let mut is_transparent = false;
 		
 		for component in self.components.values() {
@@ -181,7 +182,7 @@ impl Entity {
 		Ok(is_transparent)
 	}
 	
-	pub fn render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> {
+	pub fn render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
 		let close_hide: bool = self.tag("CloseHide").unwrap_or_default();
 		let state = self.state.get_mut();
 		
@@ -209,7 +210,7 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn end_components(&self, application: &Application) -> Result<bool, ComponentError> {
+	pub fn end_components(&self, application: &Application) -> Result<bool> {
 		let mut did_work = false;
 		
 		for component in self.components.values() {
@@ -408,8 +409,17 @@ impl Entity {
 		self.parent.set(EntityRef::null());
 	}
 	
-	pub fn children(&self) -> Ref<Vec<EntityRef>> {
-		self.children.borrow()
+	pub fn children(&self) -> Ref<[EntityRef]> {
+		Ref::map(self.children.borrow(), Vec::as_slice)
+	}
+	
+	pub fn descendants<'a>(&'a self, application: &'a Application) -> impl Iterator<Item=&'a Entity> + 'a {
+		ref_cell_iter(&self.children, Vec::as_slice)
+			.flat_map(move |child| child.get(application))
+			.flat_map(move |child|
+				Some(child).into_iter()
+				           .chain(Box::new(child.descendants(application)) as Box<dyn Iterator<Item=_>>)
+			)
 	}
 	
 	pub fn persists(&self) -> bool {

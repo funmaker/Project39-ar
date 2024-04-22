@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
@@ -15,9 +16,9 @@ use crate::application::{Application, Entity};
 use crate::math::{face_towards_lossy, Similarity3, to_euler, PI, Rot3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureAsset;
+use crate::renderer::pipelines::PipelineNoLayoutError;
 use crate::utils::{BufferEx, IntoInfo, ExUi, FenceCheck};
-use super::super::{Component, ComponentBase, ComponentError, ComponentInner};
-use super::ModelError;
+use super::super::{Component, ComponentBase, ComponentInner};
 use pipeline::{FoodPipeline, Vertex, Pc};
 
 
@@ -36,7 +37,7 @@ pub struct Billboard {
 
 #[allow(dead_code)]
 impl Billboard {
-	pub fn new(texture: TextureAsset, renderer: &mut Renderer) -> Result<Billboard, ModelError> {
+	pub fn new(texture: TextureAsset, renderer: &mut Renderer) -> Result<Billboard> {
 		let pipeline = renderer.pipelines.get::<FoodPipeline>()?;
 		let texture = renderer.load(texture)?;
 		let image_size = texture.image.image().dimensions().width_height();
@@ -62,7 +63,7 @@ impl Billboard {
 		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
+		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
 			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
 			                                       WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
 		                                       ])?;
@@ -87,7 +88,7 @@ impl Billboard {
 }
 
 impl Component for Billboard {
-	fn tick(&self, entity: &Entity, _application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, _application: &Application, _delta_time: Duration) -> Result<()> {
 		let state = entity.state_mut();
 		
 		let relative = state.position.rotation / self.last_rot.get();
@@ -99,7 +100,7 @@ impl Component for Billboard {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		if !self.fence.check() { return Ok(()) }
 		
 		let position = entity.state().position.translation.vector;

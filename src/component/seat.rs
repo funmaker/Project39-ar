@@ -1,8 +1,9 @@
 use std::time::Duration;
+use anyhow::Result;
 
 use crate::application::{Entity, Application, EntityRef};
 use crate::math::{AABB, Point3, Rot3, Vec3};
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 
 
 #[derive(ComponentBase)]
@@ -23,7 +24,7 @@ impl Seat {
 }
 
 impl Component for Seat {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		if let Some(hmd) = application.find_entity(|e| e.tag("Head").unwrap_or_default()) {
 			let local_pos = entity.state().position.inverse() * *hmd.state().position * Point3::origin();
 			

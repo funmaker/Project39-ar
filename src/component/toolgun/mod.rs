@@ -1,10 +1,9 @@
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use err_derive::Error;
+use anyhow::Result;
 use rapier3d::pipeline::QueryFilter;
 use simba::scalar::SubsetOf;
-use vulkano::{descriptor_set, sync, command_buffer};
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -24,12 +23,12 @@ use crate::debug;
 use crate::application::{Application, Entity};
 use crate::math::{AMat4, Color, Isometry3, Point3, Ray, Rot3, Similarity3, Vec3, cast_ray_on_plane};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::renderer::pipelines::PipelineError;
-use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
-use super::{Component, ComponentBase, ComponentError, ComponentInner, ComponentRef};
+use crate::renderer::pipelines::PipelineNoLayoutError;
+use crate::utils::{BufferEx, IntoInfo, FenceCheck};
+use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::hand::HandComponent;
 use pipeline::{ToolGunTextPipeline, Vertex, Pc};
-use prop_manager::{PropCollection, PropManagerError};
+use prop_manager::PropCollection;
 use tool::{get_all_tools, Tool};
 
 
@@ -66,7 +65,7 @@ pub struct ToolGun {
 }
 
 impl ToolGun {
-	pub fn new(grab_pos: Isometry3, renderer: &mut Renderer) -> Result<Self, ToolGunError> {
+	pub fn new(grab_pos: Isometry3, renderer: &mut Renderer) -> Result<Self> {
 		let pipeline = renderer.pipelines.get::<ToolGunTextPipeline>()?;
 		
 		let square = [
@@ -88,7 +87,7 @@ impl ToolGun {
 		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(ToolGunError::NoLayout)?.clone(), [
+		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
 			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
 		                                       ])?;
 		
@@ -151,14 +150,14 @@ impl ToolGun {
 }
 
 impl Component for ToolGun {
-	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<()> {
 		entity.set_tag("GrabSticky", true);
 		entity.set_tag("GrabPos", self.grab_pos);
 		
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		let ray = self.ray(application);
 		let state = &mut *self.state.borrow_mut();
 		
@@ -236,7 +235,7 @@ impl Component for ToolGun {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
 		if !self.fence.check() { return Ok(()); }
 		let state = &mut *self.state.borrow_mut();
 		
@@ -281,18 +280,4 @@ impl Component for ToolGun {
 		
 		Ok(())
 	}
-}
-
-
-#[derive(Debug, Error)]
-pub enum ToolGunError {
-	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
-	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-	#[error(display = "{}", _0)] PropManagerError(#[error(source)] PropManagerError),
-	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }

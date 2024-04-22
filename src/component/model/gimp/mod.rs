@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
+use anyhow::Result;
 use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -14,9 +15,10 @@ use crate::application::{Application, Entity, Hand};
 use crate::math::{Similarity3, Color, Point3, Isometry3, face_towards_lossy, Rot3, PI};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::assets_manager::TextureBundle;
+use crate::renderer::pipelines::PipelineNoLayoutError;
 use crate::utils::{FenceCheck, IndexSubbuffer, AutoCommandBufferBuilderEx, BufferEx, IntoInfo};
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
-use super::{ModelError, VertexIndex};
+use super::super::{Component, ComponentBase, ComponentInner};
+use super::VertexIndex;
 pub use pipeline::Vertex;
 use pipeline::{GimpPipeline, Pc};
 
@@ -41,7 +43,7 @@ impl GimpModel {
 	               texture: TextureBundle,
 	               normal_texture: TextureBundle,
 	               renderer: &mut Renderer)
-	               -> Result<GimpModel, ModelError>
+	               -> Result<GimpModel>
 	               where VI: VertexIndex {
 		let pipeline = renderer.pipelines.get::<GimpPipeline>()?;
 		
@@ -60,7 +62,7 @@ impl GimpModel {
 		                                  &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(ModelError::NoLayout)?.clone(), [
+		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
 			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
 			                                       WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
 			                                       WriteDescriptorSet::image_view_sampler(2, normal_texture.image.clone(), normal_texture.sampler.clone()),
@@ -88,7 +90,7 @@ impl GimpModel {
 		self.fence.check()
 	}
 	
-	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<(), ComponentError> {
+	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<()> {
 		if !self.loaded() { return Ok(()) }
 		
 		context.builder.bind_pipeline_graphics(self.pipeline.clone())
@@ -115,7 +117,7 @@ impl GimpModel {
 }
 
 impl Component for GimpModel {
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		if application.input.fire_btn(Hand::Right).pressed {
 			entity.unset_tag("Grabbed");
 			self.active.set(true);
@@ -157,7 +159,7 @@ impl Component for GimpModel {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		self.render_impl(Similarity3::from_isometry(*entity.state().position, 1.0), Color::FULL_WHITE, context)?;
 		
 		Ok(())

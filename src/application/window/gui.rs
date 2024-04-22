@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use egui::{Context, TextStyle};
 use egui_winit_vulkano::{Gui, GuiConfig};
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use vulkano::{command_buffer, render_pass};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassContents};
 use vulkano::format::ClearValue;
@@ -26,7 +27,7 @@ pub struct WindowGui {
 }
 
 impl WindowGui {
-	pub fn new(fb: &FramebufferBundle, event_loop: &EventLoop<()>, surface: Arc<Surface>, renderer: &Renderer) -> Result<Self, WindowGuiError> {
+	pub fn new(fb: &FramebufferBundle, event_loop: &EventLoop<()>, surface: Arc<Surface>, renderer: &Renderer) -> Result<Self> {
 		let render_pass = vulkano::ordered_passes_renderpass!(
 			renderer.device.clone(),
 			attachments: {
@@ -90,7 +91,7 @@ impl WindowGui {
 		self.gui.update(event)
 	}
 	
-	pub fn regen_framebuffer(&mut self, fb: &FramebufferBundle) -> Result<(), WindowGuiRegenFramebufferError> {
+	pub fn regen_framebuffer(&mut self, fb: &FramebufferBundle) -> Result<()> {
 		self.framebuffer = Framebuffer::new(self.render_pass.clone(), FramebufferCreateInfo {
 			attachments: vec![ImageView::new_default(fb.main_image.clone())?],
 			extent: fb.main_image.dimensions().width_height(),
@@ -117,7 +118,7 @@ impl WindowGui {
 		&self.gui.egui_ctx
 	}
 	
-	pub fn paint(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), WindowGuiPaintError> {
+	pub fn paint(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let cb = self.gui.draw_on_subpass_image(self.framebuffer.extent());
 		
 		builder.begin_render_pass(RenderPassBeginInfo {
@@ -132,21 +133,3 @@ impl WindowGui {
 }
 
 
-#[derive(Debug, Error)]
-pub enum WindowGuiError {
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
-	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
-}
-
-#[derive(Debug, Error)]
-pub enum WindowGuiRegenFramebufferError {
-	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
-}
-
-#[derive(Debug, Error)]
-pub enum WindowGuiPaintError {
-	#[error(display = "{}", _0)] RenderPassError(#[error(source)] command_buffer::RenderPassError),
-	#[error(display = "{}", _0)] ExecuteCommandsError(#[error(source)] command_buffer::ExecuteCommandsError),
-}

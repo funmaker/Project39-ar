@@ -1,4 +1,5 @@
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use mmd::pmx::bone::{Bone, Connection};
 use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
@@ -269,11 +270,11 @@ impl Into<JointEx<MMDIndexConfig>> for MMDJointOverride {
 
 #[derive(Debug, Error)]
 pub enum MMDOverrideError {
-	#[error(display = "No such bone id {}", _0)] BoneNotFound(usize),
-	#[error(display = "Bone id {} has no parent", _0)] NoParent(usize),
-	#[error(display = "Bone id {} has no connection, can't determine orientation.", _0)] InvalidOffset(usize),
-	#[error(display = "Bone id {} has no rigid bodies", _0)] NoRigidBodies(usize),
-	#[error(display = "Ancestors of bone id {} have no rigid bodies", _0)] AncestorsNoRigidBodies(usize),
+	#[error("No such bone id {0}")] BoneNotFound(usize),
+	#[error("Bone id {0} has no parent")] NoParent(usize),
+	#[error("Bone id {0} has no connection, can't determine orientation.")] InvalidOffset(usize),
+	#[error("Bone id {0} has no rigid bodies")] NoRigidBodies(usize),
+	#[error("Ancestors of bone id {0} have no rigid bodies")] AncestorsNoRigidBodies(usize),
 }
 
 mod shape_type_serde {

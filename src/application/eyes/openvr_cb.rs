@@ -27,15 +27,15 @@ pub struct OpenVRCommandBuffer<A = StandardCommandBufferAlloc> {
 }
 
 impl OpenVRCommandBuffer {
-	pub unsafe fn start(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+	pub unsafe fn start(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, queue_family_index: u32) -> Result<OpenVRCommandBuffer> {
 		Self::new(allocator, image, None, Some(ImageLayout::TransferSrcOptimal), queue_family_index)
 	}
 	
-	pub unsafe fn end(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+	pub unsafe fn end(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, queue_family_index: u32) -> Result<OpenVRCommandBuffer> {
 		Self::new(allocator, image, Some(ImageLayout::TransferSrcOptimal), None, queue_family_index)
 	}
 	
-	unsafe fn new(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, from_layout: Option<ImageLayout>, to_layout: Option<ImageLayout>, queue_family_index: u32) -> Result<OpenVRCommandBuffer, OomError> {
+	unsafe fn new(allocator: &StandardCommandBufferAllocator, image: Arc<impl ImageAccess>, from_layout: Option<ImageLayout>, to_layout: Option<ImageLayout>, queue_family_index: u32) -> Result<OpenVRCommandBuffer> {
 		let builder_alloc = allocator.allocate(queue_family_index, CommandBufferLevel::Primary, 1)?
 		                             .next()
 		                             .expect("Requested one command buffer from the command pool, but got zero.");

@@ -1,8 +1,7 @@
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::{Result, Error};
 use nalgebra::Unit;
-use vulkano::command_buffer;
 use vulkano::buffer::BufferUsage;
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
@@ -16,15 +15,15 @@ use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 mod text_cache;
 
 use crate::component::model::SimpleModel;
-use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::component::model::simple::asset::ObjAsset;
 use crate::debug::{DEBUG_POINTS, DebugPoint, DEBUG_LINES, DebugLine, DEBUG_TEXTS, DebugText, DEBUG_BOXES, DEBUG_CAPSULES, DEBUG_SPHERES, DebugBox, DebugSphere, DebugCapsule};
 use crate::math::{Vec2, Rot2, PMat4, Isometry3, Similarity3, face_upwards_lossy, PI};
-use crate::utils::{AutoCommandBufferBuilderEx, SubbufferAllocatorEx, SubbufferAllocatorExError};
+use crate::utils::{AutoCommandBufferBuilderEx, SubbufferAllocatorEx};
 use super::{Renderer, RenderContext};
 use super::assets_manager::TextureAsset;
-use super::pipelines::{Pipelines, PipelineError};
+use super::pipelines::Pipelines;
 use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePipeline, ShapePc, Vertex, TexturedVertex};
-pub use text_cache::{TextCache, TextCacheError, TextCacheGetError};
+pub use text_cache::TextCache;
 
 
 pub struct DebugRenderer {
@@ -51,7 +50,7 @@ const RING_MIN: f32 = 5.0;
 const RING_WIDTH: f32 = 0.9;
 
 impl DebugRenderer {
-	pub fn new(queue: &Arc<Queue>, memory_allocator: &Arc<StandardMemoryAllocator>, command_buffer_allocator: &Arc<StandardCommandBufferAllocator>, descriptor_set_allocator: &Arc<StandardDescriptorSetAllocator>, pipelines: &mut Pipelines) -> Result<DebugRenderer, DebugRendererError> {
+	pub fn new(queue: &Arc<Queue>, memory_allocator: &Arc<StandardMemoryAllocator>, command_buffer_allocator: &Arc<StandardCommandBufferAllocator>, descriptor_set_allocator: &Arc<StandardDescriptorSetAllocator>, pipelines: &mut Pipelines) -> Result<DebugRenderer> {
 		let pipeline = pipelines.get::<DebugPipeline>()?;
 		let text_pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		let shape_pipeline = pipelines.get::<DebugShapePipeline>()?;
@@ -90,7 +89,7 @@ impl DebugRenderer {
 		self.text_cache.borrow_mut()
 	}
 	
-	pub fn before_render(&mut self, renderer: &mut Renderer) -> Result<(), DebugRendererPreRenderError> {
+	pub fn before_render(&mut self, renderer: &mut Renderer) -> Result<()> {
 		if self.models.is_none() {
 			let mut load_models = false;
 			DEBUG_BOXES.with(|boxes| load_models |= !boxes.borrow().is_empty());
@@ -107,10 +106,10 @@ impl DebugRenderer {
 			}
 		}
 		
-		Ok(())
+		Ok::<_, Error>(())
 	}
 	
-	pub fn render(&mut self, context: &mut RenderContext) -> Result<(), DebugRendererRenderError> {
+	pub fn render(&mut self, context: &mut RenderContext) -> Result<()> {
 		let viewproj = (
 			context.projection.0 * context.view.0,
 			context.projection.1 * context.view.1,
@@ -182,7 +181,7 @@ impl DebugRenderer {
 				}
 			}
 			
-			Ok::<_, DebugRendererRenderError>(())
+			Ok::<_, Error>(())
 		})?;
 		
 		DEBUG_CAPSULES.with(|capsules| self.draw_capsules(&mut *capsules.borrow_mut(), context.builder))?;
@@ -331,7 +330,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>, DebugRendererRenderError> {
+	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
 		let size_px = vector!(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
@@ -379,7 +378,7 @@ impl DebugRenderer {
 		Ok(Some(entry.set.clone()))
 	}
 	
-	fn draw_boxes(&self, boxes: &mut Vec<DebugBox>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+	fn draw_boxes(&self, boxes: &mut Vec<DebugBox>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.dbox.loaded() => { models }
 			_ => {
@@ -417,7 +416,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
-	fn draw_spheres(&self, spheres: &mut Vec<DebugSphere>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+	fn draw_spheres(&self, spheres: &mut Vec<DebugSphere>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.sphere.loaded() => { models }
 			_ => {
@@ -455,7 +454,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
-	fn draw_capsules(&self, capsules: &mut Vec<DebugCapsule>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<(), DebugRendererRenderError> {
+	fn draw_capsules(&self, capsules: &mut Vec<DebugCapsule>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.ccap.loaded()
 			             && models.cbody.loaded() => { models }
@@ -540,20 +539,3 @@ impl DebugRenderer {
 }
 
 
-#[derive(Debug, Error)]
-pub enum DebugRendererError {
-	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-	#[error(display = "{}", _0)] TextCacheError(#[error(source)] TextCacheError),
-}
-
-#[derive(Debug, Error)]
-pub enum DebugRendererRenderError {
-	#[error(display = "{}", _0)] TextCacheGetError(#[error(source)] TextCacheGetError),
-	#[error(display = "{}", _0)] SubbufferAllocatorExError(#[error(source)] SubbufferAllocatorExError),
-	#[error(display = "{}", _0)] DrawIndexedError(#[error(source)] command_buffer::PipelineExecutionError),
-}
-
-#[derive(Debug, Error)]
-pub enum DebugRendererPreRenderError {
-	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-}

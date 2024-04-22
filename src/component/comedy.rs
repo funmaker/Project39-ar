@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use nalgebra::Point3;
 use rapier3d::dynamics::RigidBodyType;
@@ -9,9 +10,9 @@ use crate::application::{Entity, Application, EntityRef};
 use crate::math::{Color, Isometry3, Similarity3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::ExUi;
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 use super::model::SimpleModel;
-use super::model::simple::{ObjAsset, ObjLoadError};
+use super::model::simple::ObjAsset;
 use super::physics::joint::JointComponent;
 
 
@@ -26,7 +27,7 @@ pub struct Comedy {
 }
 
 impl Comedy {
-	pub fn new(renderer: &mut Renderer) -> Result<Self, ObjLoadError> {
+	pub fn new(renderer: &mut Renderer) -> Result<Self> {
 		Ok(Comedy {
 			inner: ComponentInner::from_render_type(RenderType::Transparent),
 			model: renderer.load(ObjAsset::at("comedy/base.obj", "comedy/base.png"))?,
@@ -37,7 +38,7 @@ impl Comedy {
 }
 
 impl Component for Comedy {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let pos = *entity.state().position;
 		
 		self.iris.set(application.add_entity(
@@ -59,7 +60,7 @@ impl Component for Comedy {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		if let Some(iris) = self.iris.get(application) {
 			self.iris_pos.set(*iris.state().position);
 			
@@ -79,7 +80,7 @@ impl Component for Comedy {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		let base_pos = *entity.state().position;
 		
 		self.model.render_impl(Similarity3::from_isometry(self.iris_pos.get(), 0.6 * SCALE), Color::FULL_BLACK, context)?;

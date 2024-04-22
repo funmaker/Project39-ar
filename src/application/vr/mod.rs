@@ -1,14 +1,15 @@
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use openvr::{Context, System, Compositor, RenderModels};
 
 mod camera_service;
 mod tracked_camera;
 
 pub use camera_service::CameraService;
-pub use tracked_camera::{TrackedCamera, FrameType, TrackedCameraError};
+pub use tracked_camera::{TrackedCamera, FrameType};
 
 
 static VR_CREATED: AtomicBool = AtomicBool::new(false);
@@ -34,9 +35,9 @@ impl Drop for VRInner {
 pub struct VR(Mutex<VRInner>);
 
 impl VR {
-	pub fn new() -> Result<VR, VRError> {
+	pub fn new() -> Result<VR> {
 		if VR_CREATED.swap(true, Ordering::SeqCst) {
-			return Err(VRError::AlreadyInitialized);
+			return Err(VRError::AlreadyInitialized.into());
 		}
 		
 		let context = unsafe { openvr::init(openvr::ApplicationType::Scene) }?;
@@ -67,7 +68,5 @@ impl Deref for VR {
 
 #[derive(Debug, Error)]
 pub enum VRError {
-	#[error(display = "OpenVR has already been initialized")] AlreadyInitialized,
-	#[error(display = "{}", _0)] OpenVRInitError(#[error(source)] openvr::InitError),
-	#[error(display = "{}", _0)] TrackedCameraInitError(#[error(source)] tracked_camera::InitError),
+	#[error("OpenVR has already been initialized")] AlreadyInitialized,
 }

@@ -22,17 +22,18 @@ macro_rules! mmd_pipelines {
 		}
 	)* ) => {
 		use std::sync::Arc;
+		use anyhow::Result;
 		use vulkano::render_pass::RenderPass;
 		use vulkano::device::DeviceOwned;
 		use vulkano::pipeline::GraphicsPipeline;
-				use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
+		use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 		use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState, FrontFace};
 		use vulkano::pipeline::graphics::viewport::ViewportState;
 		use vulkano::pipeline::graphics::multisample::MultisampleState;
 		use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 		use vulkano::image::SampleCount;
 		
-		use $crate::renderer::pipelines::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
+		use $crate::renderer::pipelines::{PipelineConstructor, pre_mul_alpha_blending};
 		
 		$(
 			$pub struct $name;
@@ -40,7 +41,7 @@ macro_rules! mmd_pipelines {
 			impl PipelineConstructor for $name {
 				type PipeType = GraphicsPipeline;
 				
-				fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+				fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 					use $vertex_shader as vertex_shader;
 					use $fragment_shader as fragment_shader;
 					

@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 use std::sync::Arc;
+use anyhow::Result;
 pub use frag::Pc;
 use vulkano::device::DeviceOwned;
 use vulkano::image::SampleCount;
@@ -13,7 +14,7 @@ use vulkano::render_pass::{RenderPass, Subpass};
 
 mod vertex;
 
-use crate::renderer::pipelines::{PipelineConstructor, PipelineError};
+use crate::renderer::pipelines::PipelineConstructor;
 pub use vertex::Vertex;
 
 
@@ -38,7 +39,7 @@ pub struct BackgroundPipeline;
 impl PipelineConstructor for BackgroundPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
 		let vs = vert::load(device.clone()).unwrap();
 		let fs = frag::load(device.clone()).unwrap();

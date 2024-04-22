@@ -7,13 +7,14 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, ErrorKind, Seek};
 use std::path::{Path, PathBuf};
+use anyhow::Result;
 
 mod texture;
 mod toml;
 
 use super::Renderer;
-pub use self::toml::{TomlAsset, TomlLoadError};
-pub use texture::{TextureAsset, TextureBundle, TextureLoadError};
+pub use self::toml::TomlAsset;
+pub use texture::{TextureAsset, TextureBundle};
 
 
 pub struct AssetsManager {
@@ -27,7 +28,7 @@ impl AssetsManager {
 		}
 	}
 	
-	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key, renderer: &mut Renderer) -> Result<Key::Asset, Key::Error> {
+	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key, renderer: &mut Renderer) -> Result<Key::Asset> {
 		let mut hasher = DefaultHasher::new();
 		TypeId::of::<Key>().hash(&mut hasher);
 		key.hash(&mut hasher);
@@ -68,9 +69,8 @@ impl AssetsManager {
 
 pub trait AssetKey: Hash + Display {
 	type Asset: Clone + 'static;
-	type Error: std::error::Error;
 	
-	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error>;
+	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset>;
 }
 
 // Windows why

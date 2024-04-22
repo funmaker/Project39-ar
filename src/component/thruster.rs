@@ -1,7 +1,8 @@
 use std::time::Duration;
+use anyhow::Result;
 
 use crate::application::{Entity, Application, Hand};
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 
 
 const FORCE: f32 = 1000.0;
@@ -30,7 +31,7 @@ impl Thruster {
 }
 
 impl Component for Thruster {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		if let Some(root) = application.find_entity(|e| e.name == "VR Root") {
 			if root.has_tag("Seat") {
 				let (x, y) = application.input.controller(Hand::Right)

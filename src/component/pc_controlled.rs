@@ -1,8 +1,9 @@
 use std::time::Duration;
+use anyhow::Result;
 
 use crate::application::{Entity, Application, Key};
 use crate::math::{Vec3, Isometry3, PI, to_euler, from_euler};
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 
 
 #[derive(ComponentBase)]
@@ -19,7 +20,7 @@ impl PCControlled {
 }
 
 impl Component for PCControlled {
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		let mut entity = entity.state_mut();
 		let mut position = entity.position.translation.vector;
 		let (mut pitch, mut yaw, mut roll) = to_euler(entity.position.rotation);

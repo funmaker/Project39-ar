@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use simba::scalar::SubsetOf;
 
@@ -11,7 +12,7 @@ mod proc_anim;
 use crate::application::{Entity, Application};
 use crate::math::Rot3;
 use crate::utils::num_key;
-use super::{Component, ComponentBase, ComponentInner, ComponentRef, ComponentError};
+use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::model::MMDModel;
 use super::model::mmd::{BodyPart, MMDRigidBody};
 use super::model::mmd::asset::PmxAsset;
@@ -109,7 +110,7 @@ impl Miku {
 }
 
 impl Component for Miku {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let model = application.renderer.borrow_mut().load(self.asset.clone())?;
 		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
@@ -118,7 +119,7 @@ impl Component for Miku {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		let mut model = self.model
 		                    .using(entity)
 		                    .unwrap()

@@ -3,15 +3,16 @@
 use std::sync::Arc;
 use std::time::{Instant, Duration};
 use ::openvr_sys as sys;
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use openvr::property;
 use openvr::system::TrackedPropertyError;
 use simba::scalar::SupersetOf;
 
 use crate::{debug, config};
 use crate::math::{VRSlice, Isometry3, AMat4};
-use super::super::super::vr::{VR, FrameType, TrackedCameraError, CameraService};
-use super::{Camera, CameraCaptureError};
+use super::super::super::vr::{VR, FrameType, CameraService};
+use super::{Camera, CameraCaptureTimeout};
 
 
 pub const CAPTURE_INDEX: u32 = 0;
@@ -24,7 +25,7 @@ pub struct OpenVR {
 }
 
 impl OpenVR {
-	pub fn new(vr: Arc<VR>) -> Result<OpenVR, OpenVRCameraError> {
+	pub fn new(vr: Arc<VR>) -> Result<OpenVR> {
 		let index = CAPTURE_INDEX;
 		let headtocam;
 		
@@ -84,7 +85,7 @@ impl OpenVR {
 }
 
 impl Camera for OpenVR {
-	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>)> {
 		let last_capture = self.last_capture;
 		self.last_capture = Instant::now();
 		
@@ -94,8 +95,8 @@ impl Camera for OpenVR {
 		
 		let mut fb = self.service.get_frame_buffer(FrameType::Distorted)
 		                         .map_err(|err| match err.code {
-			                         sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureError::Timeout,
-			                         _ => CameraCaptureError::Other(err.into()),
+			                         sys::EVRTrackedCameraError_VRTrackedCameraError_NoFrameAvailable => CameraCaptureTimeout.into(),
+			                         _ => err.into(),
 		                         });
 		
 		// TODO: ???
@@ -117,11 +118,4 @@ impl Camera for OpenVR {
 		))
 	}
 }
-
-#[derive(Debug, Error)]
-pub enum OpenVRCameraError {
-	#[error(display = "{}", _0)] TrackedCameraError(#[error(source)] TrackedCameraError),
-	#[error(display = "{}", _0)] TrackedPropertyError(#[error(source)] TrackedPropertyError),
-}
-
 

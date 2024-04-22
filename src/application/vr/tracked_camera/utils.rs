@@ -18,6 +18,7 @@ pub struct Intrinsics {
 	pub center: [f32; 2],
 }
 
+#[allow(dead_code)]
 #[derive(Default, Debug)]
 pub struct Projection {
 	pub z_near: f32,

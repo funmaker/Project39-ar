@@ -14,7 +14,8 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 		None => return,
 	};
 	
-	let id = ui.id().with(&miku.entity(application).name).with("Miku Gui");
+	let miku_ent = miku.entity(application);
+	let id = ui.id().with(&miku_ent.name).with("Miku Gui");
 	let selected_bone = application.get_selection().mmd_bone();
 	
 	let new_selection = ui.columns(3, |ui| {
@@ -22,7 +23,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 			list(&mut ui[0],
 			     id.with("bones"),
 			     selected_bone,
-			     model.state.borrow()
+			     model.state()
 			          .bones
 			          .iter()
 			          .map(|bone| bone.name.as_str().into())
@@ -31,13 +32,9 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 			list(&mut ui[2],
 			     id.with("rigidbodies"),
 			     selected_bone,
-			     model.state.borrow()
-			          .rigid_bodies
-			          .iter()
-			          .map(|rb| rb
-			                      .get(application)
-			                      .map(|rb| (rb.bone, rb.entity(application).name.as_str().into()))
-			                      .unwrap_or_else(|| (0, RichText::new("NULL").monospace().italics())))
+			     model.state()
+			          .rigid_bodies(application)
+			          .map(|rb| (rb.bone, rb.entity(application).name.as_str().into()))
 			),
 		].iter() // TODO: into_iter in new rust edition
 		 .find_map(|&x| x)
@@ -45,31 +42,61 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	
 	ui.separator();
 	
+	ui.horizontal(|ui| {
+		if ui.button("Freeze All").clicked() {
+			let physics = &mut *application.physics.borrow_mut();
+			
+			for rigid_body in model.state().rigid_bodies(application) {
+				rigid_body.entity(application).freeze(physics);
+			}
+		}
+		
+		if ui.button("Unfreeze All").clicked() {
+			let physics = &mut *application.physics.borrow_mut();
+			
+			for rigid_body in model.state().rigid_bodies(application) {
+				rigid_body.entity(application).unfreeze(physics);
+			}
+		}
+		
+		if ui.button("Reset Pose").clicked() {
+			let root_pos = *miku_ent.state().position;
+			
+			for rigid_body in model.state().rigid_bodies(application) {
+				*rigid_body.entity(application).state_mut().position = root_pos * rigid_body.rest_pos.get();
+			}
+		}
+	});
+	
+	ui.separator();
+	
 	if let Some(selected_bone) = selected_bone {
-		if let Ok(mut model_state) = model.state.try_borrow_mut() {
-			if let Some(bone) = model_state.bones.get_mut(selected_bone) {
+		let rb = model.state()
+		              .rigid_bodies(application)
+		              .find(|rb| rb.bone == selected_bone);
+		
+		if let Some(rb) = rb {
+			if let Some(joint) = rb.joint.get(application) {
 				ui.inspect_collapsing()
+				  .title("MMD Joint")
 				  .default_open(true)
+				  .show(ui, joint, application);
+			}
+			
+			ui.inspect_collapsing()
+			  .title("MMD Rigid Body")
+			  .default_open(true)
+			  .show(ui, rb, application);
+			
+			if let Some(bone) = model.state_mut().bones.get_mut(selected_bone) {
+				ui.inspect_collapsing()
 				  .title("Bone")
 				  .show(ui, bone, application);
 			}
-		} else {
-			ui.label("Can't borrow model state.");
-		}
-		
-		if let Some(rb) = model.state.borrow()
-		                             .rigid_bodies
-		                             .iter()
-		                             .filter_map(|rb| rb.get(application))
-		                             .find(|rb| rb.bone == selected_bone) {
-			if let Some(joint) = rb.joint.get(application) {
-				ui.inspect_collapsing()
-				  .title("Joint")
-				  .default_open(true)
-				  .show(ui, joint.handle(), application);
-			}
 			
-			ui.collapsing("Entity", |ui| ui.inspect(&mut *rb.entity(application).state_mut(), ()));
+			ui.inspect_collapsing()
+			  .title("Entity")
+			  .show(ui, rb.entity(application), application);
 		}
 	}
 	

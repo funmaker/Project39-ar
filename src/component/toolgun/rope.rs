@@ -1,3 +1,4 @@
+use anyhow::Result;
 use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Hand, Application, EntityRef};
@@ -5,7 +6,7 @@ use crate::math::{Ray, Point3};
 use crate::utils::ColliderEx;
 use super::super::physics::rope::Rope;
 use super::ToolGun;
-use super::tool::{Tool, ToolError};
+use super::tool::Tool;
 
 
 pub struct RopeTool {
@@ -27,7 +28,7 @@ impl Tool for RopeTool {
 		"Rope"
 	}
 	
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> {
 		if !application.input.fire_btn(hand).down {
 			return Ok(());
 		}

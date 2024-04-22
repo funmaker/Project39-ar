@@ -3,12 +3,13 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
+use anyhow::Result;
 use arc_swap::ArcSwap;
 use getopts::{Options, Matches};
 use serde::{Deserialize, Serialize};
 
 use crate::math::{IVec2, Vec2, Vec4, Vec3};
-use crate::utils::from_args::{FromArgs, ArgsError, args_terminals};
+use crate::utils::from_args::{FromArgs, args_terminals};
 
 
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
@@ -138,7 +139,7 @@ impl Config {
 		ret
 	}
 	
-	pub fn apply_args(&mut self) -> Result<(), ArgsError> {
+	pub fn apply_args(&mut self) -> Result<()> {
 		let args: Vec<String> = env::args().collect();
 		
 		let mut opts = Options::new();
@@ -150,8 +151,8 @@ impl Config {
 		Ok(())
 	}
 	
-	pub fn default_toml() -> Result<String, toml::ser::Error> {
-		toml::to_string_pretty(&Self::default())
+	pub fn default_toml() -> Result<String> {
+		Ok(toml::to_string_pretty(&Self::default())?)
 	}
 }
 

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
+use anyhow::Result;
 use vulkano::sync::future::{FenceSignalFuture, GpuFuture, FlushError};
 
 
@@ -7,8 +8,7 @@ use vulkano::sync::future::{FenceSignalFuture, GpuFuture, FlushError};
 pub struct FenceCheck(Arc<FenceSignalFuture<Box<dyn GpuFuture>>>);
 
 impl FenceCheck {
-	pub fn new<GF>(future: GF)
-	               -> Result<FenceCheck, FlushError>
+	pub fn new<GF>(future: GF) -> Result<FenceCheck>
 		where GF: GpuFuture + 'static {
 		Ok(FenceCheck(Arc::new(future.boxed().then_signal_fence_and_flush()?)))
 	}

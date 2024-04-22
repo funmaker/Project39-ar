@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::fmt::Display;
 use std::hash::Hash;
+use std::num::NonZero;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use arc_swap::ArcSwapOption;
@@ -204,6 +205,20 @@ macro_rules! num_impl {
 			
 			fn inspect_ui(&mut self, ui: &mut Ui, range: Self::Options<'_>) {
 				ui.add(DragValue::new(self).clamp_range(range));
+			}
+		}
+		
+		impl InspectMut for NonZero<$type> {
+			type Options<'a> = RangeInclusive<$type>;
+			
+			fn inspect_ui(&mut self, ui: &mut Ui, range: Self::Options<'_>) {
+				let mut value = self.get();
+				
+				ui.inspect(&mut value, range);
+				
+				if let Some(new_value) = Self::new(value) {
+					*self = new_value;
+				}
 			}
 		}
 	)*}

@@ -1,11 +1,12 @@
 use std::cell::Cell;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 
 use crate::application::{Entity, Application, Key, EntityRef};
 use crate::debug;
 use crate::utils::ExUi;
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 use super::model::simple::ObjAsset;
 use super::pc_controlled::PCControlled;
 
@@ -28,7 +29,7 @@ impl PoV {
 }
 
 impl Component for PoV {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		application.pov.set(entity.as_ref());
 		debug::set_flag("DebugGizmoPoV", *entity.state().position);
 		
@@ -80,7 +81,7 @@ impl DetachedPoV {
 }
 
 impl Component for DetachedPoV {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		application.detached_pov.set(entity.as_ref());
 		
 		if entity.parent().get(application).is_some() && (

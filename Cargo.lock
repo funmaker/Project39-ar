@@ -77,6 +77,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc7eb209b1518d6bb87b283c20095f5228ecda460da70b44f0802523dea6da04"
 
 [[package]]
+name = "anyhow"
+version = "1.0.82"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
+
+[[package]]
 name = "approx"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1377,17 +1383,6 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "num-derive"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
@@ -1647,7 +1642,7 @@ dependencies = [
  "downcast-rs",
  "either",
  "nalgebra",
- "num-derive 0.4.2",
+ "num-derive",
  "num-traits",
  "rustc-hash",
  "simba",
@@ -1746,6 +1741,7 @@ dependencies = [
 name = "project39-ar"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arc-swap",
  "ash",
  "bytemuck",
@@ -1753,7 +1749,6 @@ dependencies = [
  "egui",
  "egui_winit_vulkano",
  "enumflags2 0.7.9",
- "err-derive",
  "escapi",
  "getopts",
  "image",
@@ -1776,6 +1771,7 @@ dependencies = [
  "serde_derive",
  "simba",
  "smallvec",
+ "thiserror",
  "toml",
  "unifont",
  "vulkano",
@@ -1843,9 +1839,8 @@ dependencies = [
 
 [[package]]
 name = "rapier3d"
-version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62a8a0bd9d3135f7b4eb45d0796540e7bab47b6b7c974f90567ccc5a0454f42b"
+version = "0.18.0"
+source = "git+https://github.com/funmaker/rapier?rev=b0c9c4219d080cad8a2af60d2273b08d42735be2#b0c9c4219d080cad8a2af60d2273b08d42735be2"
 dependencies = [
  "approx 0.5.1",
  "arrayvec 0.7.4",
@@ -1854,7 +1849,7 @@ dependencies = [
  "crossbeam",
  "downcast-rs",
  "nalgebra",
- "num-derive 0.3.3",
+ "num-derive",
  "num-traits",
  "parry3d",
  "rustc-hash",

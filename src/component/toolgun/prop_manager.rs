@@ -1,13 +1,13 @@
-use err_derive::Error;
+use anyhow::Result;
 use linked_hash_map::LinkedHashMap;
 use rapier3d::geometry::{Collider, ColliderBuilder, ColliderShape};
 use serde_derive::Deserialize;
 
 use crate::math::{PI, Vec3, AABB};
 use crate::renderer::Renderer;
-use crate::renderer::assets_manager::{TomlAsset, TomlLoadError};
+use crate::renderer::assets_manager::TomlAsset;
 use super::super::model::SimpleModel;
-use super::super::model::simple::asset::{ObjAsset, ObjLoadError};
+use super::super::model::simple::asset::ObjAsset;
 
 
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq)]
@@ -49,7 +49,7 @@ pub struct PropCollection {
 }
 
 impl PropCollection {
-	pub fn new(renderer: &mut Renderer) -> Result<Self, PropManagerError> {
+	pub fn new(renderer: &mut Renderer) -> Result<Self> {
 		let mut props = Vec::new();
 		
 		let config: LinkedHashMap<String, PropConfig> = renderer.load(TomlAsset::at("props.toml"))?;
@@ -119,11 +119,5 @@ impl Default for PropCollider {
 	fn default() -> Self {
 		PropCollider::Box
 	}
-}
-
-#[derive(Debug, Error)]
-pub enum PropManagerError {
-	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] TomlLoadError(#[error(source)] TomlLoadError),
 }
 

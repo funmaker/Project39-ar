@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use egui::Vec2;
-use err_derive::Error;
-use vulkano::{command_buffer, descriptor_set, sync};
+use anyhow::Result;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -13,10 +12,10 @@ mod pipeline;
 
 use crate::application::Entity;
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::renderer::assets_manager::{TextureAsset, TextureLoadError};
-use crate::renderer::pipelines::PipelineError;
-use crate::utils::{BufferEx, IntoInfo, FenceCheck, UploadError};
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use crate::renderer::assets_manager::TextureAsset;
+use crate::renderer::pipelines::PipelineNoLayoutError;
+use crate::utils::{BufferEx, IntoInfo, FenceCheck};
+use super::{Component, ComponentBase, ComponentInner};
 use pipeline::{SrgbTestPipeline, Vertex, Pc};
 
 
@@ -31,7 +30,7 @@ pub struct SrgbTest {
 }
 
 impl SrgbTest {
-	pub fn new(renderer: &mut Renderer) -> Result<Self, SrgbTestError> {
+	pub fn new(renderer: &mut Renderer) -> Result<Self> {
 		let pipeline = renderer.pipelines.get::<SrgbTestPipeline>()?;
 		
 		let pattern = renderer.load(TextureAsset::at("cube/cube.png"))?;
@@ -57,7 +56,7 @@ impl SrgbTest {
 		                                   &mut upload_buffer)?;
 		
 		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(SrgbTestError::NoLayout)?.clone(), [
+		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
 			                                       WriteDescriptorSet::image_view_sampler(0, pattern.image, pattern.sampler),
 		                                       ])?;
 		
@@ -78,7 +77,7 @@ impl SrgbTest {
 }
 
 impl Component for SrgbTest {
-	fn render(&self, _entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, _entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		if !self.fence.check() { return Ok(()); }
 		
 		let scale = self.image_size / Vec2::new(context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32);
@@ -101,17 +100,4 @@ impl Component for SrgbTest {
 		
 		Ok(())
 	}
-}
-
-#[derive(Debug, Error)]
-pub enum SrgbTestError {
-	#[error(display = "Pipeline doesn't have specified layout")] NoLayout,
-	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
-	#[error(display = "{}", _0)] UploadError(#[error(source)] UploadError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
 }

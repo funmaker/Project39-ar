@@ -14,6 +14,7 @@ mod mut_mark;
 mod pattern;
 mod rapier;
 mod vulkan;
+mod ref_cell_iter;
 
 pub use fence_check::*;
 pub use fps_counter::*;
@@ -26,6 +27,7 @@ pub use mut_mark::*;
 pub use pattern::*;
 pub use rapier::*;
 pub use vulkan::*;
+pub use ref_cell_iter::*;
 
 
 pub trait IntoBoxed<T: ?Sized>: 'static {

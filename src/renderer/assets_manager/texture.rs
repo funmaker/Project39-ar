@@ -1,11 +1,9 @@
 use std::fmt::{Display, Formatter};
-use std::io::ErrorKind;
 use std::path::{PathBuf, Path};
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
 use image::{ImageFormat, DynamicImage, ImageDecoder, AnimationDecoder, RgbaImage, imageops};
 use image::codecs::gif::GifDecoder;
-use vulkano::{command_buffer, sampler, sync};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::format::Format;
 use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
@@ -14,7 +12,7 @@ use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, S
 
 use crate::utils::{FenceCheck, ImageEx};
 use super::super::Renderer;
-use super::{AssetError, AssetKey, AssetsManager};
+use super::{AssetKey, AssetsManager};
 
 
 #[derive(Clone, Hash, Debug)]
@@ -67,9 +65,8 @@ impl TextureAsset {
 
 impl AssetKey for TextureAsset {
 	type Asset = TextureBundle;
-	type Error = TextureLoadError;
 	
-	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
+	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset> {
 		let file_format = ImageFormat::from_path(&self.path)?;
 		let mip_levels = if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One };
 		let format = if self.srgb { Format::R8G8B8A8_SRGB } else { Format::R8G8B8A8_UNORM };
@@ -153,7 +150,7 @@ where T: AsRef<Path> {
 }
 
 impl TextureBundle {
-	pub fn from_raw_simple(source: DynamicImage, renderer: &Renderer) -> Result<TextureBundle, TextureLoadError> {
+	pub fn from_raw_simple(source: DynamicImage, renderer: &Renderer) -> Result<TextureBundle> {
 		let width = source.width();
 		let height = source.height();
 		
@@ -181,27 +178,5 @@ impl TextureBundle {
 			sampler,
 			fence,
 		})
-	}
-}
-
-#[derive(Debug, Error)]
-pub enum TextureLoadError {
-	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] image::ImageError),
-	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-}
-
-impl TextureLoadError {
-	pub fn kind(&self) -> ErrorKind {
-		match self {
-			TextureLoadError::AssetError(err) => err.kind(),
-			_ => ErrorKind::Other,
-		}
 	}
 }

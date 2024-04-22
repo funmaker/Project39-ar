@@ -1,7 +1,8 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use nalgebra::UnitQuaternion;
 use rapier3d::dynamics::RigidBodyType;
@@ -27,11 +28,11 @@ use crate::debug;
 use crate::application::{Application, Entity};
 use crate::math::{AMat4, Color, face_towards_lossy, Isometry3, IVec4, Mat4};
 use crate::renderer::{RenderContext, Renderer, RenderType};
+use crate::renderer::pipelines::PipelineNoLayoutError;
 use crate::utils::{AutoCommandBufferBuilderEx, ExUi, IntoInfo, SubbufferAllocatorEx};
-use super::super::{Component, ComponentBase, ComponentRef, ComponentError, ComponentInner};
+use super::super::{Component, ComponentBase, ComponentRef, ComponentInner};
 use super::super::physics::collider::ColliderComponent;
 use super::super::physics::joint::JointComponent;
-use super::ModelError;
 pub use bone::MMDBone;
 pub use overrides::BodyPart;
 pub use pipeline::{MORPH_GROUP_SIZE, Vertex, Pc};
@@ -66,7 +67,7 @@ pub struct MMDModel {
 
 #[allow(dead_code)]
 impl MMDModel {
-	pub fn new(shared: Arc<MMDModelShared>, renderer: &mut Renderer) -> Result<MMDModel, ModelError> {
+	pub fn new(shared: Arc<MMDModelShared>, renderer: &mut Renderer) -> Result<MMDModel> {
 		let bones = shared.default_bones.iter().map(Into::into).collect::<Vec<_>>();
 		let bones_count = bones.len();
 		let bones_mats = Vec::with_capacity(bones_count);
@@ -99,7 +100,7 @@ impl MMDModel {
 		                           .layout()
 		                           .set_layouts()
 		                           .get(0)
-		                           .ok_or(ModelError::NoLayout)?
+		                           .ok_or(PipelineNoLayoutError)?
 		                           .clone();
 		
 		let morphs_set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
@@ -153,6 +154,14 @@ impl MMDModel {
 		self.shared.fence.check()
 	}
 	
+	pub fn state(&self) -> Ref<MMDModelState> {
+		self.state.borrow()
+	}
+	
+	pub fn state_mut(&self) -> RefMut<MMDModelState> {
+		self.state.borrow_mut()
+	}
+	
 	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4], selected: Option<usize>) {
 		for (id, bone) in bones.iter().enumerate() {
 			if bone.display {
@@ -188,7 +197,7 @@ impl MMDModel {
 }
 
 impl Component for MMDModel {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let state = &mut *self.state.borrow_mut();
 		let ent_pos = *entity.state().position;
 		
@@ -208,7 +217,7 @@ impl Component for MMDModel {
 			let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
 			
 			// Check if joint divides the bone tree
-			if state.bone_ancestors_iter(bone_id)
+			if state.bone_ancestors(bone_id)
 			        .all(|id| parent_bone_id != id) {
 				continue;
 			}
@@ -230,7 +239,7 @@ impl Component for MMDModel {
 		}
 		
 		for desc in self.shared.colliders.iter() {
-			let rb = state.bone_ancestors_iter(desc.bone)
+			let rb = state.bone_ancestors(desc.bone)
 			              .find(|bone| rigid_bodies.contains_key(bone))
 			              .and_then(|bone| rigid_bodies.get(&bone))
 			              .unwrap_or(entity);
@@ -248,11 +257,11 @@ impl Component for MMDModel {
 		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Hip), Isometry3::identity(), ComponentRef::null(), self.as_cref())));
 		
 		for desc in self.shared.joints.iter() {
-			let (bone_a, rb_a) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_a].bone)
+			let (bone_a, rb_a) = state.bone_ancestors(self.shared.colliders[desc.collider_a].bone)
 			                          .find(|bone| rigid_bodies.contains_key(bone))
 			                          .and_then(|bone| rigid_bodies.get(&bone).map(|rb| (bone, rb)))
 			                          .unwrap_or((0, entity));
-			let (bone_b, rb_b) = state.bone_ancestors_iter(self.shared.colliders[desc.collider_b].bone)
+			let (bone_b, rb_b) = state.bone_ancestors(self.shared.colliders[desc.collider_b].bone)
 			                          .find(|bone| rigid_bodies.contains_key(bone))
 			                          .and_then(|bone| rigid_bodies.get(&bone).map(|rb| (bone, rb)))
 			                          .unwrap_or((0, entity));
@@ -271,7 +280,7 @@ impl Component for MMDModel {
 			let parent_bone_id = bone_a.min(bone_b);
 			let bone_id = bone_a.max(bone_b);
 			
-			if state.bone_ancestors_iter(bone_id)
+			if state.bone_ancestors(bone_id)
 			        .any(|id| parent_bone_id == id) {
 				if bone_a < bone_b {
 					rb_b.set_parent(rb_a.as_ref(), false, application);
@@ -293,7 +302,7 @@ impl Component for MMDModel {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		let state = &mut *self.state.borrow_mut();
 		let inv_ent_pos = entity.state().position.inverse();
 		
@@ -316,7 +325,7 @@ impl Component for MMDModel {
 		Ok(())
 	}
 	
-	fn before_render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn before_render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {
@@ -394,7 +403,7 @@ impl Component for MMDModel {
 		Ok(())
 	}
 	
-	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<(), ComponentError> {
+	fn render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
 		if !self.loaded() { return Ok(()) }
 		let model_matrix = entity.state().position.to_homogeneous();
 		
@@ -527,7 +536,7 @@ impl Component for MMDModel {
 }
 
 impl MMDModelState {
-	fn bone_ancestors_iter(&self, mut bone_id: usize) -> impl Iterator<Item = usize> + '_ {
+	fn bone_ancestors(&self, mut bone_id: usize) -> impl Iterator<Item = usize> + '_ {
 		Some(bone_id).into_iter()
 		             .chain(std::iter::from_fn(move || {
 			             if let Some(parent_id) = self.bones[bone_id].parent {
@@ -540,7 +549,7 @@ impl MMDModelState {
 		             .chain(Some(0))
 	}
 	
-	// fn find_rb(&self, mut bone_id: usize) -> &MMDRigidBody {
-	// 	&self.rigid_bodies[self.find_rb_index(bone_id)]
-	// }
+	pub fn rigid_bodies<'a: 's, 's>(&'s self, application: &'a Application) -> impl Iterator<Item=&'a MMDRigidBody> + 's {
+		self.rigid_bodies.iter().flat_map(move |rb| rb.get(application))
+	}
 }

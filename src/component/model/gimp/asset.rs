@@ -1,12 +1,10 @@
 use std::fmt::{Display, Formatter};
-use std::io::ErrorKind;
 use std::path::{PathBuf, Path};
-use err_derive::Error;
+use anyhow::Result;
 use obj::Obj;
 
 use crate::renderer::Renderer;
-use crate::renderer::assets_manager::{AssetError, AssetKey, AssetsManager, TextureAsset, TextureLoadError};
-use super::super::ModelError;
+use crate::renderer::assets_manager::{AssetKey, AssetsManager, TextureAsset};
 use super::{GimpModel, Vertex};
 
 
@@ -29,9 +27,8 @@ impl GimpAsset {
 
 impl AssetKey for GimpAsset {
 	type Asset = GimpModel;
-	type Error = GimpLoadError;
 	
-	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset, Self::Error> {
+	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset> {
 		let texture = assets_manager.load(self.texture.clone(), renderer)?;
 		let norm_texture = assets_manager.load(self.norm_texture.clone(), renderer)?;
 		let model: Obj<obj::TexturedVertex, u32> = obj::load_obj(AssetsManager::find_asset(&self.model)?)?;
@@ -59,23 +56,5 @@ impl From<&obj::TexturedVertex> for Vertex {
 			vertex.normal,
 			[vertex.texture[0], 1.0 - vertex.texture[1]]
 		)
-	}
-}
-
-#[derive(Debug, Error)]
-pub enum GimpLoadError {
-	#[error(display = "{}", _0)] AssetError(#[error(source)] AssetError),
-	#[error(display = "{}", _0)] TextureLoadError(#[error(source)] TextureLoadError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] ObjError(#[error(source)] obj::ObjError),
-}
-
-impl GimpLoadError {
-	pub fn kind(&self) -> ErrorKind {
-		match self {
-			GimpLoadError::AssetError(err) => err.kind(),
-			GimpLoadError::TextureLoadError(err) => err.kind(),
-			_ => ErrorKind::Other,
-		}
 	}
 }

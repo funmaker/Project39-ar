@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use anyhow::Result;
 use image::{DynamicImage, ImageFormat};
 use vulkano::buffer::{Buffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
@@ -8,7 +9,7 @@ use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
 use crate::math::{IVec4, Vec3};
 use crate::renderer::Renderer;
 use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
-use super::super::super::{ModelError, VertexIndex};
+use super::super::super::VertexIndex;
 use super::super::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use super::{MMDModelShared, Vertex, BoneDesc, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
@@ -68,7 +69,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
-	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared, ModelError> {
+	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared> {
 		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;

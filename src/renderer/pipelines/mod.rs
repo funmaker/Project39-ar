@@ -1,8 +1,8 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use vulkano::pipeline::graphics::color_blend::{AttachmentBlend, BlendFactor, BlendOp};
 use vulkano::render_pass::RenderPass;
 
@@ -14,7 +14,7 @@ pub trait PipelineConstructor: 'static {
 	type PipeType: Any + Send + Sync;
 	
 	fn new(render_pass: &Arc<RenderPass>)
-	      -> Result<Arc<Self::PipeType>, PipelineError>
+	      -> Result<Arc<Self::PipeType>>
 	      where Self: Sized;
 }
 
@@ -31,7 +31,7 @@ impl Pipelines {
 		}
 	}
 	
-	pub fn get<P: PipelineConstructor>(&mut self) -> Result<Arc<P::PipeType>, PipelineError> {
+	pub fn get<P: PipelineConstructor>(&mut self) -> Result<Arc<P::PipeType>> {
 		if let Some(pipeline) = self.pipelines.get(&TypeId::of::<P>()) {
 			Ok(pipeline.clone().downcast().unwrap())
 		} else {
@@ -55,9 +55,6 @@ pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 	}
 }
 
-
 #[derive(Debug, Error)]
-pub enum PipelineError {
-	#[error(display = "{}", _0)] GraphicsPipelineCreationError(#[error(source)] vulkano::pipeline::graphics::GraphicsPipelineCreationError),
-	#[error(display = "{}", _0)] ComputePipelineCreationError(#[error(source)] vulkano::pipeline::compute::ComputePipelineCreationError),
-}
+#[error("Pipeline doesn't have specified layout")]
+pub struct PipelineNoLayoutError;

@@ -1,4 +1,5 @@
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use openvr::TrackedDeviceIndex;
 use simba::scalar::SupersetOf;
@@ -6,7 +7,7 @@ use simba::scalar::SupersetOf;
 use crate::application::{Entity, Application};
 use crate::math::{AMat4, Similarity3, VRSlice};
 use crate::utils::ExUi;
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::VrRoot;
 
 
@@ -28,7 +29,7 @@ impl VrTracked {
 }
 
 impl Component for VrTracked {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		if !application.vr.as_ref().unwrap().lock().unwrap().system.is_tracked_device_connected(self.device_id) {
 			println!("Removing {}", entity.name);
 			entity.remove();

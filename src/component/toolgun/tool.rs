@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use crate::application::{Application, Hand};
 use crate::math::Ray;
 use crate::renderer::{RenderContext, Renderer};
@@ -26,9 +28,9 @@ pub fn get_all_tools(renderer: &mut Renderer) -> Vec<Box<dyn Tool>> {
 #[allow(unused_variables)]
 pub trait Tool {
 	fn name(&self) -> &str;
-	// fn activate(&mut self, toolgun: &ToolGun, application: &Application) -> Result<(), ToolError> { Ok(()) }
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> { Ok(()) }
-	fn pre_render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> { Ok(()) }
-	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<(), ToolError> { Ok(()) }
-	// fn deactivate(&mut self, toolgun: &ToolGun, application: &Application) -> Result<(), ToolError> { Ok(()) }
+	// fn activate(&mut self, toolgun: &ToolGun, application: &Application) -> Result<()> { Ok(()) }
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> { Ok(()) }
+	fn pre_render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<()> { Ok(()) }
+	fn render(&mut self, toolgun: &ToolGun, context: &mut RenderContext) -> Result<()> { Ok(()) }
+	// fn deactivate(&mut self, toolgun: &ToolGun, application: &Application) -> Result<()> { Ok(()) }
 }

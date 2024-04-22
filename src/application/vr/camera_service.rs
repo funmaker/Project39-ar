@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use openvr::{TrackedDeviceIndex, TrackedDevicePose};
 
-use super::{VR, TrackedCameraError, FrameType};
-use super::tracked_camera::TrackedCameraHandle;
+use super::{VR, FrameType};
+use super::tracked_camera::{TrackedCameraError, TrackedCameraHandle};
 
 
 pub struct CameraService {
@@ -60,6 +60,7 @@ impl Drop for CameraService {
 	}
 }
 
+#[allow(dead_code)]
 pub struct FrameBuffer {
 	pub frame_type: FrameType,
 	pub width: u32,

@@ -1,8 +1,9 @@
-use std::error::Error;
+use std::error::Error as StdError;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{Instant, Duration};
-use err_derive::Error;
+use anyhow::{Result, Error};
+use thiserror::Error;
 use simba::scalar::SubsetOf;
 use vulkano::{command_buffer, swapchain, sync};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageInfo, CommandBufferUsage, ImageBlit, ImageCopy};
@@ -23,10 +24,10 @@ mod gui;
 
 use crate::config;
 use crate::math::{Isometry3, Perspective3, projective_clip, Vec2, PI};
-use crate::renderer::{Renderer, RenderTarget, RendererSwapchainError, RenderContext, RendererCreateFramebufferError, RenderTargetContext};
+use crate::renderer::{Renderer, RenderTarget, RenderContext, RenderTargetContext};
 use crate::utils::FramebufferBundle;
 use super::Input;
-use gui::{WindowGui, WindowGuiError, WindowGuiRegenFramebufferError, WindowGuiPaintError};
+use gui::WindowGui;
 
 
 const FOV: f32 = 110.0;
@@ -47,7 +48,7 @@ pub struct Window {
 }
 
 impl Window {
-	pub fn new(size_hint: Option<(u32, u32)>, renderer: &Renderer) -> Result<Window, WindowCreationError> {
+	pub fn new(size_hint: Option<(u32, u32)>, renderer: &Renderer) -> Result<Window> {
 		let event_loop = EventLoop::new();
 		
 		let mut inner_size = size_hint.unwrap_or((1920, 960));
@@ -114,7 +115,7 @@ impl Window {
 		            .expect("Surface doesn't have a winit window!")
 	}
 	
-	pub fn regen_swapchain(&mut self, renderer: &Renderer) -> Result<(), WindowSwapchainRegenError> {
+	pub fn regen_swapchain(&mut self, renderer: &Renderer) -> Result<()> {
 		if !self.swapchain_regen_needed {
 			return Ok(())
 		}
@@ -124,7 +125,7 @@ impl Window {
 		
 		if window_size.width == 0 || window_size.height == 0 {
 			self.swapchain_regen_needed = false;
-			return Err(WindowSwapchainRegenError::NeedRetry)
+			return Err(WindowSwapchainNeedRetry.into())
 		}
 		
 		let (swapchain, swapchain_images) = self.swapchain.recreate(SwapchainCreateInfo {
@@ -134,7 +135,7 @@ impl Window {
 		                                                  .map_err(|err| match err {
 			                                                  SwapchainCreationError::ImageExtentNotSupported { provided, min_supported, max_supported } => {
 				                                                  eprintln!("SwapchainCreationError: ImageExtentNotSupported\n\tprovided: {:?}\n\tmin_supported: {:?}\n\tmax_supported: {:?}", provided, min_supported, max_supported);
-				                                                  WindowSwapchainRegenError::NeedRetry
+				                                                  Error::new(WindowSwapchainNeedRetry)
 			                                                  }, // No idea why this happens on linux
 			                                                  err => err.into(),
 		                                                  })?;
@@ -150,7 +151,7 @@ impl Window {
 		Ok(())
 	}
 	
-	pub fn acquire_swapchain_image(&mut self) -> Result<Option<(u32, SwapchainAcquireFuture)>, swapchain::AcquireError> {
+	pub fn acquire_swapchain_image(&mut self) -> Result<Option<(u32, SwapchainAcquireFuture)>> {
 		let timeout = if !self.render_required {
 			let max_fps = config::get().window_max_fps;
 			
@@ -186,7 +187,7 @@ impl Window {
 	pub fn mirror_from(&mut self,
 	                   image: &Arc<AttachmentImage>,
 	                   renderer: &mut Renderer)
-	                   -> Result<(), WindowMirrorFromError> {
+	                   -> Result<()> {
 		let (image_num, acquire_future) = match self.acquire_swapchain_image()? {
 			Some(result) => result,
 			None => return Ok(()),
@@ -241,7 +242,7 @@ impl Window {
 		self.last_present = Instant::now();
 		
 		let queue = renderer.queue.clone();
-		renderer.try_enqueue::<command_buffer::CommandBufferExecError, _>(queue.clone(), |future| {
+		renderer.try_enqueue(queue.clone(), |future| {
 			Ok(
 				future.join(acquire_future)
 				      .then_execute(queue.clone(), command_buffer)?
@@ -253,11 +254,12 @@ impl Window {
 		Ok(())
 	}
 	
-	pub fn grab_cursor(&mut self, grab: bool) -> Result<(), ExternalError> {
+	pub fn grab_cursor(&mut self, grab: bool) -> Result<()> {
 		self.cursor_trap = grab;
 		let window = self.window();
 		window.set_cursor_visible(!grab);
-		window.set_cursor_grab(if grab { CursorGrabMode::Confined } else { CursorGrabMode::None })
+		window.set_cursor_grab(if grab { CursorGrabMode::Confined } else { CursorGrabMode::None })?;
+		Ok(())
 	}
 	
 	pub fn pull_events(&mut self, input: &mut Input) {
@@ -284,7 +286,7 @@ impl Window {
 		self.gui.end_frame();
 	}
 	
-	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<(), Box<dyn Error>> {
+	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<()> {
 		*control_flow = ControlFlow::Poll;
 		
 		if !self.cursor_trap {
@@ -407,9 +409,7 @@ impl Window {
 }
 
 impl RenderTarget for Window {
-	type RenderError = WindowRenderTargetError;
-
-	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>, Self::RenderError> {
+	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>> {
 		match self.acquire_swapchain_image()? {
 			None => return Ok(None),
 			Some((image_num, future)) => {
@@ -439,7 +439,7 @@ impl RenderTarget for Window {
 		&self.fb.main_image
 	}
 	
-	fn after_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), Self::RenderError> {
+	fn after_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
 		let image_num = self.acquire_image_num.unwrap();
 		let acquire_future = self.acquire_future.take().unwrap();
 		
@@ -452,7 +452,7 @@ impl RenderTarget for Window {
 		Ok(())
 	}
 	
-	fn after_execute(&mut self, renderer: &mut Renderer) -> Result<(), Self::RenderError> {
+	fn after_execute(&mut self, renderer: &mut Renderer) -> Result<()> {
 		let image_num = self.acquire_image_num.take().unwrap();
 		
 		let queue = renderer.queue.clone();
@@ -464,35 +464,11 @@ impl RenderTarget for Window {
 
 #[derive(Debug, Error)]
 pub enum WindowCreationError {
-	#[error(display = "Surface doesn't have any window!")] NoWindow,
-	#[error(display = "Surface doesn't have a winit window!")] NoWinitWindow,
-	#[error(display = "{}", _0)] WindowGuiError(#[error(source)] WindowGuiError),
-	#[error(display = "{}", _0)] RendererSwapchainError(#[error(source)] RendererSwapchainError),
-	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
-	#[error(display = "{}", _0)] WindowBuilderError(#[error(source)] vulkano_win::CreationError),
+	#[error("Surface doesn't have any window!")] NoWindow,
+	#[error("Surface doesn't have a winit window!")] NoWinitWindow,
 }
 
 #[derive(Debug, Error)]
-pub enum WindowSwapchainRegenError {
-	#[error(display = "Need Retry")] NeedRetry,
-	#[error(display = "{}", _0)] WindowGuiRegenFramebufferError(#[error(source)] WindowGuiRegenFramebufferError),
-	#[error(display = "{}", _0)] RendererCreateFramebufferError(#[error(source)] RendererCreateFramebufferError),
-	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
-}
+#[error("Need Retry")]
+pub struct WindowSwapchainNeedRetry;
 
-#[derive(Debug, Error)]
-pub enum WindowMirrorFromError {
-	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
-	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
-	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-}
-
-#[derive(Debug, Error)]
-pub enum WindowRenderTargetError {
-	#[error(display = "{}", _0)] WindowGuiPaintError(#[error(source)] WindowGuiPaintError),
-	#[error(display = "{}", _0)] AcquireError(#[error(source)] swapchain::AcquireError),
-	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-}

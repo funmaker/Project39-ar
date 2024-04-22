@@ -2,9 +2,11 @@
 
 use std::thread;
 use std::time::{Instant, Duration};
+use anyhow::Result;
+use thiserror::Error;
 
 use crate::math::Isometry3;
-use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera};
 
 
 lazy_static!(
@@ -28,7 +30,7 @@ impl Dummy {
 }
 
 impl Camera for Dummy {
-	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>)> {
 		let next_frame = self.last_frame + Duration::from_millis(1000 / CAPTURE_FPS);
 		
 		if let Some(sleep_duration) = next_frame.checked_duration_since(Instant::now()) {

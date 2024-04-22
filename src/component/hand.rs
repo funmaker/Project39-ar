@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
 use std::time::{Duration, Instant};
+use anyhow::Result;
 use egui::{RichText, Ui};
 use rapier3d::dynamics::FixedJoint;
 use rapier3d::geometry::Ball;
@@ -11,7 +12,7 @@ use crate::debug;
 use crate::application::{Entity, Application, Hand, EntityRef};
 use crate::math::{Point3, Color, Translation3, Isometry3};
 use crate::utils::{ColliderEx, ExUi};
-use super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::physics::joint::JointComponent;
 use super::vr::VrTracked;
 
@@ -63,7 +64,7 @@ impl HandComponent {
 }
 
 impl Component for HandComponent {
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		if let Some(item) = self.grabbed_entity().get(application) {
 			if application.input.use3_btn(self.hand).down {
 				item.freeze(application.physics.borrow_mut().deref_mut());

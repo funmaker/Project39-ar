@@ -9,15 +9,16 @@
 #![feature(path_file_prefix)]
 #![feature(array_chunks)]
 #![feature(int_roundings)]
+#![feature(generic_nonzero)]
+#![feature(error_generic_member_access)]
 
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 extern crate core;
 
 use std::{fs, panic};
-use std::fmt::Debug;
 use std::panic::PanicInfo;
-use err_derive::Error;
+use anyhow::Result;
 use native_dialog::{MessageDialog, MessageType};
 
 #[macro_use] #[allow(dead_code)] mod debug;
@@ -28,9 +29,8 @@ mod config;
 #[allow(dead_code)] mod math;
 mod renderer;
 
-use application::{Application, ApplicationCreationError, ApplicationRunError};
+use application::{Application};
 use config::{Config, Color};
-use utils::from_args::ArgsError;
 
 
 fn main() {
@@ -39,9 +39,9 @@ fn main() {
 	let result = run_application();
 	
 	if let Err(err) = result {
-		let message = format!("{}\n\nError {:?}", err.to_string(), err);
+		let message = format!("{}\n{}", err, err.backtrace());
 		
-		eprintln!("{}", message);
+		eprintln!("\n{message}");
 		
 		MessageDialog::new()
 		              .set_type(MessageType::Error)
@@ -52,7 +52,7 @@ fn main() {
 	}
 }
 
-fn run_application() -> Result<(), RunError> {
+fn run_application() -> Result<()> {
 	let config_path = "config.toml";
 	let file_name = std::env::args().next().unwrap_or("project39-ar.exe".to_string());
 	
@@ -143,12 +143,3 @@ fn panic_hook() -> impl Fn(&PanicInfo) {
 	}
 }
 
-#[derive(Debug, Error)]
-pub enum RunError {
-	#[error(display = "{}", _0)] ApplicationCreationError(#[error(source)] ApplicationCreationError),
-	#[error(display = "{}", _0)] ApplicationRunError(#[error(source)] ApplicationRunError),
-	#[error(display = "{}", _0)] ArgsError(#[error(source)] ArgsError),
-	#[error(display = "{}", _0)] IOError(#[error(source)] std::io::Error),
-	#[error(display = "{}", _0)] DeserializationError(#[error(source)] toml::de::Error),
-	#[error(display = "{}", _0)] SerializationError(#[error(source)] toml::ser::Error),
-}

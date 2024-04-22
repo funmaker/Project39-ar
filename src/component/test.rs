@@ -1,11 +1,12 @@
 use std::cell::Cell;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 
 use crate::application::{Entity, Application};
 use crate::math::{Isometry3, Translation3};
 use crate::utils::ExUi;
-use super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::{Component, ComponentBase, ComponentInner};
 
 
 #[derive(ComponentBase)]
@@ -32,12 +33,12 @@ impl TestComponent {
 }
 
 impl Component for TestComponent {
-	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<()> {
 		self.orig.set(*entity.state().position);
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
 		if !self.running.get() { return Ok(()) }
 		
 		self.time.set(self.time.get() + delta_time.as_secs_f32());

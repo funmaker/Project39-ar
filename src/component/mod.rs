@@ -6,6 +6,7 @@ use std::time::Duration;
 pub use project39_ar_derive::ComponentBase;
 use egui::{Grid, Ui};
 use enumflags2::BitFlags;
+use anyhow::Result;
 
 pub mod comedy;
 pub mod example;
@@ -61,11 +62,11 @@ pub trait ComponentBase: Any {
 
 #[allow(unused_variables)]
 pub trait Component: ComponentBase {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
-	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<(), ComponentError> { Ok(()) }
-	fn before_render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
-	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<(), ComponentError> { Ok(()) }
-	fn end(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> { Ok(()) }
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> { Ok(()) }
+	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> { Ok(()) }
+	fn before_render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> { Ok(()) }
+	fn render(&self, entity: &Entity, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> { Ok(()) }
+	fn end(&self, entity: &Entity, application: &Application) -> Result<()> { Ok(()) }
 	fn on_inspect(&self, entity: &Entity, ui: &mut Ui, application: &Application) {}
 	fn on_inspect_extra(&self, entity: &Entity, ui: &mut Ui, application: &Application) {}
 	fn on_gui(&self, entity: &Entity, ui: &mut Ui, application: &Application) {

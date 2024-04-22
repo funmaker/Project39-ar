@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
 use unifont::Glyph;
-use vulkano::{command_buffer, descriptor_set, sampler};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
@@ -14,7 +13,7 @@ use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline};
 use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
 
-use super::super::pipelines::{Pipelines, PipelineError};
+use super::super::pipelines::Pipelines;
 use super::super::pipelines::debug::DebugTexturedPipeline;
 
 
@@ -36,7 +35,7 @@ const REPLACEMENT_GLYPH: Glyph = Glyph::HalfWidth([
 ]);
 
 impl TextCache {
-	pub fn new(queue: &Arc<Queue>, memory_allocator: &Arc<StandardMemoryAllocator>, command_buffer_allocator: &Arc<StandardCommandBufferAllocator>, descriptor_set_allocator: &Arc<StandardDescriptorSetAllocator>, pipelines: &mut Pipelines) -> Result<Self, TextCacheError> {
+	pub fn new(queue: &Arc<Queue>, memory_allocator: &Arc<StandardMemoryAllocator>, command_buffer_allocator: &Arc<StandardCommandBufferAllocator>, descriptor_set_allocator: &Arc<StandardDescriptorSetAllocator>, pipelines: &mut Pipelines) -> Result<Self> {
 		let pipeline = pipelines.get::<DebugTexturedPipeline>()?;
 		
 		Ok(TextCache {
@@ -50,7 +49,7 @@ impl TextCache {
 		})
 	}
 	
-	pub fn get(&mut self, text: &'_ str) -> Result<TextEntry, TextCacheGetError> {
+	pub fn get(&mut self, text: &'_ str) -> Result<TextEntry> {
 		if let Some(entry) = self.entries.get_mut(text) {
 			entry.stale = 0;
 			Ok(entry.clone())
@@ -192,18 +191,3 @@ pub struct TextEntry {
 	pub stale: usize,
 }
 
-#[derive(Debug, Error)]
-pub enum TextCacheError {
-	#[error(display = "{}", _0)] PipelineError(#[error(source)] PipelineError),
-}
-
-#[derive(Debug, Error)]
-pub enum TextCacheGetError {
-	#[error(display = "{}", _0)] ImmutableImageCreationError(#[error(source)] vulkano::image::immutable::ImmutableImageCreationError),
-	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] BuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] DescriptorSetCreationError(#[error(source)] descriptor_set::DescriptorSetCreationError),
-	#[error(display = "{}", _0)] SamplerCreationError(#[error(source)] sampler::SamplerCreationError),
-}

@@ -31,10 +31,9 @@ pub fn physics_ui(physics: &mut Physics, ui: &mut Ui, application: &Application)
 					ui.inspect_row("Max Linear Err", &mut physics.integration_parameters.allowed_linear_error, (0.000001, 0.0..=1.0));
 					ui.inspect_row("Max Pen Correct", &mut physics.integration_parameters.max_penetration_correction, (0.001, 0.0..=10.0));
 					ui.inspect_row("Predictive Dist", &mut physics.integration_parameters.prediction_distance, (0.001, 0.0..=10.0));
-					ui.inspect_row("Max Vel Iter", &mut physics.integration_parameters.max_velocity_iterations, 0..=usize::MAX);
-					ui.inspect_row("Max Frict Iter", &mut physics.integration_parameters.max_velocity_friction_iterations, 0..=usize::MAX);
-					ui.inspect_row("Max Stab Iter", &mut physics.integration_parameters.max_stabilization_iterations, 0..=usize::MAX);
-					ui.inspect_row("Interleave Resl", &mut physics.integration_parameters.interleave_restitution_and_friction_resolution, ());
+					ui.inspect_row("Max Vel Iter", &mut physics.integration_parameters.num_solver_iterations, 1..=usize::MAX);
+					ui.inspect_row("Max Frict Iter", &mut physics.integration_parameters.num_additional_friction_iterations, 0..=usize::MAX);
+					ui.inspect_row("Max PGS Iter", &mut physics.integration_parameters.num_internal_pgs_iterations, 0..=usize::MAX);
 					ui.inspect_row("Min Island Size", &mut physics.integration_parameters.min_island_size, 0..=usize::MAX);
 					ui.inspect_row("Max CCD Substeps", &mut physics.integration_parameters.max_ccd_substeps, 0..=usize::MAX);
 				});

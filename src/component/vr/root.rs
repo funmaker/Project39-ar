@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
+use anyhow::Result;
 use egui::Ui;
 use image::{DynamicImage, ImageBuffer};
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole, render_models};
@@ -13,7 +14,7 @@ use crate::application::{Entity, EntityRef, Application, Hand};
 use crate::math::Isometry3;
 use crate::renderer::assets_manager::TextureBundle;
 use crate::utils::ExUi;
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError, ComponentRef};
+use super::super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::super::comedy::Comedy;
 use super::super::hand::HandComponent;
 use super::super::model::simple::{SimpleModel, Vertex};
@@ -39,13 +40,13 @@ impl VrRoot {
 }
 
 impl Component for VrRoot {
-	fn start(&self, entity: &Entity, _application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, _application: &Application) -> Result<()> {
 		self.ik.set(entity.add_component(VrIk::new(EntityRef::null(), EntityRef::null(), EntityRef::null())));
 		
 		Ok(())
 	}
 	
-	fn tick(&self, _entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, _entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		let vr = application.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		let mut entities = self.entities.borrow_mut();
 		

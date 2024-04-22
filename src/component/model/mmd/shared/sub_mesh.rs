@@ -1,5 +1,6 @@
 use std::ops::Range;
 use std::sync::Arc;
+use anyhow::Result;
 use vulkano::buffer::{BufferContents, Subbuffer};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImmutableImage;
@@ -8,8 +9,8 @@ use vulkano::pipeline::{GraphicsPipeline, Pipeline};
 use vulkano::sampler::{Sampler, SamplerCreateInfo};
 
 use crate::math::{Vec3, Vec4};
+use crate::renderer::pipelines::PipelineNoLayoutError;
 use crate::renderer::Renderer;
-use super::super::super::ModelError;
 use super::super::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 
 
@@ -44,7 +45,7 @@ impl SubMesh {
 	           no_cull: bool,
 	           edge: Option<(f32, Vec4)>,
 	           renderer: &mut Renderer)
-	           -> Result<SubMesh, ModelError> {
+	           -> Result<SubMesh> {
 		let sampler = Sampler::new(renderer.device.clone(), SamplerCreateInfo::simple_repeat_linear())?;
 		
 		let main_pipeline = match no_cull {
@@ -57,7 +58,7 @@ impl SubMesh {
 		let sphere_map_view = ImageView::new_default(sphere_map)?;
 		
 		let main_set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                            main_pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+		                                            main_pipeline.layout().set_layouts().get(1).ok_or(PipelineNoLayoutError)?.clone(), [
 			                                            WriteDescriptorSet::buffer(0, material_buffer.clone()),
 			                                            WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
 			                                            WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
@@ -80,7 +81,7 @@ impl SubMesh {
 			};
 			
 			let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-			                                       pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+			                                       pipeline.layout().set_layouts().get(1).ok_or(PipelineNoLayoutError)?.clone(), [
 				                                       WriteDescriptorSet::buffer(0, material_buffer.clone()),
 				                                       WriteDescriptorSet::image_view_sampler(1, texture_view.clone(), sampler.clone()),
 				                                       WriteDescriptorSet::image_view_sampler(2, toon_view.clone(), sampler.clone()),
@@ -97,7 +98,7 @@ impl SubMesh {
 			let pipeline = renderer.pipelines.get::<MMDPipelineOutline>()?;
 			
 			let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-			                                       pipeline.layout().set_layouts().get(1).ok_or(ModelError::NoLayout)?.clone(), [
+			                                       pipeline.layout().set_layouts().get(1).ok_or(PipelineNoLayoutError)?.clone(), [
 				                                       WriteDescriptorSet::image_view_sampler(0, texture_view.clone(), sampler.clone()),
 			                                       ])?;
 			

@@ -1,17 +1,17 @@
 use std::cell::RefMut;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
-use std::error::Error;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use colored::Colorize;
-use err_derive::Error;
-use vulkano::{command_buffer, device, instance, render_pass, swapchain, sync, Version, VulkanLibrary};
-use vulkano::buffer::{BufferContents, BufferError, Buffer, Subbuffer, BufferUsage};
+use anyhow::{Result, Error};
+use thiserror::Error;
+use vulkano::{sync, Version, VulkanLibrary};
+use vulkano::buffer::{BufferContents, Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, physical, Queue, QueueCreateInfo, QueueFlags};
+use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, Queue, QueueCreateInfo, QueueFlags};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::{ClearValue, Format};
 use vulkano::image::{AttachmentImage, ImageLayout, ImageUsage, ImageViewAbstract, SampleCount, SwapchainImage};
@@ -32,13 +32,12 @@ pub mod render_target;
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
-use crate::component::ComponentError;
 use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
 use crate::utils::*;
 pub use context::{RenderContext, RenderTargetContext, RenderType};
 pub use render_target::RenderTarget;
 use assets_manager::{AssetKey, AssetsManager};
-use debug_renderer::{DebugRenderer, DebugRendererError, DebugRendererPreRenderError, DebugRendererRenderError, TextCache};
+use debug_renderer::{DebugRenderer, TextCache};
 use pipelines::Pipelines;
 
 
@@ -77,7 +76,7 @@ pub const DEPTH_FORMAT: Format = Format::D24_UNORM_S8_UINT;
 pub const LAYERS: u32 = 2;
 
 impl Renderer {
-	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer, RendererError> {
+	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer> {
 		let instance = Renderer::create_vulkan_instance(&vr)?;
 		let debug_utils_messenger = config::get()
 		                                   .validation
@@ -121,7 +120,7 @@ impl Renderer {
 		})
 	}
 	
-	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>, RendererError> {
+	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>> {
 		let library = VulkanLibrary::new().unwrap();
 		
 		dprintln!("List of Vulkan layers available to use:");
@@ -163,7 +162,7 @@ impl Renderer {
 		                 })?)
 	}
 	
-	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger, RendererError> {
+	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger> {
 		// SAFETY: user callback must not make any calls to the Vulkan API.
 		unsafe {
 			Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo {
@@ -192,7 +191,7 @@ impl Renderer {
 		}
 	}
 	
-	fn create_physical_device(instance: &Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<Arc<PhysicalDevice>, RendererError> {
+	fn create_physical_device(instance: &Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<Arc<PhysicalDevice>> {
 		dprintln!("Devices:");
 		let physical_devices = instance.enumerate_physical_devices()?
 		                               .collect::<Vec<_>>();
@@ -219,7 +218,7 @@ impl Renderer {
 		                                      .ok_or(RendererError::NoDevices)?;
 		
 		if physical_device.properties().max_multiview_view_count.unwrap_or(0) < 2 {
-			return Err(RendererError::MultiviewNotSupported);
+			return Err(RendererError::MultiviewNotSupported.into());
 		}
 		
 		dprintln!("\nUsing {}: {} api: {} driver: {}",
@@ -231,7 +230,7 @@ impl Renderer {
 		Ok(physical_device)
 	}
 	
-	fn create_device(physical: Arc<PhysicalDevice>, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>), RendererError> {
+	fn create_device(physical: Arc<PhysicalDevice>, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>)> {
 		for family in physical.queue_family_properties() {
 			dprintln!("Found a queue family with {} queue(s) {:?}",
 			          family.queue_count,
@@ -283,7 +282,7 @@ impl Renderer {
 		Ok((device, queue, load_queue))
 	}
 	
-	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>, RendererError> {
+	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>> {
 		let msaa = config::get().msaa;
 		let samples = msaa.try_into().map_err(|_| RendererError::InvalidMultiSamplingCount(msaa))?;
 		let view_mask = (1 << LAYERS) - 1;
@@ -360,9 +359,9 @@ impl Renderer {
 		Ok(render_pass)
 	}
 	
-	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<SwapchainImage>>), RendererSwapchainError> {
+	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<SwapchainImage>>)> {
 		if !self.device.physical_device().surface_support(self.queue.queue_family_index(), &surface)? {
-			return Err(RendererSwapchainError::SurfaceNotSupported)
+			return Err(RendererSwapchainError::SurfaceNotSupported.into())
 		}
 		
 		let caps = self.device
@@ -397,7 +396,7 @@ impl Renderer {
 		})?)
 	}
 	
-	pub fn create_framebuffer(&self, min_framebuffer_size: (u32, u32)) -> Result<FramebufferBundle, RendererCreateFramebufferError> {
+	pub fn create_framebuffer(&self, min_framebuffer_size: (u32, u32)) -> Result<FramebufferBundle> {
 		let config = config::get();
 		let ssaa = config.ssaa;
 		let samples = config.msaa.try_into().map_err(|_| RendererCreateFramebufferError::InvalidMultiSamplingCount(config.msaa))?;
@@ -473,7 +472,7 @@ impl Renderer {
 		})
 	}
 	
-	pub fn begin_frame(&mut self) -> Result<(), RendererBeginFrameError> {
+	pub fn begin_frame(&mut self) -> Result<()> {
 		if let Some(previous_frame) = self.future.take() {
 			// TODO: double fence?
 			previous_frame.then_signal_fence_and_flush()?
@@ -492,12 +491,12 @@ impl Renderer {
 	
 	pub fn enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
 	                  where F: FnOnce(Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
-		self.try_enqueue(queue, |future| Ok::<_, !>(callback(future))).unwrap()
+		self.try_enqueue(queue, |future| Ok(callback(future))).unwrap()
 	}
 	
-	pub fn try_enqueue<Err, F>(&mut self, queue: Arc<Queue>, callback: F)
-	                           -> Result<(), Err>
-	                           where F: FnOnce(Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>, Err> {
+	pub fn try_enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
+	                     -> Result<()>
+	                     where F: FnOnce(Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>> {
 		let mut future = self.future.take().unwrap_or_else(|| sync::now(self.device.clone()).boxed());
 		if !future.queue_change_allowed() && future.queue().unwrap() != queue {
 			future = future.then_signal_semaphore().boxed();
@@ -511,12 +510,12 @@ impl Renderer {
 	}
 	
 	pub fn render<RT>(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, render_target: &mut RT)
-	                  -> Result<(), RendererRenderError<RT::RenderError>>
+	                  -> Result<()>
 	                  where RT: RenderTarget {
 		let rt_context = match render_target.create_context(camera_pos) {
 			Ok(Some(context)) => context,
 			Ok(None) => return Ok(()),
-			Err(err) => return Err(RendererRenderError::RenderTargetError(err)),
+			Err(err) => return Err(err.into()),
 		};
 		
 		let mut builder = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator, self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
@@ -550,7 +549,7 @@ impl Renderer {
 			self.debug_renderer = Some(debug_renderer);
 		}
 		
-		render_target.before_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		render_target.before_render(&mut context, self)?;
 		
 		let viewport = Viewport {
 			origin: [0.0, 0.0],
@@ -563,7 +562,7 @@ impl Renderer {
 		                                  }, SubpassContents::Inline)?
 		               .set_viewport(0, Some(viewport));
 		
-		render_target.early_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		render_target.early_render(&mut context, self)?;
 		
 		context.render_type = RenderType::Opaque;
 		
@@ -584,25 +583,25 @@ impl Renderer {
 		
 		self.debug_renderer.as_mut().unwrap().render(&mut context)?;
 		
-		render_target.late_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		render_target.late_render(&mut context, self)?;
 		
 		context.builder.end_render_pass()?;
 		
-		render_target.after_render(&mut context, self).map_err(RendererRenderError::RenderTargetError)?;
+		render_target.after_render(&mut context, self)?;
 		
 		drop(context);
 		
 		let command_buffer = builder.build()?;
 		
 		let queue = self.queue.clone();
-		self.try_enqueue(queue.clone(), |future| future.then_execute(queue.clone(), command_buffer).map(GpuFuture::boxed))?;
+		self.try_enqueue(queue.clone(), |future| future.then_execute(queue.clone(), command_buffer).map(GpuFuture::boxed).map_err(Error::new))?;
 		
-		render_target.after_execute(self).map_err(RendererRenderError::RenderTargetError)?;
+		render_target.after_execute(self)?;
 		
 		Ok(())
 	}
 	
-	pub fn end_frame(&mut self) -> Result<(), RendererEndFrameError> {
+	pub fn end_frame(&mut self) -> Result<()> {
 		self.debug_renderer.as_mut().unwrap().reset();
 		
 		if let Some(future) = self.future.take() {
@@ -628,7 +627,7 @@ impl Renderer {
 		self.debug_renderer.as_ref().unwrap().text_cache()
 	}
 	
-	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset, Key::Error> {
+	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset> {
 		let mut assets_manager = self.assets_manager.take().unwrap();
 		let result = assets_manager.load(key, self);
 		self.assets_manager = Some(assets_manager);
@@ -639,63 +638,18 @@ impl Renderer {
 
 #[derive(Debug, Error)]
 pub enum RendererError {
-	#[error(display = "No devices available.")] NoDevices,
-	#[error(display = "No compute queue available.")] NoQueue,
-	#[error(display = "Multiview doesn't support enough views.")] MultiviewNotSupported,
-	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
-	#[error(display = "{}", _0)] DebugRendererError(#[error(source)] DebugRendererError),
-	#[error(display = "{}", _0)] BufferError(#[error(source)] BufferError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
-	#[error(display = "{}", _0)] VulkanError(#[error(source)] vulkano::VulkanError),
-	#[error(display = "{}", _0)] InstanceCreationError(#[error(source)] instance::InstanceCreationError),
-	#[error(display = "{}", _0)] DebugUtilsMessengerCreationError(#[error(source)] instance::debug::DebugUtilsMessengerCreationError),
-	#[error(display = "{}", _0)] DeviceCreationError(#[error(source)] device::DeviceCreationError),
-	#[error(display = "{}", _0)] RenderPassCreationError(#[error(source)] render_pass::RenderPassCreationError),
+	#[error("No devices available.")] NoDevices,
+	#[error("No compute queue available.")] NoQueue,
+	#[error("Multiview doesn't support enough views.")] MultiviewNotSupported,
+	#[error("Invalid Multi-Sampling count: {0}")] InvalidMultiSamplingCount(u32),
 }
 
 #[derive(Debug, Error)]
 pub enum RendererSwapchainError {
-	#[error(display = "Surface presentation is not supported.")] SurfaceNotSupported,
-	#[error(display = "{}", _0)] PhysicalDeviceError(#[error(source)] physical::PhysicalDeviceError),
-	#[error(display = "{}", _0)] SwapchainCreationError(#[error(source)] swapchain::SwapchainCreationError),
+	#[error("Surface presentation is not supported.")] SurfaceNotSupported,
 }
 
 #[derive(Debug, Error)]
 pub enum RendererCreateFramebufferError {
-	#[error(display = "Invalid Multi-Sampling count: {}", _0)] InvalidMultiSamplingCount(u32),
-	#[error(display = "{}", _0)] ImageViewCreationError(#[error(source)] vulkano::image::view::ImageViewCreationError),
-	#[error(display = "{}", _0)] ImageError(#[error(source)] vulkano::image::ImageError),
-	#[error(display = "{}", _0)] FramebufferCreationError(#[error(source)] render_pass::FramebufferCreationError),
-}
-
-#[derive(Debug, Error)]
-pub enum RendererBeginFrameError {
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-}
-
-#[derive(Debug, Error)]
-pub enum RendererEndFrameError {
-	#[error(display = "{}", _0)] FlushError(#[error(source)] sync::FlushError),
-}
-
-#[derive(Debug, Error)]
-pub enum RendererRenderError<RTE: Error> {
-	#[error(display = "{}", _0)] RenderTargetError(RTE),
-	#[error(display = "{}", _0)] ComponentError(ComponentError),
-	#[error(display = "{}", _0)] DebugRendererPreRenderError(#[error(source)] DebugRendererPreRenderError),
-	#[error(display = "{}", _0)] DebugRendererRenderError(#[error(source)] DebugRendererRenderError),
-	#[error(display = "{}", _0)] OomError(#[error(source)] vulkano::OomError),
-	#[error(display = "{}", _0)] RenderPassError(#[error(source)] command_buffer::RenderPassError),
-	#[error(display = "{}", _0)] CommandBufferBeginError(#[error(source)] command_buffer::CommandBufferBeginError),
-	#[error(display = "{}", _0)] PipelineExecutionError(#[error(source)] command_buffer::PipelineExecutionError),
-	#[error(display = "{}", _0)] CommandBufferBuildError(#[error(source)] command_buffer::BuildError),
-	#[error(display = "{}", _0)] CommandBufferExecError(#[error(source)] command_buffer::CommandBufferExecError),
-	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
-	#[error(display = "{}", _0)] ClearError(#[error(source)] command_buffer::ClearError),
-}
-
-impl<RTE: Error> From<ComponentError> for RendererRenderError<RTE> {
-	fn from(err: ComponentError) -> Self {
-		RendererRenderError::ComponentError(err)
-	}
+	#[error("Invalid Multi-Sampling count: {0}")] InvalidMultiSamplingCount(u32),
 }

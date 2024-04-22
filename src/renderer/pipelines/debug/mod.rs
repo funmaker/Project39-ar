@@ -1,5 +1,5 @@
 use std::sync::Arc;
-pub use shape_vert::Pc as ShapePc;
+use anyhow::Result;
 use vulkano::device::DeviceOwned;
 use vulkano::image::SampleCount;
 use vulkano::pipeline::GraphicsPipeline;
@@ -13,8 +13,9 @@ use vulkano::render_pass::RenderPass;
 
 mod vertex;
 
-use super::{PipelineConstructor, PipelineError, pre_mul_alpha_blending};
+use super::{PipelineConstructor, pre_mul_alpha_blending};
 pub use vertex::{Vertex, TexturedVertex};
+pub use shape_vert::Pc as ShapePc;
 
 
 type DefaultPipelineVertex = super::default::Vertex;
@@ -40,7 +41,7 @@ pub struct DebugPipeline;
 impl PipelineConstructor for DebugPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
 		let vs = vert::load(device.clone()).unwrap();
 		let fs = frag::load(device.clone()).unwrap();
@@ -84,7 +85,7 @@ pub struct DebugTexturedPipeline;
 impl PipelineConstructor for DebugTexturedPipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
 		let vs = tex_vert::load(device.clone()).unwrap();
 		let fs = tex_frag::load(device.clone()).unwrap();
@@ -129,7 +130,7 @@ pub struct DebugShapePipeline;
 impl PipelineConstructor for DebugShapePipeline {
 	type PipeType = GraphicsPipeline;
 	
-	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>, PipelineError> {
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
 		let vs = shape_vert::load(device.clone()).unwrap();
 		let fs = shape_frag::load(device.clone()).unwrap();

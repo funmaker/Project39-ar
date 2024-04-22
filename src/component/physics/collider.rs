@@ -1,10 +1,11 @@
 use std::cell::Cell;
+use anyhow::Result;
 use egui::Ui;
 use rapier3d::prelude::*;
 
 use crate::application::{Entity, Application, Physics};
 use crate::utils::{ExUi, get_user_data};
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::super::{Component, ComponentBase, ComponentInner};
 
 
 #[derive(ComponentBase)]
@@ -37,7 +38,7 @@ impl ColliderComponent {
 }
 
 impl Component for ColliderComponent {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		let mut collider = self.template.clone();
@@ -47,7 +48,7 @@ impl Component for ColliderComponent {
 		Ok(())
 	}
 	
-	fn end(&self, _entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		physics.collider_set.remove(self.handle.get(), &mut physics.island_manager, &mut physics.rigid_body_set, true);

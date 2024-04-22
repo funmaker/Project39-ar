@@ -17,7 +17,7 @@ pub struct Physics {
 	pub physics_pipeline: PhysicsPipeline,
 	pub query_pipeline: QueryPipeline,
 	pub island_manager: IslandManager,
-	pub broad_phase: BroadPhase,
+	pub broad_phase: BroadPhaseMultiSap,
 	pub narrow_phase: NarrowPhase,
 	pub impulse_joint_set: ImpulseJointSet,
 	pub multibody_joint_set: MultibodyJointSet,
@@ -42,7 +42,7 @@ impl Physics {
 			physics_pipeline: PhysicsPipeline::new(),
 			query_pipeline: QueryPipeline::new(),
 			island_manager: IslandManager::new(),
-			broad_phase: BroadPhase::new(),
+			broad_phase: BroadPhaseMultiSap::new(),
 			narrow_phase: NarrowPhase::new(),
 			impulse_joint_set: ImpulseJointSet::new(),
 			multibody_joint_set: MultibodyJointSet::new(),
@@ -208,19 +208,18 @@ impl Physics {
 				debug::draw_line(frame2, frame2 * Point3::from(Rot3::from_axis_angle(&-axis, err).transform_vector(&forward.scale(scale * 1.5))), 5.0, color);
 			};
 			
-			let double_axis = |axis1: Unit<Vec3>, axis2: Unit<Vec3>, forward: Unit<Vec3>, limits: (JointLimits<f32>, JointLimits<f32>), color: Color| {
+			let double_axis = |axis1: Unit<Vec3>, axis2: Unit<Vec3>, forward: Unit<Vec3>, limits: JointLimits<f32>, color: Color| {
 				let forward_point = Point3::origin() + forward.scale(scale);
-				let limit = (limits.0.max.powi(2) + limits.1.max.powi(2)).sqrt();
 				
-				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
-				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, -limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
-				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
-				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, -limit).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, limits.max).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis1, -limits.max).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, limits.max).transform_point(&forward_point), 3.0, color.lightness(0.5));
+				debug::draw_line(frame2, frame2 * Rot3::from_axis_angle(&axis2, -limits.max).transform_point(&forward_point), 3.0, color.lightness(0.5));
 				
 				arc(32,
 				    6.0,
 				    color.lightness(0.5),
-					|t| frame2 * (Rot3::from_axis_angle(&forward, t * PI * 2.0) * Rot3::from_axis_angle(&axis1, limit)).transform_point(&forward_point));
+					|t| frame2 * (Rot3::from_axis_angle(&forward, t * PI * 2.0) * Rot3::from_axis_angle(&axis1, limits.max)).transform_point(&forward_point));
 				
 				debug::draw_line(frame1, frame1 * Point3::from(forward.scale(scale * 1.5)), 6.0, color);
 			};
@@ -231,17 +230,17 @@ impl Physics {
 			
 			if coupled.contains(JointAxesMask::ANG_X | JointAxesMask::ANG_Y) {
 				double_axis(Vec3::x_axis(), Vec3::y_axis(), -Vec3::z_axis(),
-				            (joint.data.limits[JointAxis::AngX as usize], joint.data.limits[JointAxis::AngY as usize]),
+				            joint.data.limits[JointAxis::AngX as usize],
 				            Color::YELLOW);
 			}
 			if coupled.contains(JointAxesMask::ANG_Y | JointAxesMask::ANG_Z) {
 				double_axis(Vec3::y_axis(), Vec3::z_axis(), Vec3::x_axis(),
-				            (joint.data.limits[JointAxis::AngY as usize], joint.data.limits[JointAxis::AngZ as usize]),
+				            joint.data.limits[JointAxis::AngY as usize],
 				            Color::CYAN);
 			}
 			if coupled.contains(JointAxesMask::ANG_Z | JointAxesMask::ANG_X) {
 				double_axis(Vec3::z_axis(), Vec3::x_axis(), -Vec3::y_axis(),
-				            (joint.data.limits[JointAxis::AngZ as usize], joint.data.limits[JointAxis::AngX as usize]),
+				            joint.data.limits[JointAxis::AngX as usize],
 				            Color::MAGENTA);
 			}
 		}

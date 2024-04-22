@@ -3,40 +3,40 @@
 name = 'Extra X'
 using_bone = 7
 rotation_min = [
-    0,
-    0,
+    -45,
+    -45,
     0,
 ]
 rotation_max = [
     45,
-    0,
-    0,
-]
-
-[[joints]]
-name = 'Extra Y'
-using_bone = 9
-rotation_min = [
-    0,
-    0,
-    0,
-]
-rotation_max = [
-    0,
     45,
     0,
 ]
 
-[[joints]]
-name = 'Extra Z'
-using_bone = 11
-rotation_min = [
-    0,
-    0,
-    0,
-]
-rotation_max = [
-    0,
-    0,
-    45,
-]
+#[[joints]]
+#name = 'Extra Y'
+#using_bone = 9
+#rotation_min = [
+#    0,
+#    0,
+#    0,
+#]
+#rotation_max = [
+#    0,
+#    45,
+#    0,
+#]
+#
+#[[joints]]
+#name = 'Extra Z'
+#using_bone = 11
+#rotation_min = [
+#    0,
+#    0,
+#    0,
+#]
+#rotation_max = [
+#    0,
+#    0,
+#    45,
+#]

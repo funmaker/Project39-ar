@@ -1,10 +1,11 @@
+use anyhow::Result;
 use rapier3d::prelude::QueryFilter;
 
 use crate::application::{Hand, Application};
 use crate::math::Ray;
 use crate::utils::ColliderEx;
 use super::ToolGun;
-use super::tool::{Tool, ToolError};
+use super::tool::Tool;
 
 
 pub struct Remover;
@@ -20,7 +21,7 @@ impl Tool for Remover {
 		"Remover"
 	}
 	
-	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<(), ToolError> {
+	fn tick(&mut self, toolgun: &ToolGun, hand: Hand, ray: Ray, application: &Application) -> Result<()> {
 		if !application.input.fire_btn(hand).down {
 			return Ok(());
 		}

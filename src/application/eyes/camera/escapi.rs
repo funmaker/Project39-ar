@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 
 use crate::math::Isometry3;
-use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureError};
+use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureTimeout};
 
 
 pub const CAPTURE_INDEX: usize = 0;
@@ -13,7 +14,7 @@ pub struct Escapi {
 }
 
 impl Escapi {
-	pub fn new() -> Result<Escapi, EscapiCameraError> {
+	pub fn new() -> Result<Escapi> {
 		let inner = escapi::init(CAPTURE_INDEX, CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS)?;
 		
 		dprintln!("Camera {}: {}x{}", inner.name(), inner.capture_width(), inner.capture_height());
@@ -25,16 +26,12 @@ impl Escapi {
 }
 
 impl Camera for Escapi {
-	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>), CameraCaptureError> {
+	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>)> {
 		match self.inner.capture() {
 			Ok(frame) => Ok((frame, None)),
-			Err(escapi::Error::CaptureTimeout) => Err(CameraCaptureError::Timeout),
-			Err(err) => Err(CameraCaptureError::Other(err.into())),
+			Err(escapi::Error::CaptureTimeout) => Err(CameraCaptureTimeout.into()),
+			Err(err) => Err(err.into()),
 		}
 	}
 }
 
-#[derive(Debug, Error)]
-pub enum EscapiCameraError {
-	#[error(display = "{}", _0)] EscapiError(#[error(source)] escapi::Error),
-}

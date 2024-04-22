@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::cell::Cell;
 use std::time::Duration;
 use egui::Ui;
@@ -8,7 +9,7 @@ use crate::debug;
 use crate::application::{Entity, Application, EntityRef, Physics};
 use crate::math::{Isometry3, Vec3, PI, to_euler, from_euler, Color, Point3, face_towards_lossy, Rot3};
 use crate::utils::{ExUi, get_user_data};
-use super::super::{Component, ComponentBase, ComponentInner, ComponentError};
+use super::super::{Component, ComponentBase, ComponentInner};
 
 
 // Based on Mathias Parger's
@@ -179,7 +180,7 @@ impl VrIk {
 }
 
 impl Component for VrIk {
-	fn start(&self, entity: &Entity, application: &Application) -> Result<(), ComponentError> {
+	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		let user_data = get_user_data(entity.id, self.id());
 		
@@ -229,7 +230,7 @@ impl Component for VrIk {
 		Ok(())
 	}
 	
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<(), ComponentError> {
+	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		let root_pos = *entity.state().position;
 		let hmd_pos = self.hmd.get(application)
 		                      .map(|hmd| *hmd.state().position)

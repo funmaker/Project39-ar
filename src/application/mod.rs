@@ -5,7 +5,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use err_derive::Error;
+use anyhow::Result;
+use thiserror::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index::HMD;
@@ -23,33 +24,33 @@ mod gui;
 mod window;
 
 use crate::{config, debug};
-use crate::component::{Component, ComponentError, ComponentRef};
+use crate::component::{Component, ComponentRef};
 use crate::component::glow::Glow;
 use crate::component::hand::HandComponent;
 use crate::component::katamari::Katamari;
 use crate::component::miku::Miku;
-use crate::component::model::{MMDModel, ModelError};
-use crate::component::model::mmd::asset::{MMDModelLoadError, PmxAsset};
-use crate::component::model::simple::asset::{ObjAsset, ObjLoadError};
+use crate::component::model::MMDModel;
+use crate::component::model::mmd::asset::PmxAsset;
+use crate::component::model::simple::asset::ObjAsset;
 use crate::component::pc_controlled::PCControlled;
 use crate::component::physics::joint::JointComponent;
 use crate::component::pov::PoV;
 use crate::component::test::TestComponent;
 use crate::component::toolgun::ToolGun;
 use crate::component::vr::{VrIk, VrRoot};
+use crate::application::window::WindowSwapchainNeedRetry;
 use crate::config::CameraAPI;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
-use crate::renderer::{Renderer, RendererBeginFrameError, RendererEndFrameError, RendererError, RendererRenderError, RenderTarget};
-use crate::renderer::pipelines::PipelineError;
+use crate::renderer::{Renderer, RenderTarget};
 use crate::utils::default_wait_poses;
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use physics::Physics;
-pub use vr::{VR, VRError};
+pub use vr::VR;
 use bench::Benchmark;
-use eyes::{camera, Eyes, EyesLoadBackgroundError, EyesCreationError, EyesRenderTargetError};
+use eyes::{camera, Eyes};
 use gui::{ApplicationGui, GuiSelection};
-use window::{Window, WindowCreationError, WindowMirrorFromError, WindowRenderTargetError, WindowSwapchainRegenError};
+use window::Window;
 
 
 pub struct Application {
@@ -71,14 +72,14 @@ pub struct Application {
 }
 
 impl Application {
-	pub fn new() -> Result<Application, ApplicationCreationError> {
+	pub fn new() -> Result<Application> {
 		let config = config::get();
 		let vr = (!config.novr.enabled).then(|| VR::new())
 		                               .transpose()?
 		                               .map(Arc::new);
 		
 		if vr.is_none() && config.camera.driver == CameraAPI::OpenVR {
-			return Err(ApplicationCreationError::OpenVRCameraInNoVR);
+			return Err(OpenVRCameraInNoVRError.into());
 		}
 		
 		let mut renderer = Renderer::new(vr.clone())?;
@@ -189,29 +190,21 @@ impl Application {
 			// 		.build()
 			// );
 			
+			// application.add_entity(
+			// 	Entity::builder("初音ミク")
+			// 		.translation(point!(3.0, 0.0, 0.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+			// 		.build()
+			// );
+			
 			application.add_entity(
-				Entity::builder("初音ミク")
-					.translation(point!(3.0, 0.0, 0.0))
+				Entity::builder("test 2")
+					.translation(point!(-3.0, 4.0, -2.0))
 					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
+					.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
 					.build()
 			);
-			
-			// application.add_entity(
-			// 	Entity::builder("test 2")
-			// 		.translation(point!(3.0, 4.0, -2.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test22.pmx").no_overrides())?, renderer)?)
-			// 		.build()
-			// );
-
-			// application.add_entity(
-			// 	Entity::builder("test 2")
-			// 		.translation(point!(-3.0, 4.0, -2.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
-			// 		.build()
-			// );
 			
 			// application.add_entity(
 			// 	Entity::builder("Katamari")
@@ -228,7 +221,7 @@ impl Application {
 		Ok(application)
 	}
 	
-	pub fn run(mut self) -> Result<(), ApplicationRunError> {
+	pub fn run(mut self) -> Result<()> {
 		let mut instant = Instant::now();
 		
 		while !self.input.quitting {
@@ -315,7 +308,7 @@ impl Application {
 			
 			if let Some(window) = &mut self.window {
 				match window.regen_swapchain(self.renderer.get_mut()) {
-					Err(WindowSwapchainRegenError::NeedRetry) => {},
+					Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
 					result => result?,
 				}
 			}
@@ -428,7 +421,7 @@ impl Application {
 		self.gui_selection.borrow().clone()
 	}
 	
-	fn setup_loop(&mut self) -> Result<(), ApplicationRunError> {
+	fn setup_loop(&mut self) -> Result<()> {
 		let mut clean = false;
 		while !clean {
 			clean = true;
@@ -457,7 +450,7 @@ impl Application {
 		Ok(())
 	}
 	
-	fn cleanup_loop(&mut self) -> Result<(), ComponentError> {
+	fn cleanup_loop(&mut self) -> Result<()> {
 		let mut clean = false;
 		while !clean {
 			clean = true;
@@ -495,7 +488,7 @@ impl Application {
 		Ok(())
 	}
 	
-	fn handle_vr_input(&mut self) -> Result<(), ApplicationRunError> {
+	fn handle_vr_input(&mut self) -> Result<()> {
 		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		
 		self.vr_poses = vr.compositor.wait_get_poses()?;
@@ -519,34 +512,5 @@ impl Application {
 }
 
 #[derive(Debug, Error)]
-pub enum ApplicationCreationError {
-	#[error(display = "OpenvR unavailable. You can't use openvr background with --novr flag.")] OpenVRCameraInNoVR,
-	#[error(display = "{}", _0)] RendererCreationError(#[error(source)] RendererError),
-	#[error(display = "{}", _0)] VRError(#[error(source)] VRError),
-	#[error(display = "{}", _0)] ModelError(#[error(source)] ModelError),
-	#[error(display = "{}", _0)] ObjLoadError(#[error(source)] ObjLoadError),
-	#[error(display = "{}", _0)] MMDModelLoadError(#[error(source)] MMDModelLoadError),
-	#[error(display = "{}", _0)] EyesCreationError(#[error(source)] EyesCreationError),
-	#[cfg(windows)] #[error(display = "{}", _0)] EscapiCameraError(#[error(source)] camera::EscapiCameraError),
-	#[error(display = "{}", _0)] OpenVRCameraError(#[error(source)] camera::OpenVRCameraError),
-	#[error(display = "{}", _0)] WindowCreationError(#[error(source)] WindowCreationError),
-}
-
-#[derive(Debug, Error)]
-pub enum ApplicationRunError {
-	#[error(display = "{}", _0)] RendererBeginFrameError(#[error(source)] RendererBeginFrameError),
-	#[error(display = "{}", _0)] RendererRenderEyesError(#[error(source)] RendererRenderError<EyesRenderTargetError>),
-	#[error(display = "{}", _0)] RendererRenderWindowError(#[error(source)] RendererRenderError<WindowRenderTargetError>),
-	#[error(display = "{}", _0)] RendererEndFrameError(#[error(source)] RendererEndFrameError),
-	#[error(display = "{}", _0)] EyesLoadBackgroundError(#[error(source)] EyesLoadBackgroundError),
-	#[error(display = "{}", _0)] WindowSwapchainRegenError(#[error(source)] WindowSwapchainRegenError),
-	#[error(display = "{}", _0)] WindowRenderError(#[error(source)] WindowMirrorFromError),
-	#[error(display = "{}", _0)] ComponentError(ComponentError),
-	#[error(display = "{}", _0)] CompositorError(#[error(source)] openvr::compositor::CompositorError),
-}
-
-impl From<ComponentError> for ApplicationRunError {
-	fn from(err: ComponentError) -> Self {
-		ApplicationRunError::ComponentError(err)
-	}
-}
+#[error("OpenvR unavailable. You can't use openvr background with --novr flag.")]
+pub struct OpenVRCameraInNoVRError;

@@ -1,8 +1,8 @@
 use std::ffi::CString;
 use std::sync::Arc;
-use err_derive::Error;
+use anyhow::Result;
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
-use vulkano::{buffer, VulkanObject, Handle, command_buffer, memory};
+use vulkano::{VulkanObject, Handle};
 use vulkano::buffer::{BufferContents, BufferCreateInfo, Subbuffer, Buffer, BufferUsage};
 use vulkano::buffer::allocator::SubbufferAllocator;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo, PrimaryAutoCommandBuffer};
@@ -35,11 +35,11 @@ impl FramebufferBundle {
 }
 
 pub trait SubbufferAllocatorEx {
-	fn from_iter<T: Sized + BufferContents>(&self, iter: impl ExactSizeIterator<Item = T>) -> Result<Subbuffer<[T]>, SubbufferAllocatorExError>;
+	fn from_iter<T: Sized + BufferContents>(&self, iter: impl ExactSizeIterator<Item = T>) -> Result<Subbuffer<[T]>>;
 }
 
 impl SubbufferAllocatorEx for SubbufferAllocator {
-	fn from_iter<T: Sized + BufferContents>(&self, iter: impl ExactSizeIterator<Item = T>) -> Result<Subbuffer<[T]>, SubbufferAllocatorExError> {
+	fn from_iter<T: Sized + BufferContents>(&self, iter: impl ExactSizeIterator<Item = T>) -> Result<Subbuffer<[T]>> {
 		let subbuffer = self.allocate_slice(iter.len() as u64)?;
 		
 		{
@@ -52,12 +52,6 @@ impl SubbufferAllocatorEx for SubbufferAllocator {
 		
 		Ok(subbuffer)
 	}
-}
-
-#[derive(Debug, Error)]
-pub enum SubbufferAllocatorExError {
-	#[error(display = "{}", _0)] AllocationCreationError(#[error(source)] memory::allocator::AllocationCreationError),
-	#[error(display = "{}", _0)] BufferError(#[error(source)] buffer::BufferError),
 }
 
 pub trait IntoInfo<T>: Sized {
@@ -88,14 +82,14 @@ pub trait BufferEx {
 	                  buffer_info: BufferCreateInfo,
 	                  data: T,
 	                  cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
-	                  -> Result<Subbuffer<T>, UploadError>
+	                  -> Result<Subbuffer<T>>
 	                  where T: BufferContents;
 	
 	fn upload_iter<T, I>(allocator: &(impl MemoryAllocator + ?Sized),
 	                     buffer_info: BufferCreateInfo,
 	                     iter: I,
 	                     cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
-	                     -> Result<Subbuffer<[T]>, UploadError>
+	                     -> Result<Subbuffer<[T]>>
 	                     where T: BufferContents,
 	                           I: IntoIterator<Item = T>,
 	                           I::IntoIter: ExactSizeIterator;
@@ -106,7 +100,7 @@ impl BufferEx for Buffer {
 	                  buffer_info: BufferCreateInfo,
 	                  data: T,
 	                  cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
-	                  -> Result<Subbuffer<T>, UploadError>
+	                  -> Result<Subbuffer<T>>
 	                  where T: BufferContents {
 		let device_buffer = Buffer::new_sized(allocator,
 		                                      BufferCreateInfo {
@@ -129,7 +123,7 @@ impl BufferEx for Buffer {
 	                     buffer_info: BufferCreateInfo,
 	                     iter: I,
 	                     cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
-	                     -> Result<Subbuffer<[T]>, UploadError>
+	                     -> Result<Subbuffer<[T]>>
 	                     where T: BufferContents,
 	                           I: IntoIterator<Item=T>,
 	                           I::IntoIter: ExactSizeIterator {
@@ -152,12 +146,6 @@ impl BufferEx for Buffer {
 		
 		Ok(device_buffer)
 	}
-}
-
-#[derive(Debug, Error)]
-pub enum UploadError {
-	#[error(display = "{}", _0)] BufferError(#[error(source)] buffer::BufferError),
-	#[error(display = "{}", _0)] CopyError(#[error(source)] command_buffer::CopyError),
 }
 
 pub trait OpenVRPtr {
