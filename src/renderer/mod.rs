@@ -147,7 +147,7 @@ impl Renderer {
 			layers.push("VK_LAYER_KHRONOS_validation".to_string());
 		}
 		
-		let removed = layers.extract_if(|layer| layer_properties.iter().all(|al| al.name() != layer));
+		let removed = layers.extract_if(.., |layer| layer_properties.iter().all(|al| al.name() != layer));
 		
 		for layer in removed {
 			eprintln!("MISSING LAYER: {}", layer);
@@ -623,7 +623,7 @@ impl Renderer {
 		Ok(())
 	}
 	
-	pub fn debug_text_cache(&self) -> RefMut<TextCache> {
+	pub fn debug_text_cache(&self) -> RefMut<'_, TextCache> {
 		self.debug_renderer.as_ref().unwrap().text_cache()
 	}
 	

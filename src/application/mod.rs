@@ -9,7 +9,7 @@ use anyhow::Result;
 use thiserror::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
-use openvr::tracked_device_index::HMD;
+use openvr::tracked_device_index;
 use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::prelude::ColliderBuilder;
 use smallvec::SmallVec;
@@ -299,7 +299,7 @@ impl Application {
 			              .get(&self).map(|e| *e.state().position)
 			              .unwrap_or(Isometry3::identity());
 			let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
-			let hmd_pose = self.vr_poses.render[HMD as usize].device_to_absolute_tracking().clone();
+			let hmd_pose = self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone();
 			
 			if let Some(eyes) = &mut self.eyes {
 				eyes.set_hmd_pose(hmd_pose);
@@ -481,7 +481,7 @@ impl Application {
 			}
 		}
 		
-		for (_, mut entity) in self.entities.extract_if(|_, entity| entity.is_being_removed()) {
+		for (_, mut entity) in self.entities.extract_if(.., |_, entity| entity.is_being_removed()) {
 			entity.cleanup_physics(self.physics.get_mut());
 		}
 		
@@ -501,9 +501,9 @@ impl Application {
 			self.input.set_controller_id(Hand::Right, id);
 		}
 		
-		for id in 0..(MAX_TRACKED_DEVICE_COUNT as TrackedDeviceIndex) {
-			if let Some(state) = vr.system.controller_state(id) {
-				self.input.update_controller(id, state);
+		for id in 0..MAX_TRACKED_DEVICE_COUNT as openvr_sys::TrackedDeviceIndex_t {
+			if let Some(state) = vr.system.controller_state(TrackedDeviceIndex(id)) {
+				self.input.update_controller(TrackedDeviceIndex(id), state);
 			}
 		}
 		

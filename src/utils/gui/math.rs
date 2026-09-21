@@ -1,5 +1,3 @@
-use egui::*;
-
 use crate::math::{Color, from_euler, Isometry2, Isometry3, PI, Point2, Point3, Point4, Rot2, Rot3, Similarity2, Similarity3, to_euler, Translation2, Translation3, Vec2, Vec3, Vec4};
 use super::*;
 

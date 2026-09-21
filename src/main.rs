@@ -1,23 +1,13 @@
 #![feature(never_type)]
 #![feature(try_blocks)]
-#![feature(trace_macros)]
-#![feature(vec_into_raw_parts)]
 #![feature(negative_impls)]
-#![feature(extract_if)]
-#![feature(hash_extract_if)]
-#![feature(btree_extract_if)]
-#![feature(path_file_prefix)]
-#![feature(array_chunks)]
-#![feature(int_roundings)]
-#![feature(generic_nonzero)]
-#![feature(error_generic_member_access)]
 
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate nalgebra;
 extern crate core;
 
 use std::{fs, panic};
-use std::panic::PanicInfo;
+use std::panic::PanicHookInfo;
 use anyhow::Result;
 use native_dialog::{MessageDialog, MessageType};
 
@@ -105,7 +95,7 @@ fn print_usage(filename: &str, mut config: Config) {
 	println!("\n{}", config.usage());
 }
 
-fn panic_hook() -> impl Fn(&PanicInfo) {
+fn panic_hook() -> impl Fn(&PanicHookInfo) {
 	let default_hook = panic::take_hook();
 	
 	move |info| {

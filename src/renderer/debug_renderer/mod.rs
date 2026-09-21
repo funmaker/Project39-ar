@@ -85,7 +85,7 @@ impl DebugRenderer {
 		})
 	}
 	
-	pub fn text_cache(&self) -> RefMut<TextCache> {
+	pub fn text_cache(&self) -> RefMut<'_, TextCache> {
 		self.text_cache.borrow_mut()
 	}
 	

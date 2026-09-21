@@ -304,7 +304,7 @@ impl AssetKey for PmxAsset {
 			};
 			
 			let collider = collider.position(position)
-			                       .collision_groups(InteractionGroups::new(Group::from(1 << rigid_body.group_id), Group::from(0xFFFF0000 | rigid_body.non_collision_mask as u32)))
+			                       .collision_groups(InteractionGroups::new(Group::from(1 << rigid_body.group_id), Group::from(0xFFFF0000 | rigid_body.collision_mask as u32)))
 			                       .density(rigid_body.mass / volume)
 			                       .build();
 			

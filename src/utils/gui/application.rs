@@ -1,5 +1,3 @@
-use egui::*;
-
 use crate::application::{Application, Entity, EntityRef, Hand};
 use crate::component::{Component, ComponentRef};
 use super::*;

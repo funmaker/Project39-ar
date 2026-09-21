@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Debug};
 use openvr::{TrackedDeviceIndex, ControllerState};
+use openvr_sys as sys;
 
 mod device;
 mod state;
@@ -22,8 +23,8 @@ pub enum Hand {
 pub struct Input {
 	pub keyboard: InputDevice<Key>,
 	pub mouse: InputDevice<MouseButton>,
-	pub controllers: HashMap<TrackedDeviceIndex, InputDevice<usize>>,
-	pub controller_state: HashMap<TrackedDeviceIndex, ControllerState>,
+	pub controllers: HashMap<sys::TrackedDeviceIndex_t, InputDevice<usize>>,
+	pub controller_state: HashMap<sys::TrackedDeviceIndex_t, ControllerState>,
 	pub controller_left: Option<TrackedDeviceIndex>,
 	pub controller_right: Option<TrackedDeviceIndex>,
 	pub quitting: bool,
@@ -44,8 +45,8 @@ impl Input {
 	
 	pub fn controller(&self, hand: Hand) -> Option<&InputDevice<usize>> {
 		match hand {
-			Hand::Left => self.controller_left.and_then(|id| self.controllers.get(&id)),
-			Hand::Right => self.controller_right.and_then(|id| self.controllers.get(&id)),
+			Hand::Left => self.controller_left.and_then(|id| self.controllers.get(&id.0)),
+			Hand::Right => self.controller_right.and_then(|id| self.controllers.get(&id.0)),
 		}
 	}
 	
@@ -85,15 +86,15 @@ impl Input {
 	}
 	
 	pub fn update_controller(&mut self, idx: TrackedDeviceIndex, state: ControllerState) {
-		let previous = self.controller_state.insert(idx, state);
+		let previous = self.controller_state.insert(idx.0, state);
 		let pressed = state.button_pressed & !previous.map_or(0, |s| s.button_pressed);
 		let released = !state.button_pressed & previous.map_or(0, |s| s.button_pressed);
 		
-		let device = match self.controllers.get_mut(&idx) {
+		let device = match self.controllers.get_mut(&idx.0) {
 			Some(device) => device,
 			None => {
-				self.controllers.insert(idx, InputDevice::new(false));
-				self.controllers.get_mut(&idx).unwrap()
+				self.controllers.insert(idx.0, InputDevice::new(false));
+				self.controllers.get_mut(&idx.0).unwrap()
 			}
 		};
 		

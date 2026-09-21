@@ -43,7 +43,7 @@ impl Component for VrTracked {
 			}
 		};
 		
-		let pose = application.vr_poses.render[self.device_id as usize];
+		let pose = application.vr_poses.render[self.device_id.0 as usize];
 		
 		if !pose.pose_is_valid() {
 			return Ok(());
@@ -61,7 +61,7 @@ impl Component for VrTracked {
 	}
 	
 	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
-		ui.inspect_row("Device ID", format!("{}", self.device_id), ());
+		ui.inspect_row("Device ID", self.device_id, ());
 		ui.inspect_row("Root", &self.root, application);
 	}
 }

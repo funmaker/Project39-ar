@@ -21,7 +21,7 @@ impl TrackedCamera {
 	pub fn has_camera(&self, index: TrackedDeviceIndex) -> bool {
 		let mut out = false;
 		
-		unsafe { self.0.HasCamera.unwrap()(index, &mut out); }
+		unsafe { self.0.HasCamera.unwrap()(index.0, &mut out); }
 		
 		out
 	}
@@ -30,7 +30,7 @@ impl TrackedCamera {
 		let mut out = FrameSize::default();
 		
 		check_err(self.0, unsafe {
-			self.0.GetCameraFrameSize.unwrap()(index,
+			self.0.GetCameraFrameSize.unwrap()(index.0,
 			                                   frame_type.into(),
 			                                   &mut out.width,
 			                                   &mut out.height,
@@ -44,7 +44,7 @@ impl TrackedCamera {
 		let mut out = Intrinsics::default();
 		
 		check_err(self.0, unsafe {
-			self.0.GetCameraIntrinsics.unwrap()(index,
+			self.0.GetCameraIntrinsics.unwrap()(index.0,
 			                                    camera_index,
 			                                    frame_type.into(),
 			                                    &mut out.focal_length as *mut _ as *mut sys::HmdVector2_t,
@@ -58,7 +58,7 @@ impl TrackedCamera {
 		let mut out = [[0.0; 4]; 4];
 		
 		check_err(self.0, unsafe {
-			self.0.GetCameraProjection.unwrap()(index,
+			self.0.GetCameraProjection.unwrap()(index.0,
 			                                    camera_index,
 			                                    frame_type.into(),
 			                                    z_near,
@@ -73,7 +73,7 @@ impl TrackedCamera {
 		let mut out = 0;
 		
 		check_err(self.0,
-			self.0.AcquireVideoStreamingService.unwrap()(index,
+			self.0.AcquireVideoStreamingService.unwrap()(index.0,
 			                                             &mut out)
 		)?;
 		
@@ -95,7 +95,7 @@ impl TrackedCamera {
 			nHeight: 0,
 			nBytesPerPixel: 0,
 			nFrameSequence: 0,
-			standingTrackedDevicePose: sys::TrackedDevicePose_t {
+			trackedDevicePose: sys::TrackedDevicePose_t {
 				mDeviceToAbsoluteTracking: sys::HmdMatrix34_t { m: [[0.0; 4]; 3] },
 				vVelocity: sys::HmdVector3_t { v: [0.0, 0.0, 0.0] },
 				vAngularVelocity: sys::HmdVector3_t { v: [0.0, 0.0, 0.0] },

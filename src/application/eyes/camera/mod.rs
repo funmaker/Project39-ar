@@ -69,7 +69,7 @@ pub trait Camera: Send + 'static {
 			fps_counter.tick();
 			debug::set_flag("CAMERA_FPS", fps_counter.fps());
 			
-			let sub_buffer = allocator.from_iter(frame.0.array_chunks::<CHUNK_SIZE>().copied())?;
+			let sub_buffer = allocator.from_iter(frame.0.as_chunks::<CHUNK_SIZE>().0.iter().copied())?;
 			
 			let mut builder  = AutoCommandBufferBuilder::primary(&*command_buffer_allocator, queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
 			builder.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(sub_buffer, target.clone()))?;

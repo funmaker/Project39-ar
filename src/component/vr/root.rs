@@ -5,7 +5,6 @@ use anyhow::Result;
 use egui::Ui;
 use image::{DynamicImage, ImageBuffer};
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedDeviceClass, TrackedDeviceIndex, TrackedControllerRole, render_models};
-use openvr_sys::ETrackedDeviceProperty_Prop_RenderModelName_String;
 use rapier3d::dynamics::RigidBodyType;
 use rapier3d::geometry::{ColliderBuilder, InteractionGroups};
 use rapier3d::prelude::RigidBodyBuilder;
@@ -25,7 +24,7 @@ use super::{VrTracked, VrIk};
 #[derive(ComponentBase)]
 pub struct VrRoot {
 	#[inner] inner: ComponentInner,
-	entities: RefCell<HashMap<TrackedDeviceIndex, EntityRef>>,
+	entities: RefCell<HashMap<openvr_sys::TrackedDeviceIndex_t, EntityRef>>,
 	ik: ComponentRef<VrIk>,
 }
 
@@ -52,11 +51,12 @@ impl Component for VrRoot {
 		
 		entities.retain(|_, entref| entref.get(application).is_some());
 		
-		for tracked_id in 0..MAX_TRACKED_DEVICE_COUNT as u32 {
+		for tracked_id in 0..MAX_TRACKED_DEVICE_COUNT as openvr_sys::TrackedDeviceIndex_t {
+			let tracked_id = TrackedDeviceIndex(tracked_id);
 			if vr.system.is_tracked_device_connected(tracked_id) {
-				if entities.get(&tracked_id).is_none() {
-					let model_name = vr.system.string_tracked_device_property(tracked_id, ETrackedDeviceProperty_Prop_RenderModelName_String)?;
-					let model = vr.render_models.load_render_model(&vr.system.string_tracked_device_property(tracked_id, ETrackedDeviceProperty_Prop_RenderModelName_String)?);
+				if entities.get(&tracked_id.0).is_none() {
+					let model_name = vr.system.string_tracked_device_property(tracked_id, openvr::property::RenderModelName_String)?;
+					let model = vr.render_models.load_render_model(&model_name);
 					
 					if let Err(err) = model {
 						dprintln!("Failed to load model \"{}\": {}", model_name.to_string_lossy(), err);
@@ -143,7 +143,7 @@ impl Component for VrRoot {
 								}
 							}
 							
-							entities.insert(tracked_id, entity);
+							entities.insert(tracked_id.0, entity);
 							
 							println!("Loaded {:?}", vr.system.tracked_device_class(tracked_id));
 						}
@@ -157,8 +157,8 @@ impl Component for VrRoot {
 	
 	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
 		if let Some(vr) = application.vr.as_ref().and_then(|vr| vr.try_lock().ok()) {
-			for (id, entity) in self.entities.borrow_mut().iter() {
-				ui.inspect_row(format!("{:?}", vr.system.tracked_device_class(*id)),
+			for (&id, entity) in self.entities.borrow_mut().iter() {
+				ui.inspect_row(format!("{:?}", vr.system.tracked_device_class(TrackedDeviceIndex(id))),
 				               entity,
 				               application);
 			}

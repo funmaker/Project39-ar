@@ -2,7 +2,8 @@
 
 use std::sync::Arc;
 use std::time::{Instant, Duration};
-use ::openvr_sys as sys;
+use openvr::{tracked_device_index, TrackedDeviceIndex};
+use openvr_sys as sys;
 use anyhow::Result;
 use thiserror::Error;
 use openvr::property;
@@ -15,10 +16,10 @@ use super::super::super::vr::{VR, FrameType, CameraService};
 use super::{Camera, CameraCaptureTimeout};
 
 
-pub const CAPTURE_INDEX: u32 = 0;
+pub const CAPTURE_INDEX: TrackedDeviceIndex = tracked_device_index::HMD;
 
 pub struct OpenVR {
-	index: sys::TrackedDeviceIndex_t,
+	index: TrackedDeviceIndex,
 	last_capture: Instant,
 	service: CameraService,
 	headtocam: Isometry3,

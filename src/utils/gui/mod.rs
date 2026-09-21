@@ -259,6 +259,14 @@ impl Inspect for RichText {
 	}
 }
 
+impl Inspect for openvr::TrackedDeviceIndex {
+	type Options<'a> = ();
+	
+	fn inspect_ui(self, ui: &mut Ui, _: Self::Options<'_>) {
+		ui.label(format!("{}", self.0));
+	}
+}
+
 impl<T: InspectMut> InspectMut for Option<T> {
 	type Options<'a> = T::Options<'a>;
 	

@@ -39,7 +39,7 @@ impl CameraService {
 			height: header.nHeight,
 			bytes_per_pixel: header.nBytesPerPixel,
 			frame_sequence: header.nFrameSequence,
-			standing_device_pose: header.standingTrackedDevicePose.into(),
+			standing_device_pose: header.trackedDevicePose.into(),
 			frame_exposure_time: header.ulFrameExposureTime,
 			buffer,
 		});

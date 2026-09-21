@@ -409,7 +409,7 @@ impl Entity {
 		self.parent.set(EntityRef::null());
 	}
 	
-	pub fn children(&self) -> Ref<[EntityRef]> {
+	pub fn children(&self) -> Ref<'_, [EntityRef]> {
 		Ref::map(self.children.borrow(), Vec::as_slice)
 	}
 	
@@ -428,19 +428,19 @@ impl Entity {
 	
 	pub fn set_persist(&self, persist: bool) { self.persist.set(persist) }
 	
-	pub fn state(&self) -> Ref<EntityState> {
+	pub fn state(&self) -> Ref<'_, EntityState> {
 		self.state.borrow()
 	}
 	
-	pub fn state_mut(&self) -> RefMut<EntityState> {
+	pub fn state_mut(&self) -> RefMut<'_, EntityState> {
 		self.state.borrow_mut()
 	}
 	
-	pub fn try_state(&self) -> Option<Ref<EntityState>> {
+	pub fn try_state(&self) -> Option<Ref<'_, EntityState>> {
 		self.state.try_borrow().ok()
 	}
 	
-	pub fn try_state_mut(&self) -> Option<RefMut<EntityState>> {
+	pub fn try_state_mut(&self) -> Option<RefMut<'_, EntityState>> {
 		self.state.try_borrow_mut().ok()
 	}
 	

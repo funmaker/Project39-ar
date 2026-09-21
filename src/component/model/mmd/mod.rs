@@ -154,11 +154,11 @@ impl MMDModel {
 		self.shared.fence.check()
 	}
 	
-	pub fn state(&self) -> Ref<MMDModelState> {
+	pub fn state(&self) -> Ref<'_, MMDModelState> {
 		self.state.borrow()
 	}
 	
-	pub fn state_mut(&self) -> RefMut<MMDModelState> {
+	pub fn state_mut(&self) -> RefMut<'_, MMDModelState> {
 		self.state.borrow_mut()
 	}
 	

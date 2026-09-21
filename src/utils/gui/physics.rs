@@ -1,5 +1,4 @@
 use std::any::Any;
-use egui::*;
 use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
 use rapier3d::parry::partitioning::IndexedData;

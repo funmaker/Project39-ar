@@ -45,7 +45,7 @@ impl MMDRigidBodyOverride {
 			translation: Some(rb.universal_name.clone()),
 			bone_index: Some(rb.bone_index),
 			group_id: Some(rb.group_id),
-			collision_mask: Some(rb.non_collision_mask),
+			collision_mask: Some(rb.collision_mask),
 			shape: Some(rb.shape),
 			size: Some(rb.shape_size),
 			position: Some(rb.shape_position),
@@ -63,7 +63,7 @@ impl MMDRigidBodyOverride {
 		if let Some(value) = &self.translation     { rb.universal_name = value.clone(); }
 		if let Some(value) = self.bone_index       { rb.bone_index = value; }
 		if let Some(value) = self.group_id         { rb.group_id = value; }
-		if let Some(value) = self.collision_mask   { rb.non_collision_mask = value; }
+		if let Some(value) = self.collision_mask   { rb.collision_mask = value; }
 		if let Some(value) = self.shape            { rb.shape = value; }
 		if let Some(value) = self.size             { rb.shape_size = value; }
 		if let Some(value) = self.position         { rb.shape_position = value; }
@@ -83,7 +83,7 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 			universal_name: "".into(),
 			bone_index: 0,
 			group_id: 0,
-			non_collision_mask: 0xFFFF,
+			collision_mask: 0xFFFF,
 			shape: ShapeType::Box,
 			shape_size: vector!(1.0, 1.0, 1.0),
 			shape_position: vector!(0.0, 0.0, 0.0),
