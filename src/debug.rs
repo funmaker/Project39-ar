@@ -114,6 +114,30 @@ impl From<Similarity3> for DebugPosition {
 	}
 }
 
+impl From<glamx::Vec2> for DebugPosition {
+	fn from(pos: glamx::Vec2) -> Self {
+		DebugPosition::Screen(pos.into())
+	}
+}
+
+impl From<glamx::Vec3> for DebugPosition {
+	fn from(pos: glamx::Vec3) -> Self {
+		DebugPosition::World(pos.into())
+	}
+}
+
+impl From<glamx::Pose2> for DebugPosition {
+	fn from(pos: glamx::Pose2) -> Self {
+		DebugPosition::Screen(pos.translation.into())
+	}
+}
+
+impl From<glamx::Pose3> for DebugPosition {
+	fn from(pos: glamx::Pose3) -> Self {
+		DebugPosition::World(pos.translation.into())
+	}
+}
+
 pub struct DebugPoint {
 	pub position: DebugPosition,
 	pub radius: f32,

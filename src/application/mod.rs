@@ -6,12 +6,14 @@ use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use anyhow::Result;
+use nalgebra::Unit;
 use thiserror::Error;
 use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
 use openvr::compositor::WaitPoses;
 use openvr::tracked_device_index;
 use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
-use rapier3d::prelude::ColliderBuilder;
+use rapier3d::geometry::ColliderBuilder;
+use rapier3d::pipeline::PhysicsWorld;
 use smallvec::SmallVec;
 
 pub mod entity;
@@ -45,18 +47,17 @@ use crate::renderer::{Renderer, RenderTarget};
 use crate::utils::default_wait_poses;
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
-pub use physics::Physics;
 pub use vr::VR;
 use bench::Benchmark;
 use eyes::{camera, Eyes};
 use gui::{ApplicationGui, GuiSelection};
 use window::Window;
-
+use crate::application::physics::PhysicsDebug;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
-	pub physics: RefCell<Physics>,
+	pub physics: RefCell<PhysicsWorld>,
 	pub vr_poses: WaitPoses,
 	pub pov: EntityRef,
 	pub miku: ComponentRef<Miku>,
@@ -104,7 +105,7 @@ impl Application {
 		let application = Application {
 			vr,
 			renderer: RefCell::new(renderer),
-			physics: RefCell::new(Physics::new()),
+			physics: RefCell::new(PhysicsWorld::new()),
 			vr_poses: default_wait_poses(),
 			pov: EntityRef::null(),
 			miku: ComponentRef::null(),
@@ -133,7 +134,7 @@ impl Application {
 				Entity::builder("Floor")
 					.translation(point!(0.0, 0.0, 0.0))
 					.component(renderer.load(ObjAsset::at("shapes/floor.obj", "shapes/floor.png"))?)
-					.collider(ColliderBuilder::halfspace(Vec3::y_axis()).build())
+					.collider(ColliderBuilder::halfspace(Unit::new_unchecked(glamx::Vec3::Y)).build())
 					.tag("World", true)
 					.hidden(config.camera.driver != CameraAPI::Dummy)
 					.build()
@@ -190,21 +191,21 @@ impl Application {
 			// 		.build()
 			// );
 			
-			// application.add_entity(
-			// 	Entity::builder("初音ミク")
-			// 		.translation(point!(3.0, 0.0, 0.0))
-			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-			// 		.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
-			// 		.build()
-			// );
-			
 			application.add_entity(
-				Entity::builder("test 2")
-					.translation(point!(-3.0, 4.0, -2.0))
-					.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
-					.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
+				Entity::builder("初音ミク")
+					.translation(point!(-0.0, 0.0, 0.0))
+					.rotation(Rot3::from_euler_angles(0.0, PI * 0.5, 0.0))
+					.component(Miku::new(PmxAsset::at("YYB式初音ミクCrude Hair/YYB式初音ミクCrude Hair.pmx")))
 					.build()
 			);
+			
+			// application.add_entity(
+			// 	Entity::builder("test 2")
+			// 		.translation(point!(-3.0, 4.0, -2.0))
+			// 		.rotation(Rot3::from_euler_angles(0.0, PI * 0.0, 0.0))
+			// 		.component(MMDModel::new(renderer.load(PmxAsset::at("test2/test2.pmx"))?, renderer)?)
+			// 		.build()
+			// );
 			
 			// application.add_entity(
 			// 	Entity::builder("Katamari")
@@ -265,7 +266,8 @@ impl Application {
 					entity.before_physics(&self, &mut physics);
 				}
 				
-				physics.step(Duration::from_millis(1000 / 140)); // TODO: use deltaTime?
+				physics.integration_parameters.dt = delta_time.as_secs_f32();
+				physics.step();
 				
 				for entity in self.dfs_entities() {
 					entity.after_physics(&self, &mut physics);

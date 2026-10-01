@@ -46,7 +46,7 @@ impl Component for TestComponent {
 		let position = self.orig.get() * Translation3::new(0.0, 0.0, ((time * self.speed.get().abs()) % 1.0 - 0.5).abs() * self.speed.get().signum());
 		
 		if self.phys {
-			entity.rigid_body_mut(&mut *application.physics.borrow_mut()).set_position(position, true);
+			entity.rigid_body_mut(&mut *application.physics.borrow_mut()).set_position(position.into(), true);
 		} else {
 			*entity.state_mut().position = position;
 		}

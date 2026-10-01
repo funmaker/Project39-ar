@@ -2,11 +2,12 @@ use anyhow::Result;
 use std::cell::Cell;
 use std::time::Duration;
 use egui::Ui;
-use rapier3d::dynamics::{RigidBodyBuilder, RigidBodyType};
-use rapier3d::prelude::{ColliderBuilder, RigidBodyHandle};
+use rapier3d::dynamics::{RigidBodyBuilder, RigidBodyType, RigidBodyHandle};
+use rapier3d::geometry::ColliderBuilder;
+use rapier3d::pipeline::PhysicsWorld;
 
 use crate::debug;
-use crate::application::{Entity, Application, EntityRef, Physics};
+use crate::application::{Entity, Application, EntityRef};
 use crate::math::{Isometry3, Vec3, PI, to_euler, from_euler, Color, Point3, face_towards_lossy, Rot3};
 use crate::utils::{ExUi, get_user_data};
 use super::super::{Component, ComponentBase, ComponentInner};
@@ -191,7 +192,7 @@ impl Component for VrIk {
 			create_rb(physics,
 			          user_data,
 			          ColliderBuilder::cuboid(0.2, 0.25, 0.1)
-			                          .translation(vector!(0.0, -0.2, 0.0))
+			                          .translation(vector!(0.0, -0.2, 0.0).into())
 			                          .user_data(user_data))
 		);
 		
@@ -199,7 +200,7 @@ impl Component for VrIk {
 			create_rb(physics,
 			          user_data,
 			          ColliderBuilder::capsule_z(upper_arm_length * 0.5, 0.05)
-			                          .translation(vector!(0.0, 0.0, -upper_arm_length * 0.5))
+			                          .translation(vector!(0.0, 0.0, -upper_arm_length * 0.5).into())
 			                          .user_data(user_data))
 		);
 		
@@ -207,7 +208,7 @@ impl Component for VrIk {
 			create_rb(physics,
 			          user_data,
 			          ColliderBuilder::capsule_z(lower_arm_length * 0.5, 0.05)
-			                          .translation(vector!(0.0, 0.0, -lower_arm_length * 0.5))
+			                          .translation(vector!(0.0, 0.0, -lower_arm_length * 0.5).into())
 			                          .user_data(user_data))
 		);
 		
@@ -215,7 +216,7 @@ impl Component for VrIk {
 			create_rb(physics,
 			          user_data,
 			          ColliderBuilder::capsule_z(upper_arm_length * 0.5, 0.05)
-			                          .translation(vector!(0.0, 0.0, -upper_arm_length * 0.5))
+			                          .translation(vector!(0.0, 0.0, -upper_arm_length * 0.5).into())
 			                          .user_data(user_data))
 		);
 		
@@ -223,7 +224,7 @@ impl Component for VrIk {
 			create_rb(physics,
 			          user_data,
 			          ColliderBuilder::capsule_z(lower_arm_length * 0.5, 0.05)
-			                          .translation(vector!(0.0, 0.0, -lower_arm_length * 0.5))
+			                          .translation(vector!(0.0, 0.0, -lower_arm_length * 0.5).into())
 			                          .user_data(user_data))
 		);
 		
@@ -256,11 +257,11 @@ impl Component for VrIk {
 		let (upper_left_pos, lower_left_pos) = self.arm_pos(shoulder_left, hand_left, true, Color::D_GREEN);
 		let (upper_right_pos, lower_right_pos) = self.arm_pos(shoulder_right, hand_right, false, Color::D_BLUE);
 		
-		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_torso.get())           { rb.set_position(torso_pos, true); }
-		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_left_upper_arm.get())  { rb.set_position(upper_left_pos, true); }
-		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_left_lower_arm.get())  { rb.set_position(lower_left_pos, true); }
-		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_right_upper_arm.get()) { rb.set_position(upper_right_pos, true); }
-		if let Some(rb) = physics.rigid_body_set.get_mut(self.rb_right_lower_arm.get()) { rb.set_position(lower_right_pos, true); }
+		if let Some(rb) = physics.bodies.get_mut(self.rb_torso.get())           { rb.set_position(torso_pos.into(), true); }
+		if let Some(rb) = physics.bodies.get_mut(self.rb_left_upper_arm.get())  { rb.set_position(upper_left_pos.into(), true); }
+		if let Some(rb) = physics.bodies.get_mut(self.rb_left_lower_arm.get())  { rb.set_position(lower_left_pos.into(), true); }
+		if let Some(rb) = physics.bodies.get_mut(self.rb_right_upper_arm.get()) { rb.set_position(upper_right_pos.into(), true); }
+		if let Some(rb) = physics.bodies.get_mut(self.rb_right_lower_arm.get()) { rb.set_position(lower_right_pos.into(), true); }
 		
 		Ok(())
 	}
@@ -291,17 +292,17 @@ impl Component for VrIk {
 	}
 }
 
-fn create_rb(physics: &mut Physics, user_data: u128, collider: ColliderBuilder) -> RigidBodyHandle {
-	let handle = physics.rigid_body_set.insert(
+fn create_rb(physics: &mut PhysicsWorld, user_data: u128, collider: ColliderBuilder) -> RigidBodyHandle {
+	let handle = physics.bodies.insert(
 		RigidBodyBuilder::new(RigidBodyType::KinematicPositionBased)
 			.user_data(user_data)
 			.build()
 	);
 	
-	physics.collider_set.insert_with_parent(
+	physics.colliders.insert_with_parent(
 		collider,
 		handle,
-		&mut physics.rigid_body_set,
+		&mut physics.bodies,
 	);
 	
 	handle

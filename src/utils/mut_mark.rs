@@ -7,7 +7,7 @@ use super::{InspectMut, Inspect};
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub struct MutMark<T> {
-	pub mutated: bool,
+	mutated: bool,
 	inner: T,
 }
 
@@ -19,8 +19,29 @@ impl<T> MutMark<T> {
 		}
 	}
 	
-	pub fn reset(&mut self) {
-		self.mutated = false;
+	pub fn new_mutated(inner: T) -> Self {
+		MutMark {
+			inner,
+			mutated: false,
+		}
+	}
+	
+	pub fn mark_mut(&mut self) {
+		self.mutated = true;
+	}
+	
+	pub fn was_mut(&self) -> bool {
+		self.mutated
+	}
+	
+	pub fn clear_mut(&mut self) -> bool {
+		std::mem::replace(&mut self.mutated, false)
+	}
+}
+
+impl<T> From<T> for MutMark<T> {
+	fn from(inner: T) -> Self {
+		MutMark::new(inner)
 	}
 }
 

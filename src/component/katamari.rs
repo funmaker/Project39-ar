@@ -50,7 +50,7 @@ impl Component for Katamari {
 			for contact in physics.narrow_phase.contact_pairs_with(collider.handle()) {
 				let other = if contact.collider1 == collider.handle() { contact.collider2 } else { contact.collider1 };
 				
-				if let Some(other) = physics.collider_set.get(other) {
+				if let Some(other) = physics.colliders.get(other) {
 					if let Some(other_ent) = other.component_ref().entity().get(application) {
 						let other_rb = other_ent.rigid_body(physics);
 						let other_volume = other.volume();

@@ -5,7 +5,8 @@ use std::fmt::{Display, Formatter};
 use std::time::Duration;
 use anyhow::Result;
 use egui::Ui;
-use rapier3d::prelude::{RigidBody, RigidBodyHandle, RigidBodyType};
+use rapier3d::dynamics::{RigidBody, RigidBodyHandle, RigidBodyType};
+use rapier3d::pipeline::PhysicsWorld;
 
 mod builder;
 mod entity_ref;
@@ -15,7 +16,7 @@ use crate::component::ComponentRef;
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect, ref_cell_iter};
-use super::{Application, Component, Physics, Hand};
+use super::{Application, Component, Hand};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
 
@@ -57,11 +58,11 @@ impl Entity {
 			let mut rb = self.rigid_body_template.clone();
 			
 			rb.user_data = get_user_data(self.id, 0);
-			rb.set_position(*state.position, true);
-			rb.set_linvel(*state.velocity, true);
-			rb.set_angvel(*state.angular_velocity, true);
+			rb.set_position((*state.position).into(), true);
+			rb.set_linvel((*state.velocity).into(), true);
+			rb.set_angvel((*state.angular_velocity).into(), true);
 			
-			self.rigid_body = physics.rigid_body_set.insert(rb);
+			self.rigid_body = physics.insert_body(rb);
 		}
 		
 		self.initialized.set(true);
@@ -96,45 +97,45 @@ impl Entity {
 		Ok(())
 	}
 	
-	pub fn before_physics(&self, application: &Application, physics: &mut Physics) {
+	pub fn before_physics(&self, application: &Application, physics: &mut PhysicsWorld) {
 		let mut state = self.state_mut();
 		let rigid_body = self.rigid_body_mut(physics);
 		
-		if state.position.mutated {
+		if state.position.was_mut() {
 			if self.parent_offset.get().is_some() {
 				if let Some(parent) = self.parent.get(application) {
 					self.parent_offset.set(Some(parent.state().position.inverse() * *state.position));
 				}
 			}
 			
-			rigid_body.set_position(*state.position, true);
+			rigid_body.set_position((*state.position).into(), true);
 		} else if let Some(parent_offset) = self.parent_offset.get() {
 			if let Some(parent) = self.parent.get(application) {
-				if parent.state().position.mutated {
+				if parent.state().position.was_mut() {
 					*state.position = *parent.state().position * parent_offset;
 					
-					rigid_body.set_position(*state.position, true);
+					rigid_body.set_position((*state.position).into(), true);
 				}
 			}
 		}
 		
-		if state.velocity.mutated {
-			rigid_body.set_linvel(*state.velocity, true);
+		if state.velocity.was_mut() {
+			rigid_body.set_linvel((*state.velocity).into(), true);
 		}
 		
-		if state.angular_velocity.mutated {
-			rigid_body.set_angvel(*state.angular_velocity, true);
+		if state.angular_velocity.was_mut() {
+			rigid_body.set_angvel((*state.angular_velocity).into(), true);
 		}
 	}
 	
-	pub fn after_physics(&self, application: &Application, physics: &mut Physics) {
+	pub fn after_physics(&self, application: &Application, physics: &mut PhysicsWorld) {
 		if let Some(parent) = self.parent.get(application) {
 			if let Some(parent_offset) = self.parent_offset.get() {
 				let parent_sleeping = parent.rigid_body(physics).is_sleeping();
 				let rigid_body = self.rigid_body_mut(physics);
 				
 				if !parent_sleeping {
-					self.rigid_body_mut(physics).set_position(*parent.state().position * parent_offset, true);
+					self.rigid_body_mut(physics).set_position((*parent.state().position * parent_offset).into(), true);
 				} else if !rigid_body.is_sleeping() {
 					self.rigid_body_mut(physics).sleep();
 				}
@@ -144,20 +145,20 @@ impl Entity {
 		let mut state = self.state_mut();
 		let rigid_body = self.rigid_body(physics);
 		
-		*state.position = *rigid_body.position();
-		state.position.reset();
+		*state.position = (*rigid_body.position()).into();
+		state.position.clear_mut();
 		
-		*state.velocity = *rigid_body.linvel();
-		state.velocity.reset();
+		*state.velocity = rigid_body.linvel().into();
+		state.velocity.clear_mut();
 		
-		*state.angular_velocity = *rigid_body.angvel();
-		state.angular_velocity.reset();
+		*state.angular_velocity = rigid_body.angvel().into();
+		state.angular_velocity.clear_mut();
 	}
 	
 	pub fn tick(&self, delta_time: Duration, application: &Application) -> Result<()> {
 		if let Some(parent) = self.parent.get(application) {
 			if let Some(parent_offset) = self.parent_offset.get() {
-				if parent.state().position.mutated {
+				if parent.state().position.was_mut() {
 					*self.state_mut().position = *parent.state().position * parent_offset;
 				}
 			}
@@ -228,8 +229,8 @@ impl Entity {
 		self.components.retain(|_, component| !component.inner().is_dead());
 	}
 	
-	pub fn cleanup_physics(&mut self, physics: &mut Physics) {
-		physics.rigid_body_set.remove(self.rigid_body, &mut physics.island_manager, &mut physics.collider_set, &mut physics.impulse_joint_set, &mut physics.multibody_joint_set, true);
+	pub fn cleanup_physics(&mut self, physics: &mut PhysicsWorld) {
+		physics.remove_body(self.rigid_body);
 	}
 	
 	pub fn on_gui(&self, ui: &mut Ui, application: &Application) {
@@ -444,12 +445,12 @@ impl Entity {
 		self.state.try_borrow_mut().ok()
 	}
 	
-	pub fn rigid_body<'p>(&self, physics: &'p Physics) -> &'p RigidBody {
-		physics.rigid_body_set.get(self.rigid_body).unwrap()
+	pub fn rigid_body<'p>(&self, physics: &'p PhysicsWorld) -> &'p RigidBody {
+		physics.bodies.get(self.rigid_body).unwrap()
 	}
 	
-	pub fn rigid_body_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut RigidBody {
-		physics.rigid_body_set.get_mut(self.rigid_body).unwrap()
+	pub fn rigid_body_mut<'p>(&self, physics: &'p mut PhysicsWorld) -> &'p mut RigidBody {
+		physics.bodies.get_mut(self.rigid_body).unwrap()
 	}
 	
 	pub fn tag<T: Clone + 'static>(&self, key: &str) -> Option<T> {
@@ -468,7 +469,7 @@ impl Entity {
 		self.tags.borrow_mut().contains_key(key)
 	}
 	
-	pub fn freeze(&self, physics: &mut Physics) -> bool {
+	pub fn freeze(&self, physics: &mut PhysicsWorld) -> bool {
 		let rb = self.rigid_body_mut(physics);
 		
 		if rb.body_type() == RigidBodyType::Dynamic {
@@ -478,7 +479,7 @@ impl Entity {
 		} else { false }
 	}
 	
-	pub fn unfreeze(&self, physics: &mut Physics) -> bool {
+	pub fn unfreeze(&self, physics: &mut PhysicsWorld) -> bool {
 		if self.frozen.replace(false) {
 			self.rigid_body_mut(physics)
 			    .set_body_type(RigidBodyType::Dynamic, true);

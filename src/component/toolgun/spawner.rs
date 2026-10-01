@@ -1,6 +1,5 @@
 use anyhow::Result;
 use rapier3d::dynamics::RigidBodyType;
-use rapier3d::pipeline::QueryFilter;
 
 use crate::debug;
 use crate::application::{Hand, Application};
@@ -47,7 +46,7 @@ impl Tool for Spawner {
 			if self.menu_pos.is_some() {
 				self.menu_pos = None;
 			} else {
-				self.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE), &ray.origin, &Vec3::y_axis()));
+				self.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE).into(), &ray.origin.into(), &Vec3::y_axis()));
 			}
 		}
 		
@@ -75,17 +74,17 @@ impl Tool for Spawner {
 		} else {
 			let result = {
 				let physics = &*application.physics.borrow();
-				physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
+				physics.query_pipeline().cast_ray_and_get_normal(&ray, 9999.0, false)
 			};
 			
 			if let Some((_, intersection)) = result {
 				if let Some(prop) = toolgun.prop_collection.props.get(self.prop_idx) {
-					let hit_point = ray.point_at(intersection.toi);
+					let hit_point = ray.point_at(intersection.time_of_impact);
 					let offset = prop.model.aabb().mins.y;
 					
 					let position = Isometry3::from_parts(
 						(hit_point - intersection.normal * offset).into(),
-						face_upwards_lossy(intersection.normal),
+						face_upwards_lossy(intersection.normal.into()),
 					);
 					
 					self.ghost_pos = Some(position);
@@ -131,7 +130,7 @@ impl Tool for Spawner {
 				let pos = vector!((x - hsize) * MENU_SPACING,
 				                  (hsize - y) * MENU_SPACING,
 				                  0.0);
-				let size = MENU_SCALE / prop.model.aabb().extents().max();
+				let size = MENU_SCALE / prop.model.aabb().extents().max_element();
 				
 				let transform = menu_pos * Similarity3::from_parts(pos.into(), Rot3::from_euler_angles(0.0, 0.0, 0.0), size);
 				

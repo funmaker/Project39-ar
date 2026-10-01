@@ -1,5 +1,4 @@
 use anyhow::Result;
-use rapier3d::pipeline::QueryFilter;
 use rapier3d::prelude::RevoluteJoint;
 
 use crate::application::{Hand, Application, EntityRef};
@@ -41,8 +40,8 @@ impl Tool for Axis {
 		let result = {
 			let physics = &*application.physics.borrow();
 			
-			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new()) {
-				physics.collider_set.get(c)
+			if let Some((c, toi)) = physics.query_pipeline().cast_ray_and_get_normal(&ray, 9999.0, false) {
+				physics.colliders.get(c)
 				       .map(|c| (c.entity(application), toi))
 			} else {
 				None
@@ -51,8 +50,8 @@ impl Tool for Axis {
 		
 		if let Some((hit_ent, intersection)) = result {
 			let hit_pos = Isometry3::from_parts(
-				ray.point_at(intersection.toi).into(),
-				face_towards_lossy(intersection.normal),
+				ray.point_at(intersection.time_of_impact).into(),
+				face_towards_lossy(intersection.normal.into()),
 			);
 			self.ghost_pos = Some(hit_pos);
 			
@@ -65,9 +64,9 @@ impl Tool for Axis {
 					if target != hit_ent {
 						*target.state_mut().position = hit_pos * self.target_local_pos.inverse();
 						target.add_component(JointComponent::new(
-							*RevoluteJoint::new(Vec3::z_axis())
-							               .set_local_anchor1(self.target_local_pos * Point3::origin())
-							               .set_local_anchor2(local_pos * Point3::origin()),
+							*RevoluteJoint::new(Vec3::z_axis().into())
+							               .set_local_anchor1((self.target_local_pos * Point3::origin()).into())
+							               .set_local_anchor2((local_pos * Point3::origin()).into()),
 							hit_ent,
 						));
 						

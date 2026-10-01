@@ -1,5 +1,4 @@
 use anyhow::Result;
-use rapier3d::pipeline::QueryFilter;
 
 use crate::application::{Hand, Application, EntityRef};
 use crate::math::{Ray, Point3};
@@ -38,8 +37,8 @@ impl Tool for RopeTool {
 		let result = {
 			let physics = &*application.physics.borrow();
 			
-			if let Some((c, toi)) = physics.query_pipeline.cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new()) {
-				physics.collider_set.get(c)
+			if let Some((c, toi)) = physics.query_pipeline().cast_ray(&ray, 9999.0, false) {
+				physics.colliders.get(c)
 				       .map(|c| (c.entity(application), toi))
 			} else {
 				None
@@ -47,7 +46,7 @@ impl Tool for RopeTool {
 		};
 		
 		if let Some((hit_ent, toi)) = result {
-			let hit_pos = ray.point_at(toi);
+			let hit_pos = Point3::from(ray.point_at(toi));
 			
 			if let Some(selected) = self.selected.get(application) {
 				let selected_hit_pos = selected.state().position.transform_point(&self.selected_local_offset);

@@ -62,9 +62,9 @@ impl FromArgs for bool {
 	}
 }
 
-impl<T, R: DimName, C: DimName> FromArgs for Matrix<T, R, C, <DefaultAllocator as Allocator<T, R, C>>::Buffer>
+impl<T, R: DimName, C: DimName> FromArgs for Matrix<T, R, C, <DefaultAllocator as Allocator<R, C>>::Buffer<T>>
 	where T: Scalar + Display + FromStr,
-	      DefaultAllocator: Allocator<T, R, C>,
+	      DefaultAllocator: Allocator<R, C>,
 	      <T as FromStr>::Err: std::error::Error + Send + Sync {
 	
 	fn hint(&self) -> String {

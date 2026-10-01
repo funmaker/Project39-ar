@@ -39,7 +39,7 @@ impl Component for MMDRigidBody {
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		
 		// TODO: investigate unintended sleeps?
-		if let Some(rb) = application.physics.borrow_mut().rigid_body_set.get_mut(entity.rigid_body) {
+		if let Some(rb) = application.physics.borrow_mut().bodies.get_mut(entity.rigid_body) {
 			rb.wake_up(true);
 		}
 		

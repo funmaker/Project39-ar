@@ -25,14 +25,15 @@ winit = "0.28.3"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "45387f7bb2a4d67f20b176be2ee0b749d9a0809e" }
 native-dialog = "0.6.3"
 unifont = "0.1.0"
-nalgebra = { version = "0.32.2", features = ["serde-serialize", "bytemuck"] }
-simba = "0.8.1"
+nalgebra = { version = "0.35.0", features = ["serde-serialize", "bytemuck", "convert-glam031"] }
+glamx = { version = "0.3.1", features = ["nalgebra"] }
+simba = "0.10.2"
 imghdr = "0.7.0"
 toml = { version = "0.7.3", features = ['preserve_order'] }
 serde = "1.0.160"
 serde_derive = "1.0.160"
 project39-ar-derive = { path = "derive" }
-rapier3d = "0.18.0"
+rapier3d = "0.35.3"
 linked-hash-map = { version = "0.5.6", features = ['serde_impl'] }
 rand = "0.8.5"
 bytemuck = { version = "1.13.1", features = ['min_const_generics'] }
@@ -51,7 +52,7 @@ escapi = "4.0.0"
 vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
 vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
 vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-rapier3d = { git = "https://github.com/funmaker/rapier", rev = "b0c9c4219d080cad8a2af60d2273b08d42735be2" }
+#rapier3d = { git = "https://github.com/funmaker/rapier", rev = "b0c9c4219d080cad8a2af60d2273b08d42735be2" }
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
 #vulkano-win = { path = "../vulkano/vulkano-win" }

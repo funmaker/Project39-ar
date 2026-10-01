@@ -1,4 +1,3 @@
-#![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(negative_impls)]
 

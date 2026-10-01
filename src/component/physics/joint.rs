@@ -5,7 +5,7 @@ use egui::{Button, Color32, DragValue, RichText, Ui};
 use nalgebra::{Quaternion, Unit};
 use rapier3d::prelude::*;
 
-use crate::application::{Entity, Application, Physics, EntityRef};
+use crate::application::{Entity, Application, EntityRef};
 use crate::component::model::mmd::shared::JointDesc;
 use crate::math::{Isometry3, Rot3, Vec3};
 use crate::utils::ExUi;
@@ -58,12 +58,12 @@ impl JointComponent {
 		self.handle.get()
 	}
 	
-	pub fn inner<'p>(&self, physics: &'p Physics) -> &'p ImpulseJoint {
-		physics.impulse_joint_set.get(self.handle.get()).unwrap()
+	pub fn inner<'p>(&self, physics: &'p PhysicsWorld) -> &'p ImpulseJoint {
+		physics.impulse_joints.get(self.handle.get()).unwrap()
 	}
 	
-	pub fn inner_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut ImpulseJoint {
-		physics.impulse_joint_set.get_mut(self.handle.get()).unwrap()
+	pub fn inner_mut<'p>(&self, physics: &'p mut PhysicsWorld, wake_up: bool) -> &'p mut ImpulseJoint {
+		physics.impulse_joints.get_mut(self.handle.get(), wake_up).unwrap()
 	}
 }
 
@@ -72,7 +72,7 @@ impl Component for JointComponent {
 		let physics = &mut *application.physics.borrow_mut();
 		
 		if let Some(target) = self.target.get(application) {
-			self.handle.set(physics.impulse_joint_set.insert(entity.rigid_body, target.rigid_body, self.template, true));
+			self.handle.set(physics.insert_impulse_joint(entity.rigid_body, target.rigid_body, self.template));
 		}
 		
 		Ok(())
@@ -81,7 +81,7 @@ impl Component for JointComponent {
 	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
-		physics.impulse_joint_set.remove(self.handle.get(), true);
+		physics.remove_impulse_joint(self.handle.get());
 		
 		Ok(())
 	}
@@ -90,7 +90,7 @@ impl Component for JointComponent {
 		if let Some(mmd_desc) = self.mmd_desc.as_ref() {
 			if let Some(other) = self.other(application) {
 				if let Ok(mut physics) = application.physics.try_borrow_mut() {
-					if let Some(joint) = physics.impulse_joint_set.get_mut(self.handle.get()) {
+					if let Some(joint) = physics.impulse_joints.get_mut(self.handle.get(), false) {
 						mmd_desc.borrow_mut()
 						        .on_inspect(joint, entity, other, application, ui);
 					}
@@ -210,9 +210,9 @@ impl MMDDesc {
 			ui.end_row();
 		};
 		
-		inspect_axis(JointAxis::X, &mut self.joint_desc.position_min.x, &mut self.joint_desc.position_max.x, 100.0);
-		inspect_axis(JointAxis::Y, &mut self.joint_desc.position_min.y, &mut self.joint_desc.position_max.y, 100.0);
-		inspect_axis(JointAxis::Z, &mut self.joint_desc.position_min.z, &mut self.joint_desc.position_max.z, 100.0);
+		inspect_axis(JointAxis::LinX, &mut self.joint_desc.position_min.x, &mut self.joint_desc.position_max.x, 100.0);
+		inspect_axis(JointAxis::LinY, &mut self.joint_desc.position_min.y, &mut self.joint_desc.position_max.y, 100.0);
+		inspect_axis(JointAxis::LinZ, &mut self.joint_desc.position_min.z, &mut self.joint_desc.position_max.z, 100.0);
 		
 		inspect_axis(JointAxis::AngX, &mut self.joint_desc.rotation_min.x, &mut self.joint_desc.rotation_max.x, PI * 2.0);
 		inspect_axis(JointAxis::AngY, &mut self.joint_desc.rotation_min.y, &mut self.joint_desc.rotation_max.y, PI * 2.0);
@@ -229,7 +229,7 @@ impl MMDDesc {
 				Rot3::new_normalize(Quaternion::new(w, i, j, k)),
 			);
 			
-			let entity1_new_pos = frame2 * new_diff.inverse() * joint.data.local_frame1.inverse();
+			let entity1_new_pos = frame2 * new_diff.inverse() * Isometry3::from(joint.data.local_frame1).inverse();
 			let transform = entity1_new_pos * entity1.state().position.inverse();
 			*entity1.state_mut().position = entity1_new_pos;
 			
@@ -247,13 +247,14 @@ impl MMDDesc {
 	fn joint(&self) -> GenericJoint {
 		let mut joint = GenericJoint::default();
 		
-		joint.set_local_frame1(self.local_frame1).set_local_frame2(self.local_frame2);
+		joint.set_local_frame1(self.local_frame1.into()).set_local_frame2(self.local_frame2.into());
 		
 		fn limit(joint: &mut GenericJoint, axis: JointAxis, min: f32, max: f32, free_limit: f32) {
 			if max - min >= free_limit || min > max {
 				// free
 			} else if min != max {
 				joint.set_limits(axis, [min, max]);
+				joint.set_motor(axis, 0.0, 0.0, 0.1, 0.5);
 			} else {
 				joint.lock_axes(axis.into());
 			}
@@ -262,7 +263,7 @@ impl MMDDesc {
 		fn couple(joint: &mut GenericJoint, axis1: JointAxis, axis2: JointAxis, angle_axis_1: Unit<Vec3>, angle_axis_2: Unit<Vec3>) {
 			let limit1 = joint.limits(axis1).unwrap();
 			let limit2 = joint.limits(axis2).unwrap();
-			let local_frame2 = joint.local_frame2;
+			let local_frame2 = Isometry3::from(joint.local_frame2);
 			let bias1 = (limit1.min + limit1.max) / 2.0;
 			let bias2 = (limit2.min + limit2.max) / 2.0;
 			
@@ -274,12 +275,12 @@ impl MMDDesc {
 			joint.coupled_axes |= axis1.into();
 			joint.coupled_axes |= axis2.into();
 			
-			joint.local_frame2 = local_frame2 * Rot3::from_axis_angle(&angle_axis_1, -bias1) * Rot3::from_axis_angle(&angle_axis_2, -bias2);
+			joint.local_frame2 = (local_frame2 * Rot3::from_axis_angle(&angle_axis_1, -bias1) * Rot3::from_axis_angle(&angle_axis_2, -bias2)).into();
 		}
 		
-		limit(&mut joint, JointAxis::X, self.joint_desc.position_min.x, self.joint_desc.position_max.x, 100.0);
-		limit(&mut joint, JointAxis::Y, self.joint_desc.position_min.y, self.joint_desc.position_max.y, 100.0);
-		limit(&mut joint, JointAxis::Z, self.joint_desc.position_min.z, self.joint_desc.position_max.z, 100.0);
+		limit(&mut joint, JointAxis::LinX, self.joint_desc.position_min.x, self.joint_desc.position_max.x, 100.0);
+		limit(&mut joint, JointAxis::LinY, self.joint_desc.position_min.y, self.joint_desc.position_max.y, 100.0);
+		limit(&mut joint, JointAxis::LinZ, self.joint_desc.position_min.z, self.joint_desc.position_max.z, 100.0);
 		
 		limit(&mut joint, JointAxis::AngX, self.joint_desc.rotation_min.x, self.joint_desc.rotation_max.x, PI * 2.0);
 		limit(&mut joint, JointAxis::AngY, self.joint_desc.rotation_min.y, self.joint_desc.rotation_max.y, PI * 2.0);

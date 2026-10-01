@@ -202,7 +202,7 @@ impl Component for MMDModel {
 		let ent_pos = *entity.state().position;
 		
 		if let Some(world) = application.find_entity(|ent| ent.tag("World").unwrap_or_default()) {
-			entity.add_component(JointComponent::new(FixedJoint::new().set_local_frame1(ent_pos.inverse()).set_local_frame2(world.state().position.inverse()).data, world.as_ref()));
+			entity.add_component(JointComponent::new(FixedJoint::new().set_local_frame1(ent_pos.inverse().into()).set_local_frame2(world.state().position.inverse().into()).data, world.as_ref()));
 			entity.rigid_body_mut(&mut *application.physics.borrow_mut()).set_body_type(RigidBodyType::Dynamic, true);
 		}
 		
@@ -245,11 +245,11 @@ impl Component for MMDModel {
 			              .unwrap_or(entity);
 			
 			let mut collider: Collider = desc.collider.clone();
-			collider.set_position(
+			collider.set_position((
 				rb.state().position.inverse() *
 				ent_pos *
-				collider.position()
-			);
+				Isometry3::from(*collider.position())
+			).into());
 			
 			rb.add_component(ColliderComponent::new(collider));
 		}

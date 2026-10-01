@@ -1,7 +1,6 @@
 use std::any::Any;
 use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, RigidBody, RigidBodyHandle, RigidBodyType};
 use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
-use rapier3d::parry::partitioning::IndexedData;
 
 use crate::application::Application;
 use super::super::from_user_data;
@@ -82,11 +81,11 @@ impl InspectMut for RigidBody {
 						|pos| self.set_position(pos, true),
 					)), ());
 					ui.inspect_row("Velocity", GetSet(|| (
-						*self.linvel(),
+						self.linvel(),
 						|vel| self.set_linvel(vel, true),
 					)), ());
 					ui.inspect_row("Angular Velocity", GetSet(|| (
-						*self.angvel(),
+						self.angvel(),
 						|angvel| self.set_angvel(angvel, true),
 					)), ());
 					ui.inspect_row("Sleeping", GetSet(|| (
@@ -121,7 +120,7 @@ impl InspectMut for RigidBody {
 						.id_source("Joints")
 						.show(ui, |ui| {
 							for handle in joint_cache.drain(..) {
-								if let Some(col) = joints_set.get_mut(handle) {
+								if let Some(col) = joints_set.get_mut(handle, false) {
 									ui.inspect_collapsing()
 									  .show(ui, col, (handle, application))
 								} else {
@@ -158,7 +157,7 @@ impl Inspect for RigidBodyHandle {
 		if self == RigidBodyHandle::invalid() {
 			ui.label(RichText::new("NULL").monospace().italics());
 		} else {
-			if ui.button(id_fmt(self.index(), "RB ")).clicked() {
+			if ui.button(id_fmt(self.into_raw_parts().0, "RB ")).clicked() {
 				application.select(self);
 			}
 		}
@@ -188,8 +187,8 @@ impl InspectObject for RigidBodyHandle {
 		if let Ok(mut physics) = application.physics.try_borrow_mut() {
 			let physics = &mut *physics;
 			
-			if let Some(rb) = physics.rigid_body_set.get_mut(self) {
-				rb.show_collapsing((self, application, &mut physics.collider_set, &mut physics.impulse_joint_set), ui, collapsing);
+			if let Some(rb) = physics.bodies.get_mut(self) {
+				rb.show_collapsing((self, application, &mut physics.colliders, &mut physics.impulse_joints), ui, collapsing);
 				
 				return;
 			}
@@ -269,7 +268,7 @@ impl Inspect for ColliderHandle {
 		if self == ColliderHandle::invalid() {
 			ui.label(RichText::new("NULL").monospace().italics());
 		} else {
-			if ui.button(id_fmt(self.index(), "CO ")).clicked() {
+			if ui.button(id_fmt(self.into_raw_parts().0, "CO ")).clicked() {
 				application.select(self);
 			}
 		}
@@ -299,7 +298,7 @@ impl InspectObject for ColliderHandle {
 		if let Ok(mut physics) = application.physics.try_borrow_mut() {
 			let physics = &mut *physics;
 			
-			if let Some(col) = physics.collider_set.get_mut(self) {
+			if let Some(col) = physics.colliders.get_mut(self) {
 				col.show_collapsing((self, application), ui, collapsing);
 				
 				return;
@@ -326,9 +325,9 @@ impl InspectMut for ImpulseJoint {
 			.min_col_width(100.0)
 			.show(ui, |ui| {
 				ui.inspect_row("ID", handle, application);
-				ui.inspect_row("Body 1", self.body1, application);
+				ui.inspect_row("Body 1", self.body1(), application);
 				ui.inspect_row("Frame 1", &mut self.data.local_frame1, ());
-				ui.inspect_row("Body 2", self.body2, application);
+				ui.inspect_row("Body 2", self.body2(), application);
 				ui.inspect_row("Frame 2", &mut self.data.local_frame2, ());
 			});
 	}
@@ -355,7 +354,7 @@ impl Inspect for ImpulseJointHandle {
 		if self == ImpulseJointHandle::invalid() {
 			ui.label(RichText::new("NULL").monospace().italics());
 		} else {
-			if ui.button(id_fmt(self.0.index(), "IJ ")).clicked() {
+			if ui.button(id_fmt(self.into_raw_parts().0, "IJ ")).clicked() {
 				application.select(self);
 			}
 		}
@@ -385,7 +384,7 @@ impl InspectObject for ImpulseJointHandle {
 		if let Ok(mut physics) = application.physics.try_borrow_mut() {
 			let physics = &mut *physics;
 			
-			if let Some(col) = physics.impulse_joint_set.get_mut(self) {
+			if let Some(col) = physics.impulse_joints.get_mut(self, false) {
 				col.show_collapsing((self, application), ui, collapsing);
 				
 				return;

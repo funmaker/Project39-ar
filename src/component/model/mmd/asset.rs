@@ -13,7 +13,7 @@ use mmd::pmx::bone::{BoneFlags, Connection};
 use mmd::pmx::joint::Joint;
 use mmd::pmx::material::{Toon, EnvironmentBlendMode, DrawingFlags};
 use mmd::pmx::morph::Offsets;
-use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups};
+use rapier3d::geometry::{ColliderBuilder, ColliderShape, Group, InteractionGroups, InteractionTestMode};
 
 use crate::{config, debug};
 use crate::math::{Color, Isometry3, Rot3, Vec2, Vec3, Vec4, PI};
@@ -297,14 +297,18 @@ impl AssetKey for PmxAsset {
 				MMDShapeType::Capsule => {
 					volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
 					       + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
-					collider = ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
-					                                                       point![0.0,  rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0],
+					collider = ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0].into(),
+					                                                       point![0.0,  rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0].into(),
 					                                                       rigid_body.shape_size.x * MMD_UNIT_SIZE))
 				},
 			};
 			
-			let collider = collider.position(position)
-			                       .collision_groups(InteractionGroups::new(Group::from(1 << rigid_body.group_id), Group::from(0xFFFF0000 | rigid_body.collision_mask as u32)))
+			let collider = collider.position(position.into())
+			                       .collision_groups(InteractionGroups::new(
+				                       Group::from(1 << rigid_body.group_id),
+				                       Group::from(0xFFFF0000 | rigid_body.collision_mask as u32),
+				                       InteractionTestMode::And,
+			                       ))
 			                       .density(rigid_body.mass / volume)
 			                       .build();
 			

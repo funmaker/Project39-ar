@@ -1,5 +1,4 @@
 use anyhow::Result;
-use rapier3d::prelude::QueryFilter;
 
 use crate::application::{Hand, Application};
 use crate::math::Ray;
@@ -30,9 +29,9 @@ impl Tool for Remover {
 		
 		let result = {
 			let physics = &*application.physics.borrow();
-			physics.query_pipeline
-			       .cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
-			       .and_then(|(c, _)| physics.collider_set.get(c))
+			physics.query_pipeline()
+			       .cast_ray(&ray, 9999.0, false)
+			       .and_then(|(c, _)| physics.colliders.get(c))
 			       .map(|collider| collider.entity(application))
 		};
 			

@@ -29,7 +29,7 @@ impl Component for Seat {
 			let local_pos = entity.state().position.inverse() * *hmd.state().position * Point3::origin();
 			
 			if let Some(driver) = self.driver.get(application) {
-				if !self.trigger.contains_local_point(&local_pos) || entity.has_tag("Grabbed") || driver.parent() != entity {
+				if !self.trigger.contains_local_point(local_pos.into()) || entity.has_tag("Grabbed") || driver.parent() != entity {
 					driver.unset_tag("Seat");
 					
 					if driver.parent() == entity {
@@ -43,7 +43,7 @@ impl Component for Seat {
 					root_state.position.translation.y = 0.0;
  				}
 			} else if let Some(root) = application.find_entity(|e| e.name == "VR Root") {
-				if self.trigger.contains_local_point(&local_pos) && !entity.has_tag("Grabbed") && !root.has_tag("Seat") && root.parent().get(application).is_none() {
+				if self.trigger.contains_local_point(local_pos.into()) && !entity.has_tag("Grabbed") && !root.has_tag("Seat") && root.parent().get(application).is_none() {
 					self.driver.set(root.as_ref());
 					root.set_parent(entity.as_ref(), true, application);
 					root.set_tag("Seat", self.as_cref());

@@ -283,7 +283,7 @@ impl DebugRenderer {
 			return
 		}
 		
-		let dir = Unit::try_new((from.0 - to.0).xy(), std::f32::EPSILON).unwrap_or(Vec2::x_axis());
+		let dir = Unit::try_new((from.0 - to.0).xy(), f32::EPSILON).unwrap_or(Vec2::x_axis());
 		let dir = Rot2::rotation_between_axis(&Vec2::x_axis(), &dir);
 		
 		let base_id = self.vertices.len() as u32;

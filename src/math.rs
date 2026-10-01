@@ -121,19 +121,19 @@ pub fn aabb_from_points<'a, I>(pts: I) -> AABB
 		max = max.sup(&pt);
 	}
 	
-	AABB::new(min, max)
+	AABB::new(min.into(), max.into())
 }
 
 pub fn cast_ray_on_plane(plane: Isometry3, ray: Ray) -> Option<Point3> {
 	let norm = plane.transform_vector(&Vec3::z_axis());
 	let origin = plane.transform_point(&Point3::origin());
-	let toi = (origin - ray.origin).dot(&norm) / ray.dir.dot(&norm);
+	let toi = (origin - Point3::from(ray.origin)).dot(&norm) / ray.dir.dot(norm.into());
 	
 	if toi.is_nan() || toi < 0.0 {
 		None
 	} else {
 		let intersection = ray.point_at(toi);
-		Some(plane.inverse_transform_point(&intersection))
+		Some(plane.inverse_transform_point(&intersection.into()))
 	}
 }
 

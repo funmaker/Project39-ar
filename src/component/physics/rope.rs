@@ -51,8 +51,8 @@ impl Component for Rope {
 			let mut physics = application.physics.borrow_mut();
 			let force = (magnitude - self.length) * self.strength;
 			
-			physics.rigid_body_set.get_mut(entity.rigid_body).unwrap().add_force(offset.normalize() * -force, /*self_pos,*/ true);
-			physics.rigid_body_set.get_mut(other.rigid_body).unwrap().add_force(offset.normalize() * force, /*other_pos,*/ true);
+			physics.bodies.get_mut(entity.rigid_body).unwrap().add_force((offset.normalize() * -force).into(), /*self_pos,*/ true);
+			physics.bodies.get_mut(other.rigid_body).unwrap().add_force((offset.normalize() * force).into(), /*other_pos,*/ true);
 		}
 		
 		debug::draw_line(self_pos, other_pos, 8.0, Color::D_BLACK);

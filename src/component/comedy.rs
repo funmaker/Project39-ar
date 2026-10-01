@@ -49,9 +49,9 @@ impl Component for Comedy {
 				                          .build())
 				.rigid_body_type(RigidBodyType::Dynamic)
 				.component(JointComponent::new(
-					*RevoluteJoint::new(Vec3::z_axis())
-					               .set_local_anchor1(point!(0.0, -0.02 * SCALE, 0.0))
-					               .set_local_anchor2(Point3::origin()),
+					*RevoluteJoint::new(Vec3::z_axis().into())
+					               .set_local_anchor1(point!(0.0, -0.02 * SCALE, 0.0).into())
+					               .set_local_anchor2(Point3::origin().into()),
 					entity.as_ref()
 				))
 				.build()

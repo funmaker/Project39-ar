@@ -124,7 +124,7 @@ impl EntityBuilder {
 				let hsize = aabb.half_extents();
 				
 				return self.collider(ColliderBuilder::cuboid(hsize.x, hsize.y, hsize.z)
-				           .translation(aabb.center().coords)
+				           .translation(aabb.center())
 				           .density(density)
 				           .build());
 			}

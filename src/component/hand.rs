@@ -5,8 +5,6 @@ use anyhow::Result;
 use egui::{RichText, Ui};
 use rapier3d::dynamics::FixedJoint;
 use rapier3d::geometry::Ball;
-use rapier3d::pipeline::QueryFilter;
-use rapier3d::prelude::ColliderHandle;
 
 use crate::debug;
 use crate::application::{Entity, Application, Hand, EntityRef};
@@ -105,32 +103,25 @@ impl Component for HandComponent {
 			{
 				let physics = application.physics.borrow_mut();
 				
-				let callback = |col: ColliderHandle| {
-					let col = physics.collider_set.get(col).unwrap();
+				for (_, col) in physics.query_pipeline().intersect_shape((*entity.state().position).into(), &Ball::new(GRAB_DIST)) {
 					if col.entity_ref() == entity {
-						return true;
+						continue;
 					}
 					
 					let ent = col.entity(application);
 					if ent.tag("World").unwrap_or_default() || ent.tag("NoGrab").unwrap_or_default() {
-						return true;
+						continue;
 					}
 					
 					target = Some(ent);
 					
 					dynamic = col.parent()
-					             .and_then(|rb| physics.rigid_body_set.get(rb))
+					             .and_then(|rb| physics.bodies.get(rb))
 					             .map(|rb| rb.is_dynamic())
 					             .unwrap_or(false);
-					false
-				};
-				
-				physics.query_pipeline.intersections_with_shape(&physics.rigid_body_set,
-				                                                &physics.collider_set,
-				                                                &entity.state().position,
-				                                                &Ball::new(GRAB_DIST),
-				                                                QueryFilter::new(),
-				                                                callback);
+					
+					break;
+				}
 			}
 			
 			if let Some(target) = target {
@@ -150,8 +141,8 @@ impl Component for HandComponent {
 					if dynamic {
 						self.grab.replace(Grab::Dynamic(target.add_component(JointComponent::new(
 							*FixedJoint::new()
-								.set_local_frame1(Isometry3::identity())
-								.set_local_frame2(grab_pos),
+								.set_local_frame1(Isometry3::identity().into())
+								.set_local_frame2(grab_pos.into()),
 							entity,
 						))));
 					} else {

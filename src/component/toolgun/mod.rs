@@ -2,7 +2,6 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use anyhow::Result;
-use rapier3d::pipeline::QueryFilter;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
@@ -123,8 +122,8 @@ impl ToolGun {
 		let position = *self.entity(application).state().position;
 		
 		Ray {
-			origin: position.transform_point(&point!(0.002683, 0.038828, 0.150084)),
-			dir: position.transform_vector(&vector!(0.0, 0.0, 1.0)),
+			origin: position.transform_point(&point!(0.002683, 0.038828, 0.150084)).into(),
+			dir: position.transform_vector(&vector!(0.0, 0.0, 1.0)).into(),
 		}
 	}
 	
@@ -133,7 +132,7 @@ impl ToolGun {
 		
 		let result = {
 			let physics = &*application.physics.borrow();
-			physics.query_pipeline.cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
+			physics.query_pipeline().cast_ray(&ray, 9999.0, false)
 		};
 		
 		if let Some((_, toi)) = result {
@@ -141,8 +140,8 @@ impl ToolGun {
 			
 			self.anim.set(Some(ToolGunAnim {
 				start: Instant::now(),
-				origin: ray.origin,
-				target: hit,
+				origin: ray.origin.into(),
+				target: hit.into(),
 				scale: (2.0 / toi).clamp(0.1, 5.0),
 			}));
 		}
@@ -163,7 +162,7 @@ impl Component for ToolGun {
 		
 		let result = {
 			let physics = &*application.physics.borrow();
-			physics.query_pipeline.cast_ray(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new())
+			physics.query_pipeline().cast_ray(&ray, 9999.0, false)
 		};
 		
 		if let Some((_, intersection)) = result {
@@ -214,7 +213,7 @@ impl Component for ToolGun {
 				state.render_tool = true;
 				
 				if application.input.use_btn(hand).down {
-					state.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE), &ray.origin, &Vec3::y_axis()));
+					state.menu_pos = Some(Isometry3::face_towards(&ray.point_at(MENU_DISTANCE).into(), &ray.origin.into(), &Vec3::y_axis()));
 				}
 			}
 		}

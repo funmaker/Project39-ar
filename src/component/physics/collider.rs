@@ -3,7 +3,7 @@ use anyhow::Result;
 use egui::Ui;
 use rapier3d::prelude::*;
 
-use crate::application::{Entity, Application, Physics};
+use crate::application::{Entity, Application};
 use crate::utils::{ExUi, get_user_data};
 use super::super::{Component, ComponentBase, ComponentInner};
 
@@ -28,12 +28,12 @@ impl ColliderComponent {
 		self.handle.get()
 	}
 	
-	pub fn inner<'p>(&self, physics: &'p Physics) -> &'p Collider {
-		physics.collider_set.get(self.handle.get()).unwrap()
+	pub fn inner<'p>(&self, physics: &'p PhysicsWorld) -> &'p Collider {
+		physics.colliders.get(self.handle.get()).unwrap()
 	}
 	
-	pub fn inner_mut<'p>(&self, physics: &'p mut Physics) -> &'p mut Collider {
-		physics.collider_set.get_mut(self.handle.get()).unwrap()
+	pub fn inner_mut<'p>(&self, physics: &'p mut PhysicsWorld) -> &'p mut Collider {
+		physics.colliders.get_mut(self.handle.get()).unwrap()
 	}
 }
 
@@ -43,7 +43,7 @@ impl Component for ColliderComponent {
 		
 		let mut collider = self.template.clone();
 		collider.user_data = get_user_data(entity.id, self.id());
-		self.handle.set(physics.collider_set.insert_with_parent(collider, entity.rigid_body, &mut physics.rigid_body_set));
+		self.handle.set(physics.insert_collider(collider, Some(entity.rigid_body)));
 		
 		Ok(())
 	}
@@ -51,7 +51,7 @@ impl Component for ColliderComponent {
 	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
 		let physics = &mut *application.physics.borrow_mut();
 		
-		physics.collider_set.remove(self.handle.get(), &mut physics.island_manager, &mut physics.rigid_body_set, true);
+		physics.remove_collider(self.handle.get());
 		
 		Ok(())
 	}

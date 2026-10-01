@@ -47,7 +47,7 @@ impl Component for Thruster {
 			
 				let force = entity.state().position.transform_vector(&vector!(0.0, thrust, 0.0));
 				
-				application.physics.borrow_mut().rigid_body_set.get_mut(entity.rigid_body).unwrap().add_force(force, true);
+				application.physics.borrow_mut().bodies.get_mut(entity.rigid_body).unwrap().add_force(force.into(), true);
 			}
 		}
 		

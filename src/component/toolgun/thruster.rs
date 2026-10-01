@@ -1,7 +1,6 @@
 use anyhow::Result;
 use rapier3d::dynamics::{FixedJoint, RigidBodyType};
 use rapier3d::geometry::{ColliderBuilder, ColliderShape};
-use rapier3d::pipeline::QueryFilter;
 
 use crate::debug;
 use crate::application::{Application, Hand, Key};
@@ -70,8 +69,8 @@ impl Tool for ThrusterTool {
 		let result = {
 			let physics = &*application.physics.borrow();
 			
-			if let Some((c, toi)) = physics.query_pipeline.cast_ray_and_get_normal(&physics.rigid_body_set, &physics.collider_set, &ray, 9999.0, false, QueryFilter::new()) {
-				physics.collider_set.get(c)
+			if let Some((c, toi)) = physics.query_pipeline().cast_ray_and_get_normal(&ray, 9999.0, false) {
+				physics.colliders.get(c)
 				       .map(|c| (c.entity(application), toi))
 			} else {
 				None
@@ -79,12 +78,12 @@ impl Tool for ThrusterTool {
 		};
 		
 		if let Some((hit_ent, intersection)) = result {
-			let hit_point = ray.point_at(intersection.toi);
+			let hit_point = ray.point_at(intersection.time_of_impact);
 			let offset = self.thruster_model.aabb().mins.y - 0.02;
 			
 			let ghost_pos = Isometry3::from_parts(
 				(hit_point - intersection.normal * offset).into(),
-				face_upwards_lossy(intersection.normal),
+				face_upwards_lossy(intersection.normal.into()),
 			);
 			
 			self.ghost_pos = Some(ghost_pos);
@@ -102,8 +101,8 @@ impl Tool for ThrusterTool {
 					.component(Thruster::new(self.direction))
 					.component(JointComponent::new(
 						*FixedJoint::new()
-						            .set_local_frame1(Isometry3::identity())
-						            .set_local_frame2(local_pos),
+						            .set_local_frame1(Isometry3::identity().into())
+						            .set_local_frame2(local_pos.into()),
 						hit_ent,
 					))
 					.build()
