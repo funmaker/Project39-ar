@@ -279,6 +279,17 @@ pub fn gizmo_scale(pos: impl Into<DebugPosition>) -> f32 {
 	}
 }
 
+pub fn gizmo_opacity(selected: bool, hovered: bool, hide_unselected: bool) -> Option<(f32, f32)> {
+	if hide_unselected && !selected && !hovered { return None; }
+	
+	Some(match (selected, hovered) {
+		(true, true) => (0.75, 0.5),
+		(true, false) => (1.0, 0.0),
+		(false, true) => (0.5, 0.5),
+		(false, false) => (1.0, 0.0),
+	})
+}
+
 fn split_comma(line: &str) -> Option<(&str, &str)> {
 	let mut splitter = line.splitn(2, ',');
 	let first = splitter.next()?;

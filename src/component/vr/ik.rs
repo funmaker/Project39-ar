@@ -182,7 +182,7 @@ impl VrIk {
 
 impl Component for VrIk {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		let user_data = get_user_data(entity.id, self.id());
 		
 		let upper_arm_length = self.arm_length.get() * self.arm_upper.get();
@@ -243,7 +243,7 @@ impl Component for VrIk {
 		                                .map(|hand_right| *hand_right.state().position * self.right_hand_offset.get())
 		                                .unwrap_or_else(|| Isometry3::translation(0.5, 0.0, 0.0) * hmd_pos);
 		
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		
 		debug::draw_point(hmd_pos, 16.0, Color::RED);
 		debug::draw_point(hand_left, 16.0, Color::GREEN);

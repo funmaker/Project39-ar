@@ -5,7 +5,7 @@ use super::super::Application;
 use super::Entity;
 
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
 pub struct EntityRef {
 	inner: Cell<Option<u64>>,
 }

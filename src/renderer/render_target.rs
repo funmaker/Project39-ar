@@ -18,3 +18,17 @@ pub trait RenderTarget {
 	fn after_render(&mut self, _context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> { Ok(()) }
 	fn after_execute(&mut self, _renderer: &mut Renderer) -> Result<()> { Ok(()) }
 }
+
+impl<RT: RenderTarget> RenderTarget for &mut RT {
+	fn create_context(&mut self, camera_pos: Isometry3) -> Result<Option<RenderTargetContext>> {
+		(**self).create_context(camera_pos)
+	}
+	
+	fn clear_values(&self) -> &[Option<ClearValue>] {
+		(**self).clear_values()
+	}
+	
+	fn last_frame(&self) -> &Arc<AttachmentImage> {
+		(**self).last_frame()
+	}
+}

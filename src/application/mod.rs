@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
 use std::iter;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -44,13 +44,14 @@ use crate::application::window::WindowSwapchainNeedRetry;
 use crate::config::CameraAPI;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RenderTarget};
-use crate::utils::default_wait_poses;
+use crate::utils::{default_wait_poses, SelectionLevel};
 pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
+pub use gui::{GuiSelection, GuiSelections, select_button};
 pub use vr::VR;
 use bench::Benchmark;
 use eyes::{camera, Eyes};
-use gui::{ApplicationGui, GuiSelection};
+use gui::ApplicationGui;
 use window::Window;
 use crate::application::physics::PhysicsDebug;
 
@@ -64,12 +65,12 @@ pub struct Application {
 	pub detached_pov: EntityRef,
 	pub input: Input,
 	eyes: Option<Eyes>,
-	window: Option<Window>,
+	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<VecDeque<Entity>>,
 	bench: RefCell<Benchmark>,
 	gui: RefCell<ApplicationGui>,
-	gui_selection: RefCell<GuiSelection>,
+	gui_selections: RefCell<GuiSelections>,
 }
 
 impl Application {
@@ -113,11 +114,11 @@ impl Application {
 			input: Input::new(),
 			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
-			window: Some(window),
+			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(VecDeque::new()),
 			gui: RefCell::new(ApplicationGui::new()),
-			gui_selection: RefCell::new(GuiSelection::default()),
+			gui_selections: RefCell::new(GuiSelections::default()),
 		};
 		
 		{
@@ -236,9 +237,7 @@ impl Application {
 			
 			self.input.reset();
 			
-			if let Some(window) = &mut self.window {
-				window.pull_events(&mut self.input);
-			}
+			self.window.pull_events(&mut self.input);
 			
 			self.bench.get_mut().tick("Inputs");
 			
@@ -278,13 +277,12 @@ impl Application {
 			
 			self.bench.get_mut().tick("Physics");
 			
-			if let Some(mut window) = self.window.take() {
-				let ctx = window.start_gui_frame();
+			{
+				let ctx = self.window.start_gui_frame();
 				
 				self.gui.borrow_mut().show(&ctx, &self);
 				
-				window.end_gui_frame();
-				self.window = Some(window);
+				self.window.end_gui_frame();
 			}
 			
 			self.bench.get_mut().tick("Gui");
@@ -308,31 +306,27 @@ impl Application {
 				eyes.load_background(pov, self.renderer.get_mut())?;
 			}
 			
-			if let Some(window) = &mut self.window {
-				match window.regen_swapchain(self.renderer.get_mut()) {
-					Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
-					result => result?,
-				}
+			match self.window.regen_swapchain(self.renderer.get_mut()) {
+				Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
+				result => result?,
 			}
 			
 			self.bench.get_mut().tick("Render Setup");
 			
-			if let Some(eyes) = &mut self.eyes {
-				self.renderer.get_mut().render(pov, &mut self.entities, eyes)?;
+			if let Some(eyes) = self.eyes.as_mut() {
+				let rt_context = self.renderer.get_mut().render(pov, &mut self.entities, &mut *eyes)?;
 				
 				self.bench.get_mut().tick("Render Eyes");
 			
-				if let Some(window) = &mut self.window {
-					if let Some(detached_pov) = detached_pov {
-						self.renderer.get_mut().render(detached_pov, &mut self.entities, window)?;
-					} else {
-						window.mirror_from(eyes.last_frame(), self.renderer.get_mut())?;
-					}
-					
-					self.bench.get_mut().tick("Render Window");
+				if let Some(detached_pov) = detached_pov {
+					self.renderer.get_mut().render(detached_pov, &mut self.entities, &mut self.window)?;
+				} else {
+					self.window.mirror_from(&mut *eyes, rt_context.as_ref(), self.renderer.get_mut())?;
 				}
-			} else if let Some(window) = &mut self.window {
-				self.renderer.get_mut().render(pov, &mut self.entities, window)?;
+				
+				self.bench.get_mut().tick("Render Window");
+			} else {
+				self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
 				
 				self.bench.get_mut().tick("Render Window");
 			}
@@ -415,12 +409,50 @@ impl Application {
 		})
 	}
 	
-	pub fn select(&self, target: impl Into<GuiSelection>) {
-		self.gui_selection.replace(target.into());
+	pub fn select(&self, target: impl Into<GuiSelection>, focus: bool) {
+		let mut gui_selections = self.gui_selections.borrow_mut();
+		gui_selections.selection = target.into();
+		gui_selections.focus = focus;
 	}
 	
-	pub fn get_selection(&self) -> GuiSelection {
-		self.gui_selection.borrow().clone()
+	pub fn gui_selections(&self) -> Ref<'_, GuiSelections> {
+		self.gui_selections.borrow()
+	}
+	
+	pub fn gui_selections_mut(&self) -> RefMut<'_, GuiSelections> {
+		self.gui_selections.borrow_mut()
+	}
+	
+	pub fn gui_selections_test(&self, target: impl Into<GuiSelection>, capture_focus: bool) -> SelectionLevel {
+		let mut gui_selections = self.gui_selections_mut();
+		let target = target.into();
+		let hovered = gui_selections.hover == target;
+		let selected = gui_selections.selection == target;
+		let focus = capture_focus && gui_selections.focus && selected;
+		
+		let hover_within = match &target {
+			GuiSelection::Entity(eref) => *eref == gui_selections.hover.entity(&self.physics.borrow()),
+			GuiSelection::Component(cref) => *cref == gui_selections.hover.component(&self.physics.borrow()),
+			target => *target == gui_selections.hover,
+		};
+		
+		let select_within = match &target {
+			GuiSelection::Entity(eref) => *eref == gui_selections.selection.entity(&self.physics.borrow()),
+			GuiSelection::Component(cref) => *cref == gui_selections.selection.component(&self.physics.borrow()),
+			target => *target == gui_selections.selection,
+		};
+		
+		if focus {
+			gui_selections.focus = false;
+		}
+		
+		SelectionLevel {
+			hovered,
+			selected,
+			hover_within,
+			select_within,
+			focus,
+		}
 	}
 	
 	fn setup_loop(&mut self) -> Result<()> {

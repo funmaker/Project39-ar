@@ -7,7 +7,6 @@ use egui::Ui;
 use nalgebra::UnitQuaternion;
 use rapier3d::dynamics::RigidBodyType;
 use rapier3d::geometry::Collider;
-use rapier3d::prelude::FixedJoint;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
@@ -25,7 +24,7 @@ mod overrides;
 mod rigid_body;
 
 use crate::debug;
-use crate::application::{Application, Entity};
+use crate::application::{Application, Entity, EntityRef};
 use crate::math::{AMat4, Color, face_towards_lossy, Isometry3, IVec4, Mat4};
 use crate::renderer::{RenderContext, Renderer, RenderType};
 use crate::renderer::pipelines::PipelineNoLayoutError;
@@ -48,7 +47,6 @@ pub struct MMDModelState {
 	
 	bones_mats: Vec<AMat4>,
 	morphs_vec: Vec<IVec4>,
-	selected_bone: Option<usize>,
 }
 
 #[derive(ComponentBase)]
@@ -137,7 +135,6 @@ impl MMDModel {
 				morphs,
 				bones_mats,
 				morphs_vec,
-				selected_bone: None,
 			}),
 			shared,
 			bones_ubo,
@@ -162,16 +159,14 @@ impl MMDModel {
 		self.state.borrow_mut()
 	}
 	
-	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4], selected: Option<usize>) {
+	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4]) {
+		let hide_unselected = debug::get_flag_or_default::<bool>("DebugHideUnselected");
+		
 		for (id, bone) in bones.iter().enumerate() {
-			if bone.display {
+			if let Some((stroke_opacity, _)) = debug::gizmo_opacity(bone.gui_selected, bone.gui_hover, hide_unselected) && bone.display {
 				let pos = model_matrix.transform_point(&bones_mats[id].transform_point(&bone.origin()));
 				
-				let color = if selected.is_none() || Some(id) == selected {
-					bone.color
-				} else {
-					Color::BLACK.opactiy(0.5)
-				};
+				let color = bone.color.opactiy(stroke_opacity);
 				
 				debug::draw_point(pos, 10.0, color);
 				debug::draw_text(&bone.name, pos, debug::DebugOffset::bottom_right(8.0, 8.0), 32.0, color);
@@ -201,10 +196,10 @@ impl Component for MMDModel {
 		let state = &mut *self.state.borrow_mut();
 		let ent_pos = *entity.state().position;
 		
-		if let Some(world) = application.find_entity(|ent| ent.tag("World").unwrap_or_default()) {
-			entity.add_component(JointComponent::new(FixedJoint::new().set_local_frame1(ent_pos.inverse().into()).set_local_frame2(world.state().position.inverse().into()).data, world.as_ref()));
-			entity.rigid_body_mut(&mut *application.physics.borrow_mut()).set_body_type(RigidBodyType::Dynamic, true);
-		}
+		// if let Some(world) = application.find_entity(|ent| ent.tag("World").unwrap_or_default()) {
+		// 	entity.add_component(JointComponent::new(FixedJoint::new().set_local_frame1(ent_pos.inverse().into()).set_local_frame2(world.state().position.inverse().into()).data, world.as_ref()));
+		// 	entity.rigid_body_mut(&mut application.physics.borrow_mut()).set_body_type(RigidBodyType::Dynamic, true);
+		// }
 		
 		for bone in &mut state.bones {
 			bone.model = self.as_cref();
@@ -299,6 +294,11 @@ impl Component for MMDModel {
 			state.bones[bone_id].attach_rigid_body(application.add_entity(rb), offset);
 		}
 		
+		for bone_id in 0..state.bones.len() {
+			let rigid_body = state.bone_ancestors(bone_id).map(|id| state.bones[id].rigid_body.clone()).find(|rb| rb != &EntityRef::null()).unwrap_or(entity.as_ref());
+			state.bones[bone_id].rigid_body = rigid_body;
+		}
+		
 		Ok(())
 	}
 	
@@ -307,19 +307,44 @@ impl Component for MMDModel {
 		let inv_ent_pos = entity.state().position.inverse();
 		
 		for bone in state.bones.iter_mut() {
-			if let Some(rb) = bone.rigid_body.get(application) {
+			if let Some(rb) = bone.rigid_body.get(application)
+			&& let Some(rb_trans) = &bone.rigid_body_transform {
 				bone.override_transform = Some((
 					inv_ent_pos *
 					*rb.state().position *
-					bone.rigid_body_transform.inverse()
+					rb_trans.inverse()
 				).to_superset());
 			}
 		}
 		
-		if application.get_selection().mmd_model() == self.as_cref() {
-			state.selected_bone = application.get_selection().mmd_bone();
-		} else {
-			state.selected_bone = None;
+		
+		if debug::get_flag_or_default("DebugBonesDraw") {
+			let gui_selections = application.gui_selections();
+			let physics = application.physics.borrow();
+			
+			if gui_selections.selection.mmd_model() == self.as_cref() && let Some(bone_id) = gui_selections.selection.mmd_bone() {
+				for bone in state.bones.iter_mut() {
+					bone.gui_selected = bone.id == bone_id;
+				}
+			} else {
+				let sel_ent = gui_selections.selection.entity(&physics);
+				
+				for bone in state.bones.iter_mut() {
+					bone.gui_selected = bone.rigid_body == sel_ent;
+				}
+			}
+			
+			if gui_selections.hover.mmd_model() == self.as_cref() && let Some(bone_id) = gui_selections.hover.mmd_bone() {
+				for bone in state.bones.iter_mut() {
+					bone.gui_hover = bone.id == bone_id;
+				}
+			} else {
+				let sel_ent = gui_selections.hover.entity(&physics);
+				
+				for bone in state.bones.iter_mut() {
+					bone.gui_hover = bone.rigid_body == sel_ent;
+				}
+			}
 		}
 		
 		Ok(())
@@ -346,7 +371,7 @@ impl Component for MMDModel {
 		}
 		
 		if debug::get_flag_or_default("DebugBonesDraw") {
-			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats, state.selected_bone);
+			self.draw_debug_bones(*entity.state().position, &state.bones, &state.bones_mats);
 		}
 		
 		let bone_buf = self.upload_allocator.from_iter(state.bones_mats.drain(..).map(|mat| {

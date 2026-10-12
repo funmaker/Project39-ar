@@ -1,10 +1,13 @@
+use std::process::id;
+use egui::{Button, Color32, RichText, Ui};
 use rapier3d::dynamics::{ImpulseJointHandle, RigidBodyHandle};
 use rapier3d::geometry::ColliderHandle;
-
+use rapier3d::pipeline::PhysicsWorld;
 use crate::component::{Component, ComponentBase, ComponentRef};
 use crate::component::model::MMDModel;
 use crate::component::model::mmd::MMDBone;
-use super::super::{Entity, EntityRef};
+use crate::utils::{id_fmt, PhysicsComponentEx, PhysicsEntityEx, ExUi};
+use super::super::{Application, Entity, EntityRef};
 
 
 #[derive(Debug, Hash, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
@@ -32,9 +35,22 @@ impl GuiTab {
 	}
 }
 
+impl Default for GuiTab {
+	fn default() -> Self {
+		GuiTab::Main
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct GuiSelections {
+	pub hover: GuiSelection,
+	pub selection: GuiSelection,
+	pub focus: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum GuiSelection {
-	Tab(GuiTab),
+	None,
 	Entity(EntityRef),
 	Component(ComponentRef<dyn Component>),
 	RigidBody(RigidBodyHandle),
@@ -46,35 +62,33 @@ pub enum GuiSelection {
 impl GuiSelection {
 	pub fn tab(&self) -> GuiTab {
 		match self {
-			GuiSelection::Tab(tab) => *tab,
+			GuiSelection::None |
 			GuiSelection::Entity(_) |
-			GuiSelection::Component(_) => GuiTab::Main,
+			GuiSelection::Component(_) |
 			GuiSelection::RigidBody(_) |
-			GuiSelection::Collider(_) |
-			GuiSelection::ImpulseJoint(_) => GuiTab::Physics,
+			GuiSelection::ImpulseJoint(_) |
+			GuiSelection::Collider(_) => GuiTab::Main,
 			GuiSelection::MMDBone(_, _) => GuiTab::Miku,
 		}
 	}
 	
-	pub fn entity(&self) -> EntityRef {
-		match self {
-			GuiSelection::Entity(eref) => eref.clone(),
-			_ => EntityRef::null(),
-		}
-	}
-	
-	pub fn entity_or_component(&self) -> EntityRef {
+	pub fn entity(&self, physics: &PhysicsWorld) -> EntityRef {
 		match self {
 			GuiSelection::Entity(eref) => eref.clone(),
 			GuiSelection::Component(cref) => cref.entity(),
+			GuiSelection::RigidBody(rbref) if let Some(rb) = physics.bodies.get(*rbref) => rb.entity_ref(),
+			GuiSelection::Collider(cref) if let Some(rb) = physics.colliders.get(*cref) => rb.entity_ref(),
+			GuiSelection::ImpulseJoint(jref) if let Some(rb) = physics.impulse_joints.get(*jref) => rb.entity_ref(),
 			GuiSelection::MMDBone(cref, _) => cref.entity(),
 			_ => EntityRef::null(),
 		}
 	}
 	
-	pub fn component(&self) -> ComponentRef<dyn Component> {
+	pub fn component(&self, physics: &PhysicsWorld) -> ComponentRef<dyn Component> {
 		match self {
 			GuiSelection::Component(cref) => cref.clone(),
+			GuiSelection::Collider(cref) if let Some(rb) = physics.colliders.get(*cref) => rb.component_ref().into(),
+			GuiSelection::ImpulseJoint(jref) if let Some(rb) = physics.impulse_joints.get(*jref) => rb.component_ref().into(),
 			GuiSelection::MMDBone(cref, _) => cref.clone().into(),
 			_ => ComponentRef::null(),
 		}
@@ -129,7 +143,6 @@ macro_rules! impl_from {
 }
 
 impl_from!{
-	Tab from GuiTab;
 	Entity from EntityRef;
 	RigidBody from RigidBodyHandle;
 	Collider from ColliderHandle;
@@ -178,7 +191,44 @@ impl<C: ComponentBase> From<&C> for GuiSelection {
 
 impl Default for GuiSelection {
 	fn default() -> Self {
-		Self::Tab(GuiTab::Main)
+		GuiSelection::None
 	}
 }
 
+pub fn select_button(ui: &mut Ui, target: impl Into<GuiSelection>, application: &Application) {
+	let target = target.into();
+	
+	let label = match &target {
+		GuiSelection::Entity(eref)        if let Some(entity) = eref.get(application)                                                         => Some(id_fmt(entity.id, "")),
+		GuiSelection::Component(cref)     if let Some(component) = cref.get_dyn(application)                                                  => Some(id_fmt(component.id(), "")),
+		GuiSelection::RigidBody(rb)       if application.physics.try_borrow().ok().is_none_or(|physics| physics.bodies.contains(*rb))         => Some(id_fmt(rb.into_raw_parts().0, "RB ")),
+		GuiSelection::Collider(col)       if application.physics.try_borrow().ok().is_none_or(|physics| physics.colliders.contains(*col))     => Some(id_fmt(col.into_raw_parts().0, "CO ")),
+		GuiSelection::ImpulseJoint(ij)    if application.physics.try_borrow().ok().is_none_or(|physics| physics.impulse_joints.contains(*ij)) => Some(id_fmt(ij.into_raw_parts().0, "IJ ")),
+		GuiSelection::MMDBone(cref, bone) if let Some(component) = cref.get(application) && component.state().bones.len() < *bone             => Some(id_fmt(bone, "MB ")),
+		_ => None,
+	};
+	
+	if let Some(mut label) = label {
+		let selected = application.gui_selections().selection == target;
+		
+		if selected {
+			label = label.color(Color32::LIGHT_BLUE);
+		}
+		
+		let response = ui.button(label);
+		if response.double_clicked() {
+			application.select(target.clone(), true);
+		} else if response.clicked() {
+			application.select(target.clone(), false);
+		}
+		
+		let hovered = ui.track_hover(&response);
+		if response.hovered() && !hovered {
+			application.gui_selections_mut().hover = target;
+		} else if !response.hovered() && hovered {
+			application.gui_selections_mut().hover = GuiSelection::None;
+		}
+	} else {
+		ui.label(RichText::new("NULL").monospace().italics());
+	}
+}

@@ -2,7 +2,8 @@ use egui::Ui;
 use rapier3d::dynamics::{FrictionModel, ImpulseJointHandle, IntegrationParameters, SpringCoefficients};
 use rapier3d::geometry::ColliderHandle;
 use rapier3d::prelude::{PhysicsWorld, RigidBodyHandle};
-
+use crate::application::GuiSelection;
+use crate::utils::{id_fmt, ExUi, SelectionLevel};
 use super::super::Application;
 
 
@@ -10,9 +11,7 @@ pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Applica
 	use egui::*;
 	use crate::utils::ExUi;
 	
-	let sel_rb = application.get_selection().rigid_body();
-	let sel_col = application.get_selection().collider();
-	let sel_joint = application.get_selection().joint();
+	let selection = application.gui_selections().selection.clone();
 	
 	CollapsingHeader::new("Parameters")
 		.default_open(true)
@@ -42,38 +41,57 @@ pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Applica
 					ui.inspect_row("Frict bias pass", &mut physics.integration_parameters.friction_in_bias_pass, ());
 					
 					ui.label("Fiction model");
-					ui.radio_value(&mut physics.integration_parameters.friction_model, FrictionModel::Simplified, "Simplified");
-					ui.radio_value(&mut physics.integration_parameters.friction_model, FrictionModel::Coulomb, "Coulomb");
+					ui.horizontal(|ui| {
+						ui.radio_value(&mut physics.integration_parameters.friction_model, FrictionModel::Simplified, "Simplified");
+						ui.radio_value(&mut physics.integration_parameters.friction_model, FrictionModel::Coulomb, "Coulomb");
+					});
 					ui.end_row();
 				});
 		});
 	
+	let rb_sel = matches!(selection, GuiSelection::RigidBody(_));
+	if rb_sel {
+		ui.highlight_indent(SelectionLevel::selected());
+	}
 	CollapsingHeader::new(format!("Rigid Bodies ({})", physics.bodies.len()))
 		.id_source("Rigid Bodies")
-		.open((sel_rb != RigidBodyHandle::invalid()).then_some(true))
+		.open(rb_sel.then_some(true))
 		.show(ui, |ui| {
+			ui.reset_style();
+			
 			for (handle, rb) in physics.bodies.iter_mut() {
 				ui.inspect_collapsing()
-				  .show(ui, rb, (handle, application, &mut physics.colliders, &mut physics.impulse_joints));
+				  .title(id_fmt(handle.into_raw_parts().0, "RB "))
+				  .show(ui, rb, (handle, application, &physics.impulse_joints));
 			}
 		});
 	
+	let col_sel = matches!(selection, GuiSelection::Collider(_));
+	if col_sel {
+		ui.highlight_indent(SelectionLevel::selected());
+	}
 	CollapsingHeader::new(format!("Colliders ({})", physics.colliders.len()))
 		.id_source("Colliders")
-		.open((sel_col != ColliderHandle::invalid()).then_some(true))
+		.open(col_sel.then_some(true))
 		.show(ui, |ui| {
 			for (handle, col) in physics.all_colliders_mut() {
 				ui.inspect_collapsing()
+				  .title(id_fmt(handle.into_raw_parts().0, "CO "))
 				  .show(ui, col, (handle, application));
 			}
 		});
 	
+	let ij_sel = matches!(selection, GuiSelection::ImpulseJoint(_));
+	if ij_sel {
+		ui.highlight_indent(SelectionLevel::selected());
+	}
 	CollapsingHeader::new(format!("Joints ({})", physics.impulse_joints.len()))
 		.id_source("Joints")
-		.open((sel_joint != ImpulseJointHandle::invalid()).then_some(true))
+		.open(ij_sel.then_some(true))
 		.show(ui, |ui| {
 			for (handle, joint) in physics.impulse_joints.iter_mut() {
 				ui.inspect_collapsing()
+				  .title(id_fmt(handle.into_raw_parts().0, "IJ "))
 				  .show(ui, joint, (handle, application));
 			}
 		});

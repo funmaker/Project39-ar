@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::time::Duration;
 use anyhow::Result;
 
@@ -9,18 +10,28 @@ use super::{Component, ComponentBase, ComponentInner};
 #[derive(ComponentBase)]
 pub struct PCControlled {
 	#[inner] inner: ComponentInner,
+	disabled: Cell<bool>,
 }
 
 impl PCControlled {
 	pub fn new() -> Self {
 		PCControlled {
 			inner: ComponentInner::new_norender(),
+			disabled: Cell::new(false),
 		}
+	}
+	
+	pub fn set_disabled(&self, disabled: bool) {
+		self.disabled.set(disabled);
 	}
 }
 
 impl Component for PCControlled {
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
+		if self.disabled.get() {
+			return Ok(());
+		}
+		
 		let mut entity = entity.state_mut();
 		let mut position = entity.position.translation.vector;
 		let (mut pitch, mut yaw, mut roll) = to_euler(entity.position.rotation);

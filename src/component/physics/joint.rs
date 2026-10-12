@@ -8,7 +8,7 @@ use rapier3d::prelude::*;
 use crate::application::{Entity, Application, EntityRef};
 use crate::component::model::mmd::shared::JointDesc;
 use crate::math::{Isometry3, Rot3, Vec3};
-use crate::utils::ExUi;
+use crate::utils::{get_user_data, ExUi};
 use super::super::{Component, ComponentBase, ComponentInner};
 
 #[derive(ComponentBase)]
@@ -69,17 +69,19 @@ impl JointComponent {
 
 impl Component for JointComponent {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		
 		if let Some(target) = self.target.get(application) {
-			self.handle.set(physics.insert_impulse_joint(entity.rigid_body, target.rigid_body, self.template));
+			let mut joint = self.template.clone();
+			joint.user_data = get_user_data(entity.id, self.id());
+			self.handle.set(physics.insert_impulse_joint(entity.rigid_body, target.rigid_body, joint));
 		}
 		
 		Ok(())
 	}
 	
 	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		
 		physics.remove_impulse_joint(self.handle.get());
 		

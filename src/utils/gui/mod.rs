@@ -3,8 +3,6 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::num::NonZero;
 use std::ops::RangeInclusive;
-use std::sync::Arc;
-use arc_swap::ArcSwapOption;
 use egui::*;
 
 mod application;
@@ -38,10 +36,9 @@ pub trait ExUi {
 	fn inspect<T>(&mut self, value: T, options: T::Options<'_>) where T: Inspect;
 	fn inspect_row<T>(&mut self, label: impl Into<WidgetText>, value: T, options: T::Options<'_>) where T: Inspect;
 	fn inspect_collapsing(&mut self) -> InspectCollapsing;
-	fn highlight_indent(&mut self);
+	fn highlight_indent(&mut self, level: SelectionLevel);
+	fn track_hover(&mut self, response: &Response) -> bool;
 }
-
-static HIGHLIGHT_STYLE: ArcSwapOption<Style> = ArcSwapOption::const_empty();
 
 impl ExUi for Ui {
 	fn inspect<T>(&mut self, value: T, options: T::Options<'_>) where T: Inspect {
@@ -58,17 +55,32 @@ impl ExUi for Ui {
 		InspectCollapsing::new()
 	}
 	
-	fn highlight_indent(&mut self) {
-		if let Some(style) = HIGHLIGHT_STYLE.load_full() {
-			self.set_style(style);
-		} else {
-			let mut style = (**self.style()).clone();
-			style.visuals.widgets.noninteractive.bg_stroke.color = Color32::LIGHT_BLUE;
+	fn highlight_indent(&mut self, level: SelectionLevel) {
+		if !level.any() { return; }
+		
+		let style = self.style_mut();
+		style.visuals.widgets.noninteractive.bg_stroke.color =
+			match (level.select_within, level.hovered) {
+				(true, true) => Color32::LIGHT_BLUE.gamma_multiply(0.7),
+				(true, false) => Color32::LIGHT_BLUE,
+				(false, true) => style.visuals.widgets.noninteractive.bg_stroke.color.gamma_multiply(0.7),
+				(false, false) => return,
+			};
+	}
+	
+	fn track_hover(&mut self, response: &Response) -> bool {
+		self.data_mut(|mem| {
+			let last_hover: &mut Id = mem.get_temp_mut_or(Id::new("LastHover"), Id::null());
 			
-			let style = Arc::new(style);
-			HIGHLIGHT_STYLE.store(Some(style.clone()));
-			self.set_style(style);
-		}
+			let hovered = *last_hover == response.id;
+			if !hovered && response.hovered() {
+				*last_hover = response.id;
+			} else if hovered && !response.hovered() {
+				*last_hover = Id::null();
+			}
+			
+			hovered
+		})
 	}
 }
 
@@ -109,33 +121,25 @@ impl<T: SimpleInspect> InspectMut for T {
 
 
 pub trait InspectObject: Inspect + Sized {
-	fn is_selected(&self, options: &Self::Options<'_>) -> bool;
 	fn inspect_header(&self, options: &Self::Options<'_>) -> WidgetText;
 	fn inspect_uid(&self, options: &Self::Options<'_>) -> u64;
 	
-	fn selection_scroll(&self, ui: &mut Ui, options: &Self::Options<'_>) {
-		let self_id = self.inspect_uid(options);
-		let last_scroll = ui.data_mut(|d| {
-			std::mem::replace(d.get_persisted_mut_or_default(Id::new("LastScroll")), Some(self_id))
-		});
-		
-		if last_scroll != Some(self_id) {
-			ui.scroll_to_cursor(Some(Align::Min));
-		}
+	fn selection_level(&self, _options: &Self::Options<'_>) -> SelectionLevel {
+		SelectionLevel::default()
 	}
 	
 	fn show_collapsing(self, options: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {
-		let selected = self.is_selected(&options);
+		let selection_level = self.selection_level(&options);
+		ui.highlight_indent(selection_level);
 		
-		if selected {
-			ui.highlight_indent();
-			self.selection_scroll(ui, &options);
+		if selection_level.focus {
+			ui.scroll_to_cursor(Some(Align::Min));
 		}
 		
 		CollapsingHeader::new(collapsing.title.unwrap_or_else(|| self.inspect_header(&options)))
 			.id_source(self.inspect_uid(&options))
 			.default_open(collapsing.default_open)
-			.open(selected.then_some(true))
+			.open(selection_level.select_within.then_some(true))
 			.show(ui, |ui| {
 				ui.reset_style();
 				
@@ -143,6 +147,35 @@ pub trait InspectObject: Inspect + Sized {
 			});
 		
 		ui.reset_style();
+	}
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub struct SelectionLevel {
+	pub hovered: bool,
+	pub selected: bool,
+	pub hover_within: bool,
+	pub select_within: bool,
+	pub focus: bool,
+}
+
+impl SelectionLevel {
+	pub fn new() -> Self {
+		Self::default()
+	}
+	
+	pub fn selected() -> Self {
+		SelectionLevel {
+			hovered: false,
+			selected: false,
+			hover_within: true,
+			select_within: true,
+			focus: false,
+		}
+	}
+	
+	pub fn any(&self) -> bool {
+		self.hovered || self.select_within || self.focus
 	}
 }
 

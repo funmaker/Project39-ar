@@ -15,7 +15,7 @@ use crate::debug;
 use crate::component::ComponentRef;
 use crate::math::{Color, Isometry3, Point3, Vec3};
 use crate::renderer::{RenderContext, Renderer, RenderType};
-use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect, ref_cell_iter};
+use crate::utils::{IntoBoxed, get_user_data, MutMark, InspectObject, GetSet, ExUi, SimpleInspect, ref_cell_iter, SelectionLevel};
 use super::{Application, Component, Hand};
 pub use builder::EntityBuilder;
 pub use entity_ref::EntityRef;
@@ -168,6 +168,22 @@ impl Entity {
 			component.tick(&self, &application, delta_time)?;
 		}
 		
+		if debug::get_flag_or_default("DebugEntityDraw") {
+			let state = self.state();
+			let pos = *state.position;
+			let size = debug::gizmo_scale(pos);
+			let selection_level = application.gui_selections_test(self, false);
+			let hide_unselected = debug::get_flag_or_default::<bool>("DebugHideUnselected");
+			
+			if let Some((stroke_opacity, _)) = debug::gizmo_opacity(selection_level.select_within, selection_level.hover_within, hide_unselected) {
+				debug::draw_point(pos, 16.0, Color::MAGENTA.opactiy(stroke_opacity));
+				debug::draw_line(pos, pos * Point3::from(Vec3::x() * size * 0.3), 4.0, Color::RED.opactiy(stroke_opacity));
+				debug::draw_line(pos, pos * Point3::from(Vec3::y() * size * 0.3), 4.0, Color::GREEN.opactiy(stroke_opacity));
+				debug::draw_line(pos, pos * Point3::from(Vec3::z() * size * 0.3), 4.0, Color::BLUE.opactiy(stroke_opacity));
+				debug::draw_text(&self.name, pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::MAGENTA.opactiy(stroke_opacity));
+			}
+		}
+		
 		Ok(())
 	}
 	
@@ -189,17 +205,6 @@ impl Entity {
 		
 		if state.hidden || (close_hide && (state.position.translation.vector - context.camera_pos.translation.vector).magnitude_squared() < 0.125) {
 			return Ok(());
-		}
-		
-		if debug::get_flag_or_default("DebugEntityDraw") && context.render_type == RenderType::Opaque {
-			let pos = *state.position;
-			let size = debug::gizmo_scale(pos);
-			
-			debug::draw_point(pos, 16.0, Color::MAGENTA);
-			debug::draw_line(pos, pos * Point3::from(Vec3::x() * size * 0.3), 4.0, Color::RED);
-			debug::draw_line(pos, pos * Point3::from(Vec3::y() * size * 0.3), 4.0, Color::GREEN);
-			debug::draw_line(pos, pos * Point3::from(Vec3::z() * size * 0.3), 4.0, Color::BLUE);
-			debug::draw_text(&self.name, pos, debug::DebugOffset::bottom_right(32.0, 32.0), 128.0, Color::MAGENTA);
 		}
 		
 		for component in self.components.values() {
@@ -237,17 +242,17 @@ impl Entity {
 		use crate::utils::ExUi;
 		use egui::*;
 		
-		let selected = self.is_selected(&application);
+		let selection_level = self.selection_level(&application);
+		ui.highlight_indent(selection_level);
 		
-		if selected {
-			ui.highlight_indent();
-			self.selection_scroll(ui, &application);
+		if selection_level.focus {
+			ui.scroll_to_cursor(Some(Align::Min));
 		}
 		
 		CollapsingHeader::new(RichText::new(&self.name).strong())
 			.id_source("Entity")
 			.default_open(true)
-			.open(selected.then_some(true))
+			.open(selection_level.select_within.then_some(true))
 			.show(ui, |ui| {
 				ui.reset_style();
 				

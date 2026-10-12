@@ -9,7 +9,7 @@ use crate::component::Component;
 use crate::component::model::SimpleModel;
 use crate::component::physics::collider::ColliderComponent;
 use crate::math::{Isometry3, Vec3, Point3, Rot3};
-use crate::utils::{MutMark, next_uid};
+use crate::utils::{next_uid, MutMark, SelectionLevel};
 use super::super::EntityRef;
 use super::{Entity, EntityState};
 

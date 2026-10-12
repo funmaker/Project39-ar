@@ -9,7 +9,7 @@ use rapier3d::geometry::Ball;
 use crate::debug;
 use crate::application::{Entity, Application, Hand, EntityRef};
 use crate::math::{Point3, Color, Translation3, Isometry3};
-use crate::utils::{ColliderEx, ExUi};
+use crate::utils::{PhysicsComponentEx, ExUi};
 use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::physics::joint::JointComponent;
 use super::vr::VrTracked;

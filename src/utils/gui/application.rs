@@ -1,4 +1,4 @@
-use crate::application::{Application, Entity, EntityRef, Hand};
+use crate::application::{select_button, Application, Entity, EntityRef, Hand};
 use crate::component::{Component, ComponentRef};
 use super::*;
 
@@ -28,10 +28,6 @@ impl Inspect for &Entity {
 }
 
 impl InspectObject for &Entity {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().entity() == self.as_ref()
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		(&self.name).into()
 	}
@@ -39,27 +35,21 @@ impl InspectObject for &Entity {
 	fn inspect_uid(&self, _options: &Self::Options<'_>) -> u64 {
 		self.id
 	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(self.as_ref(), true)
+	}
 }
 
 impl Inspect for &EntityRef {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if let Some(entity) = self.get(application) {
-			if ui.button(id_fmt(entity.id, "")).clicked() {
-				application.select(self);
-			}
-		} else {
-			ui.label(RichText::new("NULL").monospace().italics());
-		}
+		select_button(ui, self, application);
 	}
 }
 
 impl InspectObject for &EntityRef {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().entity() == **self
-	}
-	
 	fn inspect_header(&self, application: &Self::Options<'_>) -> WidgetText {
 		if let Some(entity) = self.get(application) {
 			(&entity.name).into()
@@ -74,6 +64,10 @@ impl InspectObject for &EntityRef {
 		} else {
 			0
 		}
+	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*self, true)
 	}
 	
 	fn show_collapsing(self, application: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {
@@ -101,10 +95,6 @@ impl<C: Component + ?Sized> Inspect for &C {
 }
 
 impl<C: Component + ?Sized> InspectObject for &C {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().component() == self.as_cref_dyn()
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		self.name().into()
 	}
@@ -112,27 +102,21 @@ impl<C: Component + ?Sized> InspectObject for &C {
 	fn inspect_uid(&self, _options: &Self::Options<'_>) -> u64 {
 		self.id()
 	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(&self.as_cref_dyn(), true)
+	}
 }
 
 impl<C: Component + ?Sized> Inspect for &ComponentRef<C> {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if let Some(component) = self.get_dyn(application) {
-			if ui.button(id_fmt(component.id(), "")).clicked() {
-				application.select(self);
-			}
-		} else {
-			ui.label(RichText::new("NULL").monospace().italics());
-		}
+		select_button(ui, self, application);
 	}
 }
 
 impl<C: Component + ?Sized> InspectObject for &ComponentRef<C> {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().component() == **self
-	}
-	
 	fn inspect_header(&self, application: &Self::Options<'_>) -> WidgetText {
 		if let Some(component) = self.get_dyn(application) {
 			component.name().into()
@@ -147,6 +131,10 @@ impl<C: Component + ?Sized> InspectObject for &ComponentRef<C> {
 		} else {
 			0
 		}
+	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*self, true)
 	}
 	
 	fn show_collapsing(self, application: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {

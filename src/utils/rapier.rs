@@ -1,5 +1,5 @@
-use rapier3d::dynamics::RigidBody;
-use rapier3d::prelude::Collider;
+use rapier3d::dynamics::{ImpulseJoint, RigidBody};
+use rapier3d::geometry::Collider;
 
 use crate::application::{Application, Entity, EntityRef};
 use crate::component::ComponentRef;
@@ -7,7 +7,7 @@ use crate::component::physics::collider::ColliderComponent;
 
 
 #[allow(dead_code)]
-pub trait ColliderEx {
+pub trait PhysicsComponentEx {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent>;
 	
 	fn entity_ref(&self) -> EntityRef {
@@ -23,7 +23,7 @@ pub trait ColliderEx {
 	}
 }
 
-impl ColliderEx for Collider {
+impl PhysicsComponentEx for Collider {
 	fn component_ref(&self) -> ComponentRef<ColliderComponent> {
 		let (eid, cid) = from_user_data(self.user_data);
 		
@@ -31,8 +31,16 @@ impl ColliderEx for Collider {
 	}
 }
 
+impl PhysicsComponentEx for ImpulseJoint {
+	fn component_ref(&self) -> ComponentRef<ColliderComponent> {
+		let (eid, cid) = from_user_data(self.data.user_data);
+		
+		ComponentRef::new(eid, cid)
+	}
+}
+
 #[allow(dead_code)]
-pub trait RigidBodyEx {
+pub trait PhysicsEntityEx {
 	fn entity_ref(&self) -> EntityRef;
 	
 	fn entity<'a>(&self, application: &'a Application) -> &'a Entity {
@@ -40,7 +48,7 @@ pub trait RigidBodyEx {
 	}
 }
 
-impl RigidBodyEx for RigidBody {
+impl PhysicsEntityEx for RigidBody {
 	fn entity_ref(&self) -> EntityRef {
 		let (eid, _) = from_user_data(self.user_data);
 		

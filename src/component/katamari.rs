@@ -6,7 +6,7 @@ use smallvec::SmallVec;
 
 use crate::application::{Entity, Application};
 use crate::math::PI;
-use crate::utils::ColliderEx;
+use crate::utils::PhysicsComponentEx;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::physics::collider::ColliderComponent;
 
@@ -41,7 +41,7 @@ impl Component for Katamari {
 	
 	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
 		if let Some(collider) = self.collider.using(entity) {
-			let physics = &mut *application.physics.borrow_mut();
+			let physics = &mut application.physics.borrow_mut();
 			let volume = collider.inner(physics).volume();
 			let pos = *entity.state().position;
 			

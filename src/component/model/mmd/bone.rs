@@ -1,8 +1,8 @@
 use egui::{Grid, RichText, Ui, WidgetText};
 
-use crate::application::{Application, EntityRef};
+use crate::application::{select_button, Application, EntityRef};
 use crate::math::{Color, Point3, Similarity3, Translation3, Isometry3};
-use crate::utils::{ExUi, id_fmt, Inspect, InspectMut, InspectObject};
+use crate::utils::{ExUi, Inspect, InspectMut, InspectObject, SelectionLevel};
 use super::super::super::ComponentRef;
 use super::MMDModel;
 use super::shared::{BoneDesc, BoneConnection};
@@ -16,13 +16,15 @@ pub struct MMDBone {
 	pub parent: Option<usize>,
 	pub color: Color,
 	pub rigid_body: EntityRef,
+	pub rigid_body_transform: Option<Isometry3>,
 	pub model_transform: Translation3,
 	pub local_transform: Translation3,
 	pub anim_transform: Similarity3,
 	pub override_transform: Option<Similarity3>,
-	pub rigid_body_transform: Isometry3,
 	pub display: bool,
 	pub connection: BoneConnection,
+	pub gui_selected: bool,
+	pub gui_hover: bool,
 }
 
 impl MMDBone {
@@ -32,7 +34,7 @@ impl MMDBone {
 	
 	pub fn attach_rigid_body(&mut self, rigid_body: EntityRef, model_pos: Isometry3) -> &mut Self {
 		self.rigid_body = rigid_body;
-		self.rigid_body_transform = self.model_transform.inverse() * model_pos;
+		self.rigid_body_transform = Some(self.model_transform.inverse() * model_pos);
 		self
 	}
 }
@@ -46,13 +48,15 @@ impl From<&BoneDesc> for MMDBone {
 			parent: desc.parent,
 			color: desc.color,
 			rigid_body: EntityRef::null(),
+			rigid_body_transform: None,
 			model_transform: desc.model_pos.into(),
 			local_transform: desc.local_pos.into(),
 			anim_transform: Similarity3::identity(),
 			override_transform: None,
-			rigid_body_transform: Isometry3::identity(),
 			display: desc.display,
 			connection: desc.connection,
+			gui_selected: false,
+			gui_hover: false,
 		}
 	}
 }
@@ -94,12 +98,6 @@ impl InspectMut for MMDBone {
 }
 
 impl InspectObject for &mut MMDBone {
-	fn is_selected(&self, _application: &Self::Options<'_>) -> bool {
-		// application.get_selection().component() == self.model
-		// 	&& application.get_selection().mmd_bone() == Some(self.id)
-		false
-	}
-	
 	fn inspect_header(&self, _application: &Self::Options<'_>) -> WidgetText {
 		self.name.clone().into()
 	}
@@ -115,14 +113,16 @@ impl InspectObject for &mut MMDBone {
 		self.id.hash(&mut s);
 		s.finish()
 	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test((self.model.clone(), self.id), true)
+	}
 }
 
 impl Inspect for (ComponentRef<MMDModel>, usize) {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: Self::Options<'_>) {
-		if ui.button(id_fmt(self.1, "MB ")).clicked() {
-			application.select(self);
-		}
+		select_button(ui, self, application);
 	}
 }

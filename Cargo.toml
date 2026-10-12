@@ -2,7 +2,7 @@
 name = "project39-ar"
 version = "0.1.0"
 authors = ["Fun Maker <funmaker95@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 [features]
 opencv-camera = ["opencv"]

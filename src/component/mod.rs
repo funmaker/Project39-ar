@@ -308,6 +308,12 @@ impl<C: ?Sized> Clone for ComponentRef<C> {
 	}
 }
 
+impl<C: ?Sized + 'static> Default for ComponentRef<C> {
+	fn default() -> Self {
+		Self::null()
+	}
+}
+
 impl<C: Component> From<ComponentRef<C>> for ComponentRef<dyn Component> {
 	fn from(value: ComponentRef<C>) -> Self {
 		ComponentRef {

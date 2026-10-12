@@ -72,18 +72,22 @@ impl TrackedCamera {
 	pub unsafe fn acquire_video_streaming_service(&self, index: TrackedDeviceIndex) -> Result<TrackedCameraHandle, TrackedCameraError> {
 		let mut out = 0;
 		
-		check_err(self.0,
-			self.0.AcquireVideoStreamingService.unwrap()(index.0,
-			                                             &mut out)
-		)?;
+		unsafe {
+			check_err(self.0,
+			          self.0.AcquireVideoStreamingService.unwrap()(index.0,
+			                                                       &mut out)
+			)?;
+		}
 		
 		Ok(out)
 	}
 	
 	pub unsafe fn release_video_streaming_service(&self, handle: TrackedCameraHandle) -> Result<(), TrackedCameraError> {
-		check_err(self.0,
-			self.0.ReleaseVideoStreamingService.unwrap()(handle)
-		)?;
+		unsafe {
+			check_err(self.0,
+			          self.0.ReleaseVideoStreamingService.unwrap()(handle)
+			)?;
+		}
 		
 		Ok(())
 	}
@@ -106,14 +110,16 @@ impl TrackedCamera {
 			ulFrameExposureTime: 0
 		};
 		
-		check_err(self.0,
-			self.0.GetVideoStreamFrameBuffer.unwrap()(handle,
-			                                          frame_type.into(),
-			                                          buffer.as_mut_ptr() as *mut _,
-			                                          buffer.len() as u32,
-			                                          &mut header,
-			                                          std::mem::size_of::<CameraVideoStreamFrameHeader>() as u32)
-		)?;
+		unsafe {
+			check_err(self.0,
+			          self.0.GetVideoStreamFrameBuffer.unwrap()(handle,
+			                                                    frame_type.into(),
+			                                                    buffer.as_mut_ptr() as *mut _,
+			                                                    buffer.len() as u32,
+			                                                    &mut header,
+			                                                    size_of::<CameraVideoStreamFrameHeader>() as u32)
+			)?;
+		}
 		
 		Ok(header)
 	}

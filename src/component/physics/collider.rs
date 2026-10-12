@@ -39,7 +39,7 @@ impl ColliderComponent {
 
 impl Component for ColliderComponent {
 	fn start(&self, entity: &Entity, application: &Application) -> Result<()> {
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		
 		let mut collider = self.template.clone();
 		collider.user_data = get_user_data(entity.id, self.id());
@@ -49,7 +49,7 @@ impl Component for ColliderComponent {
 	}
 	
 	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
-		let physics = &mut *application.physics.borrow_mut();
+		let physics = &mut application.physics.borrow_mut();
 		
 		physics.remove_collider(self.handle.get());
 		

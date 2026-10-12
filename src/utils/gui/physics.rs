@@ -1,8 +1,8 @@
 use std::any::Any;
 use rapier3d::dynamics::{ImpulseJoint, ImpulseJointHandle, ImpulseJointSet, RigidBody, RigidBodyHandle, RigidBodyType};
-use rapier3d::geometry::{Collider, ColliderHandle, ColliderSet};
+use rapier3d::geometry::{Collider, ColliderHandle, Group, InteractionTestMode};
 
-use crate::application::Application;
+use crate::application::{select_button, Application};
 use super::super::from_user_data;
 use super::*;
 
@@ -10,7 +10,7 @@ use super::*;
 impl SimpleInspect for RigidBodyType {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		
-		ComboBox::from_id_source("Hand")
+		ComboBox::from_id_source("RigidBodyType")
 			.selected_text(match self {
 				RigidBodyType::Fixed => "Fixed",
 				RigidBodyType::Dynamic => "Dynamic",
@@ -46,15 +46,10 @@ impl Inspect for UserData {
 	}
 }
 
-
-thread_local! {
-	static JOINTS_CACHE: RefCell<Vec<ImpulseJointHandle>> = RefCell::new(Vec::new());
-}
-
 impl InspectMut for RigidBody {
-	type Options<'a> = (RigidBodyHandle, &'a Application, &'a mut ColliderSet, &'a mut ImpulseJointSet);
+	type Options<'a> = (RigidBodyHandle, &'a Application, &'a ImpulseJointSet);
 	
-	fn inspect_ui(&mut self, ui: &mut Ui, (handle, application, collider_set, joints_set): Self::Options<'_>) {
+	fn inspect_ui(&mut self, ui: &mut Ui, (handle, application, joints_set): Self::Options<'_>) {
 		Grid::new("Rigid Body")
 			.num_columns(2)
 			.min_col_width(100.0)
@@ -67,7 +62,7 @@ impl InspectMut for RigidBody {
 				)), ());
 				ui.inspect_row("Sleeping", GetSet(|| (
 					self.is_sleeping(),
-					|sleep| if sleep { self.sleep() },
+					|sleep| if sleep { self.sleep() } else { self.wake_up(true) },
 				)), ());
 			});
 		
@@ -88,10 +83,6 @@ impl InspectMut for RigidBody {
 						self.angvel(),
 						|angvel| self.set_angvel(angvel, true),
 					)), ());
-					ui.inspect_row("Sleeping", GetSet(|| (
-						self.is_sleeping(),
-						|sleep| if sleep { self.sleep() } else { self.wake_up(true) },
-					)), ());
 				});
 		});
 		
@@ -99,54 +90,46 @@ impl InspectMut for RigidBody {
 			CollapsingHeader::new(format!("Colliders ({})", self.colliders().len()))
 				.id_source("Colliders")
 				.show(ui, |ui| {
-					for handle in self.colliders() {
-						if let Some(col) = collider_set.get_mut(*handle) {
-							ui.inspect_collapsing()
-							  .show(ui, col, (*handle, application))
-						} else {
-							ui.label(RichText::new("Invalid").monospace().italics());
-						}
-					}
+					Grid::new("Colliders Grid")
+						.num_columns(2)
+						.min_col_width(100.0)
+						.show(ui, |ui| {
+							for handle in self.colliders() {
+								ui.inspect_row(id_fmt(handle.into_raw_parts().0, "CO "), *handle, application);
+							}
+						});
 				});
 		}
 		
-		JOINTS_CACHE.try_with(|joint_cache| {
-			if let Ok(mut joint_cache) = joint_cache.try_borrow_mut() {
-				joint_cache.clear();
-				joint_cache.extend(joints_set.attached_joints(handle).map(|(_, _, handle, _)| handle));
-				
-				if !joint_cache.is_empty() {
-					CollapsingHeader::new(format!("Joints ({})", joint_cache.len()))
-						.id_source("Joints")
+		let joints = joints_set.attached_joints(handle).count();
+		if joints > 0 {
+			CollapsingHeader::new(format!("Joints ({})", joints))
+				.id_source("Joints")
+				.show(ui, |ui| {
+					Grid::new("Colliders Grid")
+						.num_columns(2)
+						.min_col_width(100.0)
 						.show(ui, |ui| {
-							for handle in joint_cache.drain(..) {
-								if let Some(col) = joints_set.get_mut(handle, false) {
-									ui.inspect_collapsing()
-									  .show(ui, col, (handle, application))
-								} else {
-									ui.label(RichText::new("Invalid").monospace().italics());
-								}
+							for (_, _, handle, _) in joints_set.attached_joints(handle) {
+								ui.inspect_row(id_fmt(handle.into_raw_parts().0, "IJ "), handle, application);
 							}
 						});
-				}
-			} else {
-				ui.label(RichText::new("Joint cache busy").italics());
-			}
-		}).expect("Joint cache failed");
+				});
+		}
 	}
 }
 
 impl InspectObject for &mut RigidBody {
-	fn is_selected(&self, (handle, application, _, _): &Self::Options<'_>) -> bool {
-		application.get_selection().rigid_body() == *handle
-	}
-
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Rigid Body".into()
 	}
-
-	fn inspect_uid(&self, (handle, application, _, _): &Self::Options<'_>) -> u64 {
+	
+	fn inspect_uid(&self, (handle, application, _): &Self::Options<'_>) -> u64 {
 		handle.inspect_uid(application)
+	}
+	
+	fn selection_level(&self, (handle, application, _): &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*handle, true)
 	}
 }
 
@@ -154,21 +137,11 @@ impl Inspect for RigidBodyHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if self == RigidBodyHandle::invalid() {
-			ui.label(RichText::new("NULL").monospace().italics());
-		} else {
-			if ui.button(id_fmt(self.into_raw_parts().0, "RB ")).clicked() {
-				application.select(self);
-			}
-		}
+		select_button(ui, self, application);
 	}
 }
 
 impl InspectObject for RigidBodyHandle {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().rigid_body() == *self
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Rigid Body".into()
 	}
@@ -183,12 +156,16 @@ impl InspectObject for RigidBodyHandle {
 		s.finish()
 	}
 	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*self, true)
+	}
+	
 	fn show_collapsing(self, application: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {
 		if let Ok(mut physics) = application.physics.try_borrow_mut() {
 			let physics = &mut *physics;
 			
 			if let Some(rb) = physics.bodies.get_mut(self) {
-				rb.show_collapsing((self, application, &mut physics.colliders, &mut physics.impulse_joints), ui, collapsing);
+				rb.show_collapsing((self, application, &mut physics.impulse_joints), ui, collapsing);
 				
 				return;
 			}
@@ -243,15 +220,56 @@ impl InspectMut for Collider {
 					ui.inspect_row("Radius", &mut cylinder.radius, (0.1, 0.01..=f32::INFINITY));
 					ui.inspect_row("Half Height", &mut cylinder.half_height, (0.1, 0.01..=f32::INFINITY));
 				}
+				
+				let mut collisions = self.collision_groups();
+				
+				ui.label("Collisions");
+				if let Some(test_mode) = match collisions.test_mode { // :^)
+					InteractionTestMode::And if ui.button("And").clicked() => Some(InteractionTestMode::Or),
+					InteractionTestMode::Or if ui.button("Or").clicked() => Some(InteractionTestMode::And),
+					_ => None,
+				} {
+					collisions.test_mode = test_mode;
+					self.set_collision_groups(collisions);
+				}
+				ui.end_row();
+				
+				ui.label("Membership");
+				ui.horizontal_top(|ui| {
+					for col in (0..8).rev() {
+						ui.vertical(|ui| {
+							for pos in (col..32).step_by(8).rev() {
+								let flag = Group::from(1 << pos);
+								if ui.toggle_value(&mut collisions.memberships.contains(flag), format!("{pos}")).changed() {
+									collisions.memberships.toggle(flag);
+									self.set_collision_groups(collisions);
+								}
+							}
+						});
+					}
+				});
+				ui.end_row();
+				
+				ui.label("Filter");
+				ui.horizontal_top(|ui| {
+					for col in (0..8).rev() {
+						ui.vertical(|ui| {
+							for pos in (col..32).step_by(8).rev() {
+								let flag = Group::from(1 << pos);
+								if ui.toggle_value(&mut collisions.filter.contains(flag), format!("{pos}")).changed() {
+									collisions.filter.toggle(flag);
+									self.set_collision_groups(collisions);
+								}
+							}
+						});
+					}
+				});
+				ui.end_row();
 			});
 	}
 }
 
 impl InspectObject for &mut Collider {
-	fn is_selected(&self, (handle, application): &Self::Options<'_>) -> bool {
-		application.get_selection().collider() == *handle
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Collider".into()
 	}
@@ -259,27 +277,21 @@ impl InspectObject for &mut Collider {
 	fn inspect_uid(&self, (handle, application): &Self::Options<'_>) -> u64 {
 		handle.inspect_uid(application)
 	}
+	
+	fn selection_level(&self, (handle, application): &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*handle, true)
+	}
 }
 
 impl Inspect for ColliderHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if self == ColliderHandle::invalid() {
-			ui.label(RichText::new("NULL").monospace().italics());
-		} else {
-			if ui.button(id_fmt(self.into_raw_parts().0, "CO ")).clicked() {
-				application.select(self);
-			}
-		}
+		select_button(ui, self, application);
 	}
 }
 
 impl InspectObject for ColliderHandle {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().collider() == *self
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Collider".into()
 	}
@@ -292,6 +304,10 @@ impl InspectObject for ColliderHandle {
 		self.type_id().hash(&mut s);
 		self.hash(&mut s);
 		s.finish()
+	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*self, true)
 	}
 	
 	fn show_collapsing(self, application: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {
@@ -334,10 +350,6 @@ impl InspectMut for ImpulseJoint {
 }
 
 impl InspectObject for &mut ImpulseJoint {
-	fn is_selected(&self, (handle, application): &Self::Options<'_>) -> bool {
-		application.get_selection().joint() == *handle
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Joint".into()
 	}
@@ -345,27 +357,21 @@ impl InspectObject for &mut ImpulseJoint {
 	fn inspect_uid(&self, (handle, application): &Self::Options<'_>) -> u64 {
 		handle.inspect_uid(application)
 	}
+	
+	fn selection_level(&self, (handle, application): &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*handle, true)
+	}
 }
 
 impl Inspect for ImpulseJointHandle {
 	type Options<'a> = &'a Application;
 	
 	fn inspect_ui(self, ui: &mut Ui, application: &Application) {
-		if self == ImpulseJointHandle::invalid() {
-			ui.label(RichText::new("NULL").monospace().italics());
-		} else {
-			if ui.button(id_fmt(self.into_raw_parts().0, "IJ ")).clicked() {
-				application.select(self);
-			}
-		}
+		select_button(ui, self, application);
 	}
 }
 
 impl InspectObject for ImpulseJointHandle {
-	fn is_selected(&self, application: &Self::Options<'_>) -> bool {
-		application.get_selection().joint() == *self
-	}
-	
 	fn inspect_header(&self, _options: &Self::Options<'_>) -> WidgetText {
 		"Impulse Joint".into()
 	}
@@ -378,6 +384,10 @@ impl InspectObject for ImpulseJointHandle {
 		self.type_id().hash(&mut s);
 		self.hash(&mut s);
 		s.finish()
+	}
+	
+	fn selection_level(&self, application: &Self::Options<'_>) -> SelectionLevel {
+		application.gui_selections_test(*self, true)
 	}
 	
 	fn show_collapsing(self, application: Self::Options<'_>, ui: &mut Ui, collapsing: InspectCollapsing) {

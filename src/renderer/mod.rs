@@ -509,12 +509,10 @@ impl Renderer {
 		Ok(())
 	}
 	
-	pub fn render<RT>(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, render_target: &mut RT)
-	                  -> Result<()>
-	                  where RT: RenderTarget {
+	pub fn render(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, mut render_target: impl RenderTarget) -> Result<Option<RenderTargetContext>> {
 		let rt_context = match render_target.create_context(camera_pos) {
-			Ok(Some(context)) => context,
-			Ok(None) => return Ok(()),
+			Ok(Some(rt_context)) => rt_context,
+			Ok(None) => return Ok(None),
 			Err(err) => return Err(err.into()),
 		};
 		
@@ -598,7 +596,7 @@ impl Renderer {
 		
 		render_target.after_execute(self)?;
 		
-		Ok(())
+		Ok(Some(rt_context))
 	}
 	
 	pub fn end_frame(&mut self) -> Result<()> {

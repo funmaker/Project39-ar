@@ -4,7 +4,7 @@ use rapier3d::prelude::RevoluteJoint;
 use crate::application::{Hand, Application, EntityRef};
 use crate::math::{Ray, Isometry3, Color, Similarity3, Vec3, face_towards_lossy, PI, Point3};
 use crate::renderer::RenderContext;
-use crate::utils::ColliderEx;
+use crate::utils::PhysicsComponentEx;
 use super::super::model::SimpleModel;
 use super::super::physics::joint::JointComponent;
 use super::ToolGun;

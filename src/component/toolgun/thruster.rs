@@ -7,7 +7,7 @@ use crate::application::{Application, Hand, Key};
 use crate::application::entity::EntityBuilder;
 use crate::math::{Color, face_upwards_lossy, Isometry3, Ray, Similarity3};
 use crate::renderer::{RenderContext, Renderer};
-use crate::utils::ColliderEx;
+use crate::utils::PhysicsComponentEx;
 use super::super::ComponentBase;
 use super::super::model::SimpleModel;
 use super::super::model::simple::asset::ObjAsset;

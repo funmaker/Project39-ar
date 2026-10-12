@@ -92,6 +92,18 @@ impl Component for DetachedPoV {
 		) {
 			entity.unset_parent(application);
 			entity.add_component(PCControlled::new());
+			
+			if let Some(pc) = application.pov.get(application).and_then(|ent| ent.find_component_by_type::<PCControlled>()) {
+				pc.set_disabled(true);
+			}
+		}
+		
+		Ok(())
+	}
+	
+	fn end(&self, _entity: &Entity, application: &Application) -> Result<()> {
+		if let Some(pc) = application.pov.get(application).and_then(|ent| ent.find_component_by_type::<PCControlled>()) {
+			pc.set_disabled(false);
 		}
 		
 		Ok(())

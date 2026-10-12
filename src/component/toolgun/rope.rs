@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::application::{Hand, Application, EntityRef};
 use crate::math::{Ray, Point3};
-use crate::utils::ColliderEx;
+use crate::utils::PhysicsComponentEx;
 use super::super::physics::rope::Rope;
 use super::ToolGun;
 use super::tool::Tool;

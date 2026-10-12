@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 use egui::*;
-
+use crate::application::GuiSelection;
 use crate::debug;
 use crate::utils::{end_row_interact, ExUi, id_fmt};
 use super::super::{Application, Entity, EntityRef};
@@ -17,6 +17,7 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 				debug_flag_checkbox(&mut ui[0], "DebugCollidersDraw", "Draw Colliders");
 				debug_flag_checkbox(&mut ui[1], "DebugJointsDraw", "Draw Joints");
 				debug_flag_checkbox(&mut ui[1], "DebugRigidBodiesDraw", "Draw Rigid Bodies");
+				debug_flag_checkbox(&mut ui[1], "DebugHideUnselected", "Only Draw Selected");
 			});
 
 			debug_flag_slider(ui, "DebugGizmoSize", 0.0..=2.0, "Gizmo Size");
@@ -26,7 +27,9 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 	ui.separator();
 	ui.label(RichText::new("Scene").strong());
 	
-	let sel_ent = application.gui_selection.borrow().entity_or_component();
+	let selections = application.gui_selections().clone();
+	let selected_ent = selections.selection.entity(&application.physics.borrow_mut());
+	let hovered_cmp = selections.hover.entity(&application.physics.borrow_mut());
 	
 	ScrollArea::vertical()
 		.max_height(128.0)
@@ -37,15 +40,16 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 				.num_columns(4)
 				.show(ui, |ui| {
 					for entity in application.root_entities() {
-						entity_tree(ui, entity, application, &sel_ent, 0, false);
+						entity_tree(ui, entity, application, &selected_ent, &hovered_cmp, 0, false);
 					}
 				});
 		});
 	
 	ui.add_space(8.0);
 	
-	if let Some(entity) = sel_ent.get(application)
-	                             .or_else(|| application.pov.get(application)) {
+	let selected_ent = application.gui_selections().selection.entity(&application.physics.borrow_mut());
+	if let Some(entity) = selected_ent.get(application)
+	                                  .or_else(|| application.pov.get(application)) {
 		ScrollArea::vertical()
 			.id_source(entity.id)
 			.show(ui, |ui| ui.inspect(entity, application));
@@ -67,7 +71,7 @@ fn debug_flag_slider(ui: &mut Ui, flag: &str, range: RangeInclusive<f32>, label:
 	}
 }
 
-fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, sel_ent: &EntityRef, level: usize, default_open: bool) {
+fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, selected_ent: &EntityRef, hovered_ent: &EntityRef, level: usize, default_open: bool) {
 	let id = Id::new(entity.id);
 	let mut open = ui.ctx().data_mut(|d| d.get_persisted(id).unwrap_or(default_open));
 	
@@ -87,18 +91,28 @@ fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, sel_ent:
 	
 	let name = "|    ".to_string().repeat(level) + &entity.name;
 	
-	if entity == sel_ent {
-		ui.label(id_fmt(entity.id, "").strong());
-		ui.label(RichText::new(name).strong());
-	} else {
-		ui.label(id_fmt(entity.id, ""));
-		ui.label(RichText::new(name));
-	}
+	let color = match (entity == selected_ent, entity == hovered_ent) {
+		(true, true) => Color32::WHITE.gamma_multiply(0.8),
+		(true, false) => Color32::WHITE,
+		(false, true) => ui.style().noninteractive().fg_stroke.color.gamma_multiply(0.7),
+		(false, false) => ui.style().noninteractive().fg_stroke.color,
+	};
+	
+	ui.label(id_fmt(entity.id, "").color(color));
+	ui.label(RichText::new(name).color(color));
 	
 	ui.allocate_space(ui.available_size());
 	
-	if end_row_interact(ui, entity.id).clicked() {
-		application.select(entity);
+	let response = end_row_interact(ui, entity.id);
+	if response.clicked() {
+		application.select(entity, true);
+	}
+	
+	let hovered = ui.track_hover(&response);
+	if response.hovered() && !hovered {
+		application.gui_selections_mut().hover = entity.into();
+	} else if !response.hovered() && hovered {
+		application.gui_selections_mut().hover = GuiSelection::None;
 	}
 	
 	if open {
@@ -106,7 +120,7 @@ fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, sel_ent:
 		
 		for child in entity.children().iter() {
 			if let Some(child) = child.get(application) {
-				entity_tree(ui, child, application, sel_ent, level + 1, single_child);
+				entity_tree(ui, child, application, selected_ent, hovered_ent, level + 1, single_child);
 			} else {
 				ui.label(RichText::new("NONE").monospace());
 				ui.label(RichText::new("Broken Child").monospace().italics());

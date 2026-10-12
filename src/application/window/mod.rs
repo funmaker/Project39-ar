@@ -23,7 +23,7 @@ use winit::window::{WindowBuilder, Fullscreen, CursorGrabMode, Window as WinitWi
 mod gui;
 
 use crate::config;
-use crate::math::{Isometry3, Perspective3, projective_clip, Vec2, PI};
+use crate::math::{Isometry3, Perspective3, projective_clip, Vec2, PI, Mat4, PMat4};
 use crate::renderer::{Renderer, RenderTarget, RenderContext, RenderTargetContext};
 use crate::utils::FramebufferBundle;
 use super::Input;
@@ -33,6 +33,7 @@ use gui::WindowGui;
 const FOV: f32 = 110.0;
 
 pub struct Window {
+	pub inv_proj: Option<StereoProjection>,
 	event_loop: Option<EventLoop<()>>,
 	surface: Arc<Surface>,
 	last_present: Instant,
@@ -104,6 +105,7 @@ impl Window {
 			render_required: true,
 			cursor_trap: false,
 			gui,
+			inv_proj: None,
 		})
 	}
 	
@@ -185,7 +187,8 @@ impl Window {
 	}
 	
 	pub fn mirror_from(&mut self,
-	                   image: &Arc<AttachmentImage>,
+	                   rt: impl RenderTarget,
+	                   context: Option<&RenderTargetContext>,
 	                   renderer: &mut Renderer)
 	                   -> Result<()> {
 		let (image_num, acquire_future) = match self.acquire_swapchain_image()? {
@@ -193,6 +196,7 @@ impl Window {
 			None => return Ok(()),
 		};
 		
+		let image = rt.last_frame();
 		let out_dims = self.swapchain.image_extent();
 		let image_dims = image.dimensions();
 		let layers = image_dims.array_layers();
@@ -250,6 +254,10 @@ impl Window {
 				      .boxed()
 			)
 		})?;
+		
+		if let Some(context) = context {
+			self.inv_proj = Some(StereoProjection::stereo(context));
+		}
 		
 		Ok(())
 	}
@@ -449,6 +457,8 @@ impl RenderTarget for Window {
 		
 		context.builder.blit_image(BlitImageInfo::images(self.last_frame().clone(), self.swapchain_images[image_num as usize].clone()))?;
 		
+		self.inv_proj = Some(StereoProjection::mono(context));
+		
 		Ok(())
 	}
 	
@@ -459,6 +469,27 @@ impl RenderTarget for Window {
 		renderer.enqueue(queue.clone(), |future| future.then_swapchain_present(queue, SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), image_num)).boxed());
 		
 		Ok(())
+	}
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum StereoProjection {
+	Mono(PMat4),
+	Stereo(PMat4, PMat4),
+}
+
+impl StereoProjection {
+	fn mono(context: &RenderTargetContext) -> Self {
+		StereoProjection::Mono(
+			(context.projection.0 * context.view.0).inverse()
+		)
+	}
+	
+	fn stereo(context: &RenderTargetContext) -> Self {
+		StereoProjection::Stereo(
+			(context.projection.0 * context.view.0).inverse(),
+			(context.projection.1 * context.view.1).inverse(),
+		)
 	}
 }
 

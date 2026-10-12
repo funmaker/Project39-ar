@@ -16,7 +16,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	
 	let miku_ent = miku.entity(application);
 	let id = ui.id().with(&miku_ent.name).with("Miku Gui");
-	let selected_bone = application.get_selection().mmd_bone();
+	let selected_bone = application.gui_selections().selection.mmd_bone();
 	
 	let new_selection = ui.columns(3, |ui| {
 		[
@@ -44,7 +44,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	
 	ui.horizontal(|ui| {
 		if ui.button("Freeze All").clicked() {
-			let physics = &mut *application.physics.borrow_mut();
+			let physics = &mut application.physics.borrow_mut();
 			
 			for rigid_body in model.state().rigid_bodies(application) {
 				rigid_body.entity(application).freeze(physics);
@@ -52,7 +52,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 		}
 		
 		if ui.button("Unfreeze All").clicked() {
-			let physics = &mut *application.physics.borrow_mut();
+			let physics = &mut application.physics.borrow_mut();
 			
 			for rigid_body in model.state().rigid_bodies(application) {
 				rigid_body.entity(application).unfreeze(physics);
@@ -101,7 +101,7 @@ pub fn miku_gui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	}
 	
 	if let Some(bone) = new_selection {
-		application.select((model.as_cref(), bone));
+		application.select((model.as_cref(), bone), true);
 	}
 }
 

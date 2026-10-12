@@ -21,7 +21,7 @@ impl FenceCheck {
 		}
 	}
 	
-	pub fn future(&self) -> impl GpuFuture {
+	pub fn future(&self) -> impl GpuFuture + use<> {
 		self.0.clone()
 	}
 }
