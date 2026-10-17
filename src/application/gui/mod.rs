@@ -4,6 +4,7 @@ use egui::*;
 mod main_tab;
 mod physics_tab;
 mod selection;
+mod miku_tab;
 
 use crate::utils::ExUi;
 use super::{Application, Key};
@@ -11,6 +12,7 @@ pub use selection::{GuiSelection, GuiSelections, select_button};
 use main_tab::main_ui;
 use physics_tab::physics_ui;
 use selection::GuiTab;
+use crate::application::gui::miku_tab::miku_ui;
 use crate::application::window::StereoProjection;
 use crate::debug;
 use crate::math::{Color, Ray};
@@ -188,14 +190,14 @@ fn show_tab(ui: &mut Ui, tab: GuiTab, application: &Application) {
 	match tab {
 		GuiTab::Main => main_ui(ui, application),
 		GuiTab::Miku => {
-			if let Some(miku) = application.gui_selections()
-			                               .selection
-			                               .mmd_model()
-			                               .entity()
-			                               .get(application)
-			                               .and_then(|miku| miku.find_component_by_type())
-			                               .or_else(|| application.miku.get(application)) {
-				ui.inspect(miku, application);
+			let miku_sel = application.gui_selections()
+			                          .selection
+			                          .mmd_model()
+			                          .entity();
+			if let Some(miku) = miku_sel.get(application)
+			                            .and_then(|miku| miku.find_component_by_type())
+			                            .or_else(|| application.miku.get(application)) {
+				miku_ui(miku, ui, application);
 			}
 		},
 		GuiTab::Physics => if let Ok(mut physics) = application.physics.try_borrow_mut() { physics_ui(&mut *physics, ui, application); },

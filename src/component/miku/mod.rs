@@ -37,7 +37,7 @@ const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 pub struct Miku {
 	#[inner] inner: ComponentInner,
 	asset: PmxAsset,
-	model: ComponentRef<MMDModel>,
+	pub model: ComponentRef<MMDModel>,
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
 		HashMap<Morphs, ProcAnim<f32>>,
@@ -177,6 +177,67 @@ impl Component for Miku {
 	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
 		ui.separator();
 		
-		gui::miku_gui(self, ui, application);
+		let model = match self.model.get(application) {
+			Some(model) => model,
+			None => return,
+		};
+		
+		let miku_ent = self.entity(application);
+		let id = ui.id().with(&miku_ent.name).with("Miku Gui");
+		let selected_bone = application.gui_selections().selection.mmd_bone();
+		
+		let new_selection = ui.columns(3, |ui| {
+			[
+				gui::list(&mut ui[0],
+				          id.with("bones"),
+				          selected_bone,
+				          model.state()
+				               .bones
+				               .iter()
+				               .map(|bone| bone.name.as_str().into())
+				               .enumerate()),
+				gui::ragdoll(&mut ui[1], selected_bone, self, application),
+				gui::list(&mut ui[2],
+				          id.with("rigidbodies"),
+				          selected_bone,
+				          model.state()
+				               .rigid_bodies(application)
+				               .map(|rb| (rb.bone, rb.entity(application).name.as_str().into()))
+				),
+			].into_iter()
+			 .find_map(|x| x)
+		});
+		
+		ui.separator();
+		
+		ui.horizontal(|ui| {
+			if ui.button("Freeze All").clicked() {
+				let physics = &mut application.physics.borrow_mut();
+				
+				for rigid_body in model.state().rigid_bodies(application) {
+					rigid_body.entity(application).freeze(physics);
+				}
+			}
+			
+			if ui.button("Unfreeze All").clicked() {
+				let physics = &mut application.physics.borrow_mut();
+				
+				for rigid_body in model.state().rigid_bodies(application) {
+					rigid_body.entity(application).unfreeze(physics);
+				}
+			}
+			
+			if ui.button("Reset Pose").clicked() {
+				let root_pos = *miku_ent.state().position;
+				
+				for rigid_body in model.state().rigid_bodies(application) {
+					*rigid_body.entity(application).state_mut().position = root_pos * rigid_body.rest_pos.get();
+				}
+			}
+		});
+		
+		if let Some(bone) = new_selection {
+			application.select((model.as_cref(), bone), false);
+		}
 	}
 }

@@ -9,7 +9,6 @@ mod application;
 mod math;
 mod physics;
 
-
 pub fn id_fmt(id: impl Display, prefix: impl Display) -> RichText {
 	RichText::new(format!("{}{:04}", prefix, id)).monospace()
 }

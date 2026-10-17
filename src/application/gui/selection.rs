@@ -204,7 +204,7 @@ pub fn select_button(ui: &mut Ui, target: impl Into<GuiSelection>, application: 
 		GuiSelection::RigidBody(rb)       if application.physics.try_borrow().ok().is_none_or(|physics| physics.bodies.contains(*rb))         => Some(id_fmt(rb.into_raw_parts().0, "RB ")),
 		GuiSelection::Collider(col)       if application.physics.try_borrow().ok().is_none_or(|physics| physics.colliders.contains(*col))     => Some(id_fmt(col.into_raw_parts().0, "CO ")),
 		GuiSelection::ImpulseJoint(ij)    if application.physics.try_borrow().ok().is_none_or(|physics| physics.impulse_joints.contains(*ij)) => Some(id_fmt(ij.into_raw_parts().0, "IJ ")),
-		GuiSelection::MMDBone(cref, bone) if let Some(component) = cref.get(application) && component.state().bones.len() < *bone             => Some(id_fmt(bone, "MB ")),
+		GuiSelection::MMDBone(cref, bone) if cref.get(application).is_some()                                                                  => Some(id_fmt(bone, "MB ")),
 		_ => None,
 	};
 	

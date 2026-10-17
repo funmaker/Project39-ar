@@ -31,4 +31,24 @@ impl<RT: RenderTarget> RenderTarget for &mut RT {
 	fn last_frame(&self) -> &Arc<AttachmentImage> {
 		(**self).last_frame()
 	}
+
+	fn before_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
+		(**self).before_render(context, renderer)
+	}
+
+	fn early_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
+		(**self).early_render(context, renderer)
+	}
+
+	fn late_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
+		(**self).late_render(context, renderer)
+	}
+
+	fn after_render(&mut self, context: &mut RenderContext, renderer: &mut Renderer) -> Result<()> {
+		(**self).after_render(context, renderer)
+	}
+
+	fn after_execute(&mut self, renderer: &mut Renderer) -> Result<()> {
+		(**self).after_execute(renderer)
+	}
 }
