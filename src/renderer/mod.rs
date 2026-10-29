@@ -6,23 +6,24 @@ use std::sync::Arc;
 use colored::Colorize;
 use anyhow::{Result, Error};
 use thiserror::Error;
-use vulkano::{sync, Version, VulkanLibrary};
+use vulkano::{sync, Validated, Version, VulkanError, VulkanLibrary};
 use vulkano::buffer::{BufferContents, Buffer, Subbuffer, BufferUsage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassBeginInfo, SubpassContents, SubpassEndInfo};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
-use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, Features, Queue, QueueCreateInfo, QueueFlags};
+use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
+use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, DeviceFeatures, Queue, QueueCreateInfo, QueueFlags};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::{ClearValue, Format};
-use vulkano::image::{AttachmentImage, ImageLayout, ImageUsage, ImageViewAbstract, SampleCount, SwapchainImage};
+use vulkano::image::{Image, ImageAspects, ImageCreateInfo, ImageLayout, ImageUsage, SampleCount};
 use vulkano::image::view::ImageView;
 use vulkano::instance::{Instance, InstanceCreateInfo, InstanceExtensions};
-use vulkano::instance::debug::{DebugUtilsMessenger, DebugUtilsMessengerCreateInfo, DebugUtilsMessageType, DebugUtilsMessageSeverity};
-use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
+use vulkano::instance::debug::{DebugUtilsMessenger, DebugUtilsMessengerCallback, DebugUtilsMessengerCreateInfo, DebugUtilsMessageType, DebugUtilsMessageSeverity};
+use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::graphics::viewport::Viewport;
-use vulkano::render_pass::{AttachmentDescription, AttachmentReference, Framebuffer, FramebufferCreateInfo, LoadOp, RenderPass, RenderPassCreateInfo, StoreOp, SubpassDescription};
+use vulkano::render_pass::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, Framebuffer, FramebufferCreateInfo, RenderPass, RenderPassCreateInfo, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
 use vulkano::sync::future::GpuFuture;
+use winit::event_loop::ActiveEventLoop;
 
 pub mod assets_manager;
 pub mod context;
@@ -76,8 +77,8 @@ pub const DEPTH_FORMAT: Format = Format::D24_UNORM_S8_UINT;
 pub const LAYERS: u32 = 2;
 
 impl Renderer {
-	pub fn new(vr: Option<Arc<VR>>) -> Result<Renderer> {
-		let instance = Renderer::create_vulkan_instance(&vr)?;
+	pub fn new(vr: Option<Arc<VR>>, instance_extensions: InstanceExtensions) -> Result<Renderer> {
+		let instance = Renderer::create_vulkan_instance(&vr, instance_extensions)?;
 		let debug_utils_messenger = config::get()
 		                                   .validation
 		                                   .then(|| Renderer::create_debug_callbacks(&instance))
@@ -87,14 +88,14 @@ impl Renderer {
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
 		
 		let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo::default()));
-		let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone()));
+		let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), StandardDescriptorSetAllocatorCreateInfo::default()));
 		let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let render_pass = Renderer::create_render_pass(&device)?;
 		let mut pipelines = Pipelines::new(render_pass.clone());
 		
-		let commons = Buffer::new_sized(&memory_allocator,
+		let commons = Buffer::new_sized(memory_allocator.clone(),
 		                                (BufferUsage::TRANSFER_DST | BufferUsage::UNIFORM_BUFFER).into_info(),
-		                                MemoryUsage::DeviceOnly.into_info())?;
+		                                MemoryTypeFilter::PREFER_DEVICE.into_info())?;
 		
 		let debug_renderer = Some(DebugRenderer::new(&load_queue, &memory_allocator, &command_buffer_allocator, &descriptor_set_allocator, &mut pipelines)?);
 		let assets_manager = Some(AssetsManager::new());
@@ -120,8 +121,8 @@ impl Renderer {
 		})
 	}
 	
-	fn create_vulkan_instance(vr: &Option<Arc<VR>>) -> Result<Arc<Instance>> {
-		let library = VulkanLibrary::new().unwrap();
+	fn create_vulkan_instance(vr: &Option<Arc<VR>>, required_extensions: InstanceExtensions) -> Result<Arc<Instance>> {
+		let library = VulkanLibrary::new()?;
 		
 		dprintln!("List of Vulkan layers available to use:");
 		let layer_properties: Vec<_> = library.layer_properties()?.collect();
@@ -132,7 +133,7 @@ impl Renderer {
 		let vr_extensions = vr.as_ref().map(|vr| vr.lock().unwrap().compositor.vulkan_instance_extensions_required()).unwrap_or_default();
 		
 		let extensions = InstanceExtensions::from_iter(vr_extensions.iter().map(|ex| ex.to_str().expect("Failed to parse OpenVR required instance extensions!")))
-		                                    .union(&vulkano_win::required_extensions(&library))
+		                                    .union(&required_extensions)
 		                                    .union(&InstanceExtensions {
 			                                    ext_debug_utils: debug::debug(),
 			                                    ext_debug_report: debug::debug(), // required by RenderDoc
@@ -163,32 +164,30 @@ impl Renderer {
 	}
 	
 	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger> {
-		// SAFETY: user callback must not make any calls to the Vulkan API.
-		unsafe {
-			Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo {
-				message_severity: DebugUtilsMessageSeverity::ERROR
-					| DebugUtilsMessageSeverity::WARNING
-					| DebugUtilsMessageSeverity::INFO
-					| DebugUtilsMessageSeverity::VERBOSE,
-				message_type: DebugUtilsMessageType::GENERAL
-					| DebugUtilsMessageType::VALIDATION
-					| DebugUtilsMessageType::PERFORMANCE,
-				..DebugUtilsMessengerCreateInfo::user_callback(Arc::new(|msg| {
-					if !debug::debug() { return }
-					
-					let color = if msg.severity.contains(DebugUtilsMessageSeverity::ERROR) { colored::Color::BrightRed }
-					else if msg.severity.contains(DebugUtilsMessageSeverity::WARNING) { colored::Color::Yellow }
-					else if msg.severity.contains(DebugUtilsMessageSeverity::INFO) { colored::Color::Cyan }
-					else { colored::Color::White };
-					
-					println!("[{} {}] {}: {}",
-					         format!("{:?}", msg.ty).color(color).bold(),
-					         format!("{:?}", msg.severity).color(color).bold(),
-					         msg.layer_prefix.unwrap_or("UNKNOWN").bright_white(),
-					         msg.description.white());
-				}))
-			})?)
-		}
+		Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo {
+			message_severity: DebugUtilsMessageSeverity::ERROR
+				| DebugUtilsMessageSeverity::WARNING
+				| DebugUtilsMessageSeverity::INFO
+				| DebugUtilsMessageSeverity::VERBOSE,
+			message_type: DebugUtilsMessageType::GENERAL
+				| DebugUtilsMessageType::VALIDATION
+				| DebugUtilsMessageType::PERFORMANCE,
+			// SAFETY: user callback must not make any calls to the Vulkan API.
+			..DebugUtilsMessengerCreateInfo::user_callback(unsafe { DebugUtilsMessengerCallback::new(|severity, ty, data| {
+				if !debug::debug() { return }
+				
+				let color = if severity.contains(DebugUtilsMessageSeverity::ERROR) { colored::Color::BrightRed }
+				else if severity.contains(DebugUtilsMessageSeverity::WARNING) { colored::Color::Yellow }
+				else if severity.contains(DebugUtilsMessageSeverity::INFO) { colored::Color::Cyan }
+				else { colored::Color::White };
+				
+				println!("[{} {}] {}: {}",
+				         format!("{:?}", ty).color(color).bold(),
+				         format!("{:?}", severity).color(color).bold(),
+				         data.message_id_name.unwrap_or("UNKNOWN").bright_white(),
+				         data.message.white());
+			})})
+		})?)
 	}
 	
 	fn create_physical_device(instance: &Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<Arc<PhysicalDevice>> {
@@ -268,9 +267,9 @@ impl Renderer {
 				khr_storage_buffer_storage_class: true,
 				..DeviceExtensions::empty()
 			}),
-			enabled_features: Features {
+			enabled_features: DeviceFeatures {
 				multiview: true,
-				..Features::empty()
+				..DeviceFeatures::empty()
 			},
 			queue_create_infos,
 			..DeviceCreateInfo::default()
@@ -289,21 +288,21 @@ impl Renderer {
 		
 		let mut attachments = vec![
 			AttachmentDescription {
-				format: Some(IMAGE_FORMAT),
+				format: IMAGE_FORMAT,
 				samples,
-				load_op: LoadOp::Clear,
-				store_op: StoreOp::Store,
+				load_op: AttachmentLoadOp::Clear,
+				store_op: AttachmentStoreOp::Store,
 				initial_layout: ImageLayout::ColorAttachmentOptimal,
 				final_layout: ImageLayout::ColorAttachmentOptimal,
 				..AttachmentDescription::default()
 			},
 			AttachmentDescription {
-				format: Some(DEPTH_FORMAT),
+				format: DEPTH_FORMAT,
 				samples,
-				load_op: LoadOp::Clear,
-				store_op: StoreOp::DontCare,
-				stencil_load_op: LoadOp::Clear,
-				stencil_store_op: StoreOp::DontCare,
+				load_op: AttachmentLoadOp::Clear,
+				store_op: AttachmentStoreOp::DontCare,
+				stencil_load_op: Some(AttachmentLoadOp::Clear),
+				stencil_store_op: Some(AttachmentStoreOp::DontCare),
 				initial_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				final_layout: ImageLayout::DepthStencilAttachmentOptimal,
 				..AttachmentDescription::default()
@@ -324,7 +323,7 @@ impl Renderer {
 					..AttachmentReference::default()
 				}),
 				input_attachments: vec![],
-				resolve_attachments: vec![],
+				color_resolve_attachments: vec![],
 				preserve_attachments: vec![],
 				..SubpassDescription::default()
 			},
@@ -332,16 +331,16 @@ impl Renderer {
 		
 		if samples != SampleCount::Sample1 {
 			attachments.push(AttachmentDescription {
-				format: Some(IMAGE_FORMAT),
+				format: IMAGE_FORMAT,
 				samples: SampleCount::Sample1,
-				load_op: LoadOp::DontCare,
-				store_op: StoreOp::Store,
+				load_op: AttachmentLoadOp::DontCare,
+				store_op: AttachmentStoreOp::Store,
 				initial_layout: ImageLayout::TransferDstOptimal,
 				final_layout: ImageLayout::TransferDstOptimal,
 				..AttachmentDescription::default()
 			});
 			
-			subpasses[0].resolve_attachments.push(Some(AttachmentReference {
+			subpasses[0].color_resolve_attachments.push(Some(AttachmentReference {
 				attachment: 2,
 				layout: attachments[2].final_layout,
 				..AttachmentReference::default()
@@ -359,7 +358,7 @@ impl Renderer {
 		Ok(render_pass)
 	}
 	
-	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<SwapchainImage>>)> {
+	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<Image>>)> {
 		if !self.device.physical_device().surface_support(self.queue.queue_family_index(), &surface)? {
 			return Err(RendererSwapchainError::SurfaceNotSupported.into())
 		}
@@ -385,7 +384,7 @@ impl Renderer {
 		
 		Ok(Swapchain::new(self.device.clone(), surface, SwapchainCreateInfo {
 			min_image_count: 2.max(caps.min_image_count).min(caps.max_image_count.unwrap_or(caps.min_image_count)),
-			image_format: Some(format.0),
+			image_format: format.0,
 			image_color_space: format.1,
 			image_extent: dimensions,
 			image_usage: ImageUsage::TRANSFER_DST | ImageUsage::SAMPLED,
@@ -406,38 +405,49 @@ impl Renderer {
 			(min_framebuffer_size.1 as f32 * ssaa) as u32,
 		];
 		
-		let main_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
-		                                                                      dimensions,
-		                                                                      LAYERS,
-		                                                                      SampleCount::Sample1,
-		                                                                      IMAGE_FORMAT,
-		                                                                      ImageUsage::COLOR_ATTACHMENT
-			                                                                      | ImageUsage::TRANSFER_SRC
-			                                                                      | ImageUsage::TRANSFER_DST
-			                                                                      | ImageUsage::SAMPLED)?;
+		let main_image = Image::new(self.memory_allocator.clone(),
+		                            ImageCreateInfo {
+			                            extent: [dimensions[0], dimensions[1], 1],
+			                            format: IMAGE_FORMAT,
+			                            array_layers: LAYERS,
+			                            usage: ImageUsage::COLOR_ATTACHMENT
+			                                   | ImageUsage::TRANSFER_SRC
+			                                   | ImageUsage::TRANSFER_DST
+			                                   | ImageUsage::SAMPLED,
+			                            ..ImageCreateInfo::default()
+		                            },
+		                            AllocationCreateInfo::default())?;
 		
-		let depth_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
-		                                                                       dimensions,
-		                                                                       LAYERS,
-		                                                                       samples,
-		                                                                       DEPTH_FORMAT,
-		                                                                       ImageUsage::DEPTH_STENCIL_ATTACHMENT
-			                                                                       | ImageUsage::TRANSIENT_ATTACHMENT)?;
+		let depth_image = Image::new(self.memory_allocator.clone(),
+		                             ImageCreateInfo {
+			                             extent: [dimensions[0], dimensions[1], 1],
+			                             format: DEPTH_FORMAT,
+			                             array_layers: LAYERS,
+			                             samples,
+			                             usage: ImageUsage::DEPTH_STENCIL_ATTACHMENT
+			                                    | ImageUsage::TRANSIENT_ATTACHMENT,
+			                             ..ImageCreateInfo::default()
+		                             },
+		                             AllocationCreateInfo::default())?;
 		
 		
 		
-		let attachments: Vec<Arc<dyn ImageViewAbstract>> = if samples == SampleCount::Sample1 {
+		let attachments: Vec<Arc<ImageView>> = if samples == SampleCount::Sample1 {
 			vec![
 				ImageView::new_default(main_image.clone())?,
 				ImageView::new_default(depth_image)?,
 			]
 		} else {
-			let msaa_image = AttachmentImage::multisampled_with_usage_with_layers(&self.memory_allocator,
-			                                                                      dimensions,
-			                                                                      LAYERS,
-			                                                                      samples,
-			                                                                      IMAGE_FORMAT,
-			                                                                      ImageUsage::COLOR_ATTACHMENT)?;
+			let msaa_image = Image::new(self.memory_allocator.clone(),
+			                            ImageCreateInfo {
+				                            extent: [dimensions[0], dimensions[1], 1],
+				                            format: IMAGE_FORMAT,
+				                            array_layers: LAYERS,
+				                            samples,
+				                            usage: ImageUsage::COLOR_ATTACHMENT,
+				                            ..ImageCreateInfo::default()
+			                            },
+			                            AllocationCreateInfo::default())?;
 			
 			vec![
 				ImageView::new_default(msaa_image)?,
@@ -454,7 +464,7 @@ impl Renderer {
 		
 		let mut clear_values = vec![ Some(ClearValue::Float([0.0, 0.0, 0.0, 0.0])) ];
 		
-		if DEPTH_FORMAT.type_stencil().is_some() {
+		if DEPTH_FORMAT.aspects().contains(ImageAspects::STENCIL) {
 			clear_values.push(Some(ClearValue::DepthStencil((1.0, 0))))
 		} else {
 			clear_values.push(Some(ClearValue::Depth(1.0)))
@@ -516,7 +526,7 @@ impl Renderer {
 			Err(err) => return Err(err.into()),
 		};
 		
-		let mut builder = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator, self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
+		let mut builder = AutoCommandBufferBuilder::primary(self.command_buffer_allocator.clone(), self.queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
 		
 		let light_source = vector!(0.5, -0.5, -1.5).normalize();
 		builder.update_buffer(self.commons.clone(), Arc::new(CommonsUBO {
@@ -550,15 +560,15 @@ impl Renderer {
 		render_target.before_render(&mut context, self)?;
 		
 		let viewport = Viewport {
-			origin: [0.0, 0.0],
-			dimensions: [context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32],
-			depth_range: 0.0..1.0,
+			offset: [0.0, 0.0],
+			extent: [context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32],
+			depth_range: 0.0..=1.0,
 		};
 		context.builder.begin_render_pass(RenderPassBeginInfo {
 			                                  clear_values: render_target.clear_values().iter().copied().collect(),
 			                                  ..RenderPassBeginInfo::framebuffer(rt_context.framebuffer.clone())
-		                                  }, SubpassContents::Inline)?
-		               .set_viewport(0, Some(viewport));
+		                                  }, SubpassBeginInfo { contents: SubpassContents::Inline, ..SubpassBeginInfo::default() })?
+		               .set_viewport(0, smallvec::smallvec![viewport])?;
 		
 		render_target.early_render(&mut context, self)?;
 		
@@ -583,7 +593,7 @@ impl Renderer {
 		
 		render_target.late_render(&mut context, self)?;
 		
-		context.builder.end_render_pass()?;
+		context.builder.end_render_pass(SubpassEndInfo::default())?;
 		
 		render_target.after_render(&mut context, self)?;
 		
@@ -611,7 +621,7 @@ impl Renderer {
 				Ok(future) => {
 					self.future = Some(future.boxed());
 				},
-				Err(sync::FlushError::OutOfDate) => {
+				Err(Validated::Error(VulkanError::OutOfDate)) => {
 					// ignore
 				},
 				Err(err) => return Err(err.into()),

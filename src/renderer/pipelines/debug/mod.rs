@@ -1,19 +1,14 @@
 use std::sync::Arc;
 use anyhow::Result;
 use vulkano::device::DeviceOwned;
-use vulkano::image::SampleCount;
-use vulkano::pipeline::GraphicsPipeline;
-use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::multisample::MultisampleState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
-use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::RenderPass;
 
 mod vertex;
 
-use super::{PipelineConstructor, pre_mul_alpha_blending};
+use super::{build_graphics_pipeline, pre_mul_alpha_blending, PipelineConstructor};
 pub use vertex::{Vertex, TexturedVertex};
 pub use shape_vert::Pc as ShapePc;
 
@@ -43,23 +38,14 @@ impl PipelineConstructor for DebugPipeline {
 	
 	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
-		let vs = vert::load(device.clone()).unwrap();
-		let fs = frag::load(device.clone()).unwrap();
 		
-		Ok(
-			GraphicsPipeline::start()
-				.vertex_input_state(Vertex::per_vertex())
-				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
-				.fragment_shader(fs.entry_point("main").unwrap(), ())
-				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(render_pass.clone().first_subpass())
-				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-				.multisample_state(MultisampleState {
-					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
-					..MultisampleState::new()
-				})
-				.build(device.clone())?
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			vert::load(device.clone())?.entry_point("main").unwrap(),
+			frag::load(device.clone())?.entry_point("main").unwrap(),
+			DepthStencilState::default(),
+			RasterizationState { cull_mode: CullMode::Back, ..RasterizationState::default() },
+			Some(pre_mul_alpha_blending()),
 		)
 	}
 }
@@ -87,23 +73,14 @@ impl PipelineConstructor for DebugTexturedPipeline {
 	
 	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
-		let vs = tex_vert::load(device.clone()).unwrap();
-		let fs = tex_frag::load(device.clone()).unwrap();
 		
-		Ok(
-			GraphicsPipeline::start()
-				.vertex_input_state(TexturedVertex::per_vertex())
-				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
-				.fragment_shader(fs.entry_point("main").unwrap(), ())
-				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(render_pass.clone().first_subpass())
-				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-				.multisample_state(MultisampleState {
-					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
-					..MultisampleState::new()
-				})
-				.build(device.clone())?
+		build_graphics_pipeline::<TexturedVertex>(
+			render_pass,
+			tex_vert::load(device.clone())?.entry_point("main").unwrap(),
+			tex_frag::load(device.clone())?.entry_point("main").unwrap(),
+			DepthStencilState::default(),
+			RasterizationState { cull_mode: CullMode::Back, ..RasterizationState::default() },
+			Some(pre_mul_alpha_blending()),
 		)
 	}
 }
@@ -132,24 +109,14 @@ impl PipelineConstructor for DebugShapePipeline {
 	
 	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
-		let vs = shape_vert::load(device.clone()).unwrap();
-		let fs = shape_frag::load(device.clone()).unwrap();
 		
-		Ok(
-			GraphicsPipeline::start()
-				.vertex_input_state(DefaultPipelineVertex::per_vertex())
-				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
-				.fragment_shader(fs.entry_point("main").unwrap(), ())
-				.depth_stencil_state(DepthStencilState::disabled())
-				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-				.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-				.render_pass(render_pass.clone().first_subpass())
-				.multisample_state(MultisampleState {
-					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
-					..MultisampleState::new()
-				})
-				.build(device.clone())?
+		build_graphics_pipeline::<DefaultPipelineVertex>(
+			render_pass,
+			shape_vert::load(device.clone())?.entry_point("main").unwrap(),
+			shape_frag::load(device.clone())?.entry_point("main").unwrap(),
+			DepthStencilState::default(),
+			RasterizationState { cull_mode: CullMode::Back, ..RasterizationState::default() },
+			Some(pre_mul_alpha_blending()),
 		)
 	}
 }

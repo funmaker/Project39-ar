@@ -5,8 +5,7 @@ use anyhow::Result;
 use egui::Ui;
 use vulkano::buffer::{Buffer, BufferUsage, Subbuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::image::ImageAccess;
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 use vulkano::sync::GpuFuture;
 
@@ -31,7 +30,7 @@ pub struct Billboard {
 	last_rot: Cell<Rot3>,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
-	set: Arc<PersistentDescriptorSet>,
+	set: Arc<DescriptorSet>,
 	fence: FenceCheck,
 }
 
@@ -40,9 +39,10 @@ impl Billboard {
 	pub fn new(texture: TextureAsset, renderer: &mut Renderer) -> Result<Billboard> {
 		let pipeline = renderer.pipelines.get::<FoodPipeline>()?;
 		let texture = renderer.load(texture)?;
-		let image_size = texture.image.image().dimensions().width_height();
+		let image_extent = texture.image.image().extent();
+		let image_size = [image_extent[0], image_extent[1]];
 		let ratio = image_size[0] as f32 / image_size[1] as f32;
-		let layers = texture.image.image().dimensions().array_layers();
+		let layers = texture.image.image().array_layers();
 		
 		let square = [
 			Vertex::new([-1.0, -1.0]),
@@ -53,7 +53,7 @@ impl Billboard {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -62,11 +62,13 @@ impl Billboard {
 		                                   square.iter().cloned(),
 		                                   &mut upload_buffer)?;
 		
-		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
-			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			                                       WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
-		                                       ])?;
+		let set = DescriptorSet::new(renderer.descriptor_set_allocator.clone(),
+		                             pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
+		                             [
+			                             WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			                             WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
+		                             ],
+		                             [])?;
 		
 		let upload_future = upload_buffer.build()?
 		                                 .execute(renderer.load_queue.clone())?;
@@ -110,23 +112,25 @@ impl Component for Billboard {
 		let angle = self.rotation.get() - f32::atan2(to_camera.x, to_camera.z);
 		let frame = (angle / PI / 2.0).rem_euclid(1.0) * self.layers as f32;
 		
-		context.builder.bind_pipeline_graphics(self.pipeline.clone())
-		       .bind_vertex_buffers(0, self.vertices.clone())
-		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                             self.pipeline.layout().clone(),
-		                             0,
-		                             self.set.clone())
-		       .push_constants(self.pipeline.layout().clone(),
-		                       0,
-		                       Pc {
-			                       model: transform.to_homogeneous().into(),
-			                       ratio: self.ratio,
-			                       frame,
-		                       })
-		       .draw(self.vertices.len() as u32,
-		             1,
-		             0,
-		             0)?;
+		unsafe {
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+			       .bind_vertex_buffers(0, self.vertices.clone())?
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.pipeline.layout().clone(),
+			                             0,
+			                             self.set.clone())?
+			       .push_constants(self.pipeline.layout().clone(),
+			                       0,
+			                       Pc {
+				                       model: transform.to_homogeneous().into(),
+				                       ratio: self.ratio,
+				                       frame,
+			                       })?
+			       .draw(self.vertices.len() as u32,
+			             1,
+			             0,
+			             0)?;
+		}
 		
 		Ok(())
 	}

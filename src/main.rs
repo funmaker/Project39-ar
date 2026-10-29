@@ -9,6 +9,7 @@ use std::{fs, panic};
 use std::panic::PanicHookInfo;
 use anyhow::Result;
 use native_dialog::{MessageDialog, MessageType};
+use winit::event_loop::{ControlFlow, EventLoop};
 
 #[macro_use] #[allow(dead_code)] mod debug;
 #[macro_use] mod utils;
@@ -17,10 +18,11 @@ mod application;
 mod config;
 #[allow(dead_code)] mod math;
 mod renderer;
+mod harness;
 
-use application::{Application};
 use config::{Config, Color};
-
+use crate::harness::ApplicationHarness;
+use crate::utils::user_events::UserEvent;
 
 fn main() {
 	panic::set_hook(Box::new(panic_hook()));
@@ -28,7 +30,7 @@ fn main() {
 	let result = run_application();
 	
 	if let Err(err) = result {
-		let message = format!("{}\n{}", err, err.backtrace());
+		let message = format!("{:#}\n{}", err, err.backtrace());
 		
 		eprintln!("\n{message}");
 		
@@ -80,8 +82,16 @@ fn run_application() -> Result<()> {
 	debug::setup_default_flags();
 	config::set(config);
 	
-	let application = Application::new()?;
-	application.run()?;
+	let event_loop = EventLoop::<UserEvent>::with_user_event().build()?;
+	event_loop.set_control_flow(ControlFlow::Poll); // Run continuously
+	
+	let mut harness = ApplicationHarness::new(&event_loop);
+	
+	event_loop.run_app(&mut harness)?;
+	
+	if let ApplicationHarness::Error { error, .. } = harness {
+		return Err(error);
+	}
 	
 	Ok(())
 }

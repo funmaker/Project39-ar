@@ -250,7 +250,7 @@ impl Entity {
 		}
 		
 		CollapsingHeader::new(RichText::new(&self.name).strong())
-			.id_source("Entity")
+			.id_salt("Entity")
 			.default_open(true)
 			.open(selection_level.select_within.then_some(true))
 			.show(ui, |ui| {

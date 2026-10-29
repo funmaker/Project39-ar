@@ -86,7 +86,7 @@ impl Benchmark {
 	}
 	
 	pub fn on_gui(&mut self, ui: &mut Ui) {
-		use egui::plot::*;
+		use egui_plot::*;
 		use egui::*;
 		const COLORS: [Color32; 8] = [
 			Color32::from_rgb(255, 0, 0),

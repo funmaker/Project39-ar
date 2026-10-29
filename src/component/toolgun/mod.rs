@@ -5,7 +5,7 @@ use anyhow::Result;
 use simba::scalar::SubsetOf;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 
 mod axis;
@@ -59,7 +59,7 @@ pub struct ToolGun {
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
-	set: Arc<PersistentDescriptorSet>,
+	set: Arc<DescriptorSet>,
 	fence: FenceCheck,
 }
 
@@ -76,7 +76,7 @@ impl ToolGun {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -85,10 +85,10 @@ impl ToolGun {
 		                                   square.iter().cloned(),
 		                                   &mut upload_buffer)?;
 		
-		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
-			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-		                                       ])?;
+		let set = DescriptorSet::new(renderer.descriptor_set_allocator.clone(),
+		                             pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
+		                             [WriteDescriptorSet::buffer(0, renderer.commons.clone())],
+		                             [])?;
 		
 		let upload_future = upload_buffer.build()?
 		                                 .execute(renderer.load_queue.clone())?;
@@ -254,22 +254,24 @@ impl Component for ToolGun {
 			-0.5
 		);
 		
-		context.builder.bind_pipeline_graphics(self.pipeline.clone())
-		               .bind_vertex_buffers(0, self.vertices.clone())
-		               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                                     self.pipeline.layout().clone(),
-		                                     0,
-		                                     (self.set.clone(), text_entry.set))
-		               .push_constants(self.pipeline.layout().clone(),
-		                               0,
-		                               Pc {
-			                               model: model_matrix.to_homogeneous().into(),
-			                               uv_transform: uv_transform.into(),
-		                               })
-		               .draw(self.vertices.len() as u32,
-		                     1,
-		                     0,
-		                     0)?;
+		unsafe {
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+			               .bind_vertex_buffers(0, self.vertices.clone())?
+			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                                     self.pipeline.layout().clone(),
+			                                     0,
+			                                     (self.set.clone(), text_entry.set))?
+			               .push_constants(self.pipeline.layout().clone(),
+			                               0,
+			                               Pc {
+				                               model: model_matrix.to_homogeneous().into(),
+				                               uv_transform: uv_transform.into(),
+			                               })?
+			               .draw(self.vertices.len() as u32,
+			                     1,
+			                     0,
+			                     0)?;
+		}
 		
 		if state.render_tool {
 			if let Some(tool) = tool {

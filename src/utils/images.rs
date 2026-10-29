@@ -1,13 +1,13 @@
 use image::DynamicImage;
 
 
-pub trait ImageEx {
+pub trait DynamicImageEx {
 	fn into_lin_pre_mul_iter(self) -> std::vec::IntoIter<u8>;
 	fn into_pre_mul_iter(self) -> std::vec::IntoIter<u8>;
 	fn has_alpha(&self) -> bool;
 }
 
-impl ImageEx for DynamicImage {
+impl DynamicImageEx for DynamicImage {
 	fn into_lin_pre_mul_iter(self) -> std::vec::IntoIter<u8> {
 		let has_alpha = self.has_alpha();
 		let mut data = self.into_rgba8();

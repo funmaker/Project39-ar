@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 use anyhow::Result;
-use vulkano::sync::future::{FenceSignalFuture, GpuFuture, FlushError};
-
+use vulkano::sync::future::{FenceSignalFuture, GpuFuture};
+use vulkano::{Validated, VulkanError};
 
 #[derive(Clone)]
 pub struct FenceCheck(Arc<FenceSignalFuture<Box<dyn GpuFuture>>>);
@@ -15,7 +15,7 @@ impl FenceCheck {
 	
 	pub fn check(&self) -> bool {
 		match self.0.wait(Some(Duration::new(0, 0))) {
-			Err(FlushError::Timeout) => false,
+			Err(Validated::Error(VulkanError::Timeout)) => false,
 			Ok(()) => true,
 			Err(err) => panic!("Flushing Error: {}", err),
 		}

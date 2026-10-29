@@ -2,15 +2,14 @@ use std::sync::{Arc, mpsc};
 use bytemuck::{Zeroable, Pod};
 use anyhow::Result;
 use thiserror::Error;
-use vulkano::{sync, command_buffer, sampler, memory, descriptor_set, buffer};
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage, BufferContents};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::Queue;
 use vulkano::image::view::ImageView;
-use vulkano::memory::allocator::{AllocationCreateInfo, MemoryUsage};
+use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
-use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::image::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::sync::GpuFuture;
 
 use crate::config;
@@ -38,10 +37,10 @@ pub struct Background {
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
-	set: Arc<PersistentDescriptorSet>,
+	set: Arc<DescriptorSet>,
 	extrinsics: (Mat3, Mat3),
 	last_frame_pose: Isometry3,
-	camera_loads: mpsc::Receiver<(PrimaryAutoCommandBuffer, Option<Isometry3>)>,
+	camera_loads: mpsc::Receiver<(Arc<PrimaryAutoCommandBuffer>, Option<Isometry3>)>,
 }
 
 impl Background {
@@ -62,9 +61,9 @@ impl Background {
 		];
 		
 		// TODO: Upload
-		let vertices = Buffer::from_iter(&renderer.memory_allocator,
+		let vertices = Buffer::from_iter(renderer.memory_allocator.clone(),
 		                                 BufferUsage::VERTEX_BUFFER.into_info(),
-		                                 MemoryUsage::Upload.into_info(),
+		                                 (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
 		                                 square.iter().copied())?; // TODO: remove copied (array_into_iter)
 		
 		let intrinsics = Intrinsics {
@@ -90,9 +89,9 @@ impl Background {
 			],
 		};
 		
-		let intrinsics = Buffer::from_data(&renderer.memory_allocator,
+		let intrinsics = Buffer::from_data(renderer.memory_allocator.clone(),
 		                                   BufferUsage::UNIFORM_BUFFER.into_info(),
-		                                   MemoryUsage::Upload.into_info(),
+		                                   (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
 		                                   intrinsics)?;
 		
 		let view = ImageView::new_default(camera_image.clone())?;
@@ -104,12 +103,14 @@ impl Background {
 			..SamplerCreateInfo::default()
 		})?;
 		
-		let set = PersistentDescriptorSet::new(
-			&renderer.descriptor_set_allocator,
-			pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
-			WriteDescriptorSet::buffer(0, intrinsics.clone()),
-			WriteDescriptorSet::image_view_sampler(1, view, sampler),
-		])?;
+		let set = DescriptorSet::new(
+			renderer.descriptor_set_allocator.clone(),
+			pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
+			[
+				WriteDescriptorSet::buffer(0, intrinsics.clone()),
+				WriteDescriptorSet::image_view_sampler(1, view, sampler),
+			],
+			[])?;
 		
 		let flip_xz = vector!(-1.0, 1.0, -1.0);
 		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
@@ -229,19 +230,21 @@ impl Background {
 			],
 		};
 		
-		builder.bind_pipeline_graphics(self.pipeline.clone())
-		       .bind_vertex_buffers(0, self.vertices.clone())
-		       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                             self.pipeline.layout().clone(),
-		                             0,
-		                             self.set.clone())
-		       .push_constants(self.pipeline.layout().clone(),
-		                       0,
-		                       constants)
-		       .draw(self.vertices.len() as u32,
-		             1,
-		             0,
-		             0)?;
+		unsafe {
+			builder.bind_pipeline_graphics(self.pipeline.clone())?
+			       .bind_vertex_buffers(0, self.vertices.clone())?
+			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                             self.pipeline.layout().clone(),
+			                             0,
+			                             self.set.clone())?
+			       .push_constants(self.pipeline.layout().clone(),
+			                       0,
+			                       constants)?
+			       .draw(self.vertices.len() as u32,
+			             1,
+			             0,
+			             0)?;
+		}
 		
 		Ok(())
 	}

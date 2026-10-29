@@ -28,7 +28,7 @@ pub struct RenderTargetContext {
 
 impl RenderTargetContext {
 	pub fn new(fb: FramebufferBundle, view: (AMat4, AMat4), projection: (PMat4, PMat4), fov: (Vec2, Vec2)) -> Self {
-		let framebuffer_size = fb.size();
+		let framebuffer_size = fb.extent();
 		
 		RenderTargetContext {
 			framebuffer: fb.framebuffer,

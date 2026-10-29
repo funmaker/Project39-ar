@@ -50,25 +50,27 @@ impl Component for Glow {
 		let pos = Similarity3::from_isometry(*entity.state().position, -1.0);
 		
 		if let Some(model) = entity.find_component_by_type::<SimpleModel>() {
-			context.builder.bind_pipeline_graphics(self.pipeline.clone())
-			               .bind_vertex_buffers(0, model.vertices.clone())
-			               .bind_any_index_buffer(model.indices.clone())
-			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-			                                     self.pipeline.layout().clone(),
-			                                     0,
-			                                     model.set.clone())
-			               .push_constants(self.pipeline.layout().clone(),
-			                               0,
-			                               GlowPc {
-				                               model: pos.to_homogeneous().into(),
-				                               color: self.color.get().into(),
-				                               scale: self.size.get(),
-			                               })
-			               .draw_indexed(model.indices.len() as u32,
-			                             1,
-			                             0,
-			                             0,
-			                             0)?;
+			unsafe {
+				context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+				               .bind_vertex_buffers(0, model.vertices.clone())?
+				               .bind_any_index_buffer(model.indices.clone())
+				               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+				                                     self.pipeline.layout().clone(),
+				                                     0,
+				                                     model.set.clone())?
+				               .push_constants(self.pipeline.layout().clone(),
+				                               0,
+				                               GlowPc {
+					                               model: pos.to_homogeneous().into(),
+					                               color: self.color.get().into(),
+					                               scale: self.size.get(),
+				                               })?
+				               .draw_indexed(model.indices.len() as u32,
+				                             1,
+				                             0,
+				                             0,
+				                             0)?;
+			}
 		}
 		
 		Ok(())

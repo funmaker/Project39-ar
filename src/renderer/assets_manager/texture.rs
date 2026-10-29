@@ -6,11 +6,13 @@ use image::{ImageFormat, DynamicImage, ImageDecoder, AnimationDecoder, RgbaImage
 use image::codecs::gif::GifDecoder;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::format::Format;
-use vulkano::image::{ImmutableImage, ImageDimensions, MipmapsCount};
+use vulkano::image::{max_mip_levels, ImageCreateInfo, ImageUsage, Image};
 use vulkano::image::view::ImageView;
-use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::image::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::memory::allocator::AllocationCreateInfo;
+use vulkano::sync::Sharing;
 
-use crate::utils::{FenceCheck, ImageEx};
+use crate::utils::{FenceCheck, DynamicImageEx, ImageEx, SharingEx};
 use super::super::Renderer;
 use super::{AssetKey, AssetsManager};
 
@@ -25,7 +27,7 @@ pub struct TextureAsset {
 
 #[derive(Clone)]
 pub struct TextureBundle {
-	pub image: Arc<ImageView<ImmutableImage>>,
+	pub image: Arc<ImageView>,
 	pub sampler: Arc<Sampler>,
 	pub fence: FenceCheck,
 }
@@ -68,10 +70,9 @@ impl AssetKey for TextureAsset {
 	
 	fn load(&self, _assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset> {
 		let file_format = ImageFormat::from_path(&self.path)?;
-		let mip_levels = if self.mipmaps { MipmapsCount::Log2 } else { MipmapsCount::One };
 		let format = if self.srgb { Format::R8G8B8A8_SRGB } else { Format::R8G8B8A8_UNORM };
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -80,6 +81,7 @@ impl AssetKey for TextureAsset {
 			let (width, height) = decoder.dimensions();
 			let frames = decoder.into_frames().collect_frames()?;
 			let array_layers = frames.len() as u32;
+			let mip_levels = if self.mipmaps { max_mip_levels([width, height, 1]) } else { 1 };
 			
 			let pixels = frames.into_iter()
 			                   .flat_map(|frame| {
@@ -93,23 +95,37 @@ impl AssetKey for TextureAsset {
 			                   })
 			                   .collect::<Vec<_>>();
 			
-			ImmutableImage::from_iter(&renderer.memory_allocator,
-			                          pixels.into_iter(),
-			                          ImageDimensions::Dim2d{ width, height, array_layers },
-			                          mip_levels,
-			                          format,
-			                          &mut upload_buffer)?
+			Image::upload_iter(&renderer.memory_allocator,
+			                   pixels.into_iter(),
+			                   ImageCreateInfo {
+				                   extent: [width, height, 1],
+				                   array_layers,
+				                   mip_levels,
+				                   format,
+				                   usage: ImageUsage::SAMPLED,
+				                   sharing: Sharing::from_iters(renderer.device.active_queue_family_indices()),
+				                   ..ImageCreateInfo::default()
+			                   },
+			                   AllocationCreateInfo::default(),
+			                   &mut upload_buffer)?
 		} else {
 			let image = image::load(AssetsManager::find_asset(&self.path)?, file_format)?;
 			let width = image.width();
 			let height = image.height();
+			let mip_levels = if self.mipmaps { max_mip_levels([width, height, 1]) } else { 1 };
 			
-			ImmutableImage::from_iter(&renderer.memory_allocator,
-			                          image.into_pre_mul_iter(),
-			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-			                          mip_levels,
-			                          format,
-			                          &mut upload_buffer)?
+			Image::upload_iter(&renderer.memory_allocator,
+			                   image.into_pre_mul_iter(),
+			                   ImageCreateInfo {
+				                   extent: [width, height, 1],
+				                   mip_levels,
+				                   format,
+				                   usage: ImageUsage::SAMPLED,
+				                   sharing: Sharing::from_iters(renderer.device.active_queue_family_indices()),
+				                   ..ImageCreateInfo::default()
+			                   },
+			                   AllocationCreateInfo::default(),
+			                   &mut upload_buffer)?
 		};
 		
 		
@@ -155,16 +171,22 @@ impl TextureBundle {
 		let height = source.height();
 		
 		// TODO: Batching of all upload_buffers?
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
-		let image = ImmutableImage::from_iter(&renderer.memory_allocator,
-		                                      source.into_pre_mul_iter(),
-		                                      ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-		                                      MipmapsCount::Log2,
-		                                      Format::R8G8B8A8_SRGB,
-		                                      &mut upload_buffer)?;
+		let image = Image::upload_iter(&renderer.memory_allocator,
+		                               source.into_pre_mul_iter(),
+		                               ImageCreateInfo {
+			                               extent: [width, height, 1],
+			                               mip_levels: max_mip_levels([width, height, 1]),
+			                               format: Format::R8G8B8A8_SRGB,
+			                               usage: ImageUsage::SAMPLED,
+			                               sharing: Sharing::from_iters(renderer.device.active_queue_family_indices()),
+			                               ..ImageCreateInfo::default()
+		                               },
+		                               AllocationCreateInfo::default(),
+		                               &mut upload_buffer)?;
 		
 		let upload_future = upload_buffer.build()?
 		                                 .execute(renderer.load_queue.clone())?;

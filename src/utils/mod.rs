@@ -3,6 +3,7 @@ use openvr::compositor::WaitPoses;
 use openvr_sys::{TrackedDevicePose_t, HmdMatrix34_t, HmdVector3_t, ETrackedDeviceClass_TrackedDeviceClass_Invalid};
 
 pub mod from_args;
+pub mod user_events;
 mod fence_check;
 mod fps_counter;
 mod gui;

@@ -51,7 +51,7 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 	if let Some(entity) = selected_ent.get(application)
 	                                  .or_else(|| application.pov.get(application)) {
 		ScrollArea::vertical()
-			.id_source(entity.id)
+			.id_salt(entity.id)
 			.show(ui, |ui| ui.inspect(entity, application));
 	}
 }

@@ -3,8 +3,7 @@ use egui::Vec2;
 use anyhow::Result;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
-use vulkano::image::ImageAccess;
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 use vulkano::sync::GpuFuture;
 
@@ -25,7 +24,7 @@ pub struct SrgbTest {
 	image_size: Vec2,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
-	set: Arc<PersistentDescriptorSet>,
+	set: Arc<DescriptorSet>,
 	fence: FenceCheck,
 }
 
@@ -34,8 +33,8 @@ impl SrgbTest {
 		let pipeline = renderer.pipelines.get::<SrgbTestPipeline>()?;
 		
 		let pattern = renderer.load(TextureAsset::at("cube/cube.png"))?;
-		let image_size = pattern.image.image().dimensions().width_height();
-		let image_size = Vec2::new(image_size[0] as f32, image_size[1] as f32);
+		let image_extent = pattern.image.image().extent();
+		let image_size = Vec2::new(image_extent[0] as f32, image_extent[1] as f32);
 		
 		let square = [
 			Vertex::new([-1.0, -1.0]),
@@ -46,7 +45,7 @@ impl SrgbTest {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -55,10 +54,10 @@ impl SrgbTest {
 		                                   square.iter().cloned(),
 		                                   &mut upload_buffer)?;
 		
-		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
-			                                       WriteDescriptorSet::image_view_sampler(0, pattern.image, pattern.sampler),
-		                                       ])?;
+		let set = DescriptorSet::new(renderer.descriptor_set_allocator.clone(),
+		                             pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
+		                             [WriteDescriptorSet::image_view_sampler(0, pattern.image, pattern.sampler)],
+		                             [])?;
 		
 		let upload_future = upload_buffer.build()?
 		                                 .execute(renderer.load_queue.clone())?;
@@ -82,21 +81,23 @@ impl Component for SrgbTest {
 		
 		let scale = self.image_size / Vec2::new(context.framebuffer_size.0 as f32, context.framebuffer_size.1 as f32);
 		
-		context.builder.bind_pipeline_graphics(self.pipeline.clone())
-		               .bind_vertex_buffers(0, self.vertices.clone())
-		               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                                     self.pipeline.layout().clone(),
-		                                     0,
-		                                     self.set.clone())
-		               .push_constants(self.pipeline.layout().clone(),
-		                               0,
-		                               Pc {
-			                               scale: scale.into(),
-		                               })
-		               .draw(self.vertices.len() as u32,
-		                     1,
-		                     0,
-		                     0)?;
+		unsafe {
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+			               .bind_vertex_buffers(0, self.vertices.clone())?
+			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                                     self.pipeline.layout().clone(),
+			                                     0,
+			                                     self.set.clone())?
+			               .push_constants(self.pipeline.layout().clone(),
+			                               0,
+			                               Pc {
+				                               scale: scale.into(),
+			                               })?
+			               .draw(self.vertices.len() as u32,
+			                     1,
+			                     0,
+			                     0)?;
+		}
 		
 		Ok(())
 	}

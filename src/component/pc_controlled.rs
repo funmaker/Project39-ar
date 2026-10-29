@@ -38,11 +38,11 @@ impl Component for PCControlled {
 		
 		let get_key = |key: Key| application.input.keyboard.pressed(key) as i32 as f32;
 		
-		let x = get_key(Key::D) - get_key(Key::A);
-		let y = get_key(Key::Space) - get_key(Key::LControl);
-		let z = get_key(Key::S) - get_key(Key::W);
+		let x = get_key(Key::KeyD) - get_key(Key::KeyA);
+		let y = get_key(Key::Space) - get_key(Key::ControlLeft);
+		let z = get_key(Key::KeyS) - get_key(Key::KeyW);
 		let rr = get_key(Key::Numpad7) - get_key(Key::Numpad9);
-		let dist = (0.5 + get_key(Key::LShift) * 1.0) * delta_time.as_secs_f32();
+		let dist = (0.5 + get_key(Key::ShiftLeft) * 1.0) * delta_time.as_secs_f32();
 		let mouse_x = application.input.mouse.axis(0);
 		let mouse_y = application.input.mouse.axis(1);
 		

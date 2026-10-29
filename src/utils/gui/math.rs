@@ -69,7 +69,7 @@ impl SimpleInspect for Rot3 {
 			yaw *= 180.0 / PI;
 			roll *= 180.0 / PI;
 			
-			let pch = ui[0].add(DragValue::new(&mut pitch).prefix("ψ: ").clamp_range(-90.0..=90.0)).changed();
+			let pch = ui[0].add(DragValue::new(&mut pitch).prefix("ψ: ").range(-90.0..=90.0)).changed();
 			let ych = ui[1].add(DragValue::new(&mut yaw).prefix("θ: ")).changed();
 			let rch = ui[2].add(DragValue::new(&mut roll).prefix("φ: ")).changed();
 			
@@ -197,7 +197,7 @@ impl SimpleInspect for glamx::Rot3 {
 			yaw *= 180.0 / PI;
 			roll *= 180.0 / PI;
 			
-			let pch = ui[0].add(DragValue::new(&mut pitch).prefix("ψ: ").clamp_range(-90.0..=90.0)).changed();
+			let pch = ui[0].add(DragValue::new(&mut pitch).prefix("ψ: ").range(-90.0..=90.0)).changed();
 			let ych = ui[1].add(DragValue::new(&mut yaw).prefix("θ: ")).changed();
 			let rch = ui[2].add(DragValue::new(&mut roll).prefix("φ: ")).changed();
 			

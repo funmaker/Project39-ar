@@ -10,7 +10,7 @@ use super::*;
 impl SimpleInspect for RigidBodyType {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		
-		ComboBox::from_id_source("RigidBodyType")
+		ComboBox::from_id_salt("RigidBodyType")
 			.selected_text(match self {
 				RigidBodyType::Fixed => "Fixed",
 				RigidBodyType::Dynamic => "Dynamic",
@@ -88,7 +88,7 @@ impl InspectMut for RigidBody {
 		
 		if !self.colliders().is_empty() {
 			CollapsingHeader::new(format!("Colliders ({})", self.colliders().len()))
-				.id_source("Colliders")
+				.id_salt("Colliders")
 				.show(ui, |ui| {
 					Grid::new("Colliders Grid")
 						.num_columns(2)
@@ -104,7 +104,7 @@ impl InspectMut for RigidBody {
 		let joints = joints_set.attached_joints(handle).count();
 		if joints > 0 {
 			CollapsingHeader::new(format!("Joints ({})", joints))
-				.id_source("Joints")
+				.id_salt("Joints")
 				.show(ui, |ui| {
 					Grid::new("Colliders Grid")
 						.num_columns(2)

@@ -3,16 +3,16 @@ use crate::application::Key;
 
 pub fn num_key(num: usize) -> Key {
 	match num {
-		0 => Key::Key0,
-		1 => Key::Key1,
-		2 => Key::Key2,
-		3 => Key::Key3,
-		4 => Key::Key4,
-		5 => Key::Key5,
-		6 => Key::Key6,
-		7 => Key::Key7,
-		8 => Key::Key8,
-		9 => Key::Key9,
+		0 => Key::Digit0,
+		1 => Key::Digit1,
+		2 => Key::Digit2,
+		3 => Key::Digit3,
+		4 => Key::Digit4,
+		5 => Key::Digit5,
+		6 => Key::Digit6,
+		7 => Key::Digit7,
+		8 => Key::Digit8,
+		9 => Key::Digit9,
 		n => panic!("Invalid numeric key: {}", n),
 	}
 }

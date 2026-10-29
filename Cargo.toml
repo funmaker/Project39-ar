@@ -8,10 +8,9 @@ edition = "2024"
 opencv-camera = ["opencv"]
 
 [dependencies]
-vulkano = "0.33.0"
-vulkano-shaders = "0.33.0"
-vulkano-win = "0.33.0"
-ash = "0.37.2"
+vulkano = "0.35.2"
+vulkano-shaders = "0.35.0"
+ash = "0.38.0"
 image = "0.24.6"
 openvr = "0.9.0"
 openvr_sys = "2.1.4"
@@ -21,7 +20,7 @@ arc-swap = "1.6.0"
 obj-rs = "0.7.1"
 opencv = { version = "0.80.0", optional = true }
 lazy_static = "1.4.0"
-winit = "0.28.3"
+winit = "0.30.12"
 mmd = { git = "https://github.com/funmaker/mmd-rs", rev = "45387f7bb2a4d67f20b176be2ee0b749d9a0809e" }
 native-dialog = "0.6.3"
 unifont = "0.1.0"
@@ -38,20 +37,22 @@ linked-hash-map = { version = "0.5.6", features = ['serde_impl'] }
 rand = "0.8.5"
 bytemuck = { version = "1.13.1", features = ['min_const_generics'] }
 enumflags2 = "0.7.7"
-egui = "0.21.0"
-egui_winit_vulkano = "0.24.0"
+egui = "0.31.0"
+egui_plot = "0.31.0"
+egui_winit_vulkano = "0.28.0"
 parking_lot = "0.12.1"
 colored = "2.0.0"
 smallvec = "1.10.0"
+foldhash = "0.1"
 anyhow = "1.0.82"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"
 
 [patch.crates-io]
-vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
+#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
 #rapier3d = { git = "https://github.com/funmaker/rapier", rev = "b0c9c4219d080cad8a2af60d2273b08d42735be2" }
 #vulkano = { path = "../vulkano/vulkano" }
 #vulkano-shaders = { path = "../vulkano/vulkano-shaders" }

@@ -2,18 +2,22 @@ use std::ffi::CString;
 use std::sync::Arc;
 use anyhow::Result;
 use openvr::{VkInstance_T, VkPhysicalDevice_T, Compositor, VkDevice_T, VkQueue_T};
-use vulkano::{VulkanObject, Handle};
+use smallvec::SmallVec;
+use vulkano::{Handle, VulkanObject};
 use vulkano::buffer::{BufferContents, BufferCreateInfo, Subbuffer, Buffer, BufferUsage};
 use vulkano::buffer::allocator::SubbufferAllocator;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo, PrimaryAutoCommandBuffer};
+use vulkano::command_buffer::{BlitImageInfo, BufferImageCopy, CopyBufferToImageInfo, ImageBlit};
 use vulkano::device::{Device, Queue};
 use vulkano::device::physical::PhysicalDevice;
 use vulkano::format::ClearValue;
-use vulkano::image::{AttachmentImage, ImageAccess, StorageImage, ImmutableImage};
+use vulkano::image::{Image, ImageCreateInfo, ImageSubresourceLayers, ImageUsage};
+use vulkano::image::mip_level_extent;
+use vulkano::image::sampler::Filter;
 use vulkano::instance::Instance;
-use vulkano::memory::allocator::{AllocationCreateInfo, MemoryAllocator, MemoryUsage};
+use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::render_pass::Framebuffer;
-
+use vulkano::sync::Sharing;
 
 pub fn vulkan_device_extensions_required(compositor: &Compositor, physical: &PhysicalDevice) -> Vec<CString> {
 	unsafe { compositor.vulkan_device_extensions_required(physical.as_ptr()) }
@@ -22,13 +26,13 @@ pub fn vulkan_device_extensions_required(compositor: &Compositor, physical: &Phy
 #[derive(Clone, Debug)]
 pub struct FramebufferBundle {
 	pub framebuffer: Arc<Framebuffer>,
-	pub main_image: Arc<AttachmentImage>,
+	pub main_image: Arc<Image>,
 	pub ssaa: f32,
 	pub clear_values: Vec<Option<ClearValue>>,
 }
 
 impl FramebufferBundle {
-	pub fn size(&self) -> (u32, u32) {
+	pub fn extent(&self) -> (u32, u32) {
 		let extent = self.framebuffer.extent();
 		(extent[0], extent[1])
 	}
@@ -68,24 +72,24 @@ impl IntoInfo<BufferCreateInfo> for BufferUsage {
 	}
 }
 
-impl IntoInfo<AllocationCreateInfo> for MemoryUsage {
+impl IntoInfo<AllocationCreateInfo> for MemoryTypeFilter {
 	fn into_info(self) -> AllocationCreateInfo {
 		AllocationCreateInfo {
-			usage: self,
+			memory_type_filter: self,
 			..AllocationCreateInfo::default()
 		}
 	}
 }
 
 pub trait BufferEx {
-	fn upload_data<T>(allocator: &(impl MemoryAllocator + ?Sized),
+	fn upload_data<T>(allocator: &Arc<StandardMemoryAllocator>,
 	                  buffer_info: BufferCreateInfo,
 	                  data: T,
 	                  cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
 	                  -> Result<Subbuffer<T>>
 	                  where T: BufferContents;
 	
-	fn upload_iter<T, I>(allocator: &(impl MemoryAllocator + ?Sized),
+	fn upload_iter<T, I>(allocator: &Arc<StandardMemoryAllocator>,
 	                     buffer_info: BufferCreateInfo,
 	                     iter: I,
 	                     cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
@@ -96,22 +100,22 @@ pub trait BufferEx {
 }
 
 impl BufferEx for Buffer {
-	fn upload_data<T>(allocator: &(impl MemoryAllocator + ?Sized),
+	fn upload_data<T>(allocator: &Arc<StandardMemoryAllocator>,
 	                  buffer_info: BufferCreateInfo,
 	                  data: T,
 	                  cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
 	                  -> Result<Subbuffer<T>>
 	                  where T: BufferContents {
-		let device_buffer = Buffer::new_sized(allocator,
+		let device_buffer = Buffer::new_sized(allocator.clone(),
 		                                      BufferCreateInfo {
 			                                      usage: buffer_info.usage | BufferUsage::TRANSFER_DST,
 			                                      ..buffer_info
 		                                      },
-		                                      MemoryUsage::DeviceOnly.into_info())?;
+		                                      MemoryTypeFilter::PREFER_DEVICE.into_info())?;
 		
-		let upload_buffer = Buffer::from_data(allocator,
+		let upload_buffer = Buffer::from_data(allocator.clone(),
 		                                      BufferUsage::TRANSFER_SRC.into_info(),
-		                                      MemoryUsage::Upload.into_info(),
+		                                      (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
 		                                      data)?;
 		
 		cbb.copy_buffer(CopyBufferInfo::buffers(upload_buffer, device_buffer.clone()))?;
@@ -119,7 +123,7 @@ impl BufferEx for Buffer {
 		Ok(device_buffer)
 	}
 	
-	fn upload_iter<T, I>(allocator: &(impl MemoryAllocator + ?Sized),
+	fn upload_iter<T, I>(allocator: &Arc<StandardMemoryAllocator>,
 	                     buffer_info: BufferCreateInfo,
 	                     iter: I,
 	                     cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
@@ -129,22 +133,125 @@ impl BufferEx for Buffer {
 	                           I::IntoIter: ExactSizeIterator {
 		let iter = iter.into_iter();
 		
-		let device_buffer = Buffer::new_slice(allocator,
+		let device_buffer = Buffer::new_slice(allocator.clone(),
 		                                      BufferCreateInfo {
 			                                      usage: buffer_info.usage | BufferUsage::TRANSFER_DST,
 			                                      ..buffer_info
 		                                      },
-		                                      MemoryUsage::DeviceOnly.into_info(),
+		                                      MemoryTypeFilter::PREFER_DEVICE.into_info(),
 		                                      iter.len() as u64)?;
 		
-		let upload_buffer = Buffer::from_iter(allocator,
+		let upload_buffer = Buffer::from_iter(allocator.clone(),
 		                                      BufferUsage::TRANSFER_SRC.into_info(),
-		                                      MemoryUsage::Upload.into_info(),
+		                                      (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
 		                                      iter)?;
 		
 		cbb.copy_buffer(CopyBufferInfo::buffers(upload_buffer, device_buffer.clone()))?;
 		
 		Ok(device_buffer)
+	}
+}
+
+
+pub trait ImageEx {
+	fn upload_iter(allocator: &Arc<StandardMemoryAllocator>,
+	               iter: impl ExactSizeIterator<Item = u8>,
+	               create_info: ImageCreateInfo,
+	               allocation_info: AllocationCreateInfo,
+	               cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
+	               -> Result<Arc<Self>>;
+	
+	fn generate_mipmaps(self: &Arc<Self>, cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()>;
+}
+
+impl ImageEx for Image {
+	fn upload_iter(allocator: &Arc<StandardMemoryAllocator>,
+	               iter: impl ExactSizeIterator<Item=u8>,
+	               mut create_info: ImageCreateInfo,
+	               allocation_info: AllocationCreateInfo,
+	               cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
+	               -> Result<Arc<Self>> {
+		let need_mipmaps = create_info.mip_levels > 1;
+		
+		create_info.usage |= ImageUsage::TRANSFER_DST;
+		if need_mipmaps {
+			create_info.usage |= ImageUsage::TRANSFER_SRC;
+		}
+		
+		let source = Buffer::from_iter(allocator.clone(),
+		                               BufferCreateInfo {
+			                               usage: BufferUsage::TRANSFER_SRC,
+			                               ..BufferCreateInfo::default()
+		                               },
+		                               AllocationCreateInfo {
+			                               memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+			                               ..AllocationCreateInfo::default()
+		                               },
+		                               iter)?;
+		
+		let main_region = BufferImageCopy {
+			image_subresource: ImageSubresourceLayers::from_parameters(create_info.format, create_info.array_layers),
+			image_extent: create_info.extent,
+			..BufferImageCopy::default()
+		};
+		
+		let image = Image::new(allocator.clone(), create_info, allocation_info)?;
+		
+		cbb.copy_buffer_to_image(CopyBufferToImageInfo {
+			regions: smallvec::smallvec![main_region],
+			..CopyBufferToImageInfo::buffer_image(source, image.clone())
+		})?;
+		
+		if need_mipmaps {
+			image.generate_mipmaps(cbb)?;
+		}
+		
+		Ok(image)
+	}
+	
+	fn generate_mipmaps(self: &Arc<Self>, cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
+		let extent = self.extent();
+		
+		for level in 1..self.mip_levels() {
+			let src_size = mip_level_extent(extent, level - 1).unwrap();
+			let dst_size = mip_level_extent(extent, level).unwrap();
+			
+			cbb.blit_image(BlitImageInfo {
+				regions: smallvec::smallvec![ImageBlit {
+					src_subresource: ImageSubresourceLayers {
+						mip_level: level - 1,
+						..self.subresource_layers()
+					},
+					src_offsets: [[0; 3], src_size],
+					dst_subresource: ImageSubresourceLayers {
+						mip_level: level,
+						..self.subresource_layers()
+					},
+					dst_offsets: [[0; 3], dst_size],
+					..ImageBlit::default()
+				}],
+				filter: Filter::Linear,
+				..BlitImageInfo::images(self.clone(), self.clone())
+			})?;
+		}
+		
+		Ok(())
+	}
+}
+
+pub trait SharingEx<I> {
+	fn from_iters(indices: impl IntoIterator<IntoIter=I>) -> Self;
+}
+
+impl<'a, I> SharingEx<I> for Sharing<SmallVec<[u32; 4]>>
+where I: ExactSizeIterator<Item=&'a u32> {
+	fn from_iters(indices: impl IntoIterator<IntoIter=I>) -> Self {
+		let indices = indices.into_iter();
+		if indices.len() >= 2 {
+			Sharing::Concurrent(SmallVec::from_iter(indices.copied()))
+		} else {
+			Sharing::Exclusive
+		}
 	}
 }
 
@@ -186,27 +293,10 @@ impl OpenVRPtr for Queue {
 	}
 }
 
-impl OpenVRPtr for AttachmentImage {
+impl OpenVRPtr for Image {
 	type PtrType = u64;
 	
 	fn as_ptr(&self) -> Self::PtrType {
-		self.inner().image.handle().as_raw()
+		self.handle().as_raw()
 	}
 }
-
-impl OpenVRPtr for ImmutableImage {
-	type PtrType = u64;
-	
-	fn as_ptr(&self) -> Self::PtrType {
-		self.inner().image.handle().as_raw()
-	}
-}
-
-impl OpenVRPtr for StorageImage {
-	type PtrType = u64;
-	
-	fn as_ptr(&self) -> Self::PtrType {
-		self.inner().image.handle().as_raw()
-	}
-}
-

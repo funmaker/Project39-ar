@@ -4,15 +4,17 @@ use anyhow::Result;
 use unifont::Glyph;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Queue;
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
+use vulkano::image::{Image, ImageCreateInfo, ImageUsage};
 use vulkano::image::view::ImageView;
-use vulkano::memory::allocator::StandardMemoryAllocator;
+use vulkano::image::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::memory::allocator::{AllocationCreateInfo, StandardMemoryAllocator};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline};
-use vulkano::sampler::{Sampler, Filter, SamplerAddressMode, BorderColor, SamplerCreateInfo, SamplerMipmapMode};
+use vulkano::sync::Sharing;
 
+use crate::utils::{ImageEx, SharingEx};
 use super::super::pipelines::Pipelines;
 use super::super::pipelines::debug::DebugTexturedPipeline;
 
@@ -63,16 +65,21 @@ impl TextCache {
 			
 			let data = Rasterizer::new(glyphs);
 			
-			let mut upload_buffer = AutoCommandBufferBuilder::primary(&*self.command_buffer_allocator,
+			let mut upload_buffer = AutoCommandBufferBuilder::primary(self.command_buffer_allocator.clone(),
 			                                                          self.queue.queue_family_index(),
 			                                                          CommandBufferUsage::OneTimeSubmit)?;
 			
-			let image = ImmutableImage::from_iter(&self.memory_allocator,
-			                                      data,
-			                                      ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-			                                      MipmapsCount::One,
-			                                      vulkano::format::Format::R8_UNORM,
-			                                      &mut upload_buffer)?;
+			let image = Image::upload_iter(&self.memory_allocator,
+			                               data,
+			                               ImageCreateInfo {
+				                               extent: [width, height, 1],
+				                               format: vulkano::format::Format::R8_UNORM,
+				                               usage: ImageUsage::SAMPLED,
+				                               sharing: Sharing::from_iters(self.queue.device().active_queue_family_indices()),
+				                               ..ImageCreateInfo::default()
+			                               },
+			                               AllocationCreateInfo::default(),
+			                               &mut upload_buffer)?;
 			
 			let sampler = Sampler::new(self.queue.device().clone(), SamplerCreateInfo {
 				mag_filter: Filter::Nearest,
@@ -83,10 +90,12 @@ impl TextCache {
 				..SamplerCreateInfo::default()
 			})?;
 			
-			let set = PersistentDescriptorSet::new(&self.descriptor_set_allocator,
-			                                       self.pipeline.layout().set_layouts().get(0).unwrap().clone(), [
-				                                       WriteDescriptorSet::image_view_sampler(0, ImageView::new_default(image)?, sampler.clone()),
-			                                       ])?;
+			let set = DescriptorSet::new(self.descriptor_set_allocator.clone(),
+			                             self.pipeline.layout().set_layouts().get(0).unwrap().clone(),
+			                             [
+				                             WriteDescriptorSet::image_view_sampler(0, ImageView::new_default(image)?, sampler.clone()),
+			                             ],
+			                             [])?;
 			
 			let entry = TextEntry {
 				size: (width, height),
@@ -187,7 +196,7 @@ impl ExactSizeIterator for Rasterizer {
 #[derive(Clone)]
 pub struct TextEntry {
 	pub size: (u32, u32),
-	pub set: Arc<PersistentDescriptorSet>,
+	pub set: Arc<DescriptorSet>,
 	pub stale: usize,
 }
 

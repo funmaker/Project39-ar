@@ -3,6 +3,7 @@
 use std::iter;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{BTreeMap, VecDeque};
+use std::fmt::Formatter;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use anyhow::Result;
@@ -15,6 +16,11 @@ use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::geometry::ColliderBuilder;
 use rapier3d::pipeline::PhysicsWorld;
 use smallvec::SmallVec;
+use vulkano::swapchain::Surface;
+use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::event::{DeviceEvent, DeviceId, WindowEvent};
+use winit::event_loop::ActiveEventLoop;
+use winit::window::WindowId;
 
 pub mod entity;
 pub mod input;
@@ -64,6 +70,7 @@ pub struct Application {
 	pub miku: ComponentRef<Miku>,
 	pub detached_pov: EntityRef,
 	pub input: Input,
+	last_draw: Instant,
 	eyes: Option<Eyes>,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
@@ -74,7 +81,7 @@ pub struct Application {
 }
 
 impl Application {
-	pub fn new() -> Result<Application> {
+	pub fn new(window: winit::window::Window, event_loop: &ActiveEventLoop) -> Result<Application> {
 		let config = config::get();
 		let vr = (!config.novr.enabled).then(|| VR::new())
 		                               .transpose()?
@@ -84,7 +91,7 @@ impl Application {
 			return Err(OpenVRCameraInNoVRError.into());
 		}
 		
-		let mut renderer = Renderer::new(vr.clone())?;
+		let mut renderer = Renderer::new(vr.clone(), Surface::required_extensions(event_loop)?)?;
 		
 		let camera: Box<dyn camera::Camera> = match config.camera.driver {
 			#[cfg(feature = "opencv-camera")]
@@ -101,7 +108,8 @@ impl Application {
 			Eyes::new_novr(&config::get().novr, Some(camera), &mut renderer)?
 		};
 		
-		let window = Window::new(Some(eyes.framebuffer_size()), &renderer)?;
+		let _ = window.request_inner_size(PhysicalSize::new(eyes.framebuffer_size().0 * 2, eyes.framebuffer_size().1));
+		let window = Window::new(window, event_loop, &renderer)?;
 		
 		let application = Application {
 			vr,
@@ -112,6 +120,7 @@ impl Application {
 			miku: ComponentRef::null(),
 			detached_pov: EntityRef::null(),
 			input: Input::new(),
+			last_draw: Instant::now(),
 			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
 			window,
@@ -223,122 +232,24 @@ impl Application {
 		Ok(application)
 	}
 	
-	pub fn run(mut self) -> Result<()> {
-		let mut instant = Instant::now();
+	pub fn on_window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) -> Result<()> {
+		match event {
+			WindowEvent::CloseRequested => event_loop.exit(),
+			WindowEvent::RedrawRequested => self.on_tick()?,
+			event => self.window.on_window_event(event, &mut self.input, &mut self.renderer.borrow_mut())?,
+		};
 		
-		while !self.input.quitting {
-			let mut delta_time = instant.elapsed();
-			instant = Instant::now();
-			
-			if delta_time.as_millis() > 250 {
-				println!("Can't keep up! Delta time: {:.2}s", delta_time.as_secs_f32());
-				delta_time = Duration::from_millis(250);
-			}
-			
-			self.input.reset();
-			
-			self.window.pull_events(&mut self.input);
-			
-			self.bench.get_mut().tick("Inputs");
-			
-			if self.vr.is_some() {
-				self.handle_vr_input()?;
-				
-				self.bench.get_mut().tick("VR Sync");
-			}
-			
-			self.bench.get_mut().new_frame();
-			
-			let inputs = format!("{}", self.input);
-			for (id, line) in inputs.split("\n").enumerate() {
-				debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
-			}
-			
-			self.setup_loop()?;
-			
-			self.bench.get_mut().tick("Setup");
-			
-			{
-				let mut physics = self.physics.borrow_mut();
-				
-				for entity in self.dfs_entities() {
-					entity.before_physics(&self, &mut physics);
-				}
-				
-				physics.integration_parameters.dt = delta_time.as_secs_f32();
-				physics.step();
-				
-				for entity in self.dfs_entities() {
-					entity.after_physics(&self, &mut physics);
-				}
-			}
-			
-			self.physics.borrow().debug_draw(&self);
-			
-			self.bench.get_mut().tick("Physics");
-			
-			{
-				let ctx = self.window.start_gui_frame();
-				
-				self.gui.borrow_mut().show(&ctx, &self);
-				
-				self.window.end_gui_frame();
-			}
-			
-			self.bench.get_mut().tick("Gui");
-			
-			for entity in self.dfs_entities() {
-				entity.tick(delta_time, &self)?;
-			}
-			
-			self.bench.get_mut().tick("Tick");
-			
-			self.renderer.get_mut().begin_frame()?;
-			
-			let pov = self.pov
-			              .get(&self).map(|e| *e.state().position)
-			              .unwrap_or(Isometry3::identity());
-			let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
-			let hmd_pose = self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone();
-			
-			if let Some(eyes) = &mut self.eyes {
-				eyes.set_hmd_pose(hmd_pose);
-				eyes.load_background(pov, self.renderer.get_mut())?;
-			}
-			
-			match self.window.regen_swapchain(self.renderer.get_mut()) {
-				Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
-				result => result?,
-			}
-			
-			self.bench.get_mut().tick("Render Setup");
-			
-			if let Some(eyes) = self.eyes.as_mut() {
-				let rt_context = self.renderer.get_mut().render(pov, &mut self.entities, &mut *eyes)?;
-				
-				self.bench.get_mut().tick("Render Eyes");
-			
-				if let Some(detached_pov) = detached_pov {
-					self.renderer.get_mut().render(detached_pov, &mut self.entities, &mut self.window)?;
-				} else {
-					self.window.mirror_from(&mut *eyes, rt_context.as_ref(), self.renderer.get_mut())?;
-				}
-				
-				self.bench.get_mut().tick("Render Window");
-			} else {
-				self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
-				
-				self.bench.get_mut().tick("Render Window");
-			}
-			
-			self.renderer.get_mut().end_frame()?;
-			
-			self.bench.get_mut().tick("Render End");
-			
-			self.cleanup_loop()?;
-			
-			self.bench.get_mut().tick("Cleanup");
-		}
+		Ok(())
+	}
+	
+	pub fn on_device_event(&mut self, _event_loop: &ActiveEventLoop, _device_id: DeviceId, event: DeviceEvent) -> Result<()> {
+		self.window.on_device_event(event, &mut self.input)?;
+		
+		Ok(())
+	}
+	
+	pub fn on_about_to_wait(&mut self, _event_loop: &ActiveEventLoop) -> Result<()> {
+		self.window.window.request_redraw();
 		
 		Ok(())
 	}
@@ -377,12 +288,14 @@ impl Application {
 		self.find_all_entities(predicate).next()
 	}
 	
+	#[allow(dead_code)]
 	pub fn root_entities(&self) -> impl Iterator<Item = &Entity> {
 		self.entities
 			.values()
 			.filter(move |entity| entity.parent().get(self).is_none())
 	}
 	
+	#[allow(dead_code)]
 	pub fn dfs_entities(&self) -> impl Iterator<Item = &Entity> {
 		let mut stack = SmallVec::<[(&Entity, usize); 32]>::new();
 		let mut root_entities = self.root_entities();
@@ -453,6 +366,117 @@ impl Application {
 			select_within,
 			focus,
 		}
+	}
+	
+	fn on_tick(&mut self) -> Result<()> {
+		let mut delta_time = self.last_draw.elapsed();
+		self.last_draw = Instant::now();
+		
+		if delta_time.as_millis() > 250 {
+			println!("Can't keep up! Delta time: {:.2}s", delta_time.as_secs_f32());
+			delta_time = Duration::from_millis(250);
+		}
+		
+		self.bench.get_mut().new_frame();
+		
+		if self.vr.is_some() {
+			self.handle_vr_input()?;
+			
+			self.bench.get_mut().tick("VR Sync");
+		}
+		
+		let inputs = format!("{}", self.input);
+		for (id, line) in inputs.split("\n").enumerate() {
+			debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
+		}
+		
+		self.setup_loop()?;
+		
+		self.bench.get_mut().tick("Setup");
+		
+		{
+			let mut physics = self.physics.borrow_mut();
+			
+			for entity in self.dfs_entities() {
+				entity.before_physics(&self, &mut physics);
+			}
+			
+			physics.integration_parameters.dt = delta_time.as_secs_f32();
+			physics.step();
+			
+			for entity in self.dfs_entities() {
+				entity.after_physics(&self, &mut physics);
+			}
+		}
+		
+		self.physics.borrow().debug_draw(&self);
+		
+		self.bench.get_mut().tick("Physics");
+		
+		{
+			let ctx = self.window.start_gui_frame();
+			
+			self.gui.borrow_mut().show(&ctx, &self);
+			
+			self.window.end_gui_frame();
+		}
+		
+		self.bench.get_mut().tick("Gui");
+		
+		for entity in self.dfs_entities() {
+			entity.tick(delta_time, &self)?;
+		}
+		
+		self.bench.get_mut().tick("Tick");
+		
+		self.renderer.get_mut().begin_frame()?;
+		
+		let pov = self.pov
+		              .get(&self).map(|e| *e.state().position)
+		              .unwrap_or(Isometry3::identity());
+		let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
+		let hmd_pose = self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone();
+		
+		if let Some(eyes) = &mut self.eyes {
+			eyes.set_hmd_pose(hmd_pose);
+			eyes.load_background(pov, self.renderer.get_mut())?;
+		}
+		
+		match self.window.regen_swapchain(self.renderer.get_mut()) {
+			Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
+			result => result?,
+		}
+		
+		self.bench.get_mut().tick("Render Setup");
+		
+		if let Some(eyes) = self.eyes.as_mut() {
+			let rt_context = self.renderer.get_mut().render(pov, &mut self.entities, &mut *eyes)?;
+			
+			self.bench.get_mut().tick("Render Eyes");
+			
+			if let Some(detached_pov) = detached_pov {
+				self.renderer.get_mut().render(detached_pov, &mut self.entities, &mut self.window)?;
+			} else {
+				self.window.mirror_from(&mut *eyes, rt_context.as_ref(), self.renderer.get_mut())?;
+			}
+			
+			self.bench.get_mut().tick("Render Window");
+		} else {
+			self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
+			
+			self.bench.get_mut().tick("Render Window");
+		}
+		
+		self.renderer.get_mut().end_frame()?;
+		
+		self.bench.get_mut().tick("Render End");
+		
+		self.cleanup_loop()?;
+		self.input.reset();
+		
+		self.bench.get_mut().tick("Cleanup");
+		
+		Ok(())
 	}
 	
 	fn setup_loop(&mut self) -> Result<()> {
@@ -542,6 +566,12 @@ impl Application {
 		}
 		
 		Ok(())
+	}
+}
+
+impl std::fmt::Debug for Application {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Application").finish()
 	}
 }
 

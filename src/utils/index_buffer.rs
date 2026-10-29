@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 use vulkano::DeviceSize;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
-use vulkano::command_buffer::allocator::CommandBufferAllocator;
+use vulkano::command_buffer::PrimaryAutoCommandBuffer;
 
 pub use crate::component::model::VertexIndex;
 
@@ -43,13 +43,12 @@ pub trait AutoCommandBufferBuilderEx {
 	fn bind_any_index_buffer(&mut self, index_buffer: IndexSubbuffer) -> &mut Self;
 }
 
-impl<L, A> AutoCommandBufferBuilderEx for AutoCommandBufferBuilder<L, A>
-where A: CommandBufferAllocator {
+impl AutoCommandBufferBuilderEx for AutoCommandBufferBuilder<PrimaryAutoCommandBuffer> {
 	fn bind_any_index_buffer(&mut self, index_buffer: IndexSubbuffer) -> &mut Self {
 		match index_buffer {
-			IndexSubbuffer::U8(buffer) => self.bind_index_buffer(buffer),
-			IndexSubbuffer::U16(buffer) => self.bind_index_buffer(buffer),
-			IndexSubbuffer::U32(buffer) => self.bind_index_buffer(buffer),
+			IndexSubbuffer::U8(buffer) => self.bind_index_buffer(buffer).unwrap(),
+			IndexSubbuffer::U16(buffer) => self.bind_index_buffer(buffer).unwrap(),
+			IndexSubbuffer::U32(buffer) => self.bind_index_buffer(buffer).unwrap(),
 		};
 		
 		self

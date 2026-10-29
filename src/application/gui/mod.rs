@@ -102,7 +102,7 @@ impl ApplicationGui {
 		}
 		
 		if self.inspect {
-			CentralPanel::default().frame(Frame::none()).show(&ctx, |ui| {
+			CentralPanel::default().frame(Frame::NONE).show(&ctx, |ui| {
 				let response = ui.interact(ui.clip_rect(), Id::new("Inspect"), Sense::click())
 				                 .on_hover_cursor(CursorIcon::Crosshair);
 				
@@ -174,7 +174,7 @@ impl ApplicationGui {
 			}
 		}
 		
-		if response.drag_released() && self.grabbed == Some(tab) {
+		if response.drag_stopped() && self.grabbed == Some(tab) {
 			self.detached.insert(tab);
 			self.grabbed = None;
 			if self.tab == tab {

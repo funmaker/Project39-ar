@@ -10,7 +10,7 @@ pub use device::InputDevice;
 pub use state::InputState;
 
 
-pub type Key = winit::event::VirtualKeyCode;
+pub type Key = winit::keyboard::KeyCode;
 pub type MouseButton = winit::event::MouseButton;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -64,18 +64,18 @@ impl Input {
 	pub fn use_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(2)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Right) |
-		self.keyboard.state(Key::E)
+		self.keyboard.state(Key::KeyE)
 	}
 	
 	pub fn use2_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(32)).unwrap_or_default() |
-		self.keyboard.state(Key::Q)
+		self.keyboard.state(Key::KeyQ)
 	}
 	
 	pub fn use3_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(1)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Middle) |
-		self.keyboard.state(Key::G)
+		self.keyboard.state(Key::KeyG)
 	}
 	
 	pub fn set_controller_id(&mut self, hand: Hand, idx: TrackedDeviceIndex) {

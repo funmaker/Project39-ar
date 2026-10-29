@@ -4,11 +4,13 @@ use image::{DynamicImage, ImageFormat};
 use vulkano::buffer::{Buffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
 use vulkano::format::Format;
-use vulkano::image::{ImmutableImage, MipmapsCount, ImageDimensions};
+use vulkano::image::{max_mip_levels, ImageCreateInfo, ImageUsage, Image};
+use vulkano::memory::allocator::AllocationCreateInfo;
+use vulkano::sync::Sharing;
 
 use crate::math::{IVec4, Vec3};
 use crate::renderer::Renderer;
-use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo};
+use crate::utils::{ImageEx, FenceCheck, BufferEx, IntoInfo, DynamicImageEx, SharingEx};
 use super::super::super::VertexIndex;
 use super::super::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use super::{MMDModelShared, Vertex, BoneDesc, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
@@ -70,7 +72,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 	}
 	
 	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared> {
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -90,12 +92,18 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			let width = image.width();
 			let height = image.height();
 			
-			ImmutableImage::from_iter(&renderer.memory_allocator,
-			                          image.into_pre_mul_iter(),
-			                          ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-			                          MipmapsCount::Log2,
-			                          Format::R8G8B8A8_SRGB,
-			                          &mut upload_buffer)?
+			Image::upload_iter(&renderer.memory_allocator,
+			                   image.into_pre_mul_iter(),
+			                   ImageCreateInfo {
+				                   extent: [width, height, 1],
+				                   mip_levels: max_mip_levels([width, height, 1]),
+				                   format: Format::R8G8B8A8_SRGB,
+				                   usage: ImageUsage::SAMPLED,
+				                   sharing: Sharing::from_iters(renderer.device.active_queue_family_indices()),
+				                   ..ImageCreateInfo::default()
+			                   },
+			                   AllocationCreateInfo::default(),
+			                   &mut upload_buffer)?
 		};
 		
 		let mut images = vec![];
@@ -104,12 +112,18 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 			let width = texture.width();
 			let height = texture.height();
 			
-			let image = ImmutableImage::from_iter(&renderer.memory_allocator,
-			                                      texture.into_pre_mul_iter(),
-			                                      ImageDimensions::Dim2d{ width, height, array_layers: 1 },
-			                                      MipmapsCount::Log2,
-			                                      Format::R8G8B8A8_SRGB,
-			                                      &mut upload_buffer)?;
+			let image = Image::upload_iter(&renderer.memory_allocator,
+			                               texture.into_pre_mul_iter(),
+			                               ImageCreateInfo {
+				                               extent: [width, height, 1],
+				                               mip_levels: max_mip_levels([width, height, 1]),
+				                               format: Format::R8G8B8A8_SRGB,
+				                               usage: ImageUsage::SAMPLED,
+				                               sharing: Sharing::from_iters(renderer.device.active_queue_family_indices()),
+				                               ..ImageCreateInfo::default()
+			                               },
+			                               AllocationCreateInfo::default(),
+			                               &mut upload_buffer)?;
 			
 			images.push(image);
 		}

@@ -69,13 +69,13 @@ impl ExUi for Ui {
 	
 	fn track_hover(&mut self, response: &Response) -> bool {
 		self.data_mut(|mem| {
-			let last_hover: &mut Id = mem.get_temp_mut_or(Id::new("LastHover"), Id::null());
+			let last_hover: &mut Id = mem.get_temp_mut_or(Id::new("LastHover"), Id::NULL);
 			
 			let hovered = *last_hover == response.id;
 			if !hovered && response.hovered() {
 				*last_hover = response.id;
 			} else if hovered && !response.hovered() {
-				*last_hover = Id::null();
+				*last_hover = Id::NULL;
 			}
 			
 			hovered
@@ -136,7 +136,7 @@ pub trait InspectObject: Inspect + Sized {
 		}
 		
 		CollapsingHeader::new(collapsing.title.unwrap_or_else(|| self.inspect_header(&options)))
-			.id_source(self.inspect_uid(&options))
+			.id_salt(self.inspect_uid(&options))
 			.default_open(collapsing.default_open)
 			.open(selection_level.select_within.then_some(true))
 			.show(ui, |ui| {
@@ -216,7 +216,7 @@ impl InspectMut for f32 {
 	type Options<'a> = (f32, RangeInclusive<f32>);
 	
 	fn inspect_ui(&mut self, ui: &mut Ui, (speed, range): Self::Options<'_>) {
-		ui.add(DragValue::new(self).speed(speed).clamp_range(range));
+		ui.add(DragValue::new(self).speed(speed).range(range));
 	}
 }
 
@@ -224,7 +224,7 @@ impl InspectMut for f64 {
 	type Options<'a> = (f64, RangeInclusive<f64>);
 	
 	fn inspect_ui(&mut self, ui: &mut Ui, (speed, range): Self::Options<'_>) {
-		ui.add(DragValue::new(self).speed(speed).clamp_range(range));
+		ui.add(DragValue::new(self).speed(speed).range(range));
 	}
 }
 
@@ -236,7 +236,7 @@ macro_rules! num_impl {
 			type Options<'a> = RangeInclusive<$type>;
 			
 			fn inspect_ui(&mut self, ui: &mut Ui, range: Self::Options<'_>) {
-				ui.add(DragValue::new(self).clamp_range(range));
+				ui.add(DragValue::new(self).range(range));
 			}
 		}
 		

@@ -6,10 +6,10 @@ use vulkano::buffer::BufferUsage;
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer};
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
-use vulkano::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::DescriptorSet;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Queue;
-use vulkano::memory::allocator::{MemoryUsage, StandardMemoryAllocator};
+use vulkano::memory::allocator::{MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 
 mod text_cache;
@@ -57,14 +57,14 @@ impl DebugRenderer {
 		
 		let vertices_allocator = SubbufferAllocator::new(memory_allocator.clone(),
 		                                                 SubbufferAllocatorCreateInfo {
-			                                                 memory_usage: MemoryUsage::Upload,
+			                                                 memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
 			                                                 buffer_usage: BufferUsage::VERTEX_BUFFER,
 			                                                 ..SubbufferAllocatorCreateInfo::default()
 		                                                 });
 		
 		let indexes_allocator = SubbufferAllocator::new(memory_allocator.clone(),
 		                                                SubbufferAllocatorCreateInfo {
-			                                                memory_usage: MemoryUsage::Upload,
+			                                                memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
 			                                                buffer_usage: BufferUsage::INDEX_BUFFER,
 			                                                ..SubbufferAllocatorCreateInfo::default()
 		                                                });
@@ -142,21 +142,23 @@ impl DebugRenderer {
 			let index_buffer = self.indexes_allocator.from_iter(self.indexes.drain(..))?;
 			let index_count = index_buffer.len();
 			
-			context.builder.bind_pipeline_graphics(self.pipeline.clone())
-			               .bind_index_buffer(index_buffer)
-			               .bind_vertex_buffers(0, vertex_buffer)
-			               .draw_indexed(index_count as u32,
-			                             1,
-			                             0,
-			                             0,
-			                             0)?;
+			unsafe {
+				context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+				       .bind_index_buffer(index_buffer)?
+				       .bind_vertex_buffers(0, vertex_buffer)?
+				       .draw_indexed(index_count as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?;
+			}
 		}
 		
 		DEBUG_TEXTS.with(|texts| {
 			let texts = texts.borrow();
 			
 			if !texts.is_empty() {
-				context.builder.bind_pipeline_graphics(self.text_pipeline.clone());
+				context.builder.bind_pipeline_graphics(self.text_pipeline.clone())?;
 			}
 			
 			for text in texts.iter() {
@@ -167,17 +169,19 @@ impl DebugRenderer {
 					let index_buffer = self.indexes_allocator.from_iter(self.indexes.drain(..))?;
 					let index_count = index_buffer.len();
 					
-					context.builder.bind_index_buffer(index_buffer)
-					               .bind_vertex_buffers(0, vertex_buffer)
-					               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-					                                     self.text_pipeline.layout().clone(),
-					                                     0,
-					                                     set)
-					               .draw_indexed(index_count as u32,
-					                             1,
-					                             0,
-					                             0,
-					                             0)?;
+					unsafe {
+						context.builder.bind_index_buffer(index_buffer)?
+						       .bind_vertex_buffers(0, vertex_buffer)?
+						       .bind_descriptor_sets(PipelineBindPoint::Graphics,
+						                             self.text_pipeline.layout().clone(),
+						                             0,
+						                             set)?
+						       .draw_indexed(index_count as u32,
+						                     1,
+						                     0,
+						                     0,
+						                     0)?;
+					}
 				}
 			}
 			
@@ -330,7 +334,7 @@ impl DebugRenderer {
 		}
 	}
 	
-	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<PersistentDescriptorSet>>> {
+	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<DescriptorSet>>> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
 		let size_px = vector!(entry.size.0 as f32 / entry.size.1 as f32 * text.size, text.size);
@@ -387,30 +391,32 @@ impl DebugRenderer {
 		};
 		
 		if !boxes.is_empty() {
-			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
-			       .bind_vertex_buffers(0, models.dbox.vertices.clone())
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())?
+			       .bind_vertex_buffers(0, models.dbox.vertices.clone())?
 			       .bind_any_index_buffer(models.dbox.indices.clone())
 			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 			                             self.shape_pipeline.layout().clone(),
 			                             0,
-			                             models.dbox.set.clone());
+			                             models.dbox.set.clone())?;
 		}
 		
 		for dbox in boxes.iter() {
 			let transform = dbox.position.to_homogeneous().prepend_nonuniform_scaling(&dbox.size);
 			
-			builder.push_constants(self.shape_pipeline.layout().clone(),
-			                       0,
-			                       ShapePc {
-				                       model: transform.into(),
-				                       color: dbox.color.into(),
-				                       edge: dbox.edge.into(),
-			                       })
-			       .draw_indexed(models.dbox.indices.len() as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?;
+			unsafe {
+				builder.push_constants(self.shape_pipeline.layout().clone(),
+				                       0,
+				                       ShapePc {
+					                       model: transform.into(),
+					                       color: dbox.color.into(),
+					                       edge: dbox.edge.into(),
+				                       })?
+				       .draw_indexed(models.dbox.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?;
+			}
 		}
 		
 		Ok(())
@@ -425,30 +431,32 @@ impl DebugRenderer {
 		};
 		
 		if !spheres.is_empty() {
-			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
-			       .bind_vertex_buffers(0, models.sphere.vertices.clone())
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())?
+			       .bind_vertex_buffers(0, models.sphere.vertices.clone())?
 			       .bind_any_index_buffer(models.sphere.indices.clone())
 			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 			                             self.shape_pipeline.layout().clone(),
 			                             0,
-			                             models.sphere.set.clone());
+			                             models.sphere.set.clone())?;
 		}
 		
 		for sphere in spheres.iter() {
 			let transform = Similarity3::from_isometry(sphere.position, sphere.radius * 2.0).to_homogeneous();
 			
-			builder.push_constants(self.shape_pipeline.layout().clone(),
-			                       0,
-			                       ShapePc {
-				                       model: transform.into(),
-				                       color: sphere.color.into(),
-				                       edge: sphere.edge.into(),
-			                       })
-			       .draw_indexed(models.sphere.indices.len() as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?;
+			unsafe {
+				builder.push_constants(self.shape_pipeline.layout().clone(),
+				                       0,
+				                       ShapePc {
+					                       model: transform.into(),
+					                       color: sphere.color.into(),
+					                       edge: sphere.edge.into(),
+				                       })?
+				       .draw_indexed(models.sphere.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?;
+			}
 		}
 		
 		Ok(())
@@ -464,13 +472,13 @@ impl DebugRenderer {
 		};
 		
 		if !capsules.is_empty() {
-			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
-			       .bind_vertex_buffers(0, models.ccap.vertices.clone())
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())?
+			       .bind_vertex_buffers(0, models.ccap.vertices.clone())?
 			       .bind_any_index_buffer(models.ccap.indices.clone())
 			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 			                             self.shape_pipeline.layout().clone(),
 			                             0,
-			                             models.ccap.set.clone());
+			                             models.ccap.set.clone())?;
 		}
 		
 		for capsule in capsules.iter() {
@@ -478,40 +486,42 @@ impl DebugRenderer {
 			let transform_a = Similarity3::from_parts(capsule.point_a.coords.into(), face_upwards_lossy(-dir), capsule.radius * 2.0).to_homogeneous();
 			let transform_b = Similarity3::from_parts(capsule.point_b.coords.into(), face_upwards_lossy(dir), capsule.radius * 2.0).to_homogeneous();
 			
-			builder.push_constants(self.shape_pipeline.layout().clone(),
-			                       0,
-			                       ShapePc {
-				                       model: transform_a.into(),
-				                       color: capsule.color.into(),
-				                       edge: capsule.edge.into(),
-			                       })
-			       .draw_indexed(models.ccap.indices.len() as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?
-			       .push_constants(self.shape_pipeline.layout().clone(),
-			                       0,
-			                       ShapePc {
-				                       model: transform_b.into(),
-				                       color: capsule.color.into(),
-				                       edge: capsule.edge.into(),
-			                       })
-			       .draw_indexed(models.ccap.indices.len() as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?;
+			unsafe {
+				builder.push_constants(self.shape_pipeline.layout().clone(),
+				                       0,
+				                       ShapePc {
+					                       model: transform_a.into(),
+					                       color: capsule.color.into(),
+					                       edge: capsule.edge.into(),
+				                       })?
+				       .draw_indexed(models.ccap.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?
+				       .push_constants(self.shape_pipeline.layout().clone(),
+				                       0,
+				                       ShapePc {
+					                       model: transform_b.into(),
+					                       color: capsule.color.into(),
+					                       edge: capsule.edge.into(),
+				                       })?
+				       .draw_indexed(models.ccap.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?;
+			}
 		}
 		
 		if !capsules.is_empty() {
-			builder.bind_pipeline_graphics(self.shape_pipeline.clone())
-			       .bind_vertex_buffers(0, models.cbody.vertices.clone())
+			builder.bind_pipeline_graphics(self.shape_pipeline.clone())?
+			       .bind_vertex_buffers(0, models.cbody.vertices.clone())?
 			       .bind_any_index_buffer(models.cbody.indices.clone())
 			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
 			                             self.shape_pipeline.layout().clone(),
 			                             0,
-			                             models.cbody.set.clone());
+			                             models.cbody.set.clone())?;
 		}
 		
 		for capsule in capsules.iter() {
@@ -520,18 +530,20 @@ impl DebugRenderer {
 			                          .to_homogeneous()
 			                          .prepend_nonuniform_scaling(&vector!(capsule.radius * 2.0, dir.magnitude(), capsule.radius * 2.0));
 			
-			builder.push_constants(self.shape_pipeline.layout().clone(),
-			                       0,
-			                       ShapePc {
-				                       model: transform.into(),
-				                       color: capsule.color.into(),
-				                       edge: capsule.edge.into(),
-			                       })
-			       .draw_indexed(models.cbody.indices.len() as u32,
-			                     1,
-			                     0,
-			                     0,
-			                     0)?;
+			unsafe {
+				builder.push_constants(self.shape_pipeline.layout().clone(),
+				                       0,
+				                       ShapePc {
+					                       model: transform.into(),
+					                       color: capsule.color.into(),
+					                       edge: capsule.edge.into(),
+				                       })?
+				       .draw_indexed(models.cbody.indices.len() as u32,
+				                     1,
+				                     0,
+				                     0,
+				                     0)?;
+			}
 		}
 		
 		Ok(())

@@ -3,18 +3,15 @@ use std::sync::Arc;
 use anyhow::Result;
 pub use frag::Pc;
 use vulkano::device::DeviceOwned;
-use vulkano::image::SampleCount;
-use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
-use vulkano::pipeline::graphics::multisample::MultisampleState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
-use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
-use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::graphics::vertex_input::{Vertex as VertexTy, VertexDefinition};
+use vulkano::pipeline::GraphicsPipeline;
 use vulkano::render_pass::{RenderPass, Subpass};
 
 mod vertex;
 
-use crate::renderer::pipelines::PipelineConstructor;
+use crate::renderer::pipelines::{build_graphics_pipeline, PipelineConstructor};
 pub use vertex::Vertex;
 
 
@@ -41,23 +38,14 @@ impl PipelineConstructor for BackgroundPipeline {
 	
 	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device();
-		let vs = vert::load(device.clone()).unwrap();
-		let fs = frag::load(device.clone()).unwrap();
 		
-		Ok(
-			GraphicsPipeline::start()
-				.vertex_input_state(Vertex::per_vertex())
-				.vertex_shader(vs.entry_point("main").unwrap(), ())
-				.viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
-				.fragment_shader(fs.entry_point("main").unwrap(), ())
-				.depth_stencil_state(DepthStencilState::disabled())
-				.rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-				.render_pass(render_pass.clone().first_subpass())
-				.multisample_state(MultisampleState {
-					rasterization_samples: render_pass.clone().first_subpass().num_samples().unwrap_or(SampleCount::Sample1),
-					..MultisampleState::new()
-				})
-				.build(device.clone())?
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			vert::load(device.clone())?.entry_point("main").unwrap(),
+			frag::load(device.clone())?.entry_point("main").unwrap(),
+			DepthStencilState::default(),
+			RasterizationState { cull_mode: CullMode::Back, ..RasterizationState::default() },
+			None,
 		)
 	}
 }

@@ -33,7 +33,7 @@ impl Component for PoV {
 		application.pov.set(entity.as_ref());
 		debug::set_flag("DebugGizmoPoV", *entity.state().position);
 		
-		if self.detachable && application.input.keyboard.down(Key::Back) {
+		if self.detachable && application.input.keyboard.down(Key::Backspace) {
 			if let Some(detached) = self.detached.get(application) {
 				detached.remove();
 			} else {
@@ -85,10 +85,10 @@ impl Component for DetachedPoV {
 		application.detached_pov.set(entity.as_ref());
 		
 		if entity.parent().get(application).is_some() && (
-			application.input.keyboard.down(Key::W) ||
-			application.input.keyboard.down(Key::S) ||
-			application.input.keyboard.down(Key::A) ||
-			application.input.keyboard.down(Key::D)
+			application.input.keyboard.down(Key::KeyW) ||
+			application.input.keyboard.down(Key::KeyS) ||
+			application.input.keyboard.down(Key::KeyA) ||
+			application.input.keyboard.down(Key::KeyD)
 		) {
 			entity.unset_parent(application);
 			entity.add_component(PCControlled::new());

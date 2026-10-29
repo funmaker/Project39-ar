@@ -1,10 +1,16 @@
 pub use outline_vert::Pc;
-use vulkano::pipeline::ComputePipeline;
-use vulkano::pipeline::graphics::color_blend::ColorBlendState;
+use std::sync::Arc;
+use anyhow::Result;
+use vulkano::device::{Device, DeviceOwned};
+use vulkano::pipeline::graphics::rasterization::{CullMode, FrontFace, RasterizationState};
+use vulkano::pipeline::{ComputePipeline, GraphicsPipeline};
+use vulkano::render_pass::RenderPass;
+use vulkano::shader::{EntryPoint, SpecializationConstant, ShaderModule};
 
 #[macro_use] mod macros;
 mod vertex;
 
+use crate::renderer::pipelines::{build_compute_pipeline, build_graphics_pipeline, pre_mul_alpha_blending, simple_depth_test, PipelineConstructor};
 pub use vertex::Vertex;
 
 
@@ -16,54 +22,133 @@ mmd_shaders!(
 	"compute" morph_comp = "src/component/model/mmd/pipeline/morph_comp.glsl";
 );
 
-mmd_pipelines!(
-	pub pipeline MMDPipelineOpaque {
-		shader vs = base_vert;
-		shader fs = base_frag { transparent_pass: 0 };
-		
-		config builder {
-			builder
-		}
-	}
+/// Loads `base_frag` with the `transparent_pass` specialization constant (`constant_id = 0`) set.
+fn base_fragment(device: &Arc<Device>, transparent_pass: bool) -> EntryPoint {
+	use foldhash::HashMapExt;
 	
-	pub pipeline MMDPipelineOpaqueNoCull {
-		shader vs = base_vert;
-		shader fs = base_frag { transparent_pass: 0 };
-		
-		config builder {
-			builder.rasterization_state(RasterizationState::new().cull_mode(CullMode::None))
-		}
-	}
-
-	pub pipeline MMDPipelineTrans {
-		shader vs = base_vert;
-		shader fs = base_frag { transparent_pass: 1 };
-		
-		config builder {
-			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-		}
-	}
+	let module: Arc<ShaderModule> = base_frag::load(device.clone()).unwrap();
 	
-	pub pipeline MMDPipelineTransNoCull {
-		shader vs = base_vert;
-		shader fs = base_frag { transparent_pass: 1 };
-		
-		config builder {
-			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-			       .rasterization_state(RasterizationState::new().cull_mode(CullMode::None))
-		}
-	}
+	let mut specializations: foldhash::HashMap<u32, SpecializationConstant> = foldhash::HashMap::new();
+	specializations.insert(0u32, SpecializationConstant::Bool(transparent_pass));
+	
+	let module = module.specialize(specializations).unwrap();
+	module.entry_point("main").unwrap()
+}
 
-	pub pipeline MMDPipelineOutline {
-		shader vs = outline_vert;
-		shader fs = outline_frag;
+pub struct MMDPipelineOpaque;
+
+impl PipelineConstructor for MMDPipelineOpaque {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
+		let device = render_pass.device();
 		
-		config builder {
-			builder.color_blend_state(ColorBlendState::new(1).blend(pre_mul_alpha_blending()))
-			       .rasterization_state(RasterizationState::new().cull_mode(CullMode::Back))
-		}
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			base_vert::load(device.clone())?.entry_point("main").unwrap(),
+			base_fragment(device, false),
+			simple_depth_test(),
+			RasterizationState {
+				cull_mode: CullMode::Back,
+				front_face: FrontFace::Clockwise,
+				..RasterizationState::default()
+			},
+			if false { Some(pre_mul_alpha_blending()) } else { None },
+		)
 	}
-);
+}
+
+pub struct MMDPipelineOpaqueNoCull;
+
+impl PipelineConstructor for MMDPipelineOpaqueNoCull {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
+		let device = render_pass.device();
+		
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			base_vert::load(device.clone())?.entry_point("main").unwrap(),
+			base_fragment(device, false),
+			simple_depth_test(),
+			RasterizationState {
+				cull_mode: CullMode::None,
+				front_face: FrontFace::Clockwise,
+				..RasterizationState::default()
+			},
+			if false { Some(pre_mul_alpha_blending()) } else { None },
+		)
+	}
+}
+
+pub struct MMDPipelineTrans;
+
+impl PipelineConstructor for MMDPipelineTrans {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
+		let device = render_pass.device();
+		
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			base_vert::load(device.clone())?.entry_point("main").unwrap(),
+			base_fragment(device, true),
+			simple_depth_test(),
+			RasterizationState {
+				cull_mode: CullMode::Back,
+				front_face: FrontFace::Clockwise,
+				..RasterizationState::default()
+			},
+			if true { Some(pre_mul_alpha_blending()) } else { None },
+		)
+	}
+}
+
+pub struct MMDPipelineTransNoCull;
+
+impl PipelineConstructor for MMDPipelineTransNoCull {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
+		let device = render_pass.device();
+		
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			base_vert::load(device.clone())?.entry_point("main").unwrap(),
+			base_fragment(device, true),
+			simple_depth_test(),
+			RasterizationState {
+				cull_mode: CullMode::None,
+				front_face: FrontFace::Clockwise,
+				..RasterizationState::default()
+			},
+			if true { Some(pre_mul_alpha_blending()) } else { None },
+		)
+	}
+}
+
+pub struct MMDPipelineOutline;
+
+impl PipelineConstructor for MMDPipelineOutline {
+	type PipeType = GraphicsPipeline;
+	
+	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
+		let device = render_pass.device();
+		
+		build_graphics_pipeline::<Vertex>(
+			render_pass,
+			outline_vert::load(device.clone())?.entry_point("main").unwrap(),
+			outline_frag::load(device.clone())?.entry_point("main").unwrap(),
+			simple_depth_test(),
+			RasterizationState {
+				cull_mode: CullMode::Back,
+				front_face: FrontFace::CounterClockwise,
+				..RasterizationState::default()
+			},
+			if true { Some(pre_mul_alpha_blending()) } else { None },
+		)
+	}
+}
 
 pub const MORPH_GROUP_SIZE: usize = 32;
 
@@ -74,9 +159,8 @@ impl PipelineConstructor for MMDPipelineMorphs {
 	
 	fn new(render_pass: &Arc<RenderPass>) -> Result<Arc<Self::PipeType>> {
 		let device = render_pass.device().clone();
-		let cs = morph_comp::load(device.clone()).unwrap();
+		let cs = morph_comp::load(device.clone())?.entry_point("main").unwrap();
 		
-		Ok(ComputePipeline::new(device, cs.entry_point("main").unwrap(), &(), None, |_| {})?)
+		build_compute_pipeline(&device, cs)
 	}
 }
-

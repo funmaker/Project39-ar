@@ -6,7 +6,8 @@ use openvr::compositor::texture::{ColorSpace, Handle, vulkan};
 use vulkano::{command_buffer, sync};
 use vulkano::command_buffer::{CopyImageInfo, ImageCopy};
 use vulkano::format::ClearValue;
-use vulkano::image::{AttachmentImage, ImageAccess, ImageDimensions, ImageSubresourceLayers, ImageUsage, SampleCount, StorageImage, ImageCreateFlags};
+use vulkano::image::{Image, ImageCreateInfo, ImageSubresourceLayers, ImageUsage};
+use vulkano::memory::allocator::AllocationCreateInfo;
 use vulkano::sync::GpuFuture;
 
 pub mod camera;
@@ -25,7 +26,7 @@ use camera::Camera;
 
 pub struct Eyes {
 	fb: FramebufferBundle,
-	side_image: Arc<StorageImage>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
+	side_image: Arc<Image>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
 	textures: (Texture, Texture),
 	view: (AMat4, AMat4),
 	projection: (PMat4, PMat4),
@@ -79,18 +80,16 @@ impl Eyes {
 		
 		let dimensions = fb.framebuffer.extent();
 		
-		let side_image = StorageImage::with_usage(&renderer.memory_allocator,
-		                                          ImageDimensions::Dim2d {
-			                                          width: dimensions[0],
-			                                          height: dimensions[1],
-			                                          array_layers: 1
-		                                          },
-		                                          IMAGE_FORMAT,
-		                                          ImageUsage::TRANSFER_SRC
-			                                          | ImageUsage::TRANSFER_DST
-			                                          | ImageUsage::SAMPLED,
-		                                          ImageCreateFlags::empty(),
-		                                          Some(renderer.queue.queue_family_index()))?;
+		let side_image = Image::new(renderer.memory_allocator.clone(),
+		                            ImageCreateInfo {
+			                            extent: [dimensions[0], dimensions[1], 1],
+			                            format: IMAGE_FORMAT,
+			                            usage: ImageUsage::TRANSFER_SRC
+			                                   | ImageUsage::TRANSFER_DST
+			                                   | ImageUsage::SAMPLED,
+			                            ..ImageCreateInfo::default()
+		                            },
+		                            AllocationCreateInfo::default())?;
 		
 		let handle_defs = vulkan::Texture {
 			image: 0,
@@ -99,8 +98,8 @@ impl Eyes {
 			instance: renderer.instance.as_ptr(),
 			queue: renderer.queue.as_ptr(),
 			queue_family_index: renderer.queue.queue_family_index(),
-			width: fb.main_image.dimensions().width(),
-			height: fb.main_image.dimensions().height(),
+			width: fb.main_image.extent()[0],
+			height: fb.main_image.extent()[1],
 			format: fb.main_image.format() as u32,
 			sample_count: 1,
 		};
@@ -147,7 +146,7 @@ impl Eyes {
 	}
 	
 	pub fn framebuffer_size(&self) -> (u32, u32) {
-		self.fb.size()
+		self.fb.extent()
 	}
 }
 
@@ -168,7 +167,7 @@ impl RenderTarget for Eyes {
 		&self.fb.clear_values
 	}
 	
-	fn last_frame(&self) -> &Arc<AttachmentImage> {
+	fn last_frame(&self) -> &Arc<Image> {
 		&self.fb.main_image
 	}
 	

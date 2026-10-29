@@ -403,7 +403,7 @@ impl AssetKey for PmxAsset {
 			let dump_path = format!("{}_modeldump.toml", model_name);
 			
 			dprintln!("Dumping model2.toml of {} to {}", self.path.to_string_lossy(), dump_path);
-			fs::write(dump_path, toml::to_string_pretty(dump_config).unwrap()).unwrap();
+			fs::write(dump_path, toml::to_string_pretty(dump_config)?)?;
 		}
 		
 		Ok(Arc::new(model.build(renderer)?))

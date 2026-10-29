@@ -3,22 +3,23 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{Instant, Duration};
 use anyhow::{Result, Error};
+use egui::Key;
 use thiserror::Error;
 use simba::scalar::SubsetOf;
-use vulkano::{command_buffer, swapchain, sync};
+use vulkano::{command_buffer, swapchain, sync, Validated, VulkanError};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, BlitImageInfo, CommandBufferUsage, ImageBlit, ImageCopy};
 use vulkano::format::ClearValue;
-use vulkano::image::{AttachmentImage, ImageSubresourceLayers, SwapchainImage, ImageAccess};
-use vulkano::sampler::Filter;
-use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainCreationError, SwapchainPresentInfo};
+use vulkano::image::{Image, ImageSubresourceLayers};
+use vulkano::image::sampler::Filter;
+use vulkano::swapchain::{Surface, Swapchain, SwapchainAcquireFuture, SwapchainCreateInfo, SwapchainPresentInfo};
 use vulkano::sync::GpuFuture;
-use vulkano_win::VkSurfaceBuild;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::error::ExternalError;
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, DeviceEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::window::{WindowBuilder, Fullscreen, CursorGrabMode, Window as WinitWindow};
+use winit::event::{ElementState, Event, KeyEvent, WindowEvent, MouseButton, DeviceEvent};
+use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::keyboard::{KeyCode, PhysicalKey};
+use winit::platform::pump_events::EventLoopExtPumpEvents;
+use winit::window::{WindowAttributes, Fullscreen, CursorGrabMode, Window as WinitWindow, WindowId};
 
 mod gui;
 
@@ -34,67 +35,46 @@ const FOV: f32 = 110.0;
 
 pub struct Window {
 	pub inv_proj: Option<StereoProjection>,
-	event_loop: Option<EventLoop<()>>,
-	surface: Arc<Surface>,
+	pub window: Arc<WinitWindow>,
 	last_present: Instant,
 	swapchain: Arc<Swapchain>,
-	swapchain_images: Vec<Arc<SwapchainImage>>,
+	swapchain_images: Vec<Arc<Image>>,
 	swapchain_regen_needed: bool,
 	acquire_image_num: Option<u32>,
 	acquire_future: Option<SwapchainAcquireFuture>,
 	fb: FramebufferBundle,
 	render_required: bool,
-	cursor_trap: bool,
+	cursor_trapped: bool,
 	gui: WindowGui,
 }
 
 impl Window {
-	pub fn new(size_hint: Option<(u32, u32)>, renderer: &Renderer) -> Result<Window> {
-		let event_loop = EventLoop::new();
-		
-		let mut inner_size = size_hint.unwrap_or((1920, 960));
-		inner_size.0 *= 2;
-		
-		if inner_size.1 > 1080 {
-			inner_size.0 = (inner_size.0 as f32 * 1080.0 / inner_size.1 as f32) as u32;
-			inner_size.1 = 1080;
-		}
-		
-		let surface = WindowBuilder::new()
-		                            .with_transparent(true)
-		                            .with_resizable(true)
-		                            .with_inner_size(PhysicalSize::new(inner_size.0, inner_size.1))
-		                            .with_title("Project 39")
-		                            .build_vk_surface(&event_loop, renderer.instance.clone())?;
+	pub fn new(window: impl Into<Arc<WinitWindow>>, event_loop: &ActiveEventLoop, renderer: &Renderer) -> Result<Window> {
+		let window = window.into();
 		
 		fn into_vec(ps: PhysicalSize<u32>) -> Vec2 {
 			vector!(ps.width as f32, ps.height as f32)
 		}
 		
-		let window = surface.object()
-		                    .ok_or(WindowCreationError::NoWindow)?
-		                    .downcast_ref::<WinitWindow>()
-		                    .ok_or(WindowCreationError::NoWinitWindow)?;
 		let outer_size = into_vec(window.outer_size());
 		let monitor_size = window.current_monitor()
 		                         .map(|mon| into_vec(mon.size()))
-		                         .unwrap_or(outer_size.clone());
+		                         .unwrap_or(outer_size);
 		let centered_pos = (monitor_size - outer_size) / 2.0;
 		
 		if centered_pos.x >= 0.0 && centered_pos.y >= 0.0 {
 			window.set_outer_position(PhysicalPosition::new(centered_pos.x, centered_pos.y));
 		}
 		
+		let surface = Surface::from_window(renderer.instance.clone(), window.clone())?;
 		let (swapchain, swapchain_images) = renderer.create_swapchain(surface.clone())?;
 		
 		let swapchain_extent = swapchain.image_extent();
 		let fb = renderer.create_framebuffer((swapchain_extent[0], swapchain_extent[1]))?;
-		
-		let gui = WindowGui::new(&fb, &event_loop, surface.clone(), renderer)?;
+		let gui = WindowGui::new(&fb, event_loop, surface.clone(), renderer)?;
 		
 		Ok(Window {
-			event_loop: Some(event_loop),
-			surface,
+			window,
 			swapchain,
 			swapchain_images,
 			swapchain_regen_needed: false,
@@ -103,18 +83,10 @@ impl Window {
 			fb,
 			last_present: Instant::now(),
 			render_required: true,
-			cursor_trap: false,
+			cursor_trapped: false,
 			gui,
 			inv_proj: None,
 		})
-	}
-	
-	fn window(&self) -> Arc<WinitWindow> {
-		self.surface.object()
-		            .expect("Surface doesn't have any window!")
-		            .clone()
-		            .downcast()
-		            .expect("Surface doesn't have a winit window!")
 	}
 	
 	pub fn regen_swapchain(&mut self, renderer: &Renderer) -> Result<()> {
@@ -122,7 +94,7 @@ impl Window {
 			return Ok(())
 		}
 		
-		let window_size = self.window().inner_size();
+		let window_size = self.window.inner_size();
 		let framebuffer_size = (window_size.width, window_size.height);
 		
 		if window_size.width == 0 || window_size.height == 0 {
@@ -133,13 +105,6 @@ impl Window {
 		let (swapchain, swapchain_images) = self.swapchain.recreate(SwapchainCreateInfo {
 			                                                  image_extent: [framebuffer_size.0, framebuffer_size.1],
 			                                                  ..self.swapchain.create_info()
-		                                                  })
-		                                                  .map_err(|err| match err {
-			                                                  SwapchainCreationError::ImageExtentNotSupported { provided, min_supported, max_supported } => {
-				                                                  eprintln!("SwapchainCreationError: ImageExtentNotSupported\n\tprovided: {:?}\n\tmin_supported: {:?}\n\tmax_supported: {:?}", provided, min_supported, max_supported);
-				                                                  Error::new(WindowSwapchainNeedRetry)
-			                                                  }, // No idea why this happens on linux
-			                                                  err => err.into(),
 		                                                  })?;
 		
 		self.swapchain = swapchain;
@@ -167,11 +132,11 @@ impl Window {
 		};
 		
 		let (image_num, suboptimal, acquire_future) = match swapchain::acquire_next_image(self.swapchain.clone(), timeout) {
-			Err(swapchain::AcquireError::OutOfDate) => {
+			Err(Validated::Error(VulkanError::OutOfDate)) => {
 				self.swapchain_regen_needed = true;
 				return Ok(None);
 			},
-			Err(swapchain::AcquireError::Timeout) => {
+			Err(Validated::Error(VulkanError::Timeout)) => {
 				return Ok(None);
 			},
 			Err(err) => return Err(err.into()),
@@ -191,21 +156,23 @@ impl Window {
 	                   context: Option<&RenderTargetContext>,
 	                   renderer: &mut Renderer)
 	                   -> Result<()> {
-		let (image_num, acquire_future) = match self.acquire_swapchain_image()? {
+		let (swapchain_img_num, acquire_future) = match self.acquire_swapchain_image()? {
 			Some(result) => result,
 			None => return Ok(()),
 		};
 		
-		let image = rt.last_frame();
-		let out_dims = self.swapchain.image_extent();
-		let image_dims = image.dimensions();
-		let layers = image_dims.array_layers();
+		let src_img = rt.last_frame();
+		let src_extent = src_img.extent();
+		let mid_img = &self.fb.main_image;
+		let mid_extent = mid_img.extent();
+		let dst_img = &self.swapchain_images[swapchain_img_num as usize];
+		let layers = src_img.array_layers();
 		
-		let mut builder = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut builder = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                    renderer.queue.queue_family_index(),
 		                                                    CommandBufferUsage::OneTimeSubmit)?;
 		
-		let mut copy_info = BlitImageInfo::images(image.clone(), self.fb.main_image.clone());
+		let mut copy_info = BlitImageInfo::images(src_img.clone(), mid_img.clone());
 		copy_info.filter = Filter::Linear;
 		copy_info.regions.clear();
 		
@@ -213,19 +180,19 @@ impl Window {
 			copy_info.regions.push(ImageBlit {
 				src_subresource: ImageSubresourceLayers {
 					array_layers: layer..(layer + 1),
-					..self.fb.main_image.subresource_layers()
+					..mid_img.subresource_layers()
 				},
 				dst_subresource: ImageSubresourceLayers {
 					array_layers: 0..1,
-					..self.fb.main_image.subresource_layers()
+					..mid_img.subresource_layers()
 				},
 				src_offsets: [
 					[0, 0, 0],
-					image_dims.width_height_depth()
+					[src_extent[0], src_extent[1], src_extent[2]]
 				],
 				dst_offsets: [
-					[out_dims[0] / layers * layer, 0, 0],
-					[out_dims[0] / layers * (layer + 1), out_dims[1], 1]
+					[mid_extent[0] / layers * layer, 0, 0],
+					[mid_extent[0] / layers * (layer + 1), mid_extent[1], 1]
 				],
 				..ImageBlit::default()
 			});
@@ -237,7 +204,7 @@ impl Window {
 		
 		builder.blit_image(BlitImageInfo {
 			filter: Filter::Nearest,
-			..BlitImageInfo::images(self.fb.main_image.clone(), self.swapchain_images[image_num as usize].clone())
+			..BlitImageInfo::images(mid_img.clone(), dst_img.clone())
 		})?;
 		
 		let command_buffer = builder.build()?;
@@ -250,7 +217,7 @@ impl Window {
 			Ok(
 				future.join(acquire_future)
 				      .then_execute(queue.clone(), command_buffer)?
-				      .then_swapchain_present(queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), image_num))
+				      .then_swapchain_present(queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), swapchain_img_num))
 				      .boxed()
 			)
 		})?;
@@ -262,26 +229,15 @@ impl Window {
 		Ok(())
 	}
 	
-	pub fn grab_cursor(&mut self, grab: bool) -> Result<()> {
-		self.cursor_trap = grab;
-		let window = self.window();
-		window.set_cursor_visible(!grab);
-		window.set_cursor_grab(if grab { CursorGrabMode::Confined } else { CursorGrabMode::None })?;
-		Ok(())
+	pub fn cursor_trapped(&self) -> bool {
+		self.cursor_trapped
 	}
 	
-	pub fn pull_events(&mut self, input: &mut Input) {
-		let mut event_loop = self.event_loop.take().unwrap();
-		
-		event_loop.run_return(|event, _, control_flow| {
-			if let Err(error) = self.on_event(event, control_flow, input) {
-				eprintln!("Error while processing events {}", error);
-				input.quitting = true;
-				*control_flow = ControlFlow::Exit;
-			}
-		});
-		
-		self.event_loop = Some(event_loop);
+	pub fn grab_cursor(&mut self, grab: bool) -> Result<()> {
+		self.cursor_trapped = grab;
+		self.window.set_cursor_visible(!grab);
+		self.window.set_cursor_grab(if grab { CursorGrabMode::Confined } else { CursorGrabMode::None })?;
+		Ok(())
 	}
 	
 	pub fn start_gui_frame(&mut self) -> egui::Context {
@@ -294,122 +250,101 @@ impl Window {
 		self.gui.end_frame();
 	}
 	
-	fn on_event(&mut self, event: Event<()>, control_flow: &mut ControlFlow, input: &mut Input) -> Result<()> {
-		*control_flow = ControlFlow::Poll;
-		
-		if !self.cursor_trap {
-			if let Event::WindowEvent { event, .. } = &event {
-				if self.gui.on_event(&event) {
-					// Event consumed by GUI
-					return Ok(());
-				}
+	pub fn on_window_event(&mut self, event: WindowEvent, input: &mut Input, renderer: &mut Renderer) -> Result<()> {
+		if !self.cursor_trapped {
+			if self.gui.on_event(&event) {
+				// Event consumed by GUI
+				return Ok(());
 			}
 		}
 		
 		match event {
-			Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
-				input.quitting = true;
-				*control_flow = ControlFlow::Exit;
-			},
+			WindowEvent::Resized(_) => self.regen_swapchain(renderer)?,
 			
-			Event::WindowEvent {
-				event: WindowEvent::KeyboardInput {
-					input: KeyboardInput {
-						virtual_keycode: Some(code),
-						state, ..
-					}, ..
+			WindowEvent::KeyboardInput {
+				event: KeyEvent {
+					physical_key: PhysicalKey::Code(KeyCode::Escape),
+					state: ElementState::Pressed,
+					repeat: false, ..
 				}, ..
-			} if self.cursor_trap => {
-				if state == ElementState::Pressed {
-					match code {
-						// VirtualKeyCode::Q => {
-						// 	*quit_required = true;
-						// 	*control_flow = ControlFlow::Exit;
-						// },
-						VirtualKeyCode::Escape => {
-							self.grab_cursor(false)?;
-						},
-						VirtualKeyCode::F => {
-							let window = self.window();
-							
-							if window.fullscreen().is_none() {
-								window.set_fullscreen(Some(Fullscreen::Borderless(window.current_monitor())));
-							} else {
-								window.set_fullscreen(None);
-							}
-						},
-						_ => {},
-					}
-				}
-				
-				if code != VirtualKeyCode::Escape {
-					input.keyboard.update_button(code, state == ElementState::Pressed);
+			} if self.cursor_trapped => {
+				self.grab_cursor(false)?;
+			}
+			
+			WindowEvent::KeyboardInput {
+				event: KeyEvent {
+					physical_key: PhysicalKey::Code(KeyCode::KeyF),
+					state: ElementState::Pressed,
+					repeat: false, ..
+				}, ..
+			} if self.cursor_trapped => {
+				if self.window.fullscreen().is_none() {
+					self.window.set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
+				} else {
+					self.window.set_fullscreen(None);
 				}
 			}
 			
-			Event::WindowEvent {
-				event: mut window_event @ WindowEvent::MouseInput {
-					button: MouseButton::Left,
-					state: ElementState::Pressed, ..
-				}, ..
-			} if !self.cursor_trap => {
+			WindowEvent::MouseInput {
+				button: MouseButton::Left,
+				state: ElementState::Pressed, ..
+			} if !self.cursor_trapped => {
 				self.grab_cursor(true)?;
 				
-				let window = self.window();
-				let size = window.inner_size();
+				let size = self.window.inner_size();
 				let center = PhysicalPosition::new(size.width as f32 / 2.0, size.height as f32 / 2.0);
-				window.set_cursor_position(center)?;
+				self.window.set_cursor_position(center)?;
 				
 				// When cursor is grabbed, egui stops receiving events. Let's fake button release so it doesn't think it's constantly pressed.
-				if let WindowEvent::MouseInput { state, .. } = &mut window_event {
+				let mut fake_event = event.clone();
+				if let WindowEvent::MouseInput { state, .. } = &mut fake_event {
 					*state = ElementState::Released;
 				}
-				self.gui.on_event(&window_event);
+				self.gui.on_event(&fake_event);
 			}
 			
-			Event::WindowEvent {
-				event: WindowEvent::MouseInput {
-					button,
-					state, ..
+			WindowEvent::KeyboardInput {
+				event: KeyEvent {
+					physical_key: PhysicalKey::Code(code),
+					state,
+					repeat: false, ..
 				}, ..
-			} if self.cursor_trap => {
+			} if self.cursor_trapped => {
+				input.keyboard.update_button(code, state == ElementState::Pressed);
+			}
+			
+			WindowEvent::MouseInput {
+				button,
+				state, ..
+			} if self.cursor_trapped => {
 				input.mouse.update_button(button, state == ElementState::Pressed);
-			}
-			
-			Event::DeviceEvent {
-				event: DeviceEvent::Motion {
-					axis,
-					value,
-				}, ..
-			} if self.cursor_trap => {
-				let window = self.window();
-				let size = window.inner_size();
-				let center = PhysicalPosition::new(size.width / 2, size.height / 2);
-				
-				input.mouse.update_axis(axis as usize, value as f32);
-				
-				window.set_cursor_position(center)?;
-			}
-			
-			Event::WindowEvent { event: WindowEvent::Resized(_), .. } => {
-				self.swapchain_regen_needed = true;
-				*control_flow = ControlFlow::Exit;
-			}
-			
-			Event::RedrawRequested(_) => {
-				self.render_required = true;
-				*control_flow = ControlFlow::Exit;
-			},
-			
-			Event::RedrawEventsCleared => {
-				*control_flow = ControlFlow::Exit;
 			}
 			
 			_ => {}
 		}
 		
-		if self.gui.is_dragging() && self.cursor_trap {
+		if self.gui.is_dragging() && self.cursor_trapped {
 			self.grab_cursor(false)?;
+		}
+		
+		Ok(())
+	}
+	
+	pub fn on_device_event(&mut self, event: DeviceEvent, input: &mut Input) -> Result<()> {
+		match event {
+			DeviceEvent::Motion {
+				axis,
+				value,
+			} if self.cursor_trapped() => {
+				let size = self.window.inner_size();
+				let center = PhysicalPosition::new(size.width / 2, size.height / 2);
+				
+				input.mouse.update_axis(axis as usize, value as f32);
+				
+				self.window.set_cursor_position(center)?;
+			},
+			
+			_ => {},
 		}
 		
 		Ok(())
@@ -427,7 +362,7 @@ impl RenderTarget for Window {
 		};
 		
 		let view = camera_pos.inverse().to_superset();
-		let framebuffer_size = self.fb.size();
+		let framebuffer_size = self.fb.extent();
 		let aspect = framebuffer_size.0 as f32 / framebuffer_size.1 as f32;
 		let fovx = FOV / 180.0 * PI;
 		let fovy = ((fovx / 2.0).tan() / aspect).atan() * 2.0;
@@ -443,7 +378,7 @@ impl RenderTarget for Window {
 		&self.fb.clear_values
 	}
 
-	fn last_frame(&self) -> &Arc<AttachmentImage> {
+	fn last_frame(&self) -> &Arc<Image> {
 		&self.fb.main_image
 	}
 	
@@ -494,12 +429,5 @@ impl StereoProjection {
 }
 
 #[derive(Debug, Error)]
-pub enum WindowCreationError {
-	#[error("Surface doesn't have any window!")] NoWindow,
-	#[error("Surface doesn't have a winit window!")] NoWinitWindow,
-}
-
-#[derive(Debug, Error)]
 #[error("Need Retry")]
 pub struct WindowSwapchainNeedRetry;
-

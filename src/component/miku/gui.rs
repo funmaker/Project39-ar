@@ -12,7 +12,7 @@ pub fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: i
 	let id = id.into();
 	
 	ScrollArea::vertical()
-		.id_source(id)
+		.id_salt(id)
 		.max_height(384.0)
 		.show(ui, |ui| {
 			Grid::new(id)

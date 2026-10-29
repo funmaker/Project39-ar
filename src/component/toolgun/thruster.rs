@@ -45,13 +45,13 @@ impl Tool for ThrusterTool {
 		                              .map(|input| (input.axis(0), input.axis(1)))
 		                              .unwrap_or_default();
 		
-		if x < -0.75 || application.input.keyboard.down(Key::Left) {
+		if x < -0.75 || application.input.keyboard.down(Key::ArrowLeft) {
 			self.direction = ThrusterDirection::Left;
-		} else if x > 0.75 || application.input.keyboard.down(Key::Right) {
+		} else if x > 0.75 || application.input.keyboard.down(Key::ArrowRight) {
 			self.direction = ThrusterDirection::Right;
-		} else if y > 0.75 || application.input.keyboard.down(Key::Up) {
+		} else if y > 0.75 || application.input.keyboard.down(Key::ArrowUp) {
 			self.direction = ThrusterDirection::Forward;
-		} else if y < -0.75 || application.input.keyboard.down(Key::Down) {
+		} else if y < -0.75 || application.input.keyboard.down(Key::ArrowDown) {
 			self.direction = ThrusterDirection::Back;
 		}
 		

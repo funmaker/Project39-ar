@@ -7,7 +7,7 @@ impl SimpleInspect for Hand {
 	fn inspect_ui(&mut self, ui: &mut Ui) {
 		use egui::*;
 		
-		ComboBox::from_id_source("Hand")
+		ComboBox::from_id_salt("Hand")
 			.selected_text(match self {
 				Hand::Right => "Right",
 				Hand::Left => "Left",

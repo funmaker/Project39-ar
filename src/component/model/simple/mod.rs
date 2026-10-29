@@ -2,7 +2,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract};
-use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint};
 use vulkano::sync::GpuFuture;
 
@@ -28,7 +28,7 @@ pub struct SimpleModel {
 	pipeline: Arc<GraphicsPipeline>,
 	pub vertices: Subbuffer<[Vertex]>,
 	pub indices: IndexSubbuffer,
-	pub set: Arc<PersistentDescriptorSet>,
+	pub set: Arc<DescriptorSet>,
 	pub fence: FenceCheck,
 }
 
@@ -43,7 +43,7 @@ impl SimpleModel {
 		let aabb = aabb_from_points(vertices.iter().map(|v| Point3::from(v.pos)));
 		let pipeline = renderer.pipelines.get::<DefaultPipeline>()?;
 		
-		let mut upload_buffer = AutoCommandBufferBuilder::primary(&*renderer.command_buffer_allocator,
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),
 		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
@@ -57,11 +57,13 @@ impl SimpleModel {
 		                                  indices.iter().copied(),
 		                                  &mut upload_buffer)?;
 		
-		let set = PersistentDescriptorSet::new(&renderer.descriptor_set_allocator,
-		                                       pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(), [
-			                                       WriteDescriptorSet::buffer(0, renderer.commons.clone()),
-			                                       WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
-		                                       ])?;
+		let set = DescriptorSet::new(renderer.descriptor_set_allocator.clone(),
+		                             pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
+		                             [
+			                             WriteDescriptorSet::buffer(0, renderer.commons.clone()),
+			                             WriteDescriptorSet::image_view_sampler(1, texture.image.clone(), texture.sampler.clone()),
+		                             ],
+		                             [])?;
 		
 		let upload_future = upload_buffer.build()?
 		                                 .execute(renderer.load_queue.clone())?;
@@ -94,24 +96,26 @@ impl SimpleModel {
 	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<()> {
 		if !self.loaded() { return Ok(()) }
 		
-		context.builder.bind_pipeline_graphics(self.pipeline.clone())
-		               .bind_vertex_buffers(0, self.vertices.clone())
-		               .bind_any_index_buffer(self.indices.clone())
-		               .bind_descriptor_sets(PipelineBindPoint::Graphics,
-		                                     self.pipeline.layout().clone(),
-		                                     0,
-		                                     self.set.clone())
-		               .push_constants(self.pipeline.layout().clone(),
-		                               0,
-		                               Pc {
-			                               model: transform.to_homogeneous().into(),
-			                               color: color.into(),
-		                               })
-		               .draw_indexed(self.indices.len() as u32,
-		                             1,
-		                             0,
-		                             0,
-		                             0)?;
+		unsafe {
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+			               .bind_vertex_buffers(0, self.vertices.clone())?
+			               .bind_any_index_buffer(self.indices.clone())
+			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                                     self.pipeline.layout().clone(),
+			                                     0,
+			                                     self.set.clone())?
+			               .push_constants(self.pipeline.layout().clone(),
+			                               0,
+			                               Pc {
+				                               model: transform.to_homogeneous().into(),
+				                               color: color.into(),
+			                               })?
+			               .draw_indexed(self.indices.len() as u32,
+			                             1,
+			                             0,
+			                             0,
+			                             0)?;
+		}
 		
 		Ok(())
 	}

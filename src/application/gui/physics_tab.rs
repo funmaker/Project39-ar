@@ -54,7 +54,7 @@ pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Applica
 		ui.highlight_indent(SelectionLevel::selected());
 	}
 	CollapsingHeader::new(format!("Rigid Bodies ({})", physics.bodies.len()))
-		.id_source("Rigid Bodies")
+		.id_salt("Rigid Bodies")
 		.open(rb_sel.then_some(true))
 		.show(ui, |ui| {
 			ui.reset_style();
@@ -71,7 +71,7 @@ pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Applica
 		ui.highlight_indent(SelectionLevel::selected());
 	}
 	CollapsingHeader::new(format!("Colliders ({})", physics.colliders.len()))
-		.id_source("Colliders")
+		.id_salt("Colliders")
 		.open(col_sel.then_some(true))
 		.show(ui, |ui| {
 			for (handle, col) in physics.all_colliders_mut() {
@@ -86,7 +86,7 @@ pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Applica
 		ui.highlight_indent(SelectionLevel::selected());
 	}
 	CollapsingHeader::new(format!("Joints ({})", physics.impulse_joints.len()))
-		.id_source("Joints")
+		.id_salt("Joints")
 		.open(ij_sel.then_some(true))
 		.show(ui, |ui| {
 			for (handle, joint) in physics.impulse_joints.iter_mut() {
