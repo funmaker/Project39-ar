@@ -88,12 +88,10 @@ pub fn ragdoll(ui: &mut Ui, selected: Option<usize>, miku: &Miku, application: &
 		painter.rect_filled(rect, half_height * 0.0125, color);
 	};
 	
-	part(BodyPart::Abdomen, -0.10, -0.40,  0.10, -0.10);
 	part(BodyPart::Torso, -0.15, -0.60,  0.15, -0.45);
-	part(BodyPart::Hip, -0.15, -0.05,  0.15,  0.10);
+	part(BodyPart::Pelvis, -0.15, -0.05,  0.15,  0.10);
 	
 	part(BodyPart::Head, -0.10, -0.95,  0.10, -0.75);
-	part(BodyPart::Neck, -0.05, -0.70,  0.05, -0.65);
 	
 	part(BodyPart::RightArm, -0.25, -0.60, -0.20, -0.25);
 	part(BodyPart::RightForearm, -0.25, -0.20, -0.20,  0.15);

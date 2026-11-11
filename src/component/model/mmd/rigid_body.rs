@@ -36,12 +36,12 @@ impl MMDRigidBody {
 }
 
 impl Component for MMDRigidBody {
-	fn tick(&self, entity: &Entity, application: &Application, _delta_time: Duration) -> Result<()> {
+	fn tick(&self, _entity: &Entity, _application: &Application, _delta_time: Duration) -> Result<()> {
 		
 		// TODO: investigate unintended sleeps?
-		if let Some(rb) = application.physics.borrow_mut().bodies.get_mut(entity.rigid_body) {
-			rb.wake_up(true);
-		}
+		// if let Some(rb) = application.physics.borrow_mut().bodies.get_mut(entity.rigid_body) {
+		// 	rb.wake_up(true);
+		// }
 		
 		Ok(())
 	}

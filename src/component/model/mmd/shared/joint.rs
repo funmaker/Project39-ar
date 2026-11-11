@@ -1,4 +1,4 @@
-use crate::math::{Isometry3, Vec3};
+use crate::math::{Isometry3, Vec2, Vec3};
 use super::super::BodyPart;
 
 
@@ -18,6 +18,7 @@ pub struct JointDesc {
 	pub position_spring: Vec3,
 	pub rotation_spring: Vec3,
 	pub body_part: Option<BodyPart>,
+	pub cone_twist: Option<ConeTwistDesc>,
 }
 
 impl JointDesc {
@@ -32,7 +33,8 @@ impl JointDesc {
 	           rotation_max: Vec3,
 	           position_spring: Vec3,
 	           rotation_spring: Vec3,
-	           body_part: Option<BodyPart>) -> Self {
+	           body_part: Option<BodyPart>,
+	           cone_twist: Option<ConeTwistDesc>) -> Self {
 		JointDesc {
 			name: name.into(),
 			joint_type,
@@ -46,6 +48,35 @@ impl JointDesc {
 			position_spring,
 			rotation_spring,
 			body_part,
+			cone_twist,
 		}
+	}
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ConeTwistDesc {
+	pub swing: f32,
+	pub twist: (f32, f32),
+	pub bias: Vec2,
+}
+
+impl ConeTwistDesc {
+	pub fn from_rotation_limits(min: Vec3, max: Vec3) -> Self {
+		let swing = ((max.x - min.x) + (max.y - min.y)) / 4.0;
+		ConeTwistDesc {
+			swing,
+			twist: (min.z, max.z),
+			bias: vector![
+				(min.x + max.x) / 2.0,
+				(min.y + max.y) / 2.0,
+			],
+		}
+	}
+	
+	pub fn rotation_limits(self) -> (Vec3, Vec3) {
+		(
+			vector![self.bias.x - self.swing, self.bias.y - self.swing, self.twist.0],
+			vector![self.bias.x + self.swing, self.bias.y + self.swing, self.twist.1],
+		)
 	}
 }

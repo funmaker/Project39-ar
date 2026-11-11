@@ -18,7 +18,7 @@ use super::Vertex;
 pub use bone::{BoneDesc, BoneConnection};
 pub use builder::MMDModelSharedBuilder;
 pub use collider::ColliderDesc;
-pub use joint::JointDesc;
+pub use joint::{JointDesc, ConeTwistDesc};
 pub use sub_mesh::{MaterialInfo, SubMesh, SubMeshDesc};
 
 

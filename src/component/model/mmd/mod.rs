@@ -255,7 +255,7 @@ impl Component for MMDModel {
 			rb.add_component(ColliderComponent::new(collider));
 		}
 		
-		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Hip), Isometry3::identity(), ComponentRef::null(), self.as_cref())));
+		state.rigid_bodies.push(entity.add_component(MMDRigidBody::new(0, Some(BodyPart::Pelvis), Isometry3::identity(), ComponentRef::null(), self.as_cref())));
 		
 		for desc in self.shared.joints.iter() {
 			let (bone_a, rb_a) = state.bone_ancestors(self.shared.colliders[desc.collider_a].bone)

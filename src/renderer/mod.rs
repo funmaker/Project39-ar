@@ -23,7 +23,6 @@ use vulkano::pipeline::graphics::viewport::Viewport;
 use vulkano::render_pass::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, Framebuffer, FramebufferCreateInfo, RenderPass, RenderPassCreateInfo, SubpassDescription};
 use vulkano::swapchain::{CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo};
 use vulkano::sync::future::GpuFuture;
-use winit::event_loop::ActiveEventLoop;
 
 pub mod assets_manager;
 pub mod context;

@@ -21,8 +21,8 @@ use crate::renderer::Renderer;
 use crate::renderer::assets_manager::{AssetKey, AssetsManager, TomlAsset};
 use crate::utils::PatternMatcher;
 use super::{Vertex, BodyPart};
-use super::overrides::{MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
-use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, JointDesc, ColliderDesc};
+use super::overrides::{ConeTwist, MMDConfig, MMDJointOverride, MMDRigidBodyOverride};
+use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, JointDesc, ColliderDesc, ConeTwistDesc};
 
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
@@ -280,27 +280,32 @@ impl AssetKey for PmxAsset {
 			             * Rot3::from_axis_angle(&Vec3::x_axis(), -rigid_body.shape_rotation.x)
 			             * Rot3::from_axis_angle(&Vec3::z_axis(),  rigid_body.shape_rotation.z);
 			let position = Isometry3::from_parts(translation.into(), rotation);
+			let size = rigid_body.shape_size * MMD_UNIT_SIZE;
 			
 			let volume;
 			let collider;
 			match rigid_body.shape {
 				MMDShapeType::Sphere => {
-					volume = 4.0 / 3.0 * PI * rigid_body.shape_size.x;
-					collider = ColliderBuilder::new(ColliderShape::ball(rigid_body.shape_size.x * MMD_UNIT_SIZE))
+					volume = 4.0 / 3.0 * PI * size.x * size.x * size.x;
+					collider = ColliderBuilder::new(ColliderShape::ball(size.x))
 				},
 				MMDShapeType::Box => {
-					volume = rigid_body.shape_size.x / rigid_body.shape_size.y / rigid_body.shape_size.z;
-					collider = ColliderBuilder::new(ColliderShape::cuboid(rigid_body.shape_size.x * MMD_UNIT_SIZE,
-					                                                      rigid_body.shape_size.y * MMD_UNIT_SIZE,
-					                                                      rigid_body.shape_size.z * MMD_UNIT_SIZE))
+					volume = 8.0 * size.x * size.y * size.z;
+					collider = ColliderBuilder::new(ColliderShape::cuboid(size.x, size.y, size.z))
 				},
 				MMDShapeType::Capsule => {
-					volume = 4.0 / 3.0 * PI * rigid_body.shape_size.y
-					       + rigid_body.shape_size.x * rigid_body.shape_size.y * rigid_body.shape_size.y * PI;
-					collider = ColliderBuilder::new(ColliderShape::capsule(point![0.0, -rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0].into(),
-					                                                       point![0.0,  rigid_body.shape_size.y * MMD_UNIT_SIZE / 2.0, 0.0].into(),
-					                                                       rigid_body.shape_size.x * MMD_UNIT_SIZE))
+					volume = PI * size.x * size.x * size.y
+					       + 4.0 / 3.0 * PI * size.x * size.x * size.x;
+					collider = ColliderBuilder::new(ColliderShape::capsule(point![0.0, -size.y / 2.0, 0.0].into(),
+					                                                       point![0.0,  size.y / 2.0, 0.0].into(),
+					                                                       size.x))
 				},
+			};
+			
+			let density = if volume.is_finite() && volume > 0.0 {
+				rigid_body.mass / volume
+			} else {
+				0.0
 			};
 			
 			let collider = collider.position(position.into())
@@ -309,7 +314,7 @@ impl AssetKey for PmxAsset {
 				                       Group::from(0xFFFF0000 | rigid_body.collision_mask as u32),
 				                       InteractionTestMode::And,
 			                       ))
-			                       .density(rigid_body.mass / volume)
+			                       .density(density)
 			                       .build();
 			
 			model.add_collider(ColliderDesc::new(name,
@@ -379,10 +384,30 @@ impl AssetKey for PmxAsset {
 			             * Rot3::from_axis_angle(&Vec3::x_axis(), -joint.rotation.x)
 			             * Rot3::from_axis_angle(&Vec3::z_axis(),  joint.rotation.z);
 			let position = Isometry3::from_parts(translation.into(), rotation);
-			let position_min = joint.position_min.from_mmd_scale();
-			let position_max = joint.position_max.from_mmd_scale();
-			let rotation_min = vector!(joint.rotation_min.x, -joint.rotation_max.y, -joint.rotation_max.z);
-			let rotation_max = vector!(joint.rotation_max.x, -joint.rotation_min.y, -joint.rotation_min.z);
+			let position_min = vector!(joint.position_min.x,  joint.position_min.y, -joint.position_max.z) * MMD_UNIT_SIZE;
+			let position_max = vector!(joint.position_max.x,  joint.position_max.y, -joint.position_min.z) * MMD_UNIT_SIZE;
+			let rotation_min = vector!(-joint.rotation_max.x, -joint.rotation_max.y, joint.rotation_min.z);
+			let rotation_max = vector!(-joint.rotation_min.x, -joint.rotation_min.y, joint.rotation_max.z);
+			
+			let cone_twist = joint.cone_twist.map(|cone_twist| {
+				let default_swing = ((rotation_max.x - rotation_min.x)
+				                  +  (rotation_max.y - rotation_min.y)) / 4.0;
+				
+				let swing = cone_twist.swing.map_or(default_swing, f32::to_radians);
+				
+				let twist = cone_twist.twist
+				                      .map(|twist| (twist.0.to_radians(), twist.1.to_radians()))
+				                      .unwrap_or_else(|| (rotation_min.z, rotation_max.z));
+				
+				let bias = cone_twist.bias
+				                     .map(|bias| vector![-bias.x.to_radians(), -bias.y.to_radians()])
+				                     .unwrap_or_else(|| vector![
+					                     (rotation_min.x + rotation_max.x) / 2.0,
+					                     (rotation_min.y + rotation_max.y) / 2.0,
+				                     ]);
+				
+				ConeTwistDesc { swing, twist, bias }
+			});
 			
 			model.add_joint(JointDesc::new(name,
 			                               joint.joint_type,
@@ -395,7 +420,8 @@ impl AssetKey for PmxAsset {
 			                               rotation_max,
 			                               joint.position_spring,
 			                               joint.rotation_spring,
-			                               joint.body_part));
+			                               joint.body_part,
+			                               cone_twist));
 		}
 		
 		if let Some(dump_config) = &dump_config {
@@ -477,6 +503,7 @@ impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 pub struct JointEx<C: mmd::Config> {
 	joint: Joint<C>,
 	pub body_part: Option<BodyPart>,
+	pub cone_twist: Option<ConeTwist>,
 }
 
 impl<C: mmd::Config> Deref for JointEx<C> {
@@ -498,6 +525,7 @@ impl<C: mmd::Config> From<Joint<C>> for JointEx<C> {
 		Self {
 			joint,
 			body_part: None,
+			cone_twist: None,
 		}
 	}
 }

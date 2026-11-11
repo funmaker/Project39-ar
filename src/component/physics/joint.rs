@@ -2,12 +2,13 @@ use std::cell::{Cell, RefCell};
 use std::f32::consts::PI;
 use anyhow::Result;
 use egui::{Button, Color32, DragValue, RichText, Ui};
-use nalgebra::{Quaternion, Unit};
-use rapier3d::prelude::*;
+use nalgebra::Quaternion;
+use rapier3d::dynamics::{GenericJoint, ImpulseJoint, ImpulseJointHandle, JointAxesMask, JointAxis};
+use rapier3d::pipeline::PhysicsWorld;
 
 use crate::application::{Entity, Application, EntityRef};
-use crate::component::model::mmd::shared::JointDesc;
-use crate::math::{Isometry3, Rot3, Vec3};
+use crate::component::model::mmd::shared::{ConeTwistDesc, JointDesc};
+use crate::math::{from_euler, Isometry3, Rot3};
 use crate::utils::{get_user_data, ExUi};
 use super::super::{Component, ComponentBase, ComponentInner};
 
@@ -125,8 +126,30 @@ impl MMDDesc {
 	              entity2: &Entity,
 	              application: &Application,
 	              ui: &mut Ui) {
+		let mut offset_changed = false;
+		let mut limits_changed = false;
+		
+		let is_cone_twist = self.joint_desc.cone_twist.is_some();
+		ui.label("Model");
+		ui.horizontal(|ui| {
+			if ui.selectable_label(!is_cone_twist, "6DoF").clicked()
+			&& let Some(cone_twist) = self.joint_desc.cone_twist.take() {
+				(self.joint_desc.rotation_min, self.joint_desc.rotation_max) = cone_twist.rotation_limits();
+				limits_changed = true;
+			}
+			
+			if ui.selectable_label(is_cone_twist, "ConeTwist").clicked() && !is_cone_twist {
+				self.joint_desc.cone_twist = Some(ConeTwistDesc::from_rotation_limits(self.joint_desc.rotation_min, self.joint_desc.rotation_max));
+				limits_changed = true;
+			}
+		});
+		ui.end_row();
+		
 		let frame1 = *entity1.state().position * self.local_frame1;
-		let frame2 = *entity2.state().position * self.local_frame2;
+		let mut frame2 = *entity2.state().position * self.local_frame2;
+		if let Some(cone_twist) = self.joint_desc.cone_twist {
+			frame2 = frame2 * from_euler(cone_twist.bias.x, cone_twist.bias.y, 0.0);
+		}
 		
 		ui.label("");
 		ui.columns(6, |ui| {
@@ -149,9 +172,8 @@ impl MMDDesc {
 			ang_err.y,
 			ang_err.z,
 		];
-		let mut offset_changed = false;
-		let mut limits_changed = false;
 		
+		// limit_min is the bias for coupled/cone-axis
 		let mut inspect_axis = |axis: JointAxis, limit_min: &mut f32, limit_max: &mut f32, free_limit: f32| {
 			let free = !joint.data.locked_axes.contains(axis.into()) && !joint.data.limit_axes.contains(axis.into());
 			let locked = joint.data.locked_axes.contains(axis.into());
@@ -162,51 +184,87 @@ impl MMDDesc {
 				let angle = JointAxesMask::ANG_AXES.contains(axis.into());
 				let scale = if angle { 180.0 / PI } else { 1.0 };
 				
-				let mut min = *limit_min * scale;
-				let mut cur = offsets[axis as usize] * scale;
-				let mut max = *limit_max * scale;
-				let mut bias = (min + max) / 2.0;
-				
-				if ui[0].add(DragValue::new(&mut min).speed(0.01 * scale)).changed() {
-					*limit_min = min / scale;
-					limits_changed = true;
-				}
-				
-				if ui[1].add(DragValue::new(&mut cur).speed(0.01 * scale)).changed() {
-					if cur < min && !free { cur = min; }
-					if cur > max && !free { cur = max; }
-					offsets[axis as usize] = cur / scale;
-					offset_changed = true;
-				}
-				
-				if ui[2].add(DragValue::new(&mut max).speed(0.01 * scale)).changed() {
-					*limit_max = max / scale;
-					limits_changed = true;
-				}
-				
-				if ui[3].add(DragValue::new(&mut bias).speed(0.01 * scale)).changed() {
-					let spread = max - min;
-					min = bias - spread / 2.0;
-					max = bias + spread / 2.0;
-					*limit_min = min / scale;
-					*limit_max = max / scale;
-					limits_changed = true;
-				}
-				
 				fn btn_col(active: bool) -> Color32 {
 					if active { Color32::LIGHT_BLUE } else { Color32::GRAY }
 				}
 				
-				if ui[4].add(Button::new(RichText::new("Free").color(btn_col(free)))).clicked() {
-					*limit_min = -free_limit / 2.0;
-					*limit_max = free_limit / 2.0;
-					limits_changed = true;
-				}
-				
-				if ui[5].add(Button::new(RichText::new("Lock").color(btn_col(locked)))).clicked() {
-					*limit_min = bias / scale;
-					*limit_max = bias / scale;
-					limits_changed = true;
+				if coupled {
+					let limit_bias = limit_min;
+					let mut cur = offsets[axis as usize] * scale;
+					let mut max = *limit_max * scale;
+					let mut bias = *limit_bias * scale;
+					
+					ui[0].add(Button::new("---"));
+					
+					if ui[1].add(DragValue::new(&mut cur).speed(0.01 * scale)).changed() {
+						if cur < -max && !free { cur = -max; }
+						if cur > max && !free { cur = max; }
+						offsets[axis as usize] = cur / scale;
+						offset_changed = true;
+					}
+					
+					if ui[2].add(DragValue::new(&mut max).speed(0.01 * scale)).changed() {
+						*limit_max = max / scale;
+						limits_changed = true;
+					}
+					
+					if ui[3].add(DragValue::new(&mut bias).speed(0.01 * scale)).changed() {
+						*limit_bias = bias / scale;
+						limits_changed = true;
+					}
+					
+					if ui[4].add(Button::new(RichText::new("Free").color(btn_col(free)))).clicked() {
+						*limit_max = free_limit;
+						limits_changed = true;
+					}
+					
+					if ui[5].add(Button::new(RichText::new("Lock").color(btn_col(locked)))).clicked() {
+						*limit_max = 0.0;
+						limits_changed = true;
+					}
+				} else {
+					let mut min = *limit_min * scale;
+					let mut cur = offsets[axis as usize] * scale;
+					let mut max = *limit_max * scale;
+					let mut bias = (min + max) / 2.0;
+					
+					if ui[0].add(DragValue::new(&mut min).speed(0.01 * scale)).changed() {
+						*limit_min = min / scale;
+						limits_changed = true;
+					}
+					
+					if ui[1].add(DragValue::new(&mut cur).speed(0.01 * scale)).changed() {
+						if cur < min && !free { cur = min; }
+						if cur > max && !free { cur = max; }
+						offsets[axis as usize] = cur / scale;
+						offset_changed = true;
+					}
+					
+					if ui[2].add(DragValue::new(&mut max).speed(0.01 * scale)).changed() {
+						*limit_max = max / scale;
+						limits_changed = true;
+					}
+					
+					if ui[3].add(DragValue::new(&mut bias).speed(0.01 * scale)).changed() {
+						let spread = max - min;
+						min = bias - spread / 2.0;
+						max = bias + spread / 2.0;
+						*limit_min = min / scale;
+						*limit_max = max / scale;
+						limits_changed = true;
+					}
+					
+					if ui[4].add(Button::new(RichText::new("Free").color(btn_col(free)))).clicked() {
+						*limit_min = -free_limit / 2.0;
+						*limit_max = free_limit / 2.0;
+						limits_changed = true;
+					}
+					
+					if ui[5].add(Button::new(RichText::new("Lock").color(btn_col(locked)))).clicked() {
+						*limit_min = bias / scale;
+						*limit_max = bias / scale;
+						limits_changed = true;
+					}
 				}
 			});
 			ui.end_row();
@@ -216,9 +274,15 @@ impl MMDDesc {
 		inspect_axis(JointAxis::LinY, &mut self.joint_desc.position_min.y, &mut self.joint_desc.position_max.y, 100.0);
 		inspect_axis(JointAxis::LinZ, &mut self.joint_desc.position_min.z, &mut self.joint_desc.position_max.z, 100.0);
 		
-		inspect_axis(JointAxis::AngX, &mut self.joint_desc.rotation_min.x, &mut self.joint_desc.rotation_max.x, PI * 2.0);
-		inspect_axis(JointAxis::AngY, &mut self.joint_desc.rotation_min.y, &mut self.joint_desc.rotation_max.y, PI * 2.0);
-		inspect_axis(JointAxis::AngZ, &mut self.joint_desc.rotation_min.z, &mut self.joint_desc.rotation_max.z, PI * 2.0);
+		if let Some(cone) = self.joint_desc.cone_twist.as_mut() {
+			inspect_axis(JointAxis::AngX, &mut cone.bias.x, &mut cone.swing, PI);
+			inspect_axis(JointAxis::AngY, &mut cone.bias.y, &mut cone.swing, PI);
+			inspect_axis(JointAxis::AngZ, &mut cone.twist.0, &mut cone.twist.1, PI * 2.0);
+		} else {
+			inspect_axis(JointAxis::AngX, &mut self.joint_desc.rotation_min.x, &mut self.joint_desc.rotation_max.x, PI * 2.0);
+			inspect_axis(JointAxis::AngY, &mut self.joint_desc.rotation_min.y, &mut self.joint_desc.rotation_max.y, PI * 2.0);
+			inspect_axis(JointAxis::AngZ, &mut self.joint_desc.rotation_min.z, &mut self.joint_desc.rotation_max.z, PI * 2.0);
+		}
 		
 		if offset_changed {
 			let i = (offsets[3] / 2.0).sin() * ang_sgn;
@@ -243,69 +307,44 @@ impl MMDDesc {
 		
 		if limits_changed {
 			joint.data = self.joint();
+			entity1.state_mut().position.mark_mut();
 		}
 	}
 	
 	fn joint(&self) -> GenericJoint {
 		let mut joint = GenericJoint::default();
 		
-		joint.set_local_frame1(self.local_frame1.into()).set_local_frame2(self.local_frame2.into());
+		joint.set_local_frame1(self.local_frame1.into())
+		     .set_local_frame2(self.local_frame2.into())
+		     .set_contacts_enabled(false);
 		
 		fn limit(joint: &mut GenericJoint, axis: JointAxis, min: f32, max: f32, free_limit: f32) {
 			if max - min >= free_limit || min > max {
 				// free
 			} else if min != max {
 				joint.set_limits(axis, [min, max]);
-				joint.set_motor(axis, 0.0, 0.0, 0.1, 0.5);
+				// Need rapier coupled limited joints
+				// joint.set_motor(axis, 0.0, 0.0, 0.1, 0.5);
 			} else {
 				joint.lock_axes(axis.into());
 			}
-		}
-		
-		fn couple(joint: &mut GenericJoint, axis1: JointAxis, axis2: JointAxis, angle_axis_1: Unit<Vec3>, angle_axis_2: Unit<Vec3>) {
-			let limit1 = joint.limits(axis1).unwrap();
-			let limit2 = joint.limits(axis2).unwrap();
-			let local_frame2 = Isometry3::from(joint.local_frame2);
-			let bias1 = (limit1.min + limit1.max) / 2.0;
-			let bias2 = (limit2.min + limit2.max) / 2.0;
-			
-			let avg = (limit1.max - bias1 + limit2.max - bias2) / 2.0;
-			
-			joint.set_limits(axis1, [0.0, avg]);
-			joint.set_limits(axis2, [0.0, avg]);
-			
-			joint.coupled_axes |= axis1.into();
-			joint.coupled_axes |= axis2.into();
-			
-			joint.local_frame2 = (local_frame2 * Rot3::from_axis_angle(&angle_axis_1, -bias1) * Rot3::from_axis_angle(&angle_axis_2, -bias2)).into();
 		}
 		
 		limit(&mut joint, JointAxis::LinX, self.joint_desc.position_min.x, self.joint_desc.position_max.x, 100.0);
 		limit(&mut joint, JointAxis::LinY, self.joint_desc.position_min.y, self.joint_desc.position_max.y, 100.0);
 		limit(&mut joint, JointAxis::LinZ, self.joint_desc.position_min.z, self.joint_desc.position_max.z, 100.0);
 		
-		limit(&mut joint, JointAxis::AngX, self.joint_desc.rotation_min.x, self.joint_desc.rotation_max.x, PI * 2.0);
-		limit(&mut joint, JointAxis::AngY, self.joint_desc.rotation_min.y, self.joint_desc.rotation_max.y, PI * 2.0);
-		limit(&mut joint, JointAxis::AngZ, self.joint_desc.rotation_min.z, self.joint_desc.rotation_max.z, PI * 2.0);
-		
-		match (joint.limits(JointAxis::AngX), joint.limits(JointAxis::AngY), joint.limits(JointAxis::AngZ)) {
-			(Some(x), Some(y), Some(z)) => {
-				let dx = x.max - x.min;
-				let dy = y.max - y.min;
-				let dz = z.max - z.min;
-				let dxy = f32::abs(dx - dy);
-				let dyz = f32::abs(dy - dz);
-				let dxz = f32::abs(dx - dz);
-				let min = dxy.min(dyz).min(dxz);
-				
-				if min == dxy { couple(&mut joint, JointAxis::AngX, JointAxis::AngY, Vec3::x_axis(), Vec3::y_axis()); }
-				else if min == dyz { couple(&mut joint, JointAxis::AngY, JointAxis::AngZ, Vec3::y_axis(), Vec3::z_axis()); }
-				else if min == dxz { couple(&mut joint, JointAxis::AngX, JointAxis::AngZ, Vec3::x_axis(), Vec3::z_axis()); }
-			},
-			(Some(_), Some(_), None) => couple(&mut joint, JointAxis::AngX, JointAxis::AngY, Vec3::x_axis(), Vec3::y_axis()),
-			(None, Some(_), Some(_)) => couple(&mut joint, JointAxis::AngY, JointAxis::AngZ, Vec3::y_axis(), Vec3::z_axis()),
-			(Some(_), None, Some(_)) => couple(&mut joint, JointAxis::AngX, JointAxis::AngZ, Vec3::x_axis(), Vec3::z_axis()),
-			_ => {},
+		if let Some(cone) = &self.joint_desc.cone_twist {
+			joint.local_frame2 = (self.local_frame2 * from_euler(cone.bias.x, cone.bias.y, 0.0)).into();
+			
+			limit(&mut joint, JointAxis::AngX, 0.0, cone.swing, PI);
+			limit(&mut joint, JointAxis::AngY, 0.0, cone.swing, PI);
+			limit(&mut joint, JointAxis::AngZ, cone.twist.0, cone.twist.1, PI * 2.0);
+			joint.coupled_axes |= JointAxesMask::ANG_X | JointAxesMask::ANG_Y;
+		} else {
+			limit(&mut joint, JointAxis::AngX, self.joint_desc.rotation_min.x, self.joint_desc.rotation_max.x, PI * 2.0);
+			limit(&mut joint, JointAxis::AngY, self.joint_desc.rotation_min.y, self.joint_desc.rotation_max.y, PI * 2.0);
+			limit(&mut joint, JointAxis::AngZ, self.joint_desc.rotation_min.z, self.joint_desc.rotation_max.z, PI * 2.0);
 		}
 		
 		joint

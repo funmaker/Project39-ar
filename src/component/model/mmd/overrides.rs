@@ -5,7 +5,7 @@ use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::math::{Vec3, PI};
+use crate::math::{Vec2, Vec3, PI};
 use super::asset::{MMDIndexConfig, JointEx};
 
 
@@ -105,10 +105,8 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyPart {
-	Hip,
-	Abdomen,
+	Pelvis,
 	Torso,
-	Neck,
 	Head,
 	LeftThigh,
 	RightThigh,
@@ -142,7 +140,15 @@ pub struct MMDJointOverride {
 	pub rotation_max: Option<Vec3>,
 	pub position_spring: Option<Vec3>,
 	pub rotation_spring: Option<Vec3>,
+	pub cone_twist: Option<ConeTwist>,
 	pub body_part: Option<BodyPart>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Copy, Debug)]
+pub struct ConeTwist {
+	pub swing: Option<f32>,
+	pub twist: Option<(f32, f32)>,
+	pub bias: Option<Vec2>,
 }
 
 impl MMDJointOverride {
@@ -163,6 +169,7 @@ impl MMDJointOverride {
 			rotation_max: Some(joint.rotation_max / PI * 180.0),
 			position_spring: Some(joint.position_spring),
 			rotation_spring: Some(joint.rotation_spring),
+			cone_twist: joint.cone_twist,
 			body_part: joint.body_part,
 		}
 	}
@@ -181,6 +188,7 @@ impl MMDJointOverride {
 		if let Some(value) = self.position_spring { joint.position_spring = value; }
 		if let Some(value) = self.rotation_spring { joint.rotation_spring = value; }
 		if let Some(value) = self.body_part       { joint.body_part = Some(value); }
+		if let Some(value) = self.cone_twist      { joint.cone_twist = Some(value); }
 	}
 	
 	pub fn normalize(&mut self, bones: &[Bone<MMDIndexConfig>], rigid_bodies: &[RigidBody<MMDIndexConfig>]) -> Result<(), MMDOverrideError> {
