@@ -357,6 +357,8 @@ impl Component for MMDModel {
 	}
 	
 	fn before_render(&self, entity: &Entity, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
+		if !self.loaded() { return Ok(()) }
+		
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {

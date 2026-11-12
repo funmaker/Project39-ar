@@ -1,8 +1,6 @@
 use std::sync::Arc;
-use std::time::Duration;
 use anyhow::Result;
 use vulkano::sync::future::{FenceSignalFuture, GpuFuture};
-use vulkano::{Validated, VulkanError};
 
 #[derive(Clone)]
 pub struct FenceCheck(Arc<FenceSignalFuture<Box<dyn GpuFuture>>>);
@@ -14,9 +12,13 @@ impl FenceCheck {
 	}
 	
 	pub fn check(&self) -> bool {
-		match self.0.wait(Some(Duration::new(0, 0))) {
-			Err(Validated::Error(VulkanError::Timeout)) => false,
-			Ok(()) => true,
+		// TODO: https://github.com/vulkano-rs/vulkano/issues/2854
+		match self.0.is_signaled() {
+			Ok(false) => false,
+			Ok(true) => match self.0.wait(None) {
+				Ok(()) => true,
+				Err(err) => panic!("Flushing Error: {}", err),
+			},
 			Err(err) => panic!("Flushing Error: {}", err),
 		}
 	}
