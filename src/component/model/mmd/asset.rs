@@ -161,7 +161,7 @@ impl AssetKey for PmxAsset {
 		let bone_defs = bones_reader.iter()
 		                            .collect::<std::result::Result<Vec<mmd::Bone<MMDIndexConfig>>, _>>()?;
 		
-		for def in bone_defs.iter() {
+		for (bone_id, def) in bone_defs.iter().enumerate() {
 			let name = if def.universal_name.len() > 0 {
 				&def.universal_name
 			} else if let Some(translated) = debug::translate(&def.local_name) {
@@ -192,7 +192,12 @@ impl AssetKey for PmxAsset {
 			}
 			
 			let connection = match def.connection {
-				Connection::Index(id) if id < 0 => BoneConnection::None,
+				Connection::Index(id) if id < 0 => {
+					match bone_defs.iter().position(|child| child.parent == bone_id as i32) {
+						Some(child) => BoneConnection::Bone(child),
+						None => BoneConnection::None,
+					}
+				},
 				Connection::Index(id) => BoneConnection::Bone(id as usize),
 				Connection::Position(pos) => BoneConnection::Offset(pos.from_mmd()),
 			};

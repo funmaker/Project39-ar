@@ -9,19 +9,34 @@ collision_mask = 0b1011111011111100
 
 
 [[joints]]
+name = 'Torso'
+body_part = 'torso'
+using_bone = 6
+
+[joints.cone_twist]
+swing = 20.0
+twist = [-20.0, 20.0]
+bias = [0.0, 0.0]
+
+[[joints]]
+name = 'Head'
+body_part = 'head'
+using_bone = 8
+
+[joints.cone_twist]
+swing = 40.0
+twist = [-40.0, 40.0]
+bias = [0.0, 0.0]
+
+[[joints]]
 name = 'Arm Left'
 body_part = 'left_arm'
 using_bone = 38
-rotation_min = [
-    -30,
-    -30,
-    -30,
-]
-rotation_max = [
-    60,
-    30,
-    60,
-]
+
+[joints.cone_twist]
+swing = 100.0
+twist = [-70.0, 10.0]
+bias = [-40.0, 20.0]
 
 [[joints]]
 name = 'Arm Right'
@@ -29,66 +44,94 @@ body_part = 'right_arm'
 using_bone = 43
 
 [joints.cone_twist]
-swing = 90.0
-twist = [-30.0, 30.0]
-bias = [-50.0, -25.0]
+swing = 100.0
+twist = [-70.0, 10.0]
+bias = [-40.0, -20.0]
 
 [[joints]]
 name = 'Forearm Left'
 body_part = 'left_forearm'
 using_bone = 48
-rotation_min = [
-     0,
-    -30,
-    -60,
-]
-rotation_max = [
-    0,
-    30,
-    0,
-]
+rotation_min = [0.0, -140.0, 0.0]
+rotation_max = [0.0, 0.0, 0.0]
 
 [[joints]]
-name = 'Forearm Rright'
+name = 'Forearm Right'
 body_part = 'right_forearm'
 using_bone = 53
-rotation_min = [
-     0,
-    -30,
-     0,
-]
-rotation_max = [
-    0,
-    30,
-    60,
-]
+rotation_min = [0.0, 0.0, 0.0]
+rotation_max = [0.0, 140.0, 0.0]
 
 [[joints]]
 name = 'Hand Left'
 body_part = 'left_hand'
 using_bone = 58
-rotation_min = [
-    -30,
-     0,
-    -30,
-]
-rotation_max = [
-    30,
-    0,
-    30,
-]
+
+[joints.cone_twist]
+swing = 30.0
+twist = [-45.0, 45.0]
+bias = [0.0, 0.0]
 
 [[joints]]
 name = 'Hand Right'
 body_part = 'right_hand'
 using_bone = 60
-rotation_min = [
-    -30,
-     0,
-    -30,
-]
-rotation_max = [
-    30,
-    0,
-    30,
-]
+
+[joints.cone_twist]
+swing = 30.0
+twist = [-45.0, 45.0]
+bias = [0.0, 0.0]
+
+[[joints]]
+name = 'Thigh Left'
+body_part = 'left_thigh'
+using_bone = 176
+
+[joints.cone_twist]
+swing = 50.0
+twist = [-30.0, 30.0]
+bias = [20.0, -40.0]
+
+[[joints]]
+name = 'Thigh Right'
+body_part = 'right_thigh'
+using_bone = 172
+
+[joints.cone_twist]
+swing = 50.0
+twist = [-30.0, 30.0]
+bias = [20.0, 40.0]
+
+[[joints]]
+name = 'Calf Left'
+body_part = 'left_calf'
+using_bone = 177
+rotation_min = [-10.0, 0.0, 0.0]
+rotation_max = [135.0, 0.0, 0.0]
+
+[[joints]]
+name = 'Calf Right'
+body_part = 'right_calf'
+using_bone = 173
+rotation_min = [-10.0, 0.0, 0.0]
+rotation_max = [135.0, 0.0, 0.0]
+
+[[joints]]
+name = 'Foot Left'
+body_part = 'left_foot'
+using_bone = 178
+
+[joints.cone_twist]
+swing = 40.0
+twist = [-20.0, 20.0]
+bias = [0.0, 0.0]
+
+[[joints]]
+name = 'Foot Right'
+body_part = 'right_foot'
+using_bone = 174
+
+[joints.cone_twist]
+swing = 40.0
+twist = [-20.0, 20.0]
+bias = [0.0, 0.0]

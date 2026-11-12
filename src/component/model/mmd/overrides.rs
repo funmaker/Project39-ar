@@ -203,11 +203,16 @@ impl MMDJointOverride {
 			if self.rotation.is_none() {
 				let offset = match &bone.connection {
 					Connection::Index(con_id) => {
-						if *con_id < 0 { return Err(MMDOverrideError::InvalidOffset(bone_id)) }
-						
-						let position = bones.get(*con_id as usize)
-						                    .ok_or(MMDOverrideError::BoneNotFound(*con_id as usize))?
-							.position;
+						let position = if *con_id >= 0 {
+							bones.get(*con_id as usize)
+							     .ok_or(MMDOverrideError::BoneNotFound(*con_id as usize))?
+							     .position
+						} else {
+							bones.iter()
+							     .find(|child| child.parent == bone_id as i32)
+							     .ok_or(MMDOverrideError::InvalidOffset(bone_id))?
+							     .position
+						};
 						
 						position - bone.position
 					},

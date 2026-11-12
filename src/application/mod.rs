@@ -131,6 +131,13 @@ impl Application {
 		};
 		
 		{
+			let mut physics = application.physics.borrow_mut();
+			physics.integration_parameters.num_solver_iterations = 8;
+			physics.integration_parameters.num_internal_stabilization_iterations = 8;
+			physics.integration_parameters.num_internal_pgs_iterations = 8;
+		}
+		
+		{
 			let renderer = &mut application.renderer.borrow_mut();
 			
 			application.add_entity(
