@@ -22,6 +22,17 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 
 			debug_flag_slider(ui, "DebugGizmoSize", 0.0..=2.0, "Gizmo Size");
 			debug_flag_slider(ui, "DebugGizmoFallOff", 0.0..=3.0, "Gizmo Size Fall Off");
+			
+			{
+				let mut params = application.physics_params.borrow_mut();
+				
+				Slider::new(&mut params.dt_mul, 0.0..=2.0).text("Delta Time Multiplier").ui(ui);
+				
+				ui.horizontal(|ui| {
+					ui.toggle_value(&mut params.paused, "Pause");
+					ui.toggle_value(&mut params.step, "Step");
+				});
+			}
 		});
 	
 	ui.separator();

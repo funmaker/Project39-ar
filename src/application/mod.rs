@@ -55,16 +55,17 @@ pub use entity::{Entity, EntityRef};
 pub use input::{Hand, Input, Key, MouseButton};
 pub use gui::{GuiSelection, GuiSelections, select_button};
 pub use vr::VR;
+use physics::{PhysicsDebug, PhysicsParams};
 use bench::Benchmark;
 use eyes::{camera, Eyes};
 use gui::ApplicationGui;
 use window::Window;
-use crate::application::physics::PhysicsDebug;
 
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
 	pub physics: RefCell<PhysicsWorld>,
+	pub physics_params: RefCell<PhysicsParams>,
 	pub vr_poses: WaitPoses,
 	pub pov: EntityRef,
 	pub miku: ComponentRef<Miku>,
@@ -115,6 +116,7 @@ impl Application {
 			vr,
 			renderer: RefCell::new(renderer),
 			physics: RefCell::new(PhysicsWorld::new()),
+			physics_params: RefCell::new(PhysicsParams::new()),
 			vr_poses: default_wait_poses(),
 			pov: EntityRef::null(),
 			miku: ComponentRef::null(),
@@ -408,8 +410,14 @@ impl Application {
 				entity.before_physics(&self, &mut physics);
 			}
 			
-			physics.integration_parameters.dt = delta_time.as_secs_f32();
-			physics.step();
+			{
+				let mut params = self.physics_params.borrow_mut();
+				if !params.paused || params.step {
+					physics.integration_parameters.dt = delta_time.as_secs_f32() * params.dt_mul;
+					physics.step();
+					params.step = false;
+				}
+			}
 			
 			for entity in self.dfs_entities() {
 				entity.after_physics(&self, &mut physics);

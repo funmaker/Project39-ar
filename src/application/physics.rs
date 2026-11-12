@@ -7,6 +7,22 @@ use crate::math::{Color, Isometry3, Point3, Rot3, Vec3, PI};
 use crate::utils::{PhysicsEntityEx, PhysicsComponentEx};
 use super::{Application, EntityRef, GuiSelection};
 
+pub struct PhysicsParams {
+	pub dt_mul: f32,
+	pub paused: bool,
+	pub step: bool,
+}
+
+impl PhysicsParams {
+	pub fn new() -> PhysicsParams {
+		PhysicsParams {
+			dt_mul: 1.0,
+			paused: false,
+			step: false,
+		}
+	}
+}
+
 pub trait PhysicsDebug {
 	fn debug_draw(&self, application: &Application);
 }
