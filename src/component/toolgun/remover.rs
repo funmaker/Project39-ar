@@ -7,6 +7,7 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Tool removing the entity it's fired at (except the world).
 pub struct Remover;
 
 impl Remover {

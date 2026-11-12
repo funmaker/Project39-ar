@@ -5,6 +5,7 @@ use crate::application::{Entity, Application};
 use super::{Component, ComponentBase, ComponentInner};
 
 
+/// Minimal component template. Copy this file when creating a new component.
 #[derive(ComponentBase)]
 pub struct Example {
 	#[inner] inner: ComponentInner,

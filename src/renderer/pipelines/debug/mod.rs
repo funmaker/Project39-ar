@@ -31,6 +31,7 @@ mod frag {
 	}
 }
 
+/// Pipeline for debug points and lines, drawn on top of everything.
 pub struct DebugPipeline;
 
 impl PipelineConstructor for DebugPipeline {
@@ -66,6 +67,7 @@ mod tex_frag {
 	}
 }
 
+/// Pipeline for debug text, drawn on top of everything.
 pub struct DebugTexturedPipeline;
 
 impl PipelineConstructor for DebugTexturedPipeline {
@@ -102,6 +104,7 @@ vulkano_shaders::shader! {
 	}
 }
 
+/// Pipeline for debug shapes (boxes, spheres and capsules), drawn on top of everything.
 pub struct DebugShapePipeline;
 
 impl PipelineConstructor for DebugShapePipeline {

@@ -13,11 +13,13 @@ use super::{Component, ComponentBase, ComponentInner};
 use super::model::SimpleModel;
 
 
+/// Draws a colored glowing outline around the entity's `SimpleModel` (eg. to highlight it).
 #[derive(ComponentBase)]
 pub struct Glow {
 	#[inner] inner: ComponentInner,
 	pipeline: Arc<GraphicsPipeline>,
 	color: Cell<Color>,
+	/// Thickness of the outline.
 	size: Cell<f32>,
 }
 

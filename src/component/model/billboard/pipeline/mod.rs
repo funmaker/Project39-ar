@@ -28,6 +28,7 @@ mod frag {
 	}
 }
 
+/// Camera-facing sprite pipeline used by `Billboard`, selecting the texture layer by view angle.
 pub struct FoodPipeline;
 
 impl PipelineConstructor for FoodPipeline {

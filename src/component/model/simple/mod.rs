@@ -21,19 +21,23 @@ use super::VertexIndex;
 pub use asset::ObjAsset;
 
 
+/// Static textured and lit triangle mesh, rendered with the `DefaultPipeline`.
 #[derive(ComponentBase, Clone)]
 pub struct SimpleModel {
+	/// Bounding box of the vertices in model space.
 	#[inner] inner: ComponentInner,
 	aabb: AABB,
 	pipeline: Arc<GraphicsPipeline>,
 	pub vertices: Subbuffer<[Vertex]>,
 	pub indices: IndexSubbuffer,
 	pub set: Arc<DescriptorSet>,
+	/// Signaled once the mesh and texture uploads have finished.
 	pub fence: FenceCheck,
 }
 
 #[allow(dead_code)]
 impl SimpleModel {
+	/// Uploads the mesh and creates the model. The model renders nothing until the upload finishes.
 	pub fn new<VI>(vertices: &[Vertex],
 	               indices: &[VI],
 	               texture: TextureBundle,
@@ -81,6 +85,7 @@ impl SimpleModel {
 		})
 	}
 	
+	/// Returns `true` once the GPU upload has finished.
 	pub fn loaded(&self) -> bool {
 		self.fence.check()
 	}
@@ -89,10 +94,12 @@ impl SimpleModel {
 	// 	Ok(Box::new(self.clone()))
 	// }
 	
+	/// Returns the bounding box of the model in model space.
 	pub fn aabb(&self) -> AABB {
 		self.aabb
 	}
 	
+	/// Draws the model with the given transform and tint color. Does nothing if it's not loaded yet.
 	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<()> {
 		if !self.loaded() { return Ok(()) }
 		

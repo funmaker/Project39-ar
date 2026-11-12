@@ -9,6 +9,7 @@ use super::{MMDModel, Vertex};
 use super::shared::{BoneDesc, BoneConnection, MMDModelShared, SubMeshDesc};
 
 
+/// Builds a procedural test model: a tall box with bend bones, for testing skinning.
 #[allow(dead_code)]
 pub fn test_model(renderer: &mut Renderer) -> MMDModel {
 	let mut vertices = vec![];

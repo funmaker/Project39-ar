@@ -23,6 +23,8 @@ pub use pipeline::Vertex;
 use pipeline::{GimpPipeline, Pc};
 
 
+/// Normal mapped OBJ model that, when the right fire button is pressed, starts juggling in front
+/// of the camera. Multiple models are offset in time by their `"Id"` tag.
 #[derive(ComponentBase, Clone)]
 pub struct GimpModel {
 	#[inner] inner: ComponentInner,
@@ -31,13 +33,17 @@ pub struct GimpModel {
 	pub indices: IndexSubbuffer,
 	pub set: Arc<DescriptorSet>,
 	pub fence: FenceCheck,
+	/// The juggling animation is running.
 	active: Cell<bool>,
+	/// Time within the juggling animation loop.
 	time: Cell<f32>,
+	/// Camera position (with yaw only) when the animation started; the juggling happens relative to it.
 	orientation: Cell<Isometry3>,
 }
 
 #[allow(dead_code)]
 impl GimpModel {
+	/// Uploads the mesh and creates the model.
 	pub fn new<VI>(vertices: &[Vertex],
 	               indices: &[VI],
 	               texture: TextureBundle,
@@ -88,10 +94,12 @@ impl GimpModel {
 		})
 	}
 	
+	/// Returns `true` once the GPU upload has finished.
 	pub fn loaded(&self) -> bool {
 		self.fence.check()
 	}
 	
+	/// Draws the model with the given transform and tint color. Does nothing if it's not loaded yet.
 	pub fn render_impl(&self, transform: Similarity3, color: Color, context: &mut RenderContext) -> Result<()> {
 		if !self.loaded() { return Ok(()) }
 		

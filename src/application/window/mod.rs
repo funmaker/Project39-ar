@@ -31,24 +31,32 @@ use super::Input;
 use gui::WindowGui;
 
 
+/// Horizontal field of view of the window camera, in degrees.
 const FOV: f32 = 110.0;
 
+/// The desktop window. It either mirrors the eyes or renders its own (detached) view, with the
+/// egui GUI on top. Also captures the mouse and keyboard for novr controls.
 pub struct Window {
+	/// Inverse view-projection of the last presented frame, used to cast rays from the cursor.
 	pub inv_proj: Option<StereoProjection>,
 	pub window: Arc<WinitWindow>,
 	last_present: Instant,
 	swapchain: Arc<Swapchain>,
 	swapchain_images: Vec<Arc<Image>>,
+	/// Set when the swapchain is out of date and has to be recreated.
 	swapchain_regen_needed: bool,
 	acquire_image_num: Option<u32>,
 	acquire_future: Option<SwapchainAcquireFuture>,
 	fb: FramebufferBundle,
+	/// Forces rendering of the next frame regardless of the `window_max_fps` limit.
 	render_required: bool,
+	/// Mouse is captured: input goes to the application instead of the GUI.
 	cursor_trapped: bool,
 	gui: WindowGui,
 }
 
 impl Window {
+	/// Creates the swapchain, framebuffer and GUI for the window and centers it on the monitor.
 	pub fn new(window: impl Into<Arc<WinitWindow>>, event_loop: &ActiveEventLoop, renderer: &Renderer) -> Result<Window> {
 		let window = window.into();
 		
@@ -89,6 +97,9 @@ impl Window {
 		})
 	}
 	
+	/// Recreates the swapchain and framebuffers if needed (eg. after a resize).
+	///
+	/// Returns `WindowSwapchainNeedRetry` if the window is minimized.
 	pub fn regen_swapchain(&mut self, renderer: &Renderer) -> Result<()> {
 		if !self.swapchain_regen_needed {
 			return Ok(())
@@ -118,6 +129,8 @@ impl Window {
 		Ok(())
 	}
 	
+	/// Acquires the next swapchain image. Returns `None` if the frame should be skipped (out of date
+	/// swapchain, or presenting too soon according to `window_max_fps`).
 	pub fn acquire_swapchain_image(&mut self) -> Result<Option<(u32, SwapchainAcquireFuture)>> {
 		let timeout = if !self.render_required {
 			let max_fps = config::get().window_max_fps;
@@ -151,6 +164,8 @@ impl Window {
 		Ok(Some((image_num, acquire_future)))
 	}
 	
+	/// Presents the last frame of another render target (eg. the eyes), with each layer blitted
+	/// side by side, and the GUI on top.
 	pub fn mirror_from(&mut self,
 	                   rt: impl RenderTarget,
 	                   context: Option<&RenderTargetContext>,
@@ -229,10 +244,12 @@ impl Window {
 		Ok(())
 	}
 	
+	/// Returns `true` while the mouse is captured by the window.
 	pub fn cursor_trapped(&self) -> bool {
 		self.cursor_trapped
 	}
 	
+	/// Captures or releases the mouse cursor.
 	pub fn grab_cursor(&mut self, grab: bool) -> Result<()> {
 		self.cursor_trapped = grab;
 		self.window.set_cursor_visible(!grab);
@@ -240,6 +257,7 @@ impl Window {
 		Ok(())
 	}
 	
+	/// Begins a GUI frame and returns the egui context to draw with.
 	pub fn start_gui_frame(&mut self) -> egui::Context {
 		self.gui.start_frame();
 		
@@ -250,6 +268,8 @@ impl Window {
 		self.gui.end_frame();
 	}
 	
+	/// Handles window events: forwards them to the GUI, or to the application input while the
+	/// cursor is captured. Left click captures the cursor, `Escape` releases it and `F` toggles fullscreen.
 	pub fn on_window_event(&mut self, event: WindowEvent, input: &mut Input, renderer: &mut Renderer) -> Result<()> {
 		if !self.cursor_trapped {
 			if self.gui.on_event(&event) {
@@ -330,6 +350,7 @@ impl Window {
 		Ok(())
 	}
 	
+	/// Handles raw mouse motion while the cursor is captured, keeping the cursor centered.
 	pub fn on_device_event(&mut self, event: DeviceEvent, input: &mut Input) -> Result<()> {
 		match event {
 			DeviceEvent::Motion {
@@ -407,6 +428,7 @@ impl RenderTarget for Window {
 	}
 }
 
+/// Inverse view-projection matrices of a mono or stereo (side by side) frame.
 #[derive(Debug, Copy, Clone)]
 pub enum StereoProjection {
 	Mono(PMat4),
@@ -428,6 +450,7 @@ impl StereoProjection {
 	}
 }
 
+/// The swapchain can't be created now (eg. the window is minimized). Try again later.
 #[derive(Debug, Error)]
 #[error("Need Retry")]
 pub struct WindowSwapchainNeedRetry;

@@ -14,8 +14,10 @@ use crate::renderer::Renderer;
 use super::super::pipeline::{MMDPipelineOpaqueNoCull, MMDPipelineOpaque, MMDPipelineTransNoCull, MMDPipelineTrans, MMDPipelineOutline};
 
 
+/// Pipeline and its per-material descriptor set.
 pub type PipelineWithSet = (Arc<GraphicsPipeline>, Arc<DescriptorSet>);
 
+/// Material uniform data of a sub mesh.
 #[repr(C)]
 #[derive(Default, Copy, Clone, BufferContents)]
 pub struct MaterialInfo {
@@ -26,16 +28,21 @@ pub struct MaterialInfo {
 	pub sphere_mode: u32,
 }
 
+/// Range of indices drawn with a single material.
 pub struct SubMesh {
 	pub range: Range<u32>,
+	/// Pipeline for the opaque pass.
 	pub main: PipelineWithSet,
+	/// Pipeline for the transparent pass, if the material isn't fully opaque.
 	pub transparent: Option<PipelineWithSet>,
+	/// Pipeline drawing the toon edge, if the material has one.
 	pub edge: Option<PipelineWithSet>,
 	pub edge_scale: f32,
 	pub edge_color: Vec4,
 }
 
 impl SubMesh {
+	/// Creates the pipelines and descriptor sets of a material.
 	pub fn new(range: Range<u32>,
 	           material_buffer: Subbuffer<MaterialInfo>,
 	           texture: Arc<Image>,
@@ -115,6 +122,7 @@ impl SubMesh {
 	}
 }
 
+/// Material of an MMD model as loaded from the file. Textures are indices into the builder's textures.
 pub struct SubMeshDesc {
 	pub range: Range<u32>,
 	pub texture: Option<usize>,
@@ -126,6 +134,8 @@ pub struct SubMeshDesc {
 	pub ambient: Vec3,
 	pub sphere_mode: u32,
 	pub no_cull: bool,
+	/// The material has no transparent pixels, so the transparent pass can be skipped.
 	pub opaque: bool,
+	/// Edge (toon outline) size and color.
 	pub edge: Option<(f32, Vec4)>,
 }

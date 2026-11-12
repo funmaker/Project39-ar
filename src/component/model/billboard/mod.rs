@@ -21,12 +21,18 @@ use super::super::{Component, ComponentBase, ComponentInner};
 use pipeline::{FoodPipeline, Vertex, Pc};
 
 
+/// Camera-facing sprite. If the texture has multiple layers (eg. an animated GIF), they are used
+/// as views from different angles around the vertical axis, like sprites in old 3D games.
 #[derive(ComponentBase, Clone)]
 pub struct Billboard {
+	/// Width to height ratio of the texture.
 	#[inner] inner: ComponentInner,
 	ratio: f32,
+	/// Number of view angles (texture layers).
 	layers: u32,
+	/// Yaw of the billboard, accumulated from changes of the entity's rotation.
 	rotation: Cell<f32>,
+	/// Entity rotation in the previous tick.
 	last_rot: Cell<Rot3>,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
@@ -36,6 +42,7 @@ pub struct Billboard {
 
 #[allow(dead_code)]
 impl Billboard {
+	/// Creates a billboard showing the given texture.
 	pub fn new(texture: TextureAsset, renderer: &mut Renderer) -> Result<Billboard> {
 		let pipeline = renderer.pipelines.get::<FoodPipeline>()?;
 		let texture = renderer.load(texture)?;

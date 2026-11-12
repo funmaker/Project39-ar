@@ -41,6 +41,8 @@ use debug_renderer::{DebugRenderer, TextCache};
 use pipelines::Pipelines;
 
 
+/// Per-frame uniform data shared by all pipelines: per-eye projection, view and light direction
+/// (in view space), and the ambient light level.
 #[allow(dead_code)]
 #[repr(C)]
 #[derive(Default, Clone, Copy, BufferContents)]
@@ -51,31 +53,46 @@ pub struct CommonsUBO {
 	ambient: f32,
 }
 
+/// Owns the Vulkan instance, device, queues, allocators, pipelines and assets, and renders the
+/// scene into render targets.
+///
+/// GPU work of a frame is chained into a single future (see `enqueue`), which is flushed in
+/// `end_frame` and waited on in the next `begin_frame`.
 pub struct Renderer {
 	pub instance: Arc<Instance>,
 	pub device: Arc<Device>,
+	/// Queue used for uploads. May be the same as `queue` if there is no separate queue family.
 	pub load_queue: Arc<Queue>,
+	/// Multiview render pass used for all scene rendering.
 	pub render_pass: Arc<RenderPass>,
 	pub queue: Arc<Queue>,
 	pub pipelines: Pipelines,
 	pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
 	pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
 	pub memory_allocator: Arc<StandardMemoryAllocator>,
+	/// Uniform buffer with `CommonsUBO`, updated at the start of every `render`.
 	pub commons: Subbuffer<CommonsUBO>,
 	
+	/// GPU work of the current frame.
 	future: Option<Box<dyn GpuFuture>>,
 	debug_renderer: Option<DebugRenderer>,
 	fps_counter: FpsCounter<20>,
 	assets_manager: Option<AssetsManager>,
+	/// Reusable buffer of `(distance, entity id)` of transparent entities, used to sort them back to front.
 	transparent_registry: Option<Vec<(f32, u64)>>,
 	#[allow(dead_code)] debug_utils_messenger: Option<DebugUtilsMessenger>,
 }
 
+/// Color format of all framebuffers.
 pub const IMAGE_FORMAT: Format = Format::R8G8B8A8_SRGB;
+/// Depth format of all framebuffers.
 pub const DEPTH_FORMAT: Format = Format::D24_UNORM_S8_UINT;
+/// Number of multiview layers (eyes) every framebuffer has.
 pub const LAYERS: u32 = 2;
 
 impl Renderer {
+	/// Initializes Vulkan, picking the GPU used by OpenVR (or `gpu_id` from the config), and creates
+	/// the device, render pass, pipelines, debug renderer and assets manager.
 	pub fn new(vr: Option<Arc<VR>>, instance_extensions: InstanceExtensions) -> Result<Renderer> {
 		let instance = Renderer::create_vulkan_instance(&vr, instance_extensions)?;
 		let debug_utils_messenger = config::get()
@@ -120,6 +137,8 @@ impl Renderer {
 		})
 	}
 	
+	/// Creates the Vulkan instance with the extensions required by OpenVR and the window surface,
+	/// and validation layers if enabled.
 	fn create_vulkan_instance(vr: &Option<Arc<VR>>, required_extensions: InstanceExtensions) -> Result<Arc<Instance>> {
 		let library = VulkanLibrary::new()?;
 		
@@ -162,6 +181,7 @@ impl Renderer {
 		                 })?)
 	}
 	
+	/// Sets up printing of validation layer messages (only shown in debug mode).
 	fn create_debug_callbacks(instance: &Arc<Instance>) -> Result<DebugUtilsMessenger> {
 		Ok(DebugUtilsMessenger::new(instance.clone(), DebugUtilsMessengerCreateInfo {
 			message_severity: DebugUtilsMessageSeverity::ERROR
@@ -189,6 +209,8 @@ impl Renderer {
 		})?)
 	}
 	
+	/// Picks the physical device used by the OpenVR compositor, falling back to `gpu_id`.
+	/// Fails if the device doesn't support multiview with at least two views.
 	fn create_physical_device(instance: &Arc<Instance>, vr: &Option<Arc<VR>>) -> Result<Arc<PhysicalDevice>> {
 		dprintln!("Devices:");
 		let physical_devices = instance.enumerate_physical_devices()?
@@ -228,6 +250,8 @@ impl Renderer {
 		Ok(physical_device)
 	}
 	
+	/// Creates the logical device with a graphics queue and, if available, a separate load queue
+	/// from a different queue family.
 	fn create_device(physical: Arc<PhysicalDevice>, vr: &Option<Arc<VR>>) -> Result<(Arc<Device>, Arc<Queue>, Arc<Queue>)> {
 		for family in physical.queue_family_properties() {
 			dprintln!("Found a queue family with {} queue(s) {:?}",
@@ -280,6 +304,8 @@ impl Renderer {
 		Ok((device, queue, load_queue))
 	}
 	
+	/// Creates the 2-view multiview render pass with color and depth attachments, and an MSAA
+	/// resolve attachment if multisampling is enabled.
 	fn create_render_pass(device: &Arc<Device>) -> Result<Arc<RenderPass>> {
 		let msaa = config::get().msaa;
 		let samples = msaa.try_into().map_err(|_| RendererError::InvalidMultiSamplingCount(msaa))?;
@@ -357,6 +383,7 @@ impl Renderer {
 		Ok(render_pass)
 	}
 	
+	/// Creates an sRGB, FIFO swapchain for a window surface.
 	pub fn create_swapchain(&self, surface: Arc<Surface>) -> Result<(Arc<Swapchain>, Vec<Arc<Image>>)> {
 		if !self.device.physical_device().surface_support(self.queue.queue_family_index(), &surface)? {
 			return Err(RendererSwapchainError::SurfaceNotSupported.into())
@@ -394,6 +421,8 @@ impl Renderer {
 		})?)
 	}
 	
+	/// Creates a multiview framebuffer at least as large as `min_framebuffer_size`, scaled by SSAA,
+	/// with an MSAA color image if multisampling is enabled.
 	pub fn create_framebuffer(&self, min_framebuffer_size: (u32, u32)) -> Result<FramebufferBundle> {
 		let config = config::get();
 		let ssaa = config.ssaa;
@@ -481,6 +510,7 @@ impl Renderer {
 		})
 	}
 	
+	/// Waits for the previous frame's GPU work and starts a new frame.
 	pub fn begin_frame(&mut self) -> Result<()> {
 		if let Some(previous_frame) = self.future.take() {
 			// TODO: double fence?
@@ -498,11 +528,14 @@ impl Renderer {
 		Ok(())
 	}
 	
+	/// Chains GPU work onto the current frame's future. `callback` receives the current future
+	/// and returns the new one. A semaphore is inserted if the work runs on a different queue.
 	pub fn enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
 	                  where F: FnOnce(Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
 		self.try_enqueue(queue, |future| Ok(callback(future))).unwrap()
 	}
 	
+	/// Fallible version of `enqueue`.
 	pub fn try_enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
 	                     -> Result<()>
 	                     where F: FnOnce(Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>> {
@@ -518,6 +551,10 @@ impl Renderer {
 		Ok(())
 	}
 	
+	/// Renders the scene from `camera_pos` into a render target: opaque entities first, then
+	/// transparent ones sorted back to front, then debug primitives.
+	///
+	/// Returns the target's context, or `None` if the target skipped this frame.
 	pub fn render(&mut self, camera_pos: Isometry3, scene: &mut BTreeMap<u64, Entity>, mut render_target: impl RenderTarget) -> Result<Option<RenderTargetContext>> {
 		let rt_context = match render_target.create_context(camera_pos) {
 			Ok(Some(rt_context)) => rt_context,
@@ -608,6 +645,7 @@ impl Renderer {
 		Ok(Some(rt_context))
 	}
 	
+	/// Flushes the GPU work of the frame and clears the debug primitives.
 	pub fn end_frame(&mut self) -> Result<()> {
 		self.debug_renderer.as_mut().unwrap().reset();
 		
@@ -630,10 +668,12 @@ impl Renderer {
 		Ok(())
 	}
 	
+	/// Returns the text cache used for rendering debug text.
 	pub fn debug_text_cache(&self) -> RefMut<'_, TextCache> {
 		self.debug_renderer.as_ref().unwrap().text_cache()
 	}
 	
+	/// Loads an asset (eg. `ObjAsset::at(...)`) using the assets manager, which caches loaded assets.
 	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key) -> Result<Key::Asset> {
 		let mut assets_manager = self.assets_manager.take().unwrap();
 		let result = assets_manager.load(key, self);
@@ -643,6 +683,7 @@ impl Renderer {
 }
 
 
+/// Errors raised during the renderer initialization.
 #[derive(Debug, Error)]
 pub enum RendererError {
 	#[error("No devices available.")] NoDevices,

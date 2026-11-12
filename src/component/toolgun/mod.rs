@@ -31,9 +31,12 @@ use prop_manager::PropCollection;
 use tool::{get_all_tools, Tool};
 
 
+/// Vertical spacing of the tool menu entries.
 const MENU_SPACING: f32 = 0.1;
+/// Distance of the tool menu from the toolgun's muzzle.
 const MENU_DISTANCE: f32 = 0.1;
 
+/// Beam and impact animation played when the toolgun fires.
 #[derive(Copy, Clone)]
 struct ToolGunAnim {
 	start: Instant,
@@ -42,20 +45,29 @@ struct ToolGunAnim {
 	scale: f32,
 }
 
+/// Mutable state of the toolgun.
 pub struct ToolGunState {
+	/// Time used to scroll the tool name on the toolgun screen.
 	scroll: f32,
 	tools: Vec<Box<dyn Tool>>,
 	tool_id: usize,
+	/// Position of the open tool selection menu, if open.
 	menu_pos: Option<Isometry3>,
+	/// Whether the current tool's render hooks should be called this frame.
 	render_tool: bool,
 }
 
+/// Garry's Mod style tool gun holding a set of tools (see `Tool`) that act on the entity it's aimed at.
+///
+/// While held, fire uses the current tool and use opens a menu to pick another tool.
+/// The current tool's name scrolls on the gun's screen.
 #[derive(ComponentBase)]
 pub struct ToolGun {
 	#[inner] inner: ComponentInner,
 	state: RefCell<ToolGunState>,
 	anim: Cell<Option<ToolGunAnim>>,
 	prop_collection: PropCollection,
+	/// Position of the gun in the hand.
 	grab_pos: Isometry3,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
@@ -118,6 +130,7 @@ impl ToolGun {
 		})
 	}
 	
+	/// Returns the ray the toolgun is aiming along, starting at its muzzle.
 	pub fn ray(&self, application: &Application) -> Ray {
 		let position = *self.entity(application).state().position;
 		
@@ -127,6 +140,7 @@ impl ToolGun {
 		}
 	}
 	
+	/// Plays the firing animation towards whatever the gun is aimed at.
 	pub fn fire(&self, application: &Application) {
 		let ray = self.ray(application);
 		

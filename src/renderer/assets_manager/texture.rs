@@ -17,6 +17,7 @@ use super::super::Renderer;
 use super::{AssetKey, AssetsManager};
 
 
+/// Key of a texture loaded from an image file. GIFs are loaded as array textures with one layer per frame.
 #[derive(Clone, Hash, Debug)]
 pub struct TextureAsset {
 	path: PathBuf,
@@ -25,15 +26,18 @@ pub struct TextureAsset {
 	srgb: bool,
 }
 
+/// Loaded texture with its sampler.
 #[derive(Clone)]
 pub struct TextureBundle {
 	pub image: Arc<ImageView>,
 	pub sampler: Arc<Sampler>,
+	/// Signaled once the texture upload has finished.
 	pub fence: FenceCheck,
 }
 
 #[allow(unused)]
 impl TextureAsset {
+	/// Texture at `path` with linear filtering, mipmaps and sRGB encoding.
 	pub fn at(path: impl AsRef<Path>) -> Self {
 		TextureAsset {
 			path: path.as_ref().to_path_buf(),
@@ -43,6 +47,7 @@ impl TextureAsset {
 		}
 	}
 	
+	/// Uses nearest filtering.
 	pub fn nearest(self) -> Self {
 		TextureAsset {
 			filter: Filter::Nearest,
@@ -50,6 +55,7 @@ impl TextureAsset {
 		}
 	}
 	
+	/// Disables mipmap generation.
 	pub fn no_mipmaps(self) -> Self {
 		TextureAsset {
 			mipmaps: false,
@@ -57,6 +63,7 @@ impl TextureAsset {
 		}
 	}
 	
+	/// Treats the image data as linear instead of sRGB.
 	pub fn no_srgb(self) -> Self {
 		TextureAsset {
 			srgb: false,
@@ -166,6 +173,7 @@ where T: AsRef<Path> {
 }
 
 impl TextureBundle {
+	/// Uploads an in-memory sRGB image as a mipmapped texture.
 	pub fn from_raw_simple(source: DynamicImage, renderer: &Renderer) -> Result<TextureBundle> {
 		let width = source.width();
 		let height = source.height();

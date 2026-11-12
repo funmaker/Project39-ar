@@ -28,6 +28,7 @@ mod frag {
 	}
 }
 
+/// Normal mapped pipeline used by `GimpModel`.
 pub struct GimpPipeline;
 
 impl PipelineConstructor for GimpPipeline {

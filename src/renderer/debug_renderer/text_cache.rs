@@ -19,6 +19,10 @@ use super::super::pipelines::Pipelines;
 use super::super::pipelines::debug::DebugTexturedPipeline;
 
 
+/// Cache of debug texts rasterized into textures using the unifont bitmap font.
+///
+/// Entries unused for `max_stale` frames are evicted. `max_stale` adapts to keep the cache
+/// around `TARGET_SIZE` entries.
 pub struct TextCache {
 	pipeline: Arc<GraphicsPipeline>,
 	queue: Arc<Queue>,
@@ -29,9 +33,11 @@ pub struct TextCache {
 	max_stale: usize,
 }
 
+/// Number of cached texts the cache tries to stay below.
 const TARGET_SIZE: usize = 512;
 
 // Unifont's U+FFFD � REPLACEMENT CHARACTER
+/// Glyph drawn for characters missing from unifont.
 const REPLACEMENT_GLYPH: Glyph = Glyph::HalfWidth([
 	0x00, 0x00, 0x00, 0x7E, 0x66, 0x5A, 0x5A, 0x7A, 0x76, 0x76, 0x7E, 0x76, 0x76, 0x7E, 0x00, 0x00
 ]);
@@ -51,6 +57,7 @@ impl TextCache {
 		})
 	}
 	
+	/// Returns the texture of `text`, rasterizing and uploading it if it's not cached.
 	pub fn get(&mut self, text: &'_ str) -> Result<TextEntry> {
 		if let Some(entry) = self.entries.get_mut(text) {
 			entry.stale = 0;
@@ -114,6 +121,7 @@ impl TextCache {
 		}
 	}
 	
+	/// Ages all entries and evicts stale ones. Called once per frame.
 	pub fn cleanup(&mut self) {
 		for entry in self.entries.values_mut() {
 			entry.stale += 1;
@@ -132,6 +140,7 @@ impl TextCache {
 	}
 }
 
+/// Iterator over the pixels of a single line of unifont glyphs, row by row.
 struct Rasterizer {
 	glyphs: Vec<&'static Glyph>,
 	x: usize,
@@ -193,10 +202,12 @@ impl ExactSizeIterator for Rasterizer {
 }
 
 
+/// Rasterized text texture.
 #[derive(Clone)]
 pub struct TextEntry {
 	pub size: (u32, u32),
 	pub set: Arc<DescriptorSet>,
+	/// Number of frames since the entry was last used.
 	pub stale: usize,
 }
 

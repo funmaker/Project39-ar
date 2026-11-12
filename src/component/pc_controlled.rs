@@ -7,6 +7,8 @@ use crate::math::{Vec3, Isometry3, PI, to_euler, from_euler};
 use super::{Component, ComponentBase, ComponentInner};
 
 
+/// Free-fly controls for novr mode: `WASD` to move, `Space`/`Ctrl` up/down, `Shift` to go faster,
+/// mouse to look around and `Numpad 7`/`Numpad 9` to roll.
 #[derive(ComponentBase)]
 pub struct PCControlled {
 	#[inner] inner: ComponentInner,
@@ -21,6 +23,7 @@ impl PCControlled {
 		}
 	}
 	
+	/// Disables the controls (eg. while a detached camera is controlled instead).
 	pub fn set_disabled(&self, disabled: bool) {
 		self.disabled.set(disabled);
 	}

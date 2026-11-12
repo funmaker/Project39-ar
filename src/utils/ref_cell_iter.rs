@@ -2,6 +2,8 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::iter;
 
+/// Iterates over a slice inside a `RefCell`, only borrowing it while each element is accessed.
+/// The cell can be modified in between iterations.
 pub fn ref_cell_iter<'c, T, U: 'c>(cell: &'c RefCell<T>, map: impl Fn(&T) -> &[U] + 'c) -> impl Iterator<Item=Ref<'c, U>> + 'c {
 	let mut i = 0;
 	
@@ -17,6 +19,7 @@ pub fn ref_cell_iter<'c, T, U: 'c>(cell: &'c RefCell<T>, map: impl Fn(&T) -> &[U
 	})
 }
 
+/// Mutable version of `ref_cell_iter`.
 pub fn ref_cell_mut<'c, T, U: 'c>(cell: &'c RefCell<T>, map: impl Fn(&mut T) -> &mut [U] + 'c) -> impl Iterator<Item=RefMut<'c, U>> + 'c {
 	let mut i = 0;
 	

@@ -5,6 +5,8 @@ use egui::Ui;
 use super::{InspectMut, Inspect};
 
 
+/// Wrapper that tracks whether the value was mutably accessed (through `DerefMut`) since the
+/// mark was last cleared.
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub struct MutMark<T> {
 	mutated: bool,
@@ -26,14 +28,17 @@ impl<T> MutMark<T> {
 		}
 	}
 	
+	/// Marks the value as mutated.
 	pub fn mark_mut(&mut self) {
 		self.mutated = true;
 	}
 	
+	/// Returns `true` if the value was mutated since the last `clear_mut`.
 	pub fn was_mut(&self) -> bool {
 		self.mutated
 	}
 	
+	/// Clears the mutation mark, returning the previous state.
 	pub fn clear_mut(&mut self) -> bool {
 		std::mem::replace(&mut self.mutated, false)
 	}

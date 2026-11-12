@@ -5,15 +5,25 @@ use std::time::Instant;
 use egui::Ui;
 
 
+/// Font size of the statistics table.
 const FONT_SIZE: f32 = 16.0;
 
+/// Per-frame timing profiler with an egui plot.
+///
+/// Call `tick` after every stage of a frame and `new_frame` at the beginning of each frame to
+/// record how long each stage took.
 pub struct Benchmark {
+	/// Samples of each stage as `(time since frame start, stage duration)` in milliseconds, newest first.
 	samples: HashMap<&'static str, VecDeque<(f64, f64)>>,
 	frame_start: Instant,
+	/// Stage timestamps recorded in the current frame.
 	current: Vec<(&'static str, Instant)>,
+	/// Stage names in the order they are recorded.
 	order: Vec<&'static str>,
+	/// Number of frames kept for each stage.
 	frame_count: usize,
 	paused: bool,
+	/// Collect `frame_count` frames and pause.
 	single_pass: bool,
 	hovered: Option<&'static str>,
 	selected: Option<&'static str>,
@@ -34,6 +44,7 @@ impl Benchmark {
 		}
 	}
 	
+	/// Commits the timings recorded in the previous frame and starts a new one.
 	pub fn new_frame(&mut self) {
 		if self.single_pass && self.samples.values().any(|queue| queue.len() == self.frame_count) {
 			self.single_pass = false;
@@ -81,10 +92,12 @@ impl Benchmark {
 		self.frame_start = Instant::now();
 	}
 	
+	/// Records the end of a frame stage.
 	pub fn tick(&mut self, stage: &'static str) {
 		self.current.push((stage, Instant::now()))
 	}
 	
+	/// Draws the timing plot and per-stage statistics table.
 	pub fn on_gui(&mut self, ui: &mut Ui) {
 		use egui_plot::*;
 		use egui::*;

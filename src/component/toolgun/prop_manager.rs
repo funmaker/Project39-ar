@@ -11,6 +11,8 @@ use super::super::model::SimpleModel;
 use super::super::model::simple::asset::ObjAsset;
 
 
+/// Collider shape of a prop, fitted to its bounding box. Cylinders and cones are oriented along
+/// the given axis, cones pointing towards its positive (`P`) or negative (`N`) direction.
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq)]
 enum PropCollider {
 	Box,
@@ -27,6 +29,11 @@ enum PropCollider {
 	ConeNZ,
 }
 
+/// Prop definition from `props.toml`.
+///
+/// `seat` and `phys_aabb` are bounding boxes given as `[x1, y1, z1, x2, y2, z2]`. `phys_aabb`
+/// overrides the model's bounding box used to fit the collider, and `seat` turns the prop into
+/// a vehicle (see `Seat`).
 #[derive(Deserialize, Debug, Clone)]
 struct PropConfig {
 	model: String,
@@ -37,19 +44,24 @@ struct PropConfig {
 	phys_aabb: Option<[f32; 6]>,
 }
 
+/// A prop that the spawner tool can create.
 pub struct Prop {
 	pub model: SimpleModel,
 	pub name: String,
 	pub collider: Collider,
+	/// Label shown in the spawn menu.
 	pub tip: Option<String>,
+	/// Seat trigger volume, if the prop is a vehicle.
 	pub seat: Option<AABB>,
 }
 
+/// All props defined in `assets/props.toml`.
 pub struct PropCollection {
 	pub props: Vec<Prop>,
 }
 
 impl PropCollection {
+	/// Loads all props from `props.toml`, together with their models.
 	pub fn new(renderer: &mut Renderer) -> Result<Self> {
 		let mut props = Vec::new();
 		

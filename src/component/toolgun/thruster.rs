@@ -17,9 +17,12 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Tool welding `Thruster`s onto the aimed surface. The touchpad (or arrow keys) selects which
+/// direction of the vehicle controls fires the thruster.
 pub struct ThrusterTool {
 	direction: ThrusterDirection,
 	thruster_model: SimpleModel,
+	/// Position where the thruster would be placed.
 	ghost_pos: Option<Isometry3>,
 }
 

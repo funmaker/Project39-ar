@@ -39,23 +39,37 @@ pub use rigid_body::MMDRigidBody;
 use shared::{MMDModelShared, BoneConnection};
 
 
+/// Mutable per-instance state of an MMD model.
 pub struct MMDModelState {
+	/// Bone pose of the model, indexed by bone id.
 	pub bones: Vec<MMDBone>,
+	/// Rigid bodies of the ragdoll, created on start.
 	pub rigid_bodies: Vec<ComponentRef<MMDRigidBody>>,
+	/// Joints of the ragdoll, created on start.
 	pub joints: Vec<ComponentRef<JointComponent>>,
+	/// Weight of every morph, indexed by morph id.
 	pub morphs: Vec<f32>,
 	
+	/// Reusable buffer for bone matrices computed in `before_render`.
 	bones_mats: Vec<AMat4>,
+	/// Reusable buffer of active morphs packed in pairs of `(id, weight bits)`, uploaded to the morph shader.
 	morphs_vec: Vec<IVec4>,
 }
 
+/// Skinned MMD (PMX) model with GPU morphs, toon edges and a physics ragdoll built from the
+/// model's rigid bodies and joints.
+///
+/// Mesh data shared between instances lives in `MMDModelShared`.
 #[derive(ComponentBase)]
 pub struct MMDModel {
 	#[inner] inner: ComponentInner,
 	pub state: RefCell<MMDModelState>,
 	shared: Arc<MMDModelShared>,
+	/// Skinning matrices of all bones. The last row holds the inverse bone rotation quaternion for normals.
 	bones_ubo: Subbuffer<[Mat4]>,
+	/// Active morphs, see `MMDModelState::morphs_vec`.
 	morphs_ubo: Subbuffer<[IVec4]>,
+	/// Per-vertex morph offsets computed by the morph compute shader.
 	offsets_ubo: Subbuffer<[IVec4]>,
 	morphs_set: Arc<DescriptorSet>,
 	model_set: Arc<DescriptorSet>,
@@ -65,6 +79,7 @@ pub struct MMDModel {
 
 #[allow(dead_code)]
 impl MMDModel {
+	/// Creates a new instance of a loaded model.
 	pub fn new(shared: Arc<MMDModelShared>, renderer: &mut Renderer) -> Result<MMDModel> {
 		let bones = shared.default_bones.iter().map(Into::into).collect::<Vec<_>>();
 		let bones_count = bones.len();
@@ -153,6 +168,7 @@ impl MMDModel {
 		})
 	}
 	
+	/// Returns `true` once the model data has been uploaded.
 	pub fn loaded(&self) -> bool {
 		self.shared.fence.check()
 	}
@@ -165,6 +181,7 @@ impl MMDModel {
 		self.state.borrow_mut()
 	}
 	
+	/// Draws bones, their names and connections as debug primitives.
 	fn draw_debug_bones(&self, model_matrix: Isometry3, bones: &[MMDBone], bones_mats: &[AMat4]) {
 		let hide_unselected = debug::get_flag_or_default::<bool>("DebugHideUnselected");
 		
@@ -577,6 +594,7 @@ impl Component for MMDModel {
 }
 
 impl MMDModelState {
+	/// Iterates over the bone, its ancestors and finally the root bone (0).
 	fn bone_ancestors(&self, mut bone_id: usize) -> impl Iterator<Item = usize> + '_ {
 		Some(bone_id).into_iter()
 		             .chain(std::iter::from_fn(move || {
@@ -590,6 +608,7 @@ impl MMDModelState {
 		             .chain(Some(0))
 	}
 	
+	/// Iterates over the live rigid bodies of the ragdoll.
 	pub fn rigid_bodies<'a: 's, 's>(&'s self, application: &'a Application) -> impl Iterator<Item=&'a MMDRigidBody> + 's {
 		self.rigid_bodies.iter().flat_map(move |rb| rb.get(application))
 	}

@@ -5,6 +5,7 @@ use ::openvr_sys as sys;
 use super::FnTable;
 
 
+/// OpenVR interface initialization error.
 pub struct InitError(pub sys::EVRInitError);
 
 impl error::Error for InitError {}
@@ -29,6 +30,7 @@ impl fmt::Display for InitError {
 	}
 }
 
+/// Error returned by the OpenVR tracked camera API.
 pub struct TrackedCameraError {
 	pub code: sys::EVRTrackedCameraError,
 	pub name: String,
@@ -48,6 +50,7 @@ impl fmt::Display for TrackedCameraError {
 	}
 }
 
+/// Converts a tracked camera error code into a `Result`, resolving the error name through OpenVR.
 pub fn check_err(fn_tab: FnTable, code: sys::EVRTrackedCameraError) -> Result<(), TrackedCameraError> {
 	if code == sys::EVRTrackedCameraError_VRTrackedCameraError_None {
 		Ok(())

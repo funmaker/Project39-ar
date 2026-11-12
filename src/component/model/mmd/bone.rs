@@ -8,30 +8,44 @@ use super::MMDModel;
 use super::shared::{BoneDesc, BoneConnection};
 
 
+/// Runtime state of a single bone of an `MMDModel`.
 #[derive(Debug, Clone)]
 pub struct MMDBone {
 	pub id: usize,
 	pub model: ComponentRef<MMDModel>,
 	pub name: String,
 	pub parent: Option<usize>,
+	/// Color used when drawing the bone as a debug gizmo.
 	pub color: Color,
+	/// Ragdoll rigid body entity driving this bone (the closest one up the hierarchy).
 	pub rigid_body: EntityRef,
+	/// Transform from the bone to its own rigid body, if the bone has one.
 	pub rigid_body_transform: Option<Isometry3>,
+	/// Rest position of the bone in model space.
 	pub model_transform: Translation3,
+	/// Rest position of the bone relative to its parent.
 	pub local_transform: Translation3,
+	/// Animation transform applied on top of the rest pose.
 	pub anim_transform: Similarity3,
+	/// Model space transform overriding the hierarchy, eg. when the bone follows a ragdoll rigid body.
 	pub override_transform: Option<Similarity3>,
+	/// Whether the bone is drawn as a debug gizmo.
 	pub display: bool,
+	/// Where the bone points to, used to draw it and orient its rigid body.
 	pub connection: BoneConnection,
+	/// The bone (or its rigid body) is selected in the GUI.
 	pub gui_selected: bool,
+	/// The bone (or its rigid body) is hovered in the GUI.
 	pub gui_hover: bool,
 }
 
 impl MMDBone {
+	/// Rest position of the bone in model space.
 	pub fn origin(&self) -> Point3 {
 		self.model_transform * Point3::origin()
 	}
 	
+	/// Makes the bone follow `rigid_body`, whose model space position is `model_pos`.
 	pub fn attach_rigid_body(&mut self, rigid_body: EntityRef, model_pos: Isometry3) -> &mut Self {
 		self.rigid_body = rigid_body;
 		self.rigid_body_transform = Some(self.model_transform.inverse() * model_pos);

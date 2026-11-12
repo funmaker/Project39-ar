@@ -11,10 +11,18 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Tool welding two entities together with a fixed joint, surface to surface.
+///
+/// The first shot selects the entity to attach and the point on it, the second moves it onto
+/// the second hit point (showing a ghost preview meanwhile) and creates the joint.
 pub struct Weld {
+	/// Entity selected with the first shot.
 	target: EntityRef,
+	/// Attachment frame on the target, in its local space (facing away from the surface).
 	target_local_pos: Isometry3,
+	/// Model of the target, drawn as a preview at the aimed position.
 	ghost: Option<SimpleModel>,
+	/// Currently aimed surface position.
 	ghost_pos: Option<Isometry3>,
 }
 

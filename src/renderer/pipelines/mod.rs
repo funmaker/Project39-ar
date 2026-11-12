@@ -23,6 +23,7 @@ pub mod debug;
 pub mod default;
 
 
+/// Type that knows how to build a pipeline. Pipelines are built lazily and cached by `Pipelines`.
 pub trait PipelineConstructor: 'static {
 	type PipeType: Any + Send + Sync;
 	
@@ -31,6 +32,7 @@ pub trait PipelineConstructor: 'static {
 	      where Self: Sized;
 }
 
+/// Cache of pipelines, keyed by their `PipelineConstructor` type.
 pub struct Pipelines {
 	pipelines: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
 	render_pass: Arc<RenderPass>,
@@ -44,6 +46,7 @@ impl Pipelines {
 		}
 	}
 	
+	/// Returns the pipeline built by `P`, building it on first use.
 	pub fn get<P: PipelineConstructor>(&mut self) -> Result<Arc<P::PipeType>> {
 		if let Some(pipeline) = self.pipelines.get(&TypeId::of::<P>()) {
 			Ok(pipeline.clone().downcast().unwrap())
@@ -57,6 +60,7 @@ impl Pipelines {
 }
 
 
+/// Blending for premultiplied alpha colors.
 pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 	AttachmentBlend {
 		color_blend_op: BlendOp::Add,
@@ -68,6 +72,7 @@ pub fn pre_mul_alpha_blending() -> AttachmentBlend {
 	}
 }
 
+/// Depth test and write with the `Less` comparison.
 pub fn simple_depth_test() -> DepthStencilState {
 	DepthStencilState {
 		depth: Some(DepthState::simple()),
@@ -75,6 +80,8 @@ pub fn simple_depth_test() -> DepthStencilState {
 	}
 }
 
+/// Builds a graphics pipeline for the first subpass of the multiview `render_pass`, with vertex
+/// input `V`, a dynamic viewport and the layout derived from the shaders.
 pub fn build_graphics_pipeline<V>(render_pass: &Arc<RenderPass>,
                                   vs: EntryPoint,
                                   fs: EntryPoint,
@@ -122,6 +129,7 @@ pub fn build_graphics_pipeline<V>(render_pass: &Arc<RenderPass>,
 	})?)
 }
 
+/// Builds a compute pipeline with the layout derived from the shader.
 pub fn build_compute_pipeline(device: &Arc<Device>, cs: EntryPoint) -> Result<Arc<ComputePipeline>> {
 	let stage = PipelineShaderStageCreateInfo::new(cs);
 	
@@ -138,6 +146,7 @@ pub fn build_compute_pipeline(device: &Arc<Device>, cs: EntryPoint) -> Result<Ar
 	)
 }
 
+/// The pipeline doesn't have the requested descriptor set layout.
 #[derive(Debug, Error)]
 #[error("Pipeline doesn't have specified layout")]
 pub struct PipelineNoLayoutError;

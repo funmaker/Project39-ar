@@ -16,12 +16,14 @@ use super::super::pipeline::{MMDPipelineMorphs, MORPH_GROUP_SIZE};
 use super::{MMDModelShared, Vertex, BoneDesc, SubMesh, SubMeshDesc, ColliderDesc, JointDesc, MaterialInfo};
 
 
+/// Builder for `MMDModelShared`, filled by the model loader.
 pub struct MMDModelSharedBuilder<VI: VertexIndex> {
 	vertices: Vec<Vertex>,
 	indices: Vec<VI>,
 	textures: Vec<DynamicImage>,
 	sub_meshes: Vec<SubMeshDesc>,
 	bones: Vec<BoneDesc>,
+	/// Vertex offsets of each morph, as `(vertex index, offset)`.
 	morphs: Vec<Vec<(VI, Vec3)>>,
 	colliders: Vec<ColliderDesc>,
 	joints: Vec<JointDesc>,
@@ -41,6 +43,7 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		}
 	}
 	
+	/// Adds a texture. Sub meshes refer to textures by the order they were added.
 	pub fn add_texture(&mut self, texture: DynamicImage) -> &mut Self {
 		self.textures.push(texture);
 		self
@@ -51,11 +54,13 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
+	/// Adds a bone, assigning it the next bone id.
 	pub fn add_bone(&mut self, bone: BoneDesc) -> &mut Self {
 		self.bones.push(bone.id(self.bones.len()));
 		self
 	}
 	
+	/// Adds a vertex morph.
 	pub fn add_morph(&mut self, offsets: Vec<(VI, Vec3)>) -> &mut Self {
 		self.morphs.push(offsets);
 		self
@@ -71,6 +76,10 @@ impl<VI: VertexIndex> MMDModelSharedBuilder<VI> {
 		self
 	}
 	
+	/// Uploads all model data to the GPU and creates the sub mesh pipelines.
+	///
+	/// Morph offsets are stored as fixed point integers (1/1 000 000) in a `morphs_max_size` padded
+	/// table, so the morph compute shader can sum them atomically.
 	pub fn build(mut self, renderer: &mut Renderer) -> Result<MMDModelShared> {
 		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
 		                                                          renderer.load_queue.queue_family_index(),

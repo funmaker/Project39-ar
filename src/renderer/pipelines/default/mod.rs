@@ -45,6 +45,7 @@ mod glow_frag {
 	}
 }
 
+/// Lit, textured pipeline used by simple models.
 pub struct DefaultPipeline;
 
 impl PipelineConstructor for DefaultPipeline {
@@ -64,6 +65,7 @@ impl PipelineConstructor for DefaultPipeline {
 	}
 }
 
+/// Pipeline drawing a glowing outline around simple models (see `Glow` component).
 pub struct DefaultGlowPipeline;
 
 impl PipelineConstructor for DefaultGlowPipeline {

@@ -11,10 +11,18 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Tool connecting two entities with a revolute joint around the hit surface normal.
+///
+/// The first shot selects the entity to attach and the point on it, the second moves it onto
+/// the second hit point (showing a ghost preview meanwhile) and creates the joint.
 pub struct Axis {
+	/// Entity selected with the first shot.
 	target: EntityRef,
+	/// Attachment frame on the target, in its local space (facing away from the surface).
 	target_local_pos: Isometry3,
+	/// Model of the target, drawn as a preview at the aimed position.
 	ghost: Option<SimpleModel>,
+	/// Currently aimed surface position.
 	ghost_pos: Option<Isometry3>,
 }
 

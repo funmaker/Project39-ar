@@ -14,6 +14,7 @@ use super::super::EntityRef;
 use super::{Entity, EntityState};
 
 
+/// Builder for `Entity`. Obtained using `Entity::builder`.
 pub struct EntityBuilder {
 	pub name: String,
 	pub parent: EntityRef,
@@ -45,17 +46,20 @@ impl EntityBuilder {
 		}
 	}
 	
+	/// Sets the parent entity. If `follow` is set, the entity moves together with its parent.
 	pub fn parent(mut self, parent: EntityRef, follow: bool) -> Self {
 		self.parent = parent;
 		self.parent_follow = follow;
 		self
 	}
 	
+	/// Keeps the entity alive when its parent is removed.
 	pub fn persist(mut self) -> Self {
 		self.persist = true;
 		self
 	}
 	
+	/// Replaces the rigid body template. Defaults to a fixed body.
 	pub fn rigid_body(mut self, rigid_body: RigidBody) -> Self {
 		self.rigid_body = rigid_body;
 		self
@@ -102,6 +106,7 @@ impl EntityBuilder {
 		self
 	}
 	
+	/// Hides the entity from rendering.
 	pub fn hidden(mut self, hidden: bool) -> Self {
 		self.hidden = hidden;
 		self
@@ -112,11 +117,13 @@ impl EntityBuilder {
 		self
 	}
 	
+	/// Adds a `ColliderComponent` with the given collider.
 	pub fn collider(mut self, collider: Collider) -> Self {
 		self.components.push(ColliderComponent::new(collider).boxed());
 		self
 	}
 	
+	/// Adds a cuboid collider matching the bounding box of a previously added `SimpleModel` component.
 	pub fn collider_from_aabb(self, density: f32) -> Self {
 		for component in &self.components {
 			if let Some(model) = component.as_any().downcast_ref::<SimpleModel>() {
@@ -135,11 +142,13 @@ impl EntityBuilder {
 		self
 	}
 	
+	/// Sets a tag on the entity.
 	pub fn tag<T: 'static>(mut self, key: impl Into<String>, val: T) -> Self {
 		self.tags.insert(key.into(), Box::new(val));
 		self
 	}
 	
+	/// Builds the entity with a fresh id. It still has to be added using `Application::add_entity`.
 	pub fn build(self) -> Entity {
 		let entity = Entity {
 			id: next_uid(),

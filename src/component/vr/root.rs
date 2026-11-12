@@ -21,8 +21,12 @@ use super::super::pov::PoV;
 use super::{VrTracked, VrIk};
 
 
+/// Origin of the VR tracking space. Creates an entity for every connected tracked device, using
+/// its OpenVR render model. The HMD gets a `PoV` (and googly eyes), controllers get `HandComponent`s.
+/// Also sets up `VrIk`.
 #[derive(ComponentBase)]
 pub struct VrRoot {
+	/// Entities of tracked devices by device index.
 	#[inner] inner: ComponentInner,
 	entities: RefCell<HashMap<openvr_sys::TrackedDeviceIndex_t, EntityRef>>,
 	ik: ComponentRef<VrIk>,

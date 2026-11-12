@@ -31,6 +31,7 @@ mod frag {
 	}
 }
 
+/// Pipeline rendering the undistorted camera background.
 pub struct BackgroundPipeline;
 
 impl PipelineConstructor for BackgroundPipeline {

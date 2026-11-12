@@ -8,8 +8,12 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Tool connecting two points with a `Rope`. The first shot selects the first point, the second
+/// creates the rope with the current distance as its length.
 pub struct RopeTool {
+	/// Entity selected with the first shot.
 	selected: EntityRef,
+	/// Selected point in the local space of `selected`.
 	selected_local_offset: Point3,
 }
 

@@ -7,8 +7,10 @@ use crate::math::Isometry3;
 use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureTimeout};
 
 
+/// Index of the capture device to use.
 pub const CAPTURE_INDEX: i32 = 0;
 
+/// Webcam capture using OpenCV.
 pub struct OpenCV {
 	inner: videoio::VideoCapture,
 	frame: Mat,

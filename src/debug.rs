@@ -7,16 +7,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::math::{Point2, Point3, Color, Vec2, Translation2, PMat4, Isometry3, Vec3, Similarity3, Translation3};
 
 
+/// Global debug mode toggle (`--debug`).
 static DEBUG: AtomicBool = AtomicBool::new(false);
 lazy_static! {
     static ref FLAGS: RwLock<HashMap<String, Box<dyn Any + Send + Sync>>> = RwLock::new(HashMap::new());
 }
 
+/// Returns `true` if debug mode is enabled.
 pub fn debug() -> bool {
 	let read = DEBUG.load(Ordering::Relaxed);
 	read
 }
 
+/// No-op function to put a breakpoint on.
 pub fn debugger() {
 	() // Breakpoint
 }
@@ -25,6 +28,10 @@ pub fn set_debug(value: bool) {
 	DEBUG.store(value, Ordering::Relaxed);
 }
 
+/// Returns the value of a debug flag if it is set and has type `T`.
+///
+/// Debug flags are global, string-keyed values used for debug toggles and for passing
+/// debug values around (eg. `"DebugCollidersDraw"`).
 pub fn get_flag<T>(key: &str)
                    -> Option<T>
                    where T: Clone + Send + Sync + 'static {
@@ -35,12 +42,14 @@ pub fn get_flag<T>(key: &str)
 	     .map(|val| val.clone())
 }
 
+/// Returns the value of a debug flag, or `T::default()` if it's not set or has a different type.
 pub fn get_flag_or_default<T>(key: &str)
                               -> T
                               where T: Clone + Send + Sync + Default + 'static {
 	get_flag(key).unwrap_or_default()
 }
 
+/// Sets a debug flag.
 pub fn set_flag<T>(key: &str, value: T)
 	               where T: Clone + Send + Sync + 'static {
 	FLAGS.write()
@@ -48,21 +57,25 @@ pub fn set_flag<T>(key: &str, value: T)
 	     .insert(key.to_string(), Box::new(value));
 }
 
+/// Sets the default values of debug flags that don't default to `T::default()`.
 pub fn setup_default_flags() {
 	set_flag("DebugGizmoSize", 1.0_f32);
 	set_flag("DebugGizmoFallOff", 1.0_f32);
 }
 
+/// `print!` that only prints in debug mode.
 #[allow(unused_macros)]
 macro_rules! dprint {
 	($( $args:expr ),*) => { if crate::debug::debug() { print!( $( $args ),* ); } }
 }
 
+/// `println!` that only prints in debug mode.
 #[allow(unused_macros)]
 macro_rules! dprintln {
 	($( $args:expr ),*) => { if crate::debug::debug() { println!( $( $args ),* ); } }
 }
 
+/// Position of a debug primitive: in screen space (normalized device coordinates) or in world space.
 #[derive(Copy, Clone)]
 pub enum DebugPosition {
 	Screen(Point2),
@@ -70,6 +83,7 @@ pub enum DebugPosition {
 }
 
 impl DebugPosition {
+	/// Projects the position into clip space of both eyes using their view-projection matrices.
 	pub fn project(self, viewproj: &(PMat4, PMat4)) -> (Point3, Point3) {
 		match self {
 			DebugPosition::Screen(screen) => (screen.coords.push(0.0).into(), screen.coords.push(0.0).into()),
@@ -138,12 +152,14 @@ impl From<glamx::Pose3> for DebugPosition {
 	}
 }
 
+/// Debug point, `radius` is in pixels.
 pub struct DebugPoint {
 	pub position: DebugPosition,
 	pub radius: f32,
 	pub color: Color,
 }
 
+/// Debug line, `width` is in pixels.
 pub struct DebugLine {
 	pub from: DebugPosition,
 	pub to: DebugPosition,
@@ -151,6 +167,9 @@ pub struct DebugLine {
 	pub color: Color,
 }
 
+/// Anchor of a debug text relative to its position, with an additional offset in pixels.
+///
+/// eg. `BottomRight` places the text below and to the right of the position.
 #[derive(Clone)]
 pub enum DebugOffset {
 	Center(Translation2),
@@ -177,6 +196,7 @@ impl DebugOffset {
 }
 
 impl DebugOffset {
+	/// Returns the top left corner of a text of the given size, relative to its position.
 	pub fn evaluate(&self, size: Vec2) -> Point2 {
 		match self {
 			DebugOffset::TopLeft(offset)     => offset * point!(-size.x * 1.0, -size.y * 1.0),
@@ -192,6 +212,7 @@ impl DebugOffset {
 	}
 }
 
+/// Debug text label, `size` is the font size in pixels.
 pub struct DebugText {
 	pub text: String,
 	pub position: DebugPosition,
@@ -200,6 +221,7 @@ pub struct DebugText {
 	pub color: Color,
 }
 
+/// Debug box with filled faces and outlined edges.
 pub struct DebugBox {
 	pub position: Isometry3,
 	pub size: Vec3,
@@ -207,6 +229,7 @@ pub struct DebugBox {
 	pub edge: Color,
 }
 
+/// Debug sphere with filled faces and outlined edges.
 pub struct DebugSphere {
 	pub position: Isometry3,
 	pub radius: f32,
@@ -214,6 +237,7 @@ pub struct DebugSphere {
 	pub edge: Color,
 }
 
+/// Debug capsule between two points with filled faces and outlined edges.
 pub struct DebugCapsule {
 	pub point_a: Point3,
 	pub point_b: Point3,
@@ -222,6 +246,7 @@ pub struct DebugCapsule {
 	pub edge: Color,
 }
 
+// Debug primitives queued for drawing this frame. Drawn and cleared by the `DebugRenderer`.
 thread_local! {
     pub static DEBUG_POINTS: RefCell<Vec<DebugPoint>> = RefCell::new(vec![]);
     pub static DEBUG_LINES: RefCell<Vec<DebugLine>> = RefCell::new(vec![]);
@@ -231,42 +256,52 @@ thread_local! {
     pub static DEBUG_CAPSULES: RefCell<Vec<DebugCapsule>> = RefCell::new(vec![]);
 }
 
+/// Queues a debug point to be drawn this frame.
 pub fn draw_point(position: impl Into<DebugPosition>, radius: f32, color: Color) {
 	DEBUG_POINTS.with(|points| {
 		points.borrow_mut().push(DebugPoint{ position: position.into(), radius, color });
 	})
 }
 
+/// Queues a debug line to be drawn this frame.
 pub fn draw_line(from: impl Into<DebugPosition>, to: impl Into<DebugPosition>, width: f32, color: Color) {
 	DEBUG_LINES.with(|lines| {
 		lines.borrow_mut().push(DebugLine{ from: from.into(), to: to.into(), width, color });
 	})
 }
 
+/// Queues a debug text to be drawn this frame.
 pub fn draw_text(text: impl Into<String>, position: impl Into<DebugPosition>, offset: DebugOffset, size: f32, color: Color) {
 	DEBUG_TEXTS.with(|texts| {
 		texts.borrow_mut().push(DebugText{ text: text.into(), position: position.into(), offset, size, color });
 	})
 }
 
+/// Queues a debug box to be drawn this frame.
 pub fn draw_box(position: Isometry3, size: Vec3, color: Color, edge: Color) {
 	DEBUG_BOXES.with(|boxes| {
 		boxes.borrow_mut().push(DebugBox{ position, size, color, edge });
 	})
 }
 
+/// Queues a debug sphere to be drawn this frame.
 pub fn draw_sphere(position: Isometry3, radius: f32, color: Color, edge: Color) {
 	DEBUG_SPHERES.with(|spheres| {
 		spheres.borrow_mut().push(DebugSphere{ position, radius, color, edge });
 	})
 }
 
+/// Queues a debug capsule to be drawn this frame.
 pub fn draw_capsule(point_a: Point3, point_b: Point3, radius: f32, color: Color, edge: Color) {
 	DEBUG_CAPSULES.with(|capsules| {
 		capsules.borrow_mut().push(DebugCapsule{ point_a, point_b, radius, color, edge });
 	})
 }
 
+/// Returns the scale of a debug gizmo at the given position, based on the `DebugGizmoSize` and
+/// `DebugGizmoFallOff` flags and the distance from `DebugGizmoPoV`.
+///
+/// With a fall off of 1, gizmos keep the same world size. With 0, they keep the same screen size.
 pub fn gizmo_scale(pos: impl Into<DebugPosition>) -> f32 {
 	let pos = pos.into();
 	let gizmo_size = get_flag("DebugGizmoSize").unwrap_or(1.0_f32);
@@ -279,6 +314,8 @@ pub fn gizmo_scale(pos: impl Into<DebugPosition>) -> f32 {
 	}
 }
 
+/// Returns the `(stroke, fill)` opacity of a gizmo based on its selection state, or `None`
+/// if it should be hidden.
 pub fn gizmo_opacity(selected: bool, hovered: bool, hide_unselected: bool) -> Option<(f32, f32)> {
 	if hide_unselected && !selected && !hovered { return None; }
 	
@@ -290,6 +327,7 @@ pub fn gizmo_opacity(selected: bool, hovered: bool, hide_unselected: bool) -> Op
 	})
 }
 
+/// Splits a line at the first comma.
 fn split_comma(line: &str) -> Option<(&str, &str)> {
 	let mut splitter = line.splitn(2, ',');
 	let first = splitter.next()?;
@@ -298,9 +336,11 @@ fn split_comma(line: &str) -> Option<(&str, &str)> {
 }
 
 lazy_static! {
+	/// Japanese to English translations of MMD bone and morph names, loaded from `translations.txt`.
 	static ref TRANSLATIONS: HashMap<&'static str, &'static str> = include_str!("./translations.txt").lines().filter_map(split_comma).collect();
 }
 
+/// Translates a Japanese MMD name to English, if a translation is known.
 pub fn translate(text: &str) -> Option<&'static str> {
 	TRANSLATIONS.get(text)
 	            .cloned() // Remove double ref

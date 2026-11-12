@@ -7,6 +7,8 @@ use crate::utils::{end_row_interact, ExUi, id_fmt};
 use super::super::{Application, Entity, EntityRef};
 
 
+/// Main GUI tab: debug flags, physics parameters, the scene tree and the inspector of the
+/// selected entity (or the POV entity if nothing is selected).
 pub fn main_ui(ui: &mut Ui, application: &Application) {
 	CollapsingHeader::new("Debug Flags")
 		.default_open(true)
@@ -68,6 +70,7 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 }
 
 
+/// Checkbox bound to a boolean debug flag.
 fn debug_flag_checkbox(ui: &mut Ui, flag: &str, label: impl Into<WidgetText>) {
 	let mut value = debug::get_flag_or_default(flag);
 	if Checkbox::new(&mut value, label).ui(ui).changed() {
@@ -75,6 +78,7 @@ fn debug_flag_checkbox(ui: &mut Ui, flag: &str, label: impl Into<WidgetText>) {
 	}
 }
 
+/// Slider bound to a float debug flag.
 fn debug_flag_slider(ui: &mut Ui, flag: &str, range: RangeInclusive<f32>, label: impl Into<WidgetText>) {
 	let mut value: f32 = debug::get_flag_or_default(flag);
 	if Slider::new(&mut value, range).text(label).ui(ui).changed() {
@@ -82,6 +86,8 @@ fn debug_flag_slider(ui: &mut Ui, flag: &str, range: RangeInclusive<f32>, label:
 	}
 }
 
+/// Draws a row for `entity` in the scene tree grid and, if expanded, recursively its children.
+/// Clicking a row selects the entity and hovering it highlights it.
 fn entity_tree(ui: &mut Ui, entity: &Entity, application: &Application, selected_ent: &EntityRef, hovered_ent: &EntityRef, level: usize, default_open: bool) {
 	let id = Id::new(entity.id);
 	let mut open = ui.ctx().data_mut(|d| d.get_persisted(id).unwrap_or(default_open));

@@ -20,6 +20,7 @@ pub use enums::{Bones, Morphs};
 use proc_anim::{ProcAnim, Easing};
 
 
+/// Facial expression presets, activated by holding the given number key.
 const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 	(1, &[Morphs::Embarrassment]),
 	(2, &[Morphs::Embarrassment3]),
@@ -33,11 +34,17 @@ const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 	(0, &[Morphs::BWink2Right]),
 ];
 
+/// The Miku character: loads her MMD model and drives procedural idle animations (breathing,
+/// blinking) and facial expressions. She reacts with embarrassment when her body is moved around.
+///
+/// Also shows a ragdoll and bone/rigid body browser in the inspector.
 #[derive(ComponentBase)]
 pub struct Miku {
 	#[inner] inner: ComponentInner,
 	asset: PmxAsset,
+	/// Model component created on start.
 	pub model: ComponentRef<MMDModel>,
+	/// Procedural animations of bones and morphs.
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
 		HashMap<Morphs, ProcAnim<f32>>,
@@ -98,6 +105,7 @@ impl Miku {
 		}
 	}
 	
+	/// Returns the ragdoll rigid body of the given body part, if the model has one.
 	pub fn body_part<'a>(&self, body_part: BodyPart, application: &'a Application) -> Option<&'a MMDRigidBody> {
 		self.model
 			.get(application)

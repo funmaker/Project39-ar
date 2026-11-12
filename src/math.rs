@@ -42,6 +42,7 @@ pub type Mat3x4 = nalgebra::Matrix3x4<f32>;
 pub type Ray = rapier3d::geometry::Ray;
 pub type AABB = rapier3d::geometry::Aabb;
 
+/// Conversions between matrices and OpenVR row-major 3x4/4x4 arrays.
 pub trait VRSlice {
 	fn from_slice34(from: &[[f32; 4]; 3]) -> Self;
 	fn from_slice44(from: &[[f32; 4]; 4]) -> Self;
@@ -104,6 +105,7 @@ impl<C: TCategory> VRSlice for Transform<f32, C, 3> {
 	}
 }
 
+/// Computes the bounding box of a set of points. Panics if there are no points.
 pub fn aabb_from_points<'a, I>(pts: I) -> AABB
 	where
 		I: IntoIterator<Item = Point3>,
@@ -124,6 +126,8 @@ pub fn aabb_from_points<'a, I>(pts: I) -> AABB
 	AABB::new(min.into(), max.into())
 }
 
+/// Intersects a ray with the XY plane of `plane`. Returns the hit point in the plane's local
+/// coordinates, or `None` if the ray doesn't hit the plane.
 pub fn cast_ray_on_plane(plane: Isometry3, ray: Ray) -> Option<Point3> {
 	let norm = plane.transform_vector(&Vec3::z_axis());
 	let origin = plane.transform_point(&Point3::origin());
@@ -137,6 +141,7 @@ pub fn cast_ray_on_plane(plane: Isometry3, ray: Ray) -> Option<Point3> {
 	}
 }
 
+/// Rotation that makes -Z face `dir`, keeping Y up. Uses Z as up if `dir` is vertical.
 pub fn face_towards_lossy(dir: Vec3) -> Rot3 {
 	if dir.cross(&Vec3::y_axis()).magnitude_squared() <= f32::EPSILON {
 		Rot3::face_towards(&-dir, &Vec3::z_axis())
@@ -145,6 +150,7 @@ pub fn face_towards_lossy(dir: Vec3) -> Rot3 {
 	}
 }
 
+/// Rotation that makes Y face along `dir`, keeping Z as close to down as possible.
 pub fn face_upwards_lossy(dir: Vec3) -> Rot3 {
 	if dir.cross(&-Vec3::y_axis()).magnitude_squared() < f32::EPSILON {
 		Rot3::identity()
@@ -153,8 +159,9 @@ pub fn face_upwards_lossy(dir: Vec3) -> Rot3 {
 	}
 }
 
-// Using ZXY euler sequence
 // Thanks for help kirsh168
+/// Decomposes a rotation into `(pitch, yaw, roll)` Euler angles, using the ZXY sequence
+/// (see `from_euler`). In gimbal lock, roll is zero.
 pub fn to_euler(rot: Rot3) -> (f32, f32, f32) {
 	let m11 = 2.0 * (rot.w * rot.w + rot.i * rot.i) - 1.0;
 	// let m12 = 2.0 * (rot.i * rot.j - rot.w * rot.k);
@@ -189,7 +196,8 @@ pub fn to_euler(rot: Rot3) -> (f32, f32, f32) {
 	(pitch, yaw, roll)
 }
 
-// Using ZXY euler sequence
+/// Builds a rotation from Euler angles using the ZXY sequence: roll around Z, then pitch around X,
+/// then yaw around Y.
 pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Rot3 {
 	let x = Rot3::from_axis_angle(&Vec3::x_axis(), pitch);
 	let y = Rot3::from_axis_angle(&Vec3::y_axis(), yaw);
@@ -198,8 +206,8 @@ pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Rot3 {
 	y * x * z
 }
 
-// Translates OpenGL projection matrix to Vulkan
 // Can't be const because Mat4::new is not const fn or something
+/// Converts an OpenGL style projection to Vulkan conventions (flipped Y, depth in 0..1).
 pub fn projective_clip() -> AMat4 {
 	AMat4::from_matrix_unchecked(Mat4::new(
 		1.0, 0.0, 0.0, 0.0,
@@ -209,12 +217,14 @@ pub fn projective_clip() -> AMat4 {
 	))
 }
 
+/// RGBA color with premultiplied alpha.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color(Vec4);
 
 impl Color {
 	pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self { Color(vector!(r, g, b, a)) }
 	
+	/// Dark variants of the basic colors.
 	pub const D_BLACK: Self = Color(vector!(0.0, 0.0, 0.0, 1.0));
 	pub const D_RED: Self = Color(vector!(0.5, 0.0, 0.0, 1.0));
 	pub const D_GREEN: Self = Color(vector!(0.0, 0.6, 0.0, 1.0));
@@ -224,6 +234,7 @@ impl Color {
 	pub const D_CYAN: Self = Color(vector!(0.0, 0.6, 0.6, 1.0));
 	pub const D_WHITE: Self = Color(vector!(0.8, 0.8, 0.8, 1.0));
 	
+	/// Gray. Pure black is `FULL_BLACK`.
 	pub const BLACK: Self = Color(vector!(0.5, 0.5, 0.5, 1.0));
 	pub const RED: Self = Color(vector!(1.0, 0.0, 0.0, 1.0));
 	pub const GREEN: Self = Color(vector!(0.0, 1.0, 0.0, 1.0));
@@ -237,7 +248,9 @@ impl Color {
 	pub const FULL_WHITE: Self = Color(vector!(1.0, 1.0, 1.0, 1.0));
 	pub const TRANSPARENT: Self = Color(vector!(0.0, 0.0, 0.0, 0.0));
 	
+	/// Multiplies all channels by `opacity`, making the (premultiplied) color more transparent.
 	pub fn opactiy(self, opacity: f32) -> Self { Color(self.0 * opacity) }
+	/// Darkens the color for `lightness` < 1, or brightens it towards white for `lightness` > 1.
 	pub fn lightness(self, lightness: f32) -> Self { Color(
 		if lightness < 1.0 {
 			self.0.component_mul(&vector!(lightness, lightness, lightness, 1.0))
@@ -279,6 +292,7 @@ impl Into<egui::Color32> for Color {
 }
 
 
+/// `SubsetOf` conversion that logs and falls back to an unchecked conversion on failure.
 pub trait SubsetOfLossy<T> {
 	fn from_superset_lossy(element: &T) -> Self;
 }
@@ -293,6 +307,7 @@ impl<T, S> SubsetOfLossy<S> for T where T: SubsetOf<S> + Any {
 	}
 }
 
+/// `SupersetOf` conversion that logs and falls back to an unchecked conversion on failure.
 pub trait SuperSetOfLossy<T>: SupersetOf<T> + Any {
 	fn to_subset_lossy(&self) -> T;
 }
@@ -307,6 +322,7 @@ impl<T, S> SuperSetOfLossy<S> for T where T: SupersetOf<S> + Any {
 	}
 }
 
+/// Conversion of vectors, points and colors into plain arrays (eg. for shader data).
 pub trait IntoArray<T> {
 	fn into_array(self) -> T;
 }

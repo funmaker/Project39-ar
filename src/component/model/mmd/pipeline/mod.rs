@@ -35,6 +35,7 @@ fn base_fragment(device: &Arc<Device>, transparent_pass: bool) -> EntryPoint {
 	module.entry_point("main").unwrap()
 }
 
+/// MMD material pipeline for the opaque pass, with back face culling.
 pub struct MMDPipelineOpaque;
 
 impl PipelineConstructor for MMDPipelineOpaque {
@@ -58,6 +59,7 @@ impl PipelineConstructor for MMDPipelineOpaque {
 	}
 }
 
+/// MMD material pipeline for the opaque pass, for double sided materials.
 pub struct MMDPipelineOpaqueNoCull;
 
 impl PipelineConstructor for MMDPipelineOpaqueNoCull {
@@ -81,6 +83,7 @@ impl PipelineConstructor for MMDPipelineOpaqueNoCull {
 	}
 }
 
+/// MMD material pipeline for the transparent pass, with back face culling.
 pub struct MMDPipelineTrans;
 
 impl PipelineConstructor for MMDPipelineTrans {
@@ -104,6 +107,7 @@ impl PipelineConstructor for MMDPipelineTrans {
 	}
 }
 
+/// MMD material pipeline for the transparent pass, for double sided materials.
 pub struct MMDPipelineTransNoCull;
 
 impl PipelineConstructor for MMDPipelineTransNoCull {
@@ -127,6 +131,7 @@ impl PipelineConstructor for MMDPipelineTransNoCull {
 	}
 }
 
+/// Pipeline drawing MMD edges (toon outlines) as inflated back faces.
 pub struct MMDPipelineOutline;
 
 impl PipelineConstructor for MMDPipelineOutline {
@@ -150,8 +155,10 @@ impl PipelineConstructor for MMDPipelineOutline {
 	}
 }
 
+/// Workgroup size of the morph compute shader.
 pub const MORPH_GROUP_SIZE: usize = 32;
 
+/// Compute pipeline applying vertex morphs into the morphed vertex offsets buffer.
 pub struct MMDPipelineMorphs;
 
 impl PipelineConstructor for MMDPipelineMorphs {

@@ -17,6 +17,7 @@ lazy_static!(
 	                                                .collect();
 );
 
+/// Camera producing a solid color frame at `CAPTURE_FPS`. Used without a real camera.
 pub struct Dummy {
 	last_frame: Instant,
 }

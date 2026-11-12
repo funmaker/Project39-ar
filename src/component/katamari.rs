@@ -11,8 +11,11 @@ use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::physics::collider::ColliderComponent;
 
 
+/// Sticky ball: dynamic bodies it touches that are smaller than a third of its volume get attached
+/// to it, and the ball grows to include their volume.
 #[derive(ComponentBase)]
 pub struct Katamari {
+	/// Ball collider created on start.
 	#[inner] inner: ComponentInner,
 	collider: ComponentRef<ColliderComponent>,
 }

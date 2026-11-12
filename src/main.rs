@@ -43,6 +43,9 @@ fn main() {
 	}
 }
 
+/// Loads `config.toml` (if present), applies CLI overrides and handles the informational flags
+/// (`--help`, `--example_config`), then initializes global state and runs the winit event loop
+/// until the application exits.
 fn run_application() -> Result<()> {
 	let config_path = "config.toml";
 	let file_name = std::env::args().next().unwrap_or("project39-ar.exe".to_string());
@@ -96,6 +99,7 @@ fn run_application() -> Result<()> {
 	Ok(())
 }
 
+/// Prints the CLI usage text generated from the `Config` struct.
 fn print_usage(filename: &str, mut config: Config) {
 	config.help = false;
 	
@@ -104,6 +108,8 @@ fn print_usage(filename: &str, mut config: Config) {
 	println!("\n{}", config.usage());
 }
 
+/// Builds a panic hook that runs the default hook and then shows the panic message, thread
+/// and location in a native error dialog.
 fn panic_hook() -> impl Fn(&PanicHookInfo) {
 	let default_hook = panic::take_hook();
 	

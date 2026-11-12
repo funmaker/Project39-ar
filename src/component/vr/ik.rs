@@ -13,10 +13,12 @@ use crate::utils::{ExUi, get_user_data};
 use super::super::{Component, ComponentBase, ComponentInner};
 
 
-// Based on Mathias Parger's
-// Inverse Kinematics for Virtual Reality
-// https://diglib.tugraz.at/download.php?id=5c4a48dc5a282&location=browse
 
+/// Upper body inverse kinematics driven by the HMD and controllers, simulating the torso and arms
+/// with kinematic colliders so the player can push things around.
+///
+/// Based on Mathias Parger's "Inverse Kinematics for Virtual Reality"
+/// (<https://diglib.tugraz.at/download.php?id=5c4a48dc5a282&location=browse>).
 #[derive(ComponentBase)]
 pub struct VrIk {
 	#[inner] inner: ComponentInner,
@@ -29,21 +31,34 @@ pub struct VrIk {
 	rb_right_upper_arm: Cell<RigidBodyHandle>,
 	rb_right_lower_arm: Cell<RigidBodyHandle>,
 	
+	/// Offset from the left controller to the wrist.
 	left_hand_offset: Cell<Isometry3>,
+	/// Offset from the right controller to the wrist.
 	right_hand_offset: Cell<Isometry3>,
+	/// Standing HMD height, used to estimate how much the player is bending over.
 	base_height: Cell<f32>,
+	/// Offset from the HMD to the neck, in HMD space.
 	neck_offset: Cell<Vec3>,
+	/// Offset from the neck to the shoulders center.
 	shoulder_offset: Cell<Vec3>,
+	/// How much the torso pitches when the HMD is lowered.
 	height_factor: Cell<f32>,
+	/// How much looking down adds to the torso pitch.
 	pitch_factor: Cell<f32>,
+	/// Total length of the arm from the shoulders center to the wrist.
 	arm_length: Cell<f32>,
+	/// Fraction of `arm_length` taken by the shoulder.
 	arm_shoulder: Cell<f32>,
+	/// Fraction of `arm_length` taken by the upper arm.
 	arm_upper: Cell<f32>,
+	/// How much the shoulders rotate towards the hands.
 	shoulder_rot_mul: Cell<f32>,
+	/// Maximum shoulder rotation, in radians.
 	shoulder_rot_max: Cell<f32>,
 }
 
 impl VrIk {
+	/// Creates the IK for the given HMD and hand entities. Missing entities are replaced with defaults.
 	pub fn new(hmd: EntityRef, hand_left: EntityRef, hand_right: EntityRef) -> Self {
 		VrIk {
 			inner: ComponentInner::new_norender(),
@@ -86,6 +101,8 @@ impl VrIk {
 		println!("Setting hand_right {:?}", self.hand_right);
 	}
 	
+	/// Estimates the torso position at the base of the neck. Yaw follows the hands, pitch follows
+	/// the HMD height and pitch.
 	fn torso_pos(&self, hmd_pos: Isometry3, left_pos: Isometry3, right_pos: Isometry3) -> Isometry3 {
 		let (hmd_pitch, hmd_yaw, _) = to_euler(hmd_pos.rotation);
 		
@@ -114,6 +131,7 @@ impl VrIk {
 		position
 	}
 	
+	/// Computes the shoulder position, rotated towards the hand when it reaches forward or up.
 	fn shoulder_pos(&self, torso_pos: Isometry3, shoulder_offset: Isometry3, hand_pos: Isometry3, color: Color) -> Isometry3 {
 		let hand_local = (torso_pos * shoulder_offset).inverse() * hand_pos;
 		let arm_length = self.arm_length.get() * (1.0 - self.arm_shoulder.get());
@@ -137,6 +155,8 @@ impl VrIk {
 		position
 	}
 	
+	/// Solves the two bone arm IK. Returns the upper and lower arm positions. Elbow roll is estimated
+	/// from the hand position relative to the shoulder.
 	fn arm_pos(&self, shoulder_pos: Isometry3, hand_pos: Isometry3, left: bool, color: Color) -> (Isometry3, Isometry3) {
 		let upper_arm_length = self.arm_length.get() * self.arm_upper.get();
 		let lower_arm_length = self.arm_length.get() * (1.0 - self.arm_upper.get() - self.arm_shoulder.get());
@@ -292,6 +312,7 @@ impl Component for VrIk {
 	}
 }
 
+/// Creates a kinematic rigid body with a collider.
 fn create_rb(physics: &mut PhysicsWorld, user_data: u128, collider: ColliderBuilder) -> RigidBodyHandle {
 	let handle = physics.bodies.insert(
 		RigidBodyBuilder::new(RigidBodyType::KinematicPositionBased)

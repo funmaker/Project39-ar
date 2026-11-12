@@ -7,8 +7,13 @@ use rand::{Rng, thread_rng};
 use crate::math::Rot3;
 
 
+/// Procedural keyframe animation of a value, built from a sequence of tweens and waits.
+///
+/// Durations can be randomized with a range. `overdrive` temporarily replaces the animation
+/// with another one, resuming from its final value afterwards.
 #[derive(Debug, Clone)]
 pub struct ProcAnim<V> {
+	/// Value at the start of the current frame.
 	from: V,
 	frames: Vec<Frame<V>>,
 	frame_start: Instant,
@@ -16,10 +21,12 @@ pub struct ProcAnim<V> {
 	frame_dur: f32,
 	repeat: bool,
 	stopped: bool,
+	/// Animation temporarily playing instead of this one.
 	overdrive: Option<Box<ProcAnim<V>>>,
 }
 
 impl<V: Interpolate + Clone> ProcAnim<V> {
+	/// Creates an empty animation starting at `initial`.
 	pub fn new(initial: V) -> Self {
 		ProcAnim {
 			from: initial,
@@ -33,6 +40,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		}
 	}
 	
+	/// Appends a pause keeping the current value.
 	pub fn wait(mut self, time: impl Into<DurationRange>) -> Self {
 		let end_state = self.end_state();
 		let duration = time.into();
@@ -48,6 +56,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		self
 	}
 	
+	/// Appends a tween to `target`.
 	pub fn anim(mut self, target: V, time: impl Into<DurationRange>, easing: Easing) -> Self {
 		let duration = time.into();
 		
@@ -62,6 +71,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		self
 	}
 	
+	/// Loops the animation.
 	pub fn repeat(self) -> Self {
 		ProcAnim {
 			repeat: true,
@@ -69,6 +79,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		}
 	}
 	
+	/// Plays the animation only once (the default).
 	pub fn no_repeat(self) -> Self {
 		ProcAnim {
 			repeat: false,
@@ -76,6 +87,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		}
 	}
 	
+	/// Starts the animation stopped. Use `play` to start it.
 	pub fn no_autoplay(self) -> Self {
 		ProcAnim {
 			stopped: true,
@@ -83,12 +95,14 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		}
 	}
 	
+	/// Value at the end of the animation.
 	pub fn end_state(&self) -> V {
 		self.frames.last()
 		    .map(|frame| frame.target.clone())
 		    .unwrap_or(self.from.clone())
 	}
 	
+	/// Advances the animation to the current time and returns its value.
 	pub fn get(&mut self) -> V {
 		if let Some(mut overdrive) = self.overdrive.take() {
 			let result = overdrive.get();
@@ -131,6 +145,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 	
 	pub fn stopped(&self) -> bool { self.stopped }
 	
+	/// Stops the animation, holding its current value.
 	pub fn stop(&mut self) {
 		if self.stopped { return; }
 		
@@ -139,6 +154,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		self.stopped = true;
 	}
 	
+	/// Starts or resumes a stopped animation from the current frame.
 	pub fn play(&mut self) {
 		if !self.stopped { return; }
 		
@@ -146,6 +162,8 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 		self.frame_start = Instant::now();
 	}
 	
+	/// Interrupts the animation with `anim`, which starts from the current value. Once `anim` ends,
+	/// this animation resumes from where `anim` ended.
 	pub fn overdrive(&mut self, mut anim: ProcAnim<V>) {
 		if let Some(overdive) = &mut self.overdrive {
 			overdive.overdrive(anim);
@@ -157,6 +175,7 @@ impl<V: Interpolate + Clone> ProcAnim<V> {
 	}
 }
 
+/// A single tween of an animation.
 #[derive(Debug, Clone)]
 struct Frame<V> {
 	target: V,
@@ -165,20 +184,24 @@ struct Frame<V> {
 }
 
 impl<V: Interpolate> Frame<V> {
+	/// Value of the frame at relative `time` (0..1).
 	fn at(&self, time: f32, from: &V) -> V {
 		Interpolate::interpolate(&from, &self.target, self.easing.ease(time))
 	}
 }
 
+/// Easing curve of a tween.
 #[allow(unused)]
 #[derive(Clone)]
 pub enum Easing {
+	/// Jumps to the target at the start of the frame.
 	Step,
 	Linear,
 	Ease,
 	EaseIn,
 	EaseOut,
 	EaseInOut,
+	/// 1D cubic Bézier curve with the given control values.
 	Bezier(f32, f32, f32, f32),
 	Custom(Arc<dyn Fn(f32) -> f32>),
 }
@@ -198,6 +221,7 @@ impl Debug for Easing {
 	}
 }
 
+/// Evaluates a 1D cubic Bézier curve.
 fn bezier(x: f32, a: f32, b: f32, c: f32, d: f32) -> f32 {
 	        a * (1.0 - x).powi(3)
 	+ 3.0 * b * (1.0 - x).powi(2) * x
@@ -206,6 +230,7 @@ fn bezier(x: f32, a: f32, b: f32, c: f32, d: f32) -> f32 {
 }
 
 impl Easing {
+	/// Maps linear progress (0..1) to eased progress.
 	pub fn ease(&self, t: f32) -> f32 {
 		match self {
 			Easing::Step => 1.0,
@@ -220,6 +245,7 @@ impl Easing {
 	}
 }
 
+/// Values that can be interpolated by animations.
 pub trait Interpolate: Sized {
 	fn interpolate(from: &Self, to: &Self, time: f32) -> Self;
 }
@@ -236,6 +262,7 @@ impl Interpolate for Rot3 {
 	}
 }
 
+/// Fixed or random (uniformly sampled each time the frame starts) duration, in seconds.
 #[derive(Clone, Debug)]
 pub enum DurationRange {
 	Fixed(f32),
@@ -243,6 +270,7 @@ pub enum DurationRange {
 }
 
 impl DurationRange {
+	/// Returns a duration, sampling the range if random.
 	fn sample(&self) -> f32 {
 		match self {
 			DurationRange::Fixed(val) => *val,

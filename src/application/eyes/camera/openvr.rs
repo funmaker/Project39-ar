@@ -16,16 +16,20 @@ use super::super::super::vr::{VR, FrameType, CameraService};
 use super::{Camera, CameraCaptureTimeout};
 
 
+/// Tracked device whose camera is used.
 pub const CAPTURE_INDEX: TrackedDeviceIndex = tracked_device_index::HMD;
 
+/// Captures frames from the HMD's front facing cameras using the OpenVR tracked camera API.
 pub struct OpenVR {
 	index: TrackedDeviceIndex,
 	last_capture: Instant,
 	service: CameraService,
+	/// Transform from the head to the camera.
 	headtocam: Isometry3,
 }
 
 impl OpenVR {
+	/// Opens the HMD camera stream and updates the configured camera frame buffer size to match it.
 	pub fn new(vr: Arc<VR>) -> Result<OpenVR> {
 		let index = CAPTURE_INDEX;
 		let headtocam;

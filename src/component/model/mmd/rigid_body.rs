@@ -12,12 +12,17 @@ use super::super::super::physics::joint::JointComponent;
 use super::BodyPart;
 
 
+/// Marks an entity as a rigid body of an MMD model's ragdoll.
 #[derive(ComponentBase)]
 pub struct MMDRigidBody {
+	/// Bone driven by this rigid body.
 	#[inner] inner: ComponentInner,
 	pub bone: usize,
+	/// Body part this rigid body represents, if recognized.
 	pub body_part: Option<BodyPart>,
+	/// Rest position relative to the model.
 	pub rest_pos: Cell<Isometry3>,
+	/// Joint connecting this rigid body to its parent.
 	pub joint: ComponentRef<JointComponent>,
 	pub model: ComponentRef<MMDModel>,
 }

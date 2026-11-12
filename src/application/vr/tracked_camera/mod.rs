@@ -8,16 +8,19 @@ pub use error::*;
 pub use utils::*;
 
 
+/// Bindings to the OpenVR `IVRTrackedCamera` interface, which the `openvr` crate doesn't provide.
 #[derive(Copy, Clone)]
 pub struct TrackedCamera(FnTable);
 
 impl TrackedCamera {
+	/// Loads the tracked camera function table. Requires an initialized OpenVR context.
 	pub fn new(_context: &Context) -> Result<TrackedCamera, InitError> {
 		let fn_tab: FnTable = unsafe { &*load(sys::IVRTrackedCamera_Version)? };
 		
 		Ok(TrackedCamera(fn_tab))
 	}
 	
+	/// Returns `true` if the given tracked device has a camera.
 	pub fn has_camera(&self, index: TrackedDeviceIndex) -> bool {
 		let mut out = false;
 		
@@ -26,6 +29,7 @@ impl TrackedCamera {
 		out
 	}
 	
+	/// Returns the frame dimensions and buffer size for the given frame type.
 	pub fn get_camera_frame_size(&self, index: TrackedDeviceIndex, frame_type: FrameType) -> Result<FrameSize, TrackedCameraError> {
 		let mut out = FrameSize::default();
 		
@@ -40,6 +44,7 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
+	/// Returns the focal length and optical center of a camera of the device.
 	pub fn get_camera_intrinsics(&self, index: TrackedDeviceIndex, camera_index: u32, frame_type: FrameType) -> Result<Intrinsics, TrackedCameraError> {
 		let mut out = Intrinsics::default();
 		
@@ -54,6 +59,7 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
+	/// Returns the projection matrix of a camera of the device.
 	pub fn get_camera_projection(&self, index: TrackedDeviceIndex, camera_index: u32, frame_type: FrameType, z_near: f32, z_far: f32) -> Result<[[f32; 4]; 4], TrackedCameraError> {
 		let mut out = [[0.0; 4]; 4];
 		
@@ -69,6 +75,10 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
+	/// Starts video streaming from the device's camera.
+	///
+	/// # Safety
+	/// The returned handle must be released with `release_video_streaming_service`.
 	pub unsafe fn acquire_video_streaming_service(&self, index: TrackedDeviceIndex) -> Result<TrackedCameraHandle, TrackedCameraError> {
 		let mut out = 0;
 		
@@ -82,6 +92,10 @@ impl TrackedCamera {
 		Ok(out)
 	}
 	
+	/// Stops video streaming.
+	///
+	/// # Safety
+	/// `handle` must be a valid handle that was not released yet.
 	pub unsafe fn release_video_streaming_service(&self, handle: TrackedCameraHandle) -> Result<(), TrackedCameraError> {
 		unsafe {
 			check_err(self.0,
@@ -92,6 +106,10 @@ impl TrackedCamera {
 		Ok(())
 	}
 	
+	/// Copies the latest frame into `buffer` and returns its header.
+	///
+	/// # Safety
+	/// `handle` must be a valid, acquired streaming handle.
 	pub unsafe fn get_video_stream_frame_buffer(&self, handle: TrackedCameraHandle, frame_type: FrameType, buffer: &mut [u8]) -> Result<CameraVideoStreamFrameHeader, TrackedCameraError> {
 		let mut header = CameraVideoStreamFrameHeader {
 			eFrameType: frame_type.into(),
@@ -125,6 +143,7 @@ impl TrackedCamera {
 	}
 }
 
+/// Loads an OpenVR interface function table by its version string.
 fn load<T>(suffix: &[u8]) -> Result<*const T, InitError> {
 	let mut magic = Vec::from(b"FnTable:".as_ref());
 	magic.extend(suffix);

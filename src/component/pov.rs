@@ -11,10 +11,14 @@ use super::model::simple::ObjAsset;
 use super::pc_controlled::PCControlled;
 
 
+/// Marks the entity as the camera (point of view) the eyes render from.
+///
+/// If `detachable`, `Backspace` toggles a detached camera rendering to the window (see `DetachedPoV`).
 #[derive(ComponentBase)]
 pub struct PoV {
 	#[inner] inner: ComponentInner,
 	detachable: bool,
+	/// Currently detached camera entity.
 	detached: EntityRef,
 }
 
@@ -65,6 +69,10 @@ impl Component for PoV {
 	}
 }
 
+/// Detached camera rendered to the desktop window instead of mirroring the eyes.
+///
+/// Initially follows the main camera. Pressing a movement key detaches it, giving it its own
+/// `PCControlled` controls while the main camera's controls are disabled.
 #[derive(ComponentBase)]
 pub struct DetachedPoV {
 	#[inner] inner: ComponentInner,

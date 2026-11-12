@@ -6,10 +6,14 @@ use crate::math::{AABB, Point3, Rot3, Vec3};
 use super::{Component, ComponentBase, ComponentInner};
 
 
+/// Vehicle seat: when the head enters the `trigger` box, the VR root is attached to the entity
+/// so the player moves with it. Leaving the trigger (or grabbing the vehicle) detaches it again.
 #[derive(ComponentBase)]
 pub struct Seat {
+	/// Trigger volume in the entity's local space.
 	#[inner] inner: ComponentInner,
 	trigger: AABB,
+	/// Entity currently seated (the VR root).
 	driver: EntityRef,
 }
 

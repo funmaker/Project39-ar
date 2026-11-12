@@ -7,6 +7,7 @@ use crate::utils::{id_fmt, ExUi, SelectionLevel};
 use super::super::Application;
 
 
+/// Physics GUI tab: integration parameters and lists of all rigid bodies, colliders and joints.
 pub fn physics_ui(physics: &mut PhysicsWorld, ui: &mut Ui, application: &Application) {
 	use egui::*;
 	use crate::utils::ExUi;

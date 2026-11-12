@@ -5,8 +5,10 @@ use crate::application::{Entity, Application, Hand};
 use super::{Component, ComponentBase, ComponentInner};
 
 
+/// Maximum thruster force.
 const FORCE: f32 = 1000.0;
 
+/// Which right controller touchpad direction fires the thruster.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ThrusterDirection {
 	Forward,
@@ -15,6 +17,8 @@ pub enum ThrusterDirection {
 	Right,
 }
 
+/// Vehicle thruster controlled with the right controller's touchpad while the player is seated
+/// (see `Seat`). Pushes the entity along its local Y axis.
 #[derive(ComponentBase)]
 pub struct Thruster {
 	#[inner] inner: ComponentInner,

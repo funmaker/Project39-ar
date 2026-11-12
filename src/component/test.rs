@@ -9,6 +9,8 @@ use crate::utils::ExUi;
 use super::{Component, ComponentBase, ComponentInner};
 
 
+/// Test component moving the entity back and forth along its Z axis, either directly or
+/// through its rigid body (`phys`).
 #[derive(ComponentBase)]
 pub struct TestComponent {
 	#[inner] inner: ComponentInner,

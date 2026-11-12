@@ -31,10 +31,12 @@ pub use vulkan::*;
 pub use ref_cell_iter::*;
 
 
+/// Conversion into a boxed trait object, implemented both for the concrete types and for the boxes themselves.
 pub trait IntoBoxed<T: ?Sized>: 'static {
 	fn into(self) -> Box<T>;
 }
 
+/// Returns an invalid tracked device pose with an identity transform.
 pub fn default_tracked_pose() -> TrackedDevicePose {
 	TrackedDevicePose::from(TrackedDevicePose_t {
 		mDeviceToAbsoluteTracking: HmdMatrix34_t { m: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]] },
@@ -46,6 +48,7 @@ pub fn default_tracked_pose() -> TrackedDevicePose {
 	})
 }
 
+/// Returns `WaitPoses` with all poses set to `default_tracked_pose`.
 pub fn default_wait_poses() -> WaitPoses {
 	WaitPoses {
 		render: [default_tracked_pose(); MAX_TRACKED_DEVICE_COUNT],
@@ -53,6 +56,7 @@ pub fn default_wait_poses() -> WaitPoses {
 	}
 }
 
+/// Collects a list of values (or `key => value` pairs) into any `FromIterator` collection.
 macro_rules! collection {
     // map-like
     ($($k:expr => $v:expr),* $(,)?) => {{

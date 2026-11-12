@@ -61,20 +61,29 @@ use eyes::{camera, Eyes};
 use gui::ApplicationGui;
 use window::Window;
 
+/// The main application state: VR, renderer, physics, input, window, eyes and every entity.
+///
+/// Shared state is kept behind `RefCell`s so that almost every API can take `&Application`.
+/// One frame is driven by `on_tick` (triggered by `RedrawRequested`).
 pub struct Application {
 	pub vr: Option<Arc<VR>>,
 	pub renderer: RefCell<Renderer>,
 	pub physics: RefCell<PhysicsWorld>,
 	pub physics_params: RefCell<PhysicsParams>,
+	/// Device poses returned by the compositor for the current frame.
 	pub vr_poses: WaitPoses,
+	/// Entity whose position is used as the camera (head) position.
 	pub pov: EntityRef,
+	/// Main Miku character component, if one exists.
 	pub miku: ComponentRef<Miku>,
+	/// Optional entity rendered to the desktop window instead of mirroring the eyes.
 	pub detached_pov: EntityRef,
 	pub input: Input,
 	last_draw: Instant,
 	eyes: Option<Eyes>,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
+	/// Entities added during the frame, inserted into `entities` on the next `setup_loop`.
 	new_entities: RefCell<VecDeque<Entity>>,
 	bench: RefCell<Benchmark>,
 	gui: RefCell<ApplicationGui>,
@@ -82,6 +91,8 @@ pub struct Application {
 }
 
 impl Application {
+	/// Initializes VR (unless disabled), the renderer, the camera, eyes and window, and builds the
+	/// initial scene (floor, VR root or PC-controlled POV with hands, and Miku).
 	pub fn new(window: winit::window::Window, event_loop: &ActiveEventLoop) -> Result<Application> {
 		let config = config::get();
 		let vr = (!config.novr.enabled).then(|| VR::new())
@@ -241,6 +252,7 @@ impl Application {
 		Ok(application)
 	}
 	
+	/// Handles a winit window event. A redraw request runs a whole application frame.
 	pub fn on_window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) -> Result<()> {
 		match event {
 			WindowEvent::CloseRequested => event_loop.exit(),
@@ -257,12 +269,16 @@ impl Application {
 		Ok(())
 	}
 	
+	/// Requests a redraw so that the application renders continuously.
 	pub fn on_about_to_wait(&mut self, _event_loop: &ActiveEventLoop) -> Result<()> {
 		self.window.window.request_redraw();
 		
 		Ok(())
 	}
 	
+	/// Queues an entity to be added to the scene and returns a reference to it.
+	///
+	/// The entity becomes available (and its components are started) on the next `setup_loop`.
 	#[allow(dead_code)]
 	pub fn add_entity(&self, entity: Entity) -> EntityRef {
 		let entity_ref = entity.as_ref();
@@ -272,11 +288,13 @@ impl Application {
 		entity_ref
 	}
 	
+	/// Returns the live entity with the given id. Pending (not yet set up) entities are not returned.
 	#[allow(dead_code)]
 	pub fn entity(&self, id: u64) -> Option<&Entity> {
 		self.entities.get(&id)
 	}
 	
+	/// Returns `true` if the entity with the given id was added but is not yet set up.
 	#[allow(dead_code)]
 	pub fn pending_entity(&self, id: u64) -> bool {
 		self.new_entities
@@ -285,6 +303,8 @@ impl Application {
 			.any(|entity| entity.id == id)
 	}
 	
+	/// Iterates over all entities matching `predicate`, skipping entities whose state is currently
+	/// mutably borrowed.
 	#[allow(dead_code)]
 	pub fn find_all_entities(&self, predicate: impl Fn(&Entity) -> bool) -> impl Iterator<Item = &Entity> {
 		self.entities
@@ -292,11 +312,13 @@ impl Application {
 		    .filter(move |entity| entity.try_state().is_some() && predicate(entity))
 	}
 	
+	/// Returns the first entity matching `predicate`. See `find_all_entities`.
 	#[allow(dead_code)]
 	pub fn find_entity(&self, predicate: impl Fn(&Entity) -> bool) -> Option<&Entity> {
 		self.find_all_entities(predicate).next()
 	}
 	
+	/// Iterates over entities that have no (live) parent.
 	#[allow(dead_code)]
 	pub fn root_entities(&self) -> impl Iterator<Item = &Entity> {
 		self.entities
@@ -304,6 +326,7 @@ impl Application {
 			.filter(move |entity| entity.parent().get(self).is_none())
 	}
 	
+	/// Iterates over all entities in depth-first order of the entity hierarchy, parents before children.
 	#[allow(dead_code)]
 	pub fn dfs_entities(&self) -> impl Iterator<Item = &Entity> {
 		let mut stack = SmallVec::<[(&Entity, usize); 32]>::new();
@@ -331,6 +354,7 @@ impl Application {
 		})
 	}
 	
+	/// Sets the GUI selection to `target`. If `focus` is set, the inspector scrolls to it.
 	pub fn select(&self, target: impl Into<GuiSelection>, focus: bool) {
 		let mut gui_selections = self.gui_selections.borrow_mut();
 		gui_selections.selection = target.into();
@@ -345,6 +369,10 @@ impl Application {
 		self.gui_selections.borrow_mut()
 	}
 	
+	/// Computes how `target` relates to the current GUI hover and selection (directly or through a
+	/// child component/collider), for highlighting in the inspector and debug drawing.
+	///
+	/// If `capture_focus` is set and the target is focused, the focus is consumed.
 	pub fn gui_selections_test(&self, target: impl Into<GuiSelection>, capture_focus: bool) -> SelectionLevel {
 		let mut gui_selections = self.gui_selections_mut();
 		let target = target.into();
@@ -377,6 +405,7 @@ impl Application {
 		}
 	}
 	
+	/// Runs a single frame: input/VR sync, setup, physics, GUI, component ticks, rendering and cleanup.
 	fn on_tick(&mut self) -> Result<()> {
 		let mut delta_time = self.last_draw.elapsed();
 		self.last_draw = Instant::now();
@@ -494,6 +523,8 @@ impl Application {
 		Ok(())
 	}
 	
+	/// Inserts pending entities and components and calls `start` on new components, repeating until
+	/// no new entities or components are queued.
 	fn setup_loop(&mut self) -> Result<()> {
 		let mut clean = false;
 		while !clean {
@@ -523,6 +554,8 @@ impl Application {
 		Ok(())
 	}
 	
+	/// Calls `end` on removed components, propagates removal to non-persistent children of removed
+	/// entities, and finally drops removed entities together with their rigid bodies.
 	fn cleanup_loop(&mut self) -> Result<()> {
 		let mut clean = false;
 		while !clean {
@@ -561,6 +594,7 @@ impl Application {
 		Ok(())
 	}
 	
+	/// Waits for the VR compositor poses and updates controller roles and states.
 	fn handle_vr_input(&mut self) -> Result<()> {
 		let vr = self.vr.as_ref().expect("VR has not been initialized.").lock().unwrap();
 		
@@ -590,6 +624,7 @@ impl std::fmt::Debug for Application {
 	}
 }
 
+/// Returned when the OpenVR camera driver is selected while VR is disabled.
 #[derive(Debug, Error)]
 #[error("OpenvR unavailable. You can't use openvr background with --novr flag.")]
 pub struct OpenVRCameraInNoVRError;

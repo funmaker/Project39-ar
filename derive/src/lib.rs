@@ -5,6 +5,10 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{Data, Meta};
 
+/// Derives `FromArgs` for a struct, recursing into every field.
+///
+/// Each field's doc comment becomes its help text. `#[arg_short = "x"]` adds a short flag,
+/// and `#[arg_rename = "name"]` changes its name (an empty name merges it into the parent's path).
 #[proc_macro_derive(FromArgs, attributes(arg_short, arg_rename, arg_skip))]
 pub fn from_args_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
@@ -122,6 +126,8 @@ pub fn from_args_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 }
 
 
+/// Derives `ComponentBase` for a component struct. The struct needs exactly one field marked
+/// `#[inner]` holding its `ComponentInner`.
 #[proc_macro_derive(ComponentBase, attributes(inner))]
 pub fn component_base_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();

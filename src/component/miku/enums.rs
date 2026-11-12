@@ -1,4 +1,5 @@
 
+/// Bone indices of the YYB Miku model.
 #[repr(usize)]
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum Bones {
@@ -251,6 +252,7 @@ pub enum Bones {
 	LeftH53 = 246,
 }
 
+/// Morph indices of the YYB Miku model.
 #[repr(usize)]
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum Morphs {
@@ -390,6 +392,7 @@ pub enum Morphs {
 	// TDApose = 133
 }
 
+/// Rigid body indices of the YYB Miku model.
 #[repr(usize)]
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum RigidBodies {

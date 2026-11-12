@@ -19,13 +19,21 @@ pub enum Hand {
 	Right,
 }
 
+/// Input state of all devices: keyboard, mouse and VR controllers.
+///
+/// Button helpers (`fire_btn`, `use_btn`, ...) merge the controller of a given hand with
+/// the matching keyboard/mouse binding, so they work in both VR and novr mode.
 #[derive(Debug)]
 pub struct Input {
 	pub keyboard: InputDevice<Key>,
 	pub mouse: InputDevice<MouseButton>,
+	/// Controller input devices by tracked device index.
 	pub controllers: HashMap<sys::TrackedDeviceIndex_t, InputDevice<usize>>,
+	/// Last raw OpenVR state of each controller, used to detect button changes.
 	pub controller_state: HashMap<sys::TrackedDeviceIndex_t, ControllerState>,
+	/// Tracked device index of the left hand controller, if known.
 	pub controller_left: Option<TrackedDeviceIndex>,
+	/// Tracked device index of the right hand controller, if known.
 	pub controller_right: Option<TrackedDeviceIndex>,
 	pub quitting: bool,
 }
@@ -43,6 +51,7 @@ impl Input {
 		}
 	}
 	
+	/// Returns the input device of the controller in the given hand.
 	pub fn controller(&self, hand: Hand) -> Option<&InputDevice<usize>> {
 		match hand {
 			Hand::Left => self.controller_left.and_then(|id| self.controllers.get(&id.0)),
@@ -50,34 +59,40 @@ impl Input {
 		}
 	}
 	
+	/// Clears per-frame input state of all devices.
 	pub fn reset(&mut self) {
 		self.keyboard.reset();
 		self.mouse.reset();
 		self.controllers.values_mut().for_each(InputDevice::reset);
 	}
 	
+	/// Primary action: controller trigger or left mouse button.
 	pub fn fire_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(33)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Left)
 	}
 	
+	/// Secondary action: controller menu button, right mouse button or `E`.
 	pub fn use_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(2)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Right) |
 		self.keyboard.state(Key::KeyE)
 	}
 	
+	/// Tertiary action: controller touchpad or `Q`.
 	pub fn use2_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(32)).unwrap_or_default() |
 		self.keyboard.state(Key::KeyQ)
 	}
 	
+	/// Quaternary action: controller grip, middle mouse button or `G`.
 	pub fn use3_btn(&self, hand: Hand) -> InputState {
 		self.controller(hand).map(|c| c.state(1)).unwrap_or_default() |
 		self.mouse.state(MouseButton::Middle) |
 		self.keyboard.state(Key::KeyG)
 	}
 	
+	/// Assigns a tracked device to the given hand.
 	pub fn set_controller_id(&mut self, hand: Hand, idx: TrackedDeviceIndex) {
 		match hand {
 			Hand::Left => self.controller_left = Some(idx),
@@ -85,6 +100,8 @@ impl Input {
 		}
 	}
 	
+	/// Updates a controller device from its raw OpenVR state, translating button bit changes into
+	/// button events and axes into axis ids (`axis * 2` for X and `axis * 2 + 1` for Y).
 	pub fn update_controller(&mut self, idx: TrackedDeviceIndex, state: ControllerState) {
 		let previous = self.controller_state.insert(idx.0, state);
 		let pressed = state.button_pressed & !previous.map_or(0, |s| s.button_pressed);

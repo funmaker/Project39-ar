@@ -5,6 +5,7 @@ pub type FnTable = &'static sys::VR_IVRTrackedCamera_FnTable;
 pub type TrackedCameraHandle = openvr_sys::TrackedCameraHandle_t;
 pub type CameraVideoStreamFrameHeader = openvr_sys::CameraVideoStreamFrameHeader_t;
 
+/// Dimensions of a camera frame.
 #[derive(Default, Debug)]
 pub struct FrameSize {
 	pub width: u32,
@@ -12,6 +13,7 @@ pub struct FrameSize {
 	pub frame_buffer_size: u32,
 }
 
+/// Camera intrinsics in pixels.
 #[derive(Default, Debug)]
 pub struct Intrinsics {
 	pub focal_length: [f32; 2],
@@ -26,6 +28,7 @@ pub struct Projection {
 	pub projection: [[f32; 4]; 4],
 }
 
+/// Type of camera frame: raw distorted image or undistorted by OpenVR.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameType {
 	Distorted = sys::EVRTrackedCameraFrameType_VRTrackedCameraFrameType_Distorted as isize,

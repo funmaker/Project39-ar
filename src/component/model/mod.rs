@@ -11,5 +11,6 @@ pub use self::mmd::MMDModel;
 pub use simple::SimpleModel;
 
 
+/// Integer types usable as vertex indices.
 pub trait VertexIndex: Pod + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}
 impl<T> VertexIndex for T where T: Pod + Copy + Send + Sync + Sized + Into<u32> + Hash + Debug + 'static {}

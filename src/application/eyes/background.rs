@@ -21,6 +21,8 @@ use super::camera::Camera;
 use super::pipeline::{BackgroundPipeline, Vertex, Pc};
 
 
+/// Uniform data for the background shader, per eye: raw projection, camera intrinsics and
+/// lens distortion coefficients (normalized to the camera frame buffer size).
 #[allow(dead_code)]
 #[repr(C)]
 #[derive(Default, Copy, Clone, BufferContents)]
@@ -32,18 +34,25 @@ struct Intrinsics {
 	center: [Vec2; 2],
 }
 
+/// Renders the passthrough camera feed as the scene background, undistorting the lens and
+/// reprojecting the frame to account for head rotation since the frame was captured.
 pub struct Background {
 	queue: Arc<Queue>,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
 	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
 	set: Arc<DescriptorSet>,
+	/// Inverse rotation of each eye's camera relative to the head.
 	extrinsics: (Mat3, Mat3),
+	/// Head pose at the time the current camera frame was captured.
 	last_frame_pose: Isometry3,
+	/// Upload command buffers of new camera frames, sent from the capture thread.
 	camera_loads: mpsc::Receiver<(Arc<PrimaryAutoCommandBuffer>, Option<Isometry3>)>,
 }
 
 impl Background {
+	/// Starts the camera capture thread and sets up the background pipeline using the camera
+	/// calibration from the config.
 	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), renderer: &mut Renderer) -> Result<Background> {
 		let config = config::get();
 		let pipeline = renderer.pipelines.get::<BackgroundPipeline>()?;
@@ -143,6 +152,7 @@ impl Background {
 		})
 	}
 	
+	/// Chains the upload of any newly captured camera frames to `future`.
 	pub fn load_camera(&mut self, camera_pos: Isometry3, mut future: Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>> {
 		while let Ok((command, cam_pose)) = self.camera_loads.try_recv() {
 			if !future.queue_change_allowed() && &future.queue().unwrap() != &self.queue {
@@ -158,6 +168,7 @@ impl Background {
 		Ok(future)
 	}
 	
+	/// Draws the background as a fullscreen quad.
 	pub fn render(&mut self, camera_pos: Isometry3, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		// if let Ok(mut intrinsics) = self.intrinsics.write() {
 		// 	if debug::get_flag_or_default("KeyA") {

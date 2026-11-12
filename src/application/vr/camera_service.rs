@@ -5,6 +5,7 @@ use super::{VR, FrameType};
 use super::tracked_camera::{TrackedCameraError, TrackedCameraHandle};
 
 
+/// An acquired OpenVR video streaming service for a tracked camera. Released on drop.
 pub struct CameraService {
 	vr: Arc<VR>,
 	index: TrackedDeviceIndex,
@@ -13,6 +14,7 @@ pub struct CameraService {
 }
 
 impl CameraService {
+	/// Acquires the video streaming service of the camera on the given tracked device.
 	pub fn new(vr: Arc<VR>, index: TrackedDeviceIndex) -> Result<CameraService, TrackedCameraError> {
 		let handle = unsafe { vr.lock().unwrap().tracked_camera.acquire_video_streaming_service(index)? };
 		
@@ -24,6 +26,7 @@ impl CameraService {
 		})
 	}
 	
+	/// Fetches the latest camera frame of the given type, reusing the previous buffer when possible.
 	pub fn get_frame_buffer(&mut self, frame_type: FrameType) -> Result<&mut FrameBuffer, TrackedCameraError> {
 		let mut buffer = self.frame_buffer
 		                     .take()
@@ -47,6 +50,7 @@ impl CameraService {
 		Ok(self.frame_buffer.as_mut().unwrap())
 	}
 	
+	/// Allocates a buffer large enough for a frame of the given type.
 	fn new_buffer(&self, frame_type: FrameType) -> Result<Vec<u8>, TrackedCameraError> {
 		let frame_size = self.vr.lock().unwrap().tracked_camera.get_camera_frame_size(self.index, frame_type)?;
 		
@@ -60,6 +64,7 @@ impl Drop for CameraService {
 	}
 }
 
+/// A camera frame along with its OpenVR frame header data.
 #[allow(dead_code)]
 pub struct FrameBuffer {
 	pub frame_type: FrameType,
@@ -67,6 +72,7 @@ pub struct FrameBuffer {
 	pub height: u32,
 	pub bytes_per_pixel: u32,
 	pub frame_sequence: u32,
+	/// Pose of the camera's device at the time the frame was captured.
 	pub standing_device_pose: TrackedDevicePose,
 	pub frame_exposure_time: u64,
 	pub buffer: Vec<u8>,

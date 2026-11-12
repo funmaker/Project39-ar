@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 
+/// Simple glob pattern where `*` matches any sequence of characters.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct PatternMatcher {
 	parts: Vec<String>,
@@ -16,6 +17,7 @@ impl PatternMatcher {
 		}
 	}
 	
+	/// Returns `true` if the whole string matches the pattern.
 	pub fn matches(&self, other: impl AsRef<str>) -> bool {
 		let mut slice = other.as_ref();
 		

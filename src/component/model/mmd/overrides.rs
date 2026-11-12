@@ -9,17 +9,24 @@ use crate::math::{Vec2, Vec3, PI};
 use super::asset::{MMDIndexConfig, JointEx};
 
 
+/// Contents of a `model.toml` file, overriding or adding rigid bodies and joints of an MMD model.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDConfig {
 	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub rigid_bodies: Vec<MMDRigidBodyOverride>,
 	#[serde(skip_serializing_if = "Vec::is_empty")] #[serde(default)] pub joints: Vec<MMDJointOverride>,
 }
 
+/// Override of a PMX rigid body. Unset fields keep their original values.
+///
+/// Targets the rigid body with the given `id`, all rigid bodies matching the name `pattern`,
+/// or adds a new rigid body if neither is set.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDRigidBodyOverride {
 	pub id: Option<usize>,
+	/// Glob pattern (see `PatternMatcher`) matched against the Japanese and English names.
 	pub pattern: Option<String>,
 	pub name: Option<String>,
+	/// English name.
 	pub translation: Option<String>,
 	pub bone_index: Option<i32>,
 	pub group_id: Option<u8>,
@@ -37,6 +44,7 @@ pub struct MMDRigidBodyOverride {
 }
 
 impl MMDRigidBodyOverride {
+	/// Creates an override reproducing the given rigid body, for dumping.
 	pub fn from_mmd(rb: &RigidBody<MMDIndexConfig>, id: usize) -> MMDRigidBodyOverride {
 		MMDRigidBodyOverride {
 			id: Some(id),
@@ -58,6 +66,7 @@ impl MMDRigidBodyOverride {
 		}
 	}
 	
+	/// Applies the set fields to a rigid body.
 	pub fn apply_to(&self, rb: &mut RigidBody<MMDIndexConfig>) {
 		if let Some(value) = &self.name            { rb.local_name = value.clone(); }
 		if let Some(value) = &self.translation     { rb.universal_name = value.clone(); }
@@ -102,6 +111,7 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 	}
 }
 
+/// Humanoid body parts, assigned to joints to identify them independently of the model.
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyPart {
@@ -122,12 +132,20 @@ pub enum BodyPart {
 	RightHand,
 }
 
+/// Override of a PMX joint. Unset fields keep their original values. Rotations are in degrees.
+///
+/// Targets the joint with the given `id`, all joints matching the name `pattern`, or adds
+/// a new joint if neither is set.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct MMDJointOverride {
 	pub id: Option<usize>,
+	/// Glob pattern (see `PatternMatcher`) matched against the Japanese and English names.
 	pub pattern: Option<String>,
 	pub name: Option<String>,
+	/// Places the joint at this bone, oriented along it, connecting its rigid body with the
+	/// closest ancestor's rigid body. See `normalize`.
 	pub using_bone: Option<usize>,
+	/// English name.
 	pub translation: Option<String>,
 	// pub joint_type: JointType,
 	pub rigid_body_a: Option<i32>,
@@ -140,10 +158,13 @@ pub struct MMDJointOverride {
 	pub rotation_max: Option<Vec3>,
 	pub position_spring: Option<Vec3>,
 	pub rotation_spring: Option<Vec3>,
+	/// Turns the joint into a cone twist joint.
 	pub cone_twist: Option<ConeTwist>,
+	/// Body part this joint represents.
 	pub body_part: Option<BodyPart>,
 }
 
+/// Cone twist limits in degrees. Unset values are derived from the joint's rotation limits.
 #[derive(Serialize, Deserialize, Default, Clone, Copy, Debug)]
 pub struct ConeTwist {
 	pub swing: Option<f32>,
@@ -152,6 +173,7 @@ pub struct ConeTwist {
 }
 
 impl MMDJointOverride {
+	/// Creates an override reproducing the given joint, for dumping.
 	pub fn from_mmd(joint: &JointEx<MMDIndexConfig>, id: usize) -> MMDJointOverride {
 		MMDJointOverride {
 			id: Some(id),
@@ -174,6 +196,7 @@ impl MMDJointOverride {
 		}
 	}
 	
+	/// Applies the set fields to a joint.
 	pub fn apply_to(&self, joint: &mut JointEx<MMDIndexConfig>) {
 		if let Some(value) = &self.name           { joint.local_name = value.clone(); }
 		if let Some(value) = &self.translation    { joint.universal_name = value.clone(); }
@@ -191,6 +214,8 @@ impl MMDJointOverride {
 		if let Some(value) = self.cone_twist      { joint.cone_twist = Some(value); }
 	}
 	
+	/// Resolves `using_bone` into the joint position, rotation and rigid bodies, leaving
+	/// explicitly set values intact.
 	pub fn normalize(&mut self, bones: &[Bone<MMDIndexConfig>], rigid_bodies: &[RigidBody<MMDIndexConfig>]) -> Result<(), MMDOverrideError> {
 		if let Some(bone_id) = self.using_bone {
 			let bone = bones.get(bone_id)
@@ -281,6 +306,7 @@ impl Into<JointEx<MMDIndexConfig>> for MMDJointOverride {
 	}
 }
 
+/// Error resolving `MMDJointOverride::using_bone`.
 #[derive(Debug, Error)]
 pub enum MMDOverrideError {
 	#[error("No such bone id {0}")] BoneNotFound(usize),
@@ -290,6 +316,7 @@ pub enum MMDOverrideError {
 	#[error("Ancestors of bone id {0} have no rigid bodies")] AncestorsNoRigidBodies(usize),
 }
 
+/// Serializes rigid body shapes as `"sphere"`, `"box"` or `"capsule"`.
 mod shape_type_serde {
 	use std::borrow::Cow;
 	use mmd::pmx::rigid_body::ShapeType;

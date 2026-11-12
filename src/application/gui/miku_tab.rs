@@ -5,6 +5,8 @@ use crate::component::miku::Miku;
 use crate::utils::ExUi;
 use super::Application;
 
+/// Miku GUI tab: the Miku component inspector and, for the selected MMD bone, its joint,
+/// rigid body, bone and entity.
 pub fn miku_ui(miku: &Miku, ui: &mut Ui, application: &Application) {
 	ui.inspect(miku, application);
 	

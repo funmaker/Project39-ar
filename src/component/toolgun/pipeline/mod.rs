@@ -28,6 +28,7 @@ mod frag {
 	}
 }
 
+/// Pipeline drawing the tool name on the toolgun's screen.
 pub struct ToolGunTextPipeline;
 
 impl PipelineConstructor for ToolGunTextPipeline {

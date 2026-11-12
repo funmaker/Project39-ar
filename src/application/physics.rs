@@ -7,9 +7,13 @@ use crate::math::{Color, Isometry3, Point3, Rot3, Vec3, PI};
 use crate::utils::{PhysicsEntityEx, PhysicsComponentEx};
 use super::{Application, EntityRef, GuiSelection};
 
+/// User-adjustable physics simulation parameters.
 pub struct PhysicsParams {
+	/// Multiplier applied to the frame delta time when stepping the simulation.
 	pub dt_mul: f32,
+	/// Pauses the physics simulation.
 	pub paused: bool,
+	/// Runs a single step while paused. Reset after the step.
 	pub step: bool,
 }
 
@@ -23,7 +27,9 @@ impl PhysicsParams {
 	}
 }
 
+/// Debug visualization for the physics world.
 pub trait PhysicsDebug {
+	/// Draws rigid bodies, colliders, contacts and joints, depending on the enabled debug flags.
 	fn debug_draw(&self, application: &Application);
 }
 
@@ -43,6 +49,7 @@ impl PhysicsDebug for PhysicsWorld {
 	}
 }
 
+/// Draws an axis gizmo at every rigid body.
 fn debug_draw_rigidbodies(physics: &PhysicsWorld, application: &Application) {
 	let gui_selections = application.gui_selections();
 	let sel_ent = gui_selections.selection.entity(physics);
@@ -63,6 +70,7 @@ fn debug_draw_rigidbodies(physics: &PhysicsWorld, application: &Application) {
 	}
 }
 
+/// Draws collider shapes (balls, cuboids and capsules) and contact points.
 fn debug_draw_colliders(physics: &PhysicsWorld, application: &Application) {
 	let gui_selections = application.gui_selections();
 	let sel_col = gui_selections.selection.collider();
@@ -126,6 +134,7 @@ fn debug_draw_colliders(physics: &PhysicsWorld, application: &Application) {
 	}
 }
 
+/// Draws joint frames, angular limits of limited axes, and the cone of coupled axes.
 fn debug_draw_joints(physics: &PhysicsWorld, application: &Application) {
 	let gui_selections = application.gui_selections();
 	let sel_ij = gui_selections.selection.joint();

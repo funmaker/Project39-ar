@@ -11,6 +11,8 @@ use super::super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::VrRoot;
 
 
+/// Moves the entity according to the pose of a tracked VR device, relative to the VR root.
+/// Removes the entity when the device disconnects.
 #[derive(ComponentBase)]
 pub struct VrTracked {
 	#[inner] inner: ComponentInner,

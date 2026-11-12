@@ -11,14 +11,25 @@ use super::ToolGun;
 use super::tool::Tool;
 
 
+/// Size of the prop models in the spawn menu.
 const MENU_SCALE: f32 = 0.2;
+/// Spacing of the spawn menu grid.
 const MENU_SPACING: f32 = 0.25;
+/// Distance of the spawn menu from the toolgun's muzzle.
 const MENU_DISTANCE: f32 = 0.25;
 
+/// Tool spawning props (see `PropCollection`) on the aimed surface.
+///
+/// `use2` opens a grid menu of props to pick from. Shooting places the selected prop, previewed
+/// as a ghost.
 pub struct Spawner {
+	/// Position of the open spawn menu, if open.
 	menu_pos: Option<Isometry3>,
+	/// Index of the prop that will be spawned.
 	prop_idx: usize,
+	/// Index of the prop hovered in the menu.
 	select_idx: Option<usize>,
+	/// Position where the prop would be spawned.
 	ghost_pos: Option<Isometry3>,
 }
 

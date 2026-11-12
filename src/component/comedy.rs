@@ -16,13 +16,18 @@ use super::model::simple::ObjAsset;
 use super::physics::joint::JointComponent;
 
 
+/// Scale of the googly eye.
 const SCALE: f32 = 0.5;
 
+/// Googly eye: a transparent eye with a black iris that freely rolls around inside it.
+///
+/// The iris is a separate dynamic entity attached with a revolute joint and kept within the eye.
 #[derive(ComponentBase)]
 pub struct Comedy {
 	#[inner] inner: ComponentInner,
 	model: SimpleModel,
 	iris: EntityRef,
+	/// Iris position of the last tick, used for rendering.
 	iris_pos: Cell<Isometry3>,
 }
 

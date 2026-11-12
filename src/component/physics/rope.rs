@@ -9,6 +9,8 @@ use crate::utils::ExUi;
 use super::super::{Component, ComponentBase, ComponentInner};
 
 
+/// Spring-like rope between a point on this entity and a point on `other`. Pulls the entities
+/// together with a force proportional to how much the rope is stretched beyond `length`.
 #[derive(ComponentBase)]
 pub struct Rope {
 	#[inner] inner: ComponentInner,

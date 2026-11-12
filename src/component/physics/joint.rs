@@ -12,17 +12,22 @@ use crate::math::{from_euler, Isometry3, Rot3};
 use crate::utils::{get_user_data, ExUi};
 use super::super::{Component, ComponentBase, ComponentInner};
 
+/// Impulse joint between the entity's rigid body and the `target` entity's rigid body, existing
+/// for the lifetime of the component.
 #[derive(ComponentBase)]
 pub struct JointComponent {
 	#[inner] inner: ComponentInner,
 	pub name: String,
+	/// Original MMD joint description, if created by `from_mmd`. Enables the joint limits editor in the inspector.
 	mmd_desc: Option<RefCell<MMDDesc>>,
+	/// Joint inserted into the physics world on start.
 	template: GenericJoint,
 	target: EntityRef,
 	handle: Cell<ImpulseJointHandle>,
 }
 
 impl JointComponent {
+	/// Creates a joint between the entity and `target`.
 	pub fn new(joint: impl Into<GenericJoint>, target: impl Into<EntityRef>) -> Self {
 		JointComponent {
 			inner: ComponentInner::new_norender(),
@@ -34,6 +39,8 @@ impl JointComponent {
 		}
 	}
 	
+	/// Creates a joint from an MMD joint description, with the given joint frames relative to the
+	/// entity and `target` bodies.
 	pub fn from_mmd(local_frame1: Isometry3, local_frame2: Isometry3,
 	                joint_desc: JointDesc,
 	                target: impl Into<EntityRef>)
@@ -46,23 +53,28 @@ impl JointComponent {
 		component
 	}
 	
+	/// Sets the name shown in the inspector.
 	pub fn named(mut self, name: impl Into<String>) -> Self {
 		self.name = name.into();
 		self
 	}
 	
+	/// Returns the other entity of the joint.
 	pub fn other<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
 		self.target.get(application)
 	}
 	
+	/// Returns the handle of the joint in the physics world. Invalid before `start`.
 	pub fn handle(&self) -> ImpulseJointHandle {
 		self.handle.get()
 	}
 	
+	/// Returns the Rapier joint. Panics if the component wasn't started.
 	pub fn inner<'p>(&self, physics: &'p PhysicsWorld) -> &'p ImpulseJoint {
 		physics.impulse_joints.get(self.handle.get()).unwrap()
 	}
 	
+	/// Returns the Rapier joint mutably. Panics if the component wasn't started.
 	pub fn inner_mut<'p>(&self, physics: &'p mut PhysicsWorld, wake_up: bool) -> &'p mut ImpulseJoint {
 		physics.impulse_joints.get_mut(self.handle.get(), wake_up).unwrap()
 	}
@@ -109,6 +121,7 @@ impl Component for JointComponent {
 	}
 }
 
+/// MMD joint description of a joint, kept to allow editing its limits at runtime.
 struct MMDDesc {
 	joint_desc: JointDesc,
 	local_frame1: Isometry3,
@@ -120,6 +133,8 @@ impl MMDDesc {
 		Self { joint_desc, local_frame1, local_frame2 }
 	}
 	
+	/// Draws an editor of the joint's per-axis limits and current offsets. Editing the offsets moves
+	/// the first entity (and its descendants), editing the limits rebuilds the joint.
 	fn on_inspect(&mut self,
 	              joint: &mut ImpulseJoint,
 	              entity1: &Entity,
@@ -311,6 +326,8 @@ impl MMDDesc {
 		}
 	}
 	
+	/// Builds the Rapier joint from the description. Axes with equal limits are locked, axes with
+	/// limits spanning the full range are free. Cone twist joints get coupled swing axes.
 	fn joint(&self) -> GenericJoint {
 		let mut joint = GenericJoint::default();
 		

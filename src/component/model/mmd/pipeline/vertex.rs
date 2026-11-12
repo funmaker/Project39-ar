@@ -5,6 +5,7 @@ use vulkano::pipeline::graphics::vertex_input::Vertex as VertexTy;
 use crate::math::IntoArray;
 
 
+/// Vertex of an MMD model, with up to 4 bone weights and optional SDEF parameters.
 #[repr(C)]
 #[derive(Default, Copy, Clone, BufferContents, VertexTy, Debug)]
 pub struct Vertex {
@@ -14,12 +15,14 @@ pub struct Vertex {
 	normal: [f32; 3],
 	#[format(R32G32_SFLOAT)]
 	uv: [f32; 2],
+	/// Per-vertex scale of the toon edge.
 	#[format(R32_SFLOAT)]
 	pub edge_scale: f32,
 	#[format(R32G32B32A32_UINT)]
 	bones_indices: [u32; 4],
 	#[format(R32G32B32A32_SFLOAT)]
 	bones_weights: [f32; 4],
+	/// SDEF center. All SDEF parameters are zero for non-SDEF vertices.
 	#[format(R32G32B32_SFLOAT)]
 	sdef_c: [f32; 3],
 	#[format(R32G32B32_SFLOAT)]
@@ -28,6 +31,7 @@ pub struct Vertex {
 	sdef_r1: [f32; 3],
 }
 
+/// SDEF parameters of non-SDEF vertices.
 const SDEF_DEF: [[f32; 3]; 3] = [
 	[0.0, 0.0, 0.0],
 	[0.0, 0.0, 0.0],
@@ -35,6 +39,7 @@ const SDEF_DEF: [[f32; 3]; 3] = [
 ];
 
 impl Vertex {
+	/// Creates a vertex. `sdef` holds the SDEF `C`, `R0` and `R1` points for SDEF deformed vertices.
 	pub fn new(
 		pos: impl IntoArray<[f32; 3]>,
 		normal: impl IntoArray<[f32; 3]>,

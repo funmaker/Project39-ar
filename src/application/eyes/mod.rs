@@ -24,20 +24,30 @@ use background::Background;
 use camera::Camera;
 
 
+/// Stereo render target for the HMD (or a simulated headset in novr mode).
+///
+/// Renders both eyes into a 2-layer multiview framebuffer with the camera passthrough as the
+/// background, and submits the result to the OpenVR compositor.
 pub struct Eyes {
 	fb: FramebufferBundle,
+	/// Copy of the right eye layer. OpenVR can't use a single layer of an array image.
 	side_image: Arc<Image>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
+	/// OpenVR texture descriptors of the left and right eye images.
 	textures: (Texture, Texture),
+	/// Head to eye transforms.
 	view: (AMat4, AMat4),
 	projection: (PMat4, PMat4),
+	/// Tangents of the eye frustum half-angles (left, right, top, bottom).
 	raw_projection: (Vec4, Vec4),
 	vr: Option<Arc<VR>>,
 	background: Option<Background>,
+	/// HMD pose used to render the current frame, submitted to the compositor.
 	hmd_pose: [[f32; 4]; 3],
 }
 
 
 impl Eyes {
+	/// Creates eyes for a simulated headset using the resolution and FOV from the novr config.
 	pub fn new_novr(config: &NovrConfig, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let min_framebuffer_size = (config.frame_buffer_width, config.frame_buffer_height);
 		let aspect = config.frame_buffer_width as f32 / config.frame_buffer_height as f32;
@@ -51,6 +61,7 @@ impl Eyes {
 		Self::new(min_framebuffer_size, (view, view), (projection, projection), (raw, raw), None, camera, renderer)
 	}
 	
+	/// Creates eyes using the HMD's recommended resolution, eye transforms and projections.
 	pub fn new_vr(vr: Arc<VR>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let vr_lock = vr.lock().unwrap();
 		let min_framebuffer_size = vr_lock.system.recommended_render_target_size();
@@ -72,6 +83,8 @@ impl Eyes {
 		Self::new(min_framebuffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), Some(vr), camera, renderer)
 	}
 	
+	/// Creates eyes with the given per-eye view and projection matrices. If `vr` is set, frames are
+	/// submitted to the OpenVR compositor. If `camera` is set, its feed is rendered as the background.
 	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
 		let background = camera.map(|camera| Background::new(camera, raw_projection, renderer))
 		                       .transpose()?;
@@ -133,6 +146,7 @@ impl Eyes {
 		})
 	}
 	
+	/// Enqueues upload of new camera frames, if there is a background.
 	pub fn load_background(&mut self, camera_pos: Isometry3, renderer: &mut Renderer) -> Result<()> {
 		if let Some(background) = &mut self.background {
 			renderer.try_enqueue(renderer.load_queue.clone(), |future| background.load_camera(camera_pos, future))?;
@@ -141,6 +155,7 @@ impl Eyes {
 		Ok(())
 	}
 	
+	/// Sets the HMD pose submitted with the next frame.
 	pub fn set_hmd_pose(&mut self, hmd_pose: [[f32; 4]; 3]) {
 		self.hmd_pose = hmd_pose;
 	}

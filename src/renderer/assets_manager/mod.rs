@@ -17,7 +17,11 @@ pub use self::toml::TomlAsset;
 pub use texture::{TextureAsset, TextureBundle};
 
 
+/// Loads and caches assets. Use it through `Renderer::load`.
+///
+/// Asset paths are resolved relative to `assets/`, with files in `assets_overrides/` taking precedence.
 pub struct AssetsManager {
+	/// Loaded assets by the hash of their key type and key.
 	cache: HashMap<u64, Box<dyn Any>>,
 }
 
@@ -28,6 +32,7 @@ impl AssetsManager {
 		}
 	}
 	
+	/// Returns the asset for `key`, loading it on the first request and returning a cached clone afterwards.
 	pub fn load<Key: AssetKey + 'static>(&mut self, key: Key, renderer: &mut Renderer) -> Result<Key::Asset> {
 		let mut hasher = DefaultHasher::new();
 		TypeId::of::<Key>().hash(&mut hasher);
@@ -46,6 +51,7 @@ impl AssetsManager {
 		}
 	}
 	
+	/// Opens an asset file for reading. See `find_asset_path`.
 	pub fn find_asset(path: impl AsRef<Path>) -> Result<impl BufRead + Seek, AssetError> {
 		let asset_path = Self::find_asset_path(&path)?;
 		
@@ -55,6 +61,7 @@ impl AssetsManager {
 		}
 	}
 	
+	/// Resolves an asset path, preferring `assets_overrides/` over `assets/`.
 	pub fn find_asset_path(path: impl AsRef<Path>) -> Result<PathBuf, AssetError> {
 		let orig_path = lookup_windows_path("assets", path.as_ref());
 		let override_path = lookup_windows_path("assets_overrides", path.as_ref());
@@ -67,13 +74,19 @@ impl AssetsManager {
 	}
 }
 
+/// Describes an asset to load, eg. a path plus loading options. Keys are hashed to cache the
+/// loaded assets, so they must hash all the options that affect the result.
 pub trait AssetKey: Hash + Display {
+	/// Type of the loaded asset. Cloned out of the cache, so it should be cheap to clone (eg. use `Arc`s).
 	type Asset: Clone + 'static;
 	
+	/// Loads the asset. Called only if the asset isn't cached yet.
 	fn load(&self, assets_manager: &mut AssetsManager, renderer: &mut Renderer) -> Result<Self::Asset>;
 }
 
-// Windows why
+/// Resolves a path case-insensitively and with `\` separators, as if on Windows, since asset
+/// files (eg. MMD models) often reference other files with mismatched case.
+/// On Windows the path is returned as is.
 fn lookup_windows_path(root: &str, orig_path: &Path) -> Result<PathBuf, AssetError> {
 	if cfg!(target_os = "windows") {
 		return Ok(PathBuf::from(root).join(orig_path));
@@ -94,6 +107,7 @@ fn lookup_windows_path(root: &str, orig_path: &Path) -> Result<PathBuf, AssetErr
 	Ok(cur_dir)
 }
 
+/// Finds a directory entry matching `name`, preferring an exact match over a case-insensitive one.
 fn lookup_component(cur_dir: &PathBuf, name: &OsStr, full_path: &PathBuf, dir: bool) -> Result<OsString, AssetError> {
 	let mut next_dir = None;
 	
@@ -120,6 +134,7 @@ fn lookup_component(cur_dir: &PathBuf, name: &OsStr, full_path: &PathBuf, dir: b
 }
 
 
+/// Failure to find or open an asset file.
 #[derive(Debug)]
 pub struct AssetError {
 	inner: Option<std::io::Error>,

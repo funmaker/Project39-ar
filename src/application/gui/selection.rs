@@ -10,6 +10,7 @@ use crate::utils::{id_fmt, PhysicsComponentEx, PhysicsEntityEx, ExUi};
 use super::super::{Application, Entity, EntityRef};
 
 
+/// Tabs of the GUI side panel.
 #[derive(Debug, Hash, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 pub enum GuiTab {
 	Main,
@@ -41,13 +42,16 @@ impl Default for GuiTab {
 	}
 }
 
+/// Current GUI selection and hover state, shared between the GUI and debug drawing.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct GuiSelections {
 	pub hover: GuiSelection,
 	pub selection: GuiSelection,
+	/// Requests the GUI to switch to and scroll to the selection.
 	pub focus: bool,
 }
 
+/// Something that can be selected or hovered in the GUI.
 #[derive(Debug, Clone, PartialEq)]
 pub enum GuiSelection {
 	None,
@@ -56,10 +60,12 @@ pub enum GuiSelection {
 	RigidBody(RigidBodyHandle),
 	Collider(ColliderHandle),
 	ImpulseJoint(ImpulseJointHandle),
+	/// A bone of an MMD model, by bone index.
 	MMDBone(ComponentRef<MMDModel>, usize),
 }
 
 impl GuiSelection {
+	/// Returns the tab in which the selection is displayed.
 	pub fn tab(&self) -> GuiTab {
 		match self {
 			GuiSelection::None |
@@ -72,6 +78,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the entity owning the selected object, or a null reference.
 	pub fn entity(&self, physics: &PhysicsWorld) -> EntityRef {
 		match self {
 			GuiSelection::Entity(eref) => eref.clone(),
@@ -84,6 +91,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the component owning the selected object, or a null reference.
 	pub fn component(&self, physics: &PhysicsWorld) -> ComponentRef<dyn Component> {
 		match self {
 			GuiSelection::Component(cref) => cref.clone(),
@@ -94,6 +102,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the selected rigid body handle, or an invalid handle.
 	pub fn rigid_body(&self) -> RigidBodyHandle {
 		match self {
 			GuiSelection::RigidBody(rb) => rb.clone(),
@@ -101,6 +110,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the selected collider handle, or an invalid handle.
 	pub fn collider(&self) -> ColliderHandle {
 		match self {
 			GuiSelection::Collider(col) => col.clone(),
@@ -108,6 +118,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the selected joint handle, or an invalid handle.
 	pub fn joint(&self) -> ImpulseJointHandle {
 		match self {
 			GuiSelection::ImpulseJoint(joint) => joint.clone(),
@@ -115,6 +126,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the model of the selected MMD bone, or a null reference.
 	pub fn mmd_model(&self) -> ComponentRef<MMDModel> {
 		match self {
 			GuiSelection::MMDBone(model, _) => model.clone(),
@@ -122,6 +134,7 @@ impl GuiSelection {
 		}
 	}
 	
+	/// Returns the index of the selected MMD bone.
 	pub fn mmd_bone(&self) -> Option<usize> {
 		match self {
 			GuiSelection::MMDBone(_, bone) => Some(*bone),
@@ -195,6 +208,8 @@ impl Default for GuiSelection {
 	}
 }
 
+/// Draws a button with the id of `target`. Clicking selects the target, double clicking also
+/// focuses it, and hovering highlights it. Shows `NULL` if the target doesn't exist.
 pub fn select_button(ui: &mut Ui, target: impl Into<GuiSelection>, application: &Application) {
 	let target = target.into();
 	

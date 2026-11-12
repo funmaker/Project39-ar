@@ -12,8 +12,10 @@ pub use camera_service::CameraService;
 pub use tracked_camera::{TrackedCamera, FrameType};
 
 
+/// Guards against initializing OpenVR more than once at a time.
 static VR_CREATED: AtomicBool = AtomicBool::new(false);
 
+/// OpenVR context and interfaces. Access it by locking `VR`.
 pub struct VRInner {
 	pub context: Context,
 	pub system: System,
@@ -32,9 +34,11 @@ impl Drop for VRInner {
 	}
 }
 
+/// Thread-safe handle to the OpenVR runtime. Only one instance can exist at a time.
 pub struct VR(Mutex<VRInner>);
 
 impl VR {
+	/// Initializes OpenVR as a scene application and loads its interfaces.
 	pub fn new() -> Result<VR> {
 		if VR_CREATED.swap(true, Ordering::SeqCst) {
 			return Err(VRError::AlreadyInitialized.into());

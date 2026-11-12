@@ -1,6 +1,7 @@
 use crate::application::Key;
 
 
+/// Returns the key code of a digit key. Panics if `num` > 9.
 pub fn num_key(num: usize) -> Key {
 	match num {
 		0 => Key::Digit0,

@@ -8,6 +8,7 @@ use crate::renderer::assets_manager::{AssetKey, AssetsManager, TextureAsset};
 use super::{SimpleModel, Vertex};
 
 
+/// Key of a `SimpleModel` loaded from a Wavefront OBJ file and a texture.
 #[derive(Clone, Hash, Debug)]
 pub struct ObjAsset {
 	model: PathBuf,

@@ -19,14 +19,17 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, Standar
 use vulkano::render_pass::Framebuffer;
 use vulkano::sync::Sharing;
 
+/// Returns the Vulkan device extensions required by the OpenVR compositor.
 pub fn vulkan_device_extensions_required(compositor: &Compositor, physical: &PhysicalDevice) -> Vec<CString> {
 	unsafe { compositor.vulkan_device_extensions_required(physical.as_ptr()) }
 }
 
+/// Framebuffer together with its main color image and attachment clear values.
 #[derive(Clone, Debug)]
 pub struct FramebufferBundle {
 	pub framebuffer: Arc<Framebuffer>,
 	pub main_image: Arc<Image>,
+	/// Supersampling factor the framebuffer was created with.
 	pub ssaa: f32,
 	pub clear_values: Vec<Option<ClearValue>>,
 }
@@ -38,7 +41,9 @@ impl FramebufferBundle {
 	}
 }
 
+/// Extensions for `SubbufferAllocator`.
 pub trait SubbufferAllocatorEx {
+	/// Allocates a slice and fills it with the items of `iter`.
 	fn from_iter<T: Sized + BufferContents>(&self, iter: impl ExactSizeIterator<Item = T>) -> Result<Subbuffer<[T]>>;
 }
 
@@ -58,6 +63,7 @@ impl SubbufferAllocatorEx for SubbufferAllocator {
 	}
 }
 
+/// Shorthand for creating Vulkan create infos with a single field set and the rest defaulted.
 pub trait IntoInfo<T>: Sized {
 	#[must_use]
 	fn into_info(self) -> T;
@@ -81,7 +87,9 @@ impl IntoInfo<AllocationCreateInfo> for MemoryTypeFilter {
 	}
 }
 
+/// Uploading data into device local buffers.
 pub trait BufferEx {
+	/// Creates a device local buffer and records a copy of `data` into it from a staging buffer.
 	fn upload_data<T>(allocator: &Arc<StandardMemoryAllocator>,
 	                  buffer_info: BufferCreateInfo,
 	                  data: T,
@@ -89,6 +97,7 @@ pub trait BufferEx {
 	                  -> Result<Subbuffer<T>>
 	                  where T: BufferContents;
 	
+	/// Creates a device local buffer and records a copy of the items from a staging buffer.
 	fn upload_iter<T, I>(allocator: &Arc<StandardMemoryAllocator>,
 	                     buffer_info: BufferCreateInfo,
 	                     iter: I,
@@ -153,7 +162,10 @@ impl BufferEx for Buffer {
 }
 
 
+/// Uploading data into images.
 pub trait ImageEx {
+	/// Creates an image and records upload of its pixel data from a staging buffer. Generates mipmaps
+	/// if `create_info` has more than one mip level.
 	fn upload_iter(allocator: &Arc<StandardMemoryAllocator>,
 	               iter: impl ExactSizeIterator<Item = u8>,
 	               create_info: ImageCreateInfo,
@@ -161,6 +173,7 @@ pub trait ImageEx {
 	               cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>)
 	               -> Result<Arc<Self>>;
 	
+	/// Records blits generating all mip levels from the first one.
 	fn generate_mipmaps(self: &Arc<Self>, cbb: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()>;
 }
 
@@ -239,7 +252,9 @@ impl ImageEx for Image {
 	}
 }
 
+/// Creating `Sharing` from a list of queue family indices.
 pub trait SharingEx<I> {
+	/// Concurrent sharing if there are at least two queue families, otherwise exclusive.
 	fn from_iters(indices: impl IntoIterator<IntoIter=I>) -> Self;
 }
 
@@ -255,6 +270,7 @@ where I: ExactSizeIterator<Item=&'a u32> {
 	}
 }
 
+/// Raw Vulkan handles in the form OpenVR expects them.
 pub trait OpenVRPtr {
 	type PtrType;
 	

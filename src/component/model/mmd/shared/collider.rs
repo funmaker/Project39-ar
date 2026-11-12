@@ -3,10 +3,13 @@ use rapier3d::geometry::Collider;
 
 pub type PhysicsMode = mmd::pmx::rigid_body::PhysicsMode;
 
+/// Rigid body of an MMD model as loaded from the file.
 #[derive(Clone)]
 pub struct ColliderDesc {
 	pub name: String,
+	/// Bone the rigid body is attached to.
 	pub bone: usize,
+	/// Collider positioned in model space.
 	pub collider: Collider,
 	pub move_attenuation: f32,
 	pub rotation_damping: f32,

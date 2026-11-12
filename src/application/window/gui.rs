@@ -19,6 +19,9 @@ use crate::renderer::{IMAGE_FORMAT, Renderer};
 use crate::utils::FramebufferBundle;
 
 
+/// egui integration for the desktop window, drawn as an overlay on top of the window's framebuffer.
+///
+/// Uses a render pass, since `egui_winit_vulkano` doesn't support dynamic rendering.
 pub struct WindowGui {
 	gui: Gui,
 	render_pass: Arc<RenderPass>,
@@ -26,6 +29,7 @@ pub struct WindowGui {
 }
 
 impl WindowGui {
+	/// Creates the egui context with the bundled unifont as a fallback font, rendering to `fb`.
 	pub fn new(fb: &FramebufferBundle, event_loop: &ActiveEventLoop, surface: Arc<Surface>, renderer: &Renderer) -> Result<Self> {
 		let render_pass = vulkano::ordered_passes_renderpass!(
 			renderer.device.clone(),
@@ -87,10 +91,12 @@ impl WindowGui {
 		})
 	}
 	
+	/// Passes a window event to egui. Returns `true` if egui consumed it.
 	pub fn on_event(&mut self, event: &WindowEvent) -> bool {
 		self.gui.update(event)
 	}
 	
+	/// Recreates the egui framebuffer after the window framebuffer changed.
 	pub fn regen_framebuffer(&mut self, fb: &FramebufferBundle) -> Result<()> {
 		self.framebuffer = Framebuffer::new(self.render_pass.clone(), FramebufferCreateInfo {
 			attachments: vec![ImageView::new_default(fb.main_image.clone())?],
@@ -102,6 +108,7 @@ impl WindowGui {
 		Ok(())
 	}
 	
+	/// Returns `true` while something in the GUI is being dragged.
 	pub fn is_dragging(&self) -> bool {
 		self.gui.egui_ctx.dragged_id().is_some()
 	}
@@ -118,6 +125,7 @@ impl WindowGui {
 		&self.gui.egui_ctx
 	}
 	
+	/// Records drawing of the current GUI frame on top of the framebuffer image.
 	pub fn paint(&mut self, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let cb = self.gui.draw_on_subpass_image(self.framebuffer.extent());
 		

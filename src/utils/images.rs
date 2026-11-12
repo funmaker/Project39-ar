@@ -1,9 +1,13 @@
 use image::DynamicImage;
 
 
+/// Helpers for converting images into RGBA8 texture data with premultiplied alpha.
 pub trait DynamicImageEx {
+	/// Returns RGBA8 bytes with alpha premultiplied directly on the stored values (correct for linear images).
 	fn into_lin_pre_mul_iter(self) -> std::vec::IntoIter<u8>;
+	/// Returns RGBA8 bytes with alpha premultiplied in linear space, for sRGB images.
 	fn into_pre_mul_iter(self) -> std::vec::IntoIter<u8>;
+	/// Returns `true` if the image format has an alpha channel.
 	fn has_alpha(&self) -> bool;
 }
 
@@ -53,6 +57,7 @@ impl DynamicImageEx for DynamicImage {
 	}
 }
 
+/// Converts an sRGB encoded byte to a linear value in 0..1.
 fn to_linear(srgb: u8) -> f32 {
 	if srgb <= (0.0031308 / 12.92 * 255.0) as u8 {
 		srgb as f32 / 255.0 / 12.92
@@ -61,6 +66,7 @@ fn to_linear(srgb: u8) -> f32 {
 	}
 }
 
+/// Converts a linear value in 0..1 to an sRGB encoded byte.
 fn to_srgb(linear: f32) -> u8 {
 	if linear <= 0.0031308 {
 		(linear * 12.92 * 255.0) as u8

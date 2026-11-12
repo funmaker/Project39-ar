@@ -18,6 +18,7 @@ use super::{Component, ComponentBase, ComponentInner};
 use pipeline::{SrgbTestPipeline, Vertex, Pc};
 
 
+/// Draws a test texture in pixel-perfect size to verify sRGB handling.
 #[derive(ComponentBase)]
 pub struct SrgbTest {
 	#[inner] inner: ComponentInner,

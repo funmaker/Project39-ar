@@ -8,6 +8,7 @@ use crate::renderer::assets_manager::{AssetKey, AssetsManager, TextureAsset};
 use super::{GimpModel, Vertex};
 
 
+/// Key of a `GimpModel` loaded from an OBJ file, a color texture and a normal map.
 #[derive(Clone, Hash, Debug)]
 pub struct GimpAsset {
 	model: PathBuf,

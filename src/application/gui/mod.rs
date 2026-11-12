@@ -17,14 +17,20 @@ use crate::application::window::StereoProjection;
 use crate::debug;
 use crate::math::{Color, Ray};
 
+/// The application's egui interface: a side panel with tabs that can be dragged out into
+/// floating windows, and an inspect mode that selects objects by clicking them in the 3D view.
 pub struct ApplicationGui {
 	id: Id,
 	tab: GuiTab,
+	/// Tabs shown as separate windows.
 	detached: HashSet<GuiTab>,
+	/// Tab currently dragged out of the tab bar.
 	grabbed: Option<GuiTab>,
 	drag_pos: Pos2,
 	closed: Vec<GuiTab>,
+	/// Last width of the fully open side panel, used for the open/close animation.
 	panel_width_hint: f32,
+	/// Inspect mode: clicking in the scene selects the collider under the cursor.
 	inspect: bool,
 }
 
@@ -42,6 +48,7 @@ impl ApplicationGui {
 		}
 	}
 	
+	/// Draws the GUI for the current frame. `Tab` toggles the side panel.
 	pub fn show(&mut self, ctx: &Context, application: &Application) {
 		let gui_selections = application.gui_selections().clone();
 		if gui_selections.focus {
@@ -159,6 +166,7 @@ impl ApplicationGui {
 		}
 	}
 	
+	/// Draws a tab button, handling dragging it out into a detached window.
 	fn show_tab_label(&mut self, ui: &mut Ui, tab: GuiTab) {
 		if self.detached.contains(&tab) {
 			return;
@@ -184,6 +192,7 @@ impl ApplicationGui {
 	}
 }
 
+/// Draws the contents of a tab.
 fn show_tab(ui: &mut Ui, tab: GuiTab, application: &Application) {
 	let ctx = ui.ctx().clone();
 	

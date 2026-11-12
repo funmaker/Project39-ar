@@ -8,10 +8,14 @@ use anyhow::{Result, Error, anyhow};
 use crate::application::Application;
 use crate::utils::user_events::UserEvent;
 
+/// winit application handler. Creates the `Application` once the event loop is resumed and
+/// forwards events to it. Any error stops the event loop and is stored in `Error`.
 pub enum ApplicationHarness {
+	/// Waiting for the event loop to resume.
 	Created {
 		proxy: EventLoopProxy<UserEvent>,
 	},
+	/// Application has been created and is waiting to be delivered through the user event.
 	Initializing,
 	Ready {
 		application: Application,
@@ -28,6 +32,7 @@ impl ApplicationHarness {
 		}
 	}
 	
+	/// Stores the error and exits the event loop if `result` failed.
 	fn handle_result(&mut self, result: Result<()>, event_loop: &ActiveEventLoop) {
 		if let Err(error) = result {
 			*self = ApplicationHarness::Error { error };

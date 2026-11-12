@@ -12,6 +12,9 @@ use crate::math::{IVec2, Vec2, Vec4, Vec3};
 use crate::utils::from_args::{FromArgs, args_terminals};
 
 
+/// Application configuration, read from `config.toml` and overridden by CLI flags.
+///
+/// Doc comments on the fields of config structs are used as the CLI help text.
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct Config {
 	/// Prints this message.
@@ -40,6 +43,7 @@ pub struct Config {
 	pub window_max_fps: u32,
 }
 
+/// When to use colors in terminal output.
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Color {
@@ -48,6 +52,7 @@ pub enum Color {
 	Always,
 }
 
+/// Passthrough camera configuration and calibration.
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct CameraConfig {
 	/// Select background API to use: escapi, opencv, openvr or dummy.
@@ -62,6 +67,7 @@ pub struct CameraConfig {
 	pub right: CameraEyeConfig,
 }
 
+/// Calibration of a single camera eye.
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct CameraEyeConfig {
 	/// Frame offset on the frame buffer.
@@ -82,6 +88,7 @@ pub struct CameraEyeConfig {
 	pub back: Vec3,
 }
 
+/// Settings of the non-VR mode.
 #[derive(Deserialize, Serialize, Debug, Clone, FromArgs)]
 pub struct NovrConfig {
 	/// Enable Non VR mode. The program will not use OpenVR. Use Keyboard and mouse to move.
@@ -94,6 +101,7 @@ pub struct NovrConfig {
 	pub fov: f32,
 }
 
+/// Camera driver used for the passthrough background.
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CameraAPI {
@@ -104,6 +112,7 @@ pub enum CameraAPI {
 }
 
 impl Config {
+	/// Formats the CLI help text of all options as an aligned table.
 	pub fn usage(&self) -> String {
 		let usage = self.usage_impl("", "", "");
 		let lines = usage.split("\n")
@@ -139,6 +148,7 @@ impl Config {
 		ret
 	}
 	
+	/// Applies the command line arguments on top of this config.
 	pub fn apply_args(&mut self) -> Result<()> {
 		let args: Vec<String> = env::args().collect();
 		
@@ -151,6 +161,7 @@ impl Config {
 		Ok(())
 	}
 	
+	/// Serializes the default config as TOML.
 	pub fn default_toml() -> Result<String> {
 		Ok(toml::to_string_pretty(&Self::default())?)
 	}
@@ -202,14 +213,17 @@ lazy_static!(
 	static ref CONFIG: ArcSwap<Config> = ArcSwap::default();
 );
 
+/// Returns the global config.
 pub fn get() -> impl Deref<Target = Arc<Config>> + 'static {
 	CONFIG.load()
 }
 
+/// Replaces the global config.
 pub fn set(config: Config) {
 	CONFIG.store(Arc::new(config));
 }
 
+/// Atomically updates the global config using the given function.
 pub fn rcu(update: impl Fn(&mut Config)) {
 	CONFIG.rcu(|current| {
 		let mut new = (**current).clone();

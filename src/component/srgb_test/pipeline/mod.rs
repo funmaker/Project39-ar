@@ -29,6 +29,7 @@ mod frag {
 	}
 }
 
+/// Pipeline drawing a screen-space textured quad for `SrgbTest`.
 pub struct SrgbTestPipeline;
 
 impl PipelineConstructor for SrgbTestPipeline {

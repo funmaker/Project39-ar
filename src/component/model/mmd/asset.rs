@@ -27,6 +27,7 @@ use super::shared::{MMDModelShared, BoneDesc, BoneConnection, SubMeshDesc, Joint
 
 type MMDShapeType = mmd::pmx::rigid_body::ShapeType;
 
+/// Index and vector types used when reading PMX files.
 pub struct MMDIndexConfig;
 
 impl mmd::Config for MMDIndexConfig {
@@ -42,6 +43,11 @@ impl mmd::Config for MMDIndexConfig {
 	type AdditionalVec4s = Vec<Vec4>;
 }
 
+/// Key of an MMD model loaded from a PMX file.
+///
+/// Unless disabled, overrides from a `model.toml` next to the PMX file (see `MMDConfig`) are
+/// applied to the model's rigid bodies and joints. With `--gen_model_toml`, the model's rigid
+/// bodies and joints are dumped into a `<model>_modeldump.toml` to use as a template.
 #[derive(Clone, Hash, Debug)]
 pub struct PmxAsset {
 	path: PathBuf,
@@ -49,6 +55,7 @@ pub struct PmxAsset {
 }
 
 impl PmxAsset {
+	/// PMX model at `model_path`, with overrides enabled.
 	pub fn at(model_path: impl AsRef<Path>) -> Self {
 		PmxAsset {
 			path: model_path.as_ref().to_path_buf(),
@@ -56,6 +63,7 @@ impl PmxAsset {
 		}
 	}
 	
+	/// Ignores `model.toml` overrides.
 	pub fn no_overrides(self) -> Self {
 		Self {
 			overrides: false,
@@ -447,6 +455,8 @@ impl Display for PmxAsset {
 	}
 }
 
+/// Detects the image format from the file contents, falling back to the extension. MMD models
+/// often have textures with wrong extensions.
 fn find_image_format<P: AsRef<Path>>(path: P) -> Result<ImageFormat> {
 	Ok(match imghdr::from_file(&path)? {
 		Some(imghdr::Type::Gif) => ImageFormat::Gif,
@@ -505,6 +515,7 @@ impl From<mmd::Vertex<MMDIndexConfig>> for Vertex {
 	}
 }
 
+/// PMX joint extended with the additional data that can be set through overrides.
 pub struct JointEx<C: mmd::Config> {
 	joint: Joint<C>,
 	pub body_part: Option<BodyPart>,
@@ -551,11 +562,16 @@ impl<C: mmd::Config> Display for JointEx<C>
 	}
 }
 
+/// Size of one MMD unit in meters.
 const MMD_UNIT_SIZE: f32 = 7.9 / 100.0; // https://www.deviantart.com/hogarth-mmd/journal/1-MMD-unit-in-real-world-units-685870002
 
+/// Conversion of PMX coordinates (left handed, MMD units) into application coordinates.
 trait FromMMD {
+	/// Converts a position: flips Z and scales to meters.
 	fn from_mmd(self) -> Self;
+	/// Converts a direction: flips Z.
 	fn from_mmd_normal(self) -> Self;
+	/// Scales MMD units to meters.
 	fn from_mmd_scale(self) -> Self;
 }
 
@@ -573,6 +589,7 @@ impl FromMMD for Vec3 {
 	}
 }
 
+/// Flattens a `Vec<[T; N]>` into a `Vec<T>` without copying.
 trait FlattenArrayVec {
 	type Out;
 	fn flatten(self) -> Self::Out;

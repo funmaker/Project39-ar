@@ -1,4 +1,5 @@
 
+/// Declares a module for each MMD shader, compiled with the MMD pipeline directory as include path.
 macro_rules! mmd_shaders {
 	( $( $type:literal $name:ident = $source:literal; )* ) => { $(
 		mod $name {

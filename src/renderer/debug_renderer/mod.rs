@@ -26,6 +26,10 @@ use super::pipelines::debug::{DebugPipeline, DebugTexturedPipeline, DebugShapePi
 pub use text_cache::TextCache;
 
 
+/// Renders the debug primitives queued with `debug::draw_*` on top of the scene.
+///
+/// Points, lines and texts are built into screen space geometry every frame, while boxes,
+/// spheres and capsules are drawn using simple models.
 pub struct DebugRenderer {
 	text_cache: RefCell<TextCache>,
 	pipeline: Arc<GraphicsPipeline>,
@@ -33,12 +37,15 @@ pub struct DebugRenderer {
 	shape_pipeline: Arc<GraphicsPipeline>,
 	vertices_allocator: SubbufferAllocator,
 	indexes_allocator: SubbufferAllocator,
+	/// Point and line vertices of the current frame.
 	vertices: Vec<Vertex>,
 	text_vertices: Vec<TexturedVertex>,
 	indexes: Vec<u32>,
+	/// Shape models, loaded on first use.
 	models: Option<DebugModels>,
 }
 
+/// Models used to draw debug shapes. Capsules are drawn as a body and two caps.
 pub struct DebugModels {
 	dbox: SimpleModel,
 	sphere: SimpleModel,
@@ -46,7 +53,9 @@ pub struct DebugModels {
 	ccap: SimpleModel,
 }
 
+/// Points with a radius above this (in pixels) are drawn as rings instead of filled circles.
 const RING_MIN: f32 = 5.0;
+/// Inner radius of rings relative to the outer radius.
 const RING_WIDTH: f32 = 0.9;
 
 impl DebugRenderer {
@@ -85,10 +94,12 @@ impl DebugRenderer {
 		})
 	}
 	
+	/// Returns the cache of rasterized debug texts.
 	pub fn text_cache(&self) -> RefMut<'_, TextCache> {
 		self.text_cache.borrow_mut()
 	}
 	
+	/// Loads the shape models if any shape is queued and they aren't loaded yet.
 	pub fn before_render(&mut self, renderer: &mut Renderer) -> Result<()> {
 		if self.models.is_none() {
 			let mut load_models = false;
@@ -109,6 +120,7 @@ impl DebugRenderer {
 		Ok::<_, Error>(())
 	}
 	
+	/// Draws all queued debug primitives.
 	pub fn render(&mut self, context: &mut RenderContext) -> Result<()> {
 		let viewproj = (
 			context.projection.0 * context.view.0,
@@ -195,6 +207,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
+	/// Clears all queued primitives and evicts stale text cache entries. Called at the end of each frame.
 	pub fn reset(&mut self) {
 		DEBUG_POINTS.with(|points| points.borrow_mut().clear());
 		DEBUG_LINES.with(|lines| lines.borrow_mut().clear());
@@ -206,6 +219,7 @@ impl DebugRenderer {
 		self.text_cache.borrow_mut().cleanup();
 	}
 	
+	/// Builds a filled circle for a small point.
 	fn draw_circle(&mut self, point: &DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = point.radius.log(1.2).max(4.0) as u32;
 		let center = point.position.project(viewproj);
@@ -239,6 +253,7 @@ impl DebugRenderer {
 		}
 	}
 	
+	/// Builds a ring for a large point.
 	fn draw_ring(&mut self, point: &DebugPoint, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = (point.radius.ln() * 9.0).max(4.0).min(128.0) as u32;
 		let center = point.position.project(viewproj);
@@ -277,6 +292,7 @@ impl DebugRenderer {
 		}
 	}
 	
+	/// Builds a quad for a line of the given pixel width.
 	fn draw_line(&mut self, line: &DebugLine, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) {
 		let edges = (line.width.ln() * 4.5).max(2.0) as u32;
 		let from = line.from.project(viewproj);
@@ -334,6 +350,7 @@ impl DebugRenderer {
 		}
 	}
 	
+	/// Builds a quad for a text, returning the descriptor set of its rasterized texture.
 	fn draw_text(&mut self, text: &DebugText, viewproj: &(PMat4, PMat4), pixel_scale: &Vec2) -> Result<Option<Arc<DescriptorSet>>> {
 		let entry = self.text_cache.get_mut().get(&text.text)?;
 		
@@ -382,6 +399,7 @@ impl DebugRenderer {
 		Ok(Some(entry.set.clone()))
 	}
 	
+	/// Draws and drains the queued boxes.
 	fn draw_boxes(&self, boxes: &mut Vec<DebugBox>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.dbox.loaded() => { models }
@@ -422,6 +440,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
+	/// Draws and drains the queued spheres.
 	fn draw_spheres(&self, spheres: &mut Vec<DebugSphere>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.sphere.loaded() => { models }
@@ -462,6 +481,7 @@ impl DebugRenderer {
 		Ok(())
 	}
 	
+	/// Draws and drains the queued capsules.
 	fn draw_capsules(&self, capsules: &mut Vec<DebugCapsule>, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
 		let models = match self.models.as_ref() {
 			Some(models) if models.ccap.loaded()

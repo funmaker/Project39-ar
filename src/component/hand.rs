@@ -15,28 +15,44 @@ use super::physics::joint::JointComponent;
 use super::vr::VrTracked;
 
 
+/// Radius around the hand in which objects can be grabbed.
 const GRAB_DIST: f32 = 0.1;
+/// Touchpad walking speed, in meters per second.
 const WALK_SPEED: f32 = 1.5;
 
+/// Ring animation shown when an object is frozen or unfrozen.
 #[derive(Debug, Copy, Clone)]
 struct FreezeAnim {
 	start: Instant,
 	origin: Point3,
+	/// 1 for unfreezing (expanding ring), -1 for freezing (shrinking ring).
 	dir: f32,
 }
 
+/// What the hand is holding.
 #[derive(Debug, Clone)]
 enum Grab {
 	None,
+	/// A dynamic body, held with a fixed joint.
 	Dynamic(ComponentRef<JointComponent>),
+	/// A non-dynamic entity hierarchy, held by parenting its root to the hand.
 	Kinematic(EntityRef),
 }
 
+/// Player hand (VR controller or novr hand).
+///
+/// Hold the use button to grab objects near the hand, press the grip (`G`) to freeze/unfreeze
+/// them in place. While nothing is held, the touchpad walks the VR root around.
+///
+/// Entities can customize grabbing using tags: `"GrabPos"` (offset of the object in the hand),
+/// `"GrabSticky"` (stays grabbed after releasing the button) and `"World"`/`"NoGrab"` (can't be grabbed).
+/// The held entity is tagged `"Grabbed"` with a reference to the hand.
 #[derive(ComponentBase, Debug)]
 pub struct HandComponent {
 	#[inner] inner: ComponentInner,
 	pub hand: Hand,
 	grab: RefCell<Grab>,
+	/// The held object stays grabbed after releasing the use button.
 	sticky: Cell<bool>,
 	freeze_anim: Cell<Option<FreezeAnim>>,
 }
@@ -52,6 +68,7 @@ impl HandComponent {
 		}
 	}
 	
+	/// Returns the entity currently held by this hand.
 	pub fn grabbed_entity(&self) -> EntityRef {
 		match &*self.grab.borrow() {
 			Grab::None => EntityRef::null(),

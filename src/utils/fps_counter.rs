@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 
+/// Measures frame rate averaged over the last `N` ticks.
 pub struct FpsCounter<const N: usize> {
 	measurements: [Instant; N],
 	current: usize,
@@ -14,11 +15,13 @@ impl<const N: usize> FpsCounter<N> {
 		}
 	}
 	
+	/// Records a frame.
 	pub fn tick(&mut self) {
 		self.measurements[self.current] = Instant::now();
 		self.current = (self.current + 1) % N;
 	}
 	
+	/// Returns the average frame rate over the recorded ticks.
 	pub fn fps(&self) -> f32 {
 		let last = self.current;
 		let first = self.current.checked_sub(1).unwrap_or(N - 1);

@@ -7,6 +7,7 @@ use vulkano::command_buffer::PrimaryAutoCommandBuffer;
 pub use crate::component::model::VertexIndex;
 
 
+/// Index buffer of any supported index type.
 #[derive(Clone)]
 pub enum IndexSubbuffer {
 	U8(Subbuffer<[u8]>),
@@ -39,7 +40,9 @@ impl<VI: VertexIndex> Into<IndexSubbuffer> for Subbuffer<[VI]> {
 }
 
 
+/// Extensions for command buffer builders.
 pub trait AutoCommandBufferBuilderEx {
+	/// Binds an index buffer of any index type.
 	fn bind_any_index_buffer(&mut self, index_buffer: IndexSubbuffer) -> &mut Self;
 }
 

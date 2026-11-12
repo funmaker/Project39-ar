@@ -7,11 +7,18 @@ use nalgebra::{Matrix, Scalar, DefaultAllocator, DimName};
 use nalgebra::allocator::Allocator;
 
 
+/// Values that can be configured from command line arguments.
+///
+/// Implemented for terminal values (using `args_terminals!`) and derived for config structs,
+/// where each field becomes a flag named after its path (eg. `--novr.fov`) with the field's
+/// doc comment as the help text.
 pub trait FromArgs {
+	/// Value hint shown in the usage text. Defaults to nothing.
 	fn hint(&self) -> String {
 		String::new()
 	}
 	
+	/// Returns the usage text line(s) of this option.
 	fn usage_impl(&self, short: &str, path: &str, doc: &str) -> String {
 		let short_flag = if short.len() > 0 {
 			format!("-{}, ", short)
@@ -22,11 +29,13 @@ pub trait FromArgs {
 		format!("\t{}--{} {}\t{}", short_flag, path, self.hint(), doc)
 	}
 	
+	/// Registers the option(s) in `opts`.
 	fn prepare_opts(&mut self, opts: &mut Options, short: &str, path: &str, doc: &str) -> Result<()> {
 		opts.optopt(short, path, doc, &self.hint());
 		Ok(())
 	}
 	
+	/// Applies the parsed option value(s), if present.
 	fn apply_matches(&mut self, matches: &Matches, path: &str) -> Result<()>;
 }
 
@@ -111,6 +120,7 @@ impl<T, R: DimName, C: DimName> FromArgs for Matrix<T, R, C, <DefaultAllocator a
 	}
 }
 
+/// Implements `FromArgs` for types that are parsed from a single argument using `FromStr`.
 macro_rules! args_terminals {
 	{ $( $typ:ty )* } => {
 		$(

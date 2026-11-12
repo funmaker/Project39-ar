@@ -5,6 +5,10 @@ use super::super::Application;
 use super::Entity;
 
 
+/// Weak, nullable reference to an entity by id.
+///
+/// Resolve it with `get`. Once the referenced entity no longer exists, the reference
+/// nulls itself.
 #[derive(Debug, Eq, PartialEq, Clone, Default)]
 pub struct EntityRef {
 	inner: Cell<Option<u64>>,
@@ -23,6 +27,7 @@ impl EntityRef {
 		}
 	}
 	
+	/// Replaces the referenced entity.
 	pub fn set(&self, other: Self) {
 		self.inner.swap(&other.inner);
 	}
@@ -31,6 +36,8 @@ impl EntityRef {
 		self.inner.set(None);
 	}
 	
+	/// Resolves the reference. Returns `None` (and clears the reference) if the entity was removed.
+	/// Entities that are still pending are not returned, but the reference stays valid.
 	pub fn get<'a>(&self, application: &'a Application) -> Option<&'a Entity> {
 		if let Some(eid) = self.inner.get() {
 			if let Some(entity) = application.entity(eid) {
@@ -43,6 +50,7 @@ impl EntityRef {
 		None
 	}
 	
+	/// Returns the referenced id without checking whether the entity exists.
 	pub fn raw(&self) -> Option<u64> {
 		self.inner.get()
 	}

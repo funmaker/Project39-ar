@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static ID_GEN: AtomicU64 = AtomicU64::new(1);
 
+/// Returns a new process-wide unique id, used for entities and components.
 pub fn next_uid() -> u64 {
 	ID_GEN.fetch_add(1, Ordering::Relaxed)
 }

@@ -26,6 +26,7 @@ impl SimpleInspect for RigidBodyType {
 	}
 }
 
+/// Rapier user data, inspected as the entity or component it refers to.
 pub struct UserData(u128);
 
 impl Inspect for UserData {

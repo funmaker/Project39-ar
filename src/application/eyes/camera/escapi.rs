@@ -7,8 +7,10 @@ use crate::math::Isometry3;
 use super::{CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS, Camera, CameraCaptureTimeout};
 
 
+/// Index of the capture device to use.
 pub const CAPTURE_INDEX: usize = 0;
 
+/// Webcam capture using ESCAPI (Windows only).
 pub struct Escapi {
 	inner: escapi::Device,
 }

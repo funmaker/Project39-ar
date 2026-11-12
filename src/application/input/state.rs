@@ -1,11 +1,16 @@
 use std::ops::BitOr;
 
 
+/// State of a single button.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct InputState {
+	/// Button was pressed this frame.
 	pub down: bool,
+	/// Button was released this frame.
 	pub up: bool,
+	/// Button is currently held.
 	pub pressed: bool,
+	/// Flips on every press.
 	pub toggle: bool,
 }
 
@@ -19,11 +24,13 @@ impl InputState {
 		}
 	}
 	
+	/// Clears the per-frame `down` and `up` flags.
 	pub fn reset(&mut self) {
 		self.down = false;
 		self.up = false;
 	}
 	
+	/// Updates the state with a new pressed value, setting edge flags if it changed.
 	pub fn update(&mut self, pressed: bool) {
 		if self.pressed == pressed {
 			return;

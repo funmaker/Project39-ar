@@ -10,6 +10,7 @@ use super::super::Renderer;
 use super::{AssetKey, AssetsManager};
 
 
+/// Key of a TOML file deserialized into `T`.
 #[derive(Clone, Debug)]
 pub struct TomlAsset<T> {
 	path: PathBuf,

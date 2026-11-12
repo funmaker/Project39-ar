@@ -6,6 +6,7 @@ use crate::utils::{end_row_interact, id_fmt};
 use super::super::model::mmd::BodyPart;
 use super::Miku;
 
+/// Draws a selectable list of `(bone id, label)` rows. Returns the bone id of the clicked row.
 pub fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: impl Iterator<Item=(usize, RichText)>) -> Option<usize> {
 	let mut new_selection = None;
 	
@@ -41,6 +42,7 @@ pub fn list(ui: &mut Ui, id: impl Into<Id>, selected: Option<usize>, elements: i
 	new_selection
 }
 
+/// Draws a clickable body diagram of Miku's ragdoll. Returns the bone of the clicked body part.
 pub fn ragdoll(ui: &mut Ui, selected: Option<usize>, miku: &Miku, application: &Application) -> Option<usize> {
 	let mut new_selection = None;
 	let width = ui.available_width().max(16.0);
