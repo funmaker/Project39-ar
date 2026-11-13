@@ -1,0 +1,442 @@
+{
+	"lines": {
+		"ANGRY_GRUMBLE_LONG": [
+			"openviva/voice/angryGrumbleLong1.ogg",
+			"openviva/voice/angryGrumbleLong2.ogg",
+			"openviva/voice/angryGrumbleLong3.ogg",
+			"openviva/voice/angryGrumbleLong4.ogg",
+			"openviva/voice/angryGrumbleLong5.ogg"
+		],
+		"ANGRY_GRUMBLE_SHORT": [
+			"openviva/voice/angryGrumbleShort1.ogg",
+			"openviva/voice/angryGrumbleShort2.ogg",
+			"openviva/voice/angryGrumbleShort3.ogg"
+		],
+		"ANGRY_HEADPAT_A": [
+			"openviva/voice/angryHeadpatA1.ogg",
+			"openviva/voice/angryHeadpatA2.ogg",
+			"openviva/voice/angryHeadpatA3.ogg",
+			"openviva/voice/angryHeadpatA4.ogg",
+			"openviva/voice/angryHeadpatA5.ogg"
+		],
+		"ANGRY_HEADPAT_B": [
+			"openviva/voice/angryHeadpatB1.ogg",
+			"openviva/voice/angryHeadpatB2.ogg",
+			"openviva/voice/angryHeadpatB3.ogg",
+			"openviva/voice/angryHeadpatB4.ogg",
+			"openviva/voice/angryHeadpatB5.ogg"
+		],
+		"ANGRY_LONG": [
+			"openviva/voice/angryLong1.ogg",
+			"openviva/voice/angryLong2.ogg",
+			"openviva/voice/angryLong3.ogg",
+			"openviva/voice/angryLong4.ogg",
+			"openviva/voice/angryLong5.ogg",
+			"openviva/voice/angryLong6.ogg",
+			"openviva/voice/angryLong7.ogg",
+			"openviva/voice/angryLong8.ogg",
+			"openviva/voice/angryLong9.ogg",
+			"openviva/voice/angryLong10.ogg"
+		],
+		"ANGRY_SHORT": [
+			"openviva/voice/angryShort1.ogg",
+			"openviva/voice/angryShort2.ogg",
+			"openviva/voice/angryShort3.ogg",
+			"openviva/voice/angryShort4.ogg",
+			"openviva/voice/angryShort5.ogg",
+			"openviva/voice/angryShort6.ogg",
+			"openviva/voice/angryShort7.ogg"
+		],
+		"ANGRY_POUT": [
+			"openviva/voice/angryPout1.ogg",
+			"openviva/voice/angryPout2.ogg",
+			"openviva/voice/angryPout3.ogg",
+			"openviva/voice/angryPout4.ogg",
+			"openviva/voice/angryPout5.ogg",
+			"openviva/voice/angryPout6.ogg"
+		],
+		"WHINE": [
+			"openviva/voice/whine_short1.ogg",
+			"openviva/voice/whine_short2.ogg"
+		],
+		"CONFIDENT": [
+			"openviva/voice/confident1.ogg",
+			"openviva/voice/confident2.ogg",
+			"openviva/voice/confident3.ogg"
+		],
+		"CONFUSED": [
+			"openviva/voice/confused1.ogg",
+			"openviva/voice/confused2.ogg",
+			"openviva/voice/confused3.ogg",
+			"openviva/voice/confused4.ogg",
+			"openviva/voice/confused5.ogg"
+		],
+		"DISAPPOINTED_SIGH": [
+			"openviva/voice/disappointedSigh1.ogg",
+			"openviva/voice/disappointedSigh2.ogg",
+			"openviva/voice/disappointedSigh3.ogg",
+			"openviva/voice/disappointedSigh4.ogg",
+			"openviva/voice/disappointedSigh5.ogg"
+		],
+		"DISAPPOINTED_STARTLE": [
+			"openviva/voice/disappointedStartle1.ogg",
+			"openviva/voice/disappointedStartle2.ogg",
+			"openviva/voice/disappointedStartle3.ogg",
+			"openviva/voice/disappointedStartle4.ogg",
+			"openviva/voice/disappointedStartle5.ogg",
+			"openviva/voice/disappointedStartle6.ogg",
+			"openviva/voice/disappointedStartle7.ogg",
+			"openviva/voice/disappointedStartle8.ogg"
+		],
+		"DONUT_SMELL_A": [
+			"openviva/voice/donutSmellA1.ogg",
+			"openviva/voice/donutSmellA2.ogg",
+			"openviva/voice/donutSmellA3.ogg",
+			"openviva/voice/donutSmellA4.ogg"
+		],
+		"DONUT_SMELL_B": [
+			"openviva/voice/donutSmellB1.ogg",
+			"openviva/voice/donutSmellB2.ogg",
+			"openviva/voice/donutSmellB3.ogg",
+			"openviva/voice/donutSmellB4.ogg"
+		],
+		"EAT": [
+			"openviva/voice/eat1.ogg",
+			"openviva/voice/eat2.ogg",
+			"openviva/voice/eat3.ogg",
+			"openviva/voice/eat4.ogg",
+			"openviva/voice/eat5.ogg",
+			"openviva/voice/eat6.ogg",
+			"openviva/voice/eat7.ogg",
+			"openviva/voice/eat8.ogg"
+		],
+		"ECSTATIC": [
+			"openviva/voice/ecstatic1.ogg",
+			"openviva/voice/ecstatic2.ogg",
+			"openviva/voice/ecstatic3.ogg",
+			"openviva/voice/ecstatic4.ogg"
+		],
+		"EFFORT": [
+			"openviva/voice/effort1.ogg",
+			"openviva/voice/effort2.ogg",
+			"openviva/voice/effort3.ogg"
+		],
+		"EFFORT_ANGRY": [
+			"openviva/voice/effortAngry1.ogg",
+			"openviva/voice/effortAngry2.ogg",
+			"openviva/voice/effortAngry3.ogg",
+			"openviva/voice/effortAngry6.ogg",
+			"openviva/voice/effortAngry7.ogg"
+		],
+		"EMBARRASSED": [
+			"openviva/voice/embarrassed1_shortened.ogg",
+			"openviva/voice/embarrassed2.ogg",
+			"openviva/voice/embarrassed3.ogg",
+			"openviva/voice/embarrassed4.ogg",
+			"openviva/voice/embarrassed5.ogg"
+		],
+		"EMBARRASSED_HANDHOLD": [
+			"openviva/voice/embarrassedHandhold1.ogg",
+			"openviva/voice/embarrassedHandhold2.ogg",
+			"openviva/voice/embarrassedHandhold3.ogg",
+			"openviva/voice/embarrassedHandhold4.ogg"
+		],
+		"GIGGLE": [
+			"openviva/voice/giggle1.ogg",
+			"openviva/voice/giggle2.ogg",
+			"openviva/voice/giggle3.ogg",
+			"openviva/voice/giggle4.ogg",
+			"openviva/voice/giggle5.ogg"
+		],
+		"HEADPAT_HAPPY": [
+			"openviva/voice/headpatHappy1.ogg",
+			"openviva/voice/headpatHappy2.ogg",
+			"openviva/voice/headpatHappy3.ogg",
+			"openviva/voice/headpatHappy4.ogg",
+			"openviva/voice/headpatHappy5.ogg",
+			"openviva/voice/headpatHappy6.ogg",
+			"openviva/voice/headpatHappy7.ogg",
+			"openviva/voice/headpatHappy8.ogg",
+			"openviva/voice/headpatHappy9.ogg"
+		],
+		"HEADPAT_RETURN": [
+			"openviva/voice/headpatReturn1.ogg",
+			"openviva/voice/headpatReturn2.ogg",
+			"openviva/voice/headpatReturn3.ogg",
+			"openviva/voice/headpatReturn4.ogg",
+			"openviva/voice/headpatReturn5.ogg",
+			"openviva/voice/headpatReturn6.ogg",
+			"openviva/voice/headpatReturn7.ogg",
+			"openviva/voice/headpatReturn8.ogg",
+			"openviva/voice/headpatReturn9.ogg"
+		],
+		"HUMMING": [
+			"openviva/voice/humming1.ogg",
+			"openviva/voice/humming2.ogg",
+			"openviva/voice/humming3.ogg",
+			"openviva/voice/humming4.ogg",
+			"openviva/voice/humming5.ogg",
+			"openviva/voice/humming6.ogg"
+		],
+		"HUMPH": [
+			"openviva/voice/humph1.ogg",
+			"openviva/voice/humph2.ogg",
+			"openviva/voice/humph3.ogg",
+			"openviva/voice/humph4.ogg"
+		],
+		"IMPRESSED": [
+			"openviva/voice/impressed8.ogg",
+			"openviva/voice/impressed9.ogg",
+			"openviva/voice/impressed10.ogg"
+		],
+		"IMPRESSED_VERY": [
+			"openviva/voice/impressedVery1.ogg",
+			"openviva/voice/impressedVery2.ogg",
+			"openviva/voice/impressedVery3.ogg",
+			"openviva/voice/impressedVery4.ogg",
+			"openviva/voice/impressedVery5.ogg",
+			"openviva/voice/impressedVery6.ogg",
+			"openviva/voice/impressedVery7.ogg"
+		],
+		"KISSED_ANGRY": [
+			"openviva/voice/kissedAngry1.ogg",
+			"openviva/voice/kissedAngry2.ogg",
+			"openviva/voice/kissedAngry3.ogg",
+			"openviva/voice/kissedAngry4.ogg",
+			"openviva/voice/kissedAngry5.ogg"
+		],
+		"KISSED_HAPPY": [
+			"openviva/voice/kissedHappy1.ogg",
+			"openviva/voice/kissedHappy2.ogg"
+		],
+		"LAUGH_LONG": [
+			"openviva/voice/laughLong1.ogg",
+			"openviva/voice/laughLong2.ogg",
+			"openviva/voice/laughLong3.ogg"
+		],
+		"LAUGH_SHORT": [
+			"openviva/voice/laughShort1.ogg",
+			"openviva/voice/laughShort2.ogg",
+			"openviva/voice/laughShort3.ogg",
+			"openviva/voice/laughShort4.ogg",
+			"openviva/voice/laughShort5.ogg",
+			"openviva/voice/laughShort6.ogg"
+		],
+		"LOSE": [
+			"openviva/voice/lose1.ogg",
+			"openviva/voice/lose2.ogg",
+			"openviva/voice/lose3.ogg",
+			"openviva/voice/lose4.ogg"
+		],
+		"MISC_IDLE": [
+			"openviva/voice/miscIdle2.ogg",
+			"openviva/voice/miscIdle4.ogg",
+			"openviva/voice/miscIdle5.ogg",
+			"openviva/voice/miscIdle9.ogg",
+			"openviva/voice/miscIdle10.ogg",
+			"openviva/voice/miscIdle11.ogg",
+			"openviva/voice/miscIdle12.ogg",
+			"openviva/voice/miscIdle13.ogg",
+			"openviva/voice/miscIdle15.ogg",
+			"openviva/voice/miscIdle16.ogg",
+			"openviva/voice/miscIdle17.ogg",
+			"openviva/voice/miscIdle20.ogg"
+		],
+		"PEACE": [
+			"openviva/voice/peace1.ogg",
+			"openviva/voice/peace2.ogg",
+			"openviva/voice/peace3.ogg"
+		],
+		"REFUSE": [
+			"openviva/voice/refuse1.ogg",
+			"openviva/voice/refuse2.ogg",
+			"openviva/voice/refuse3.ogg",
+			"openviva/voice/refuse4.ogg",
+			"openviva/voice/refuse5.ogg",
+			"openviva/voice/refuse6.ogg",
+			"openviva/voice/refuse7.ogg"
+		],
+		"RELIEF": [
+			"openviva/voice/relief1.ogg",
+			"openviva/voice/relief2.ogg",
+			"openviva/voice/relief3.ogg"
+		],
+		"RIP": [
+			"openviva/voice/rip1.ogg",
+			"openviva/voice/rip2.ogg",
+			"openviva/voice/rip3.ogg"
+		],
+		"SCARED_SHORT": [
+			"openviva/voice/scaredShort2.ogg",
+			"openviva/voice/scaredShort3.ogg",
+			"openviva/voice/scaredShort4.ogg",
+			"openviva/voice/scaredShort5.ogg",
+			"openviva/voice/scaredShort6.ogg",
+			"openviva/voice/scaredShort7.ogg",
+			"openviva/voice/scaredShort8.ogg",
+			"openviva/voice/scaredShort9.ogg",
+			"openviva/voice/scaredShort10.ogg",
+			"openviva/voice/scaredShort11.ogg"
+		],
+		"SLEEP_BREATHING": [
+			"openviva/voice/sleepBreathing1.ogg",
+			"openviva/voice/sleepBreathing2.ogg",
+			"openviva/voice/sleepBreathing3.ogg",
+			"openviva/voice/sleepBreathing4.ogg",
+			"openviva/voice/sleepBreathing5.ogg",
+			"openviva/voice/sleepBreathing6.ogg",
+			"openviva/voice/sleepBreathing7.ogg",
+			"openviva/voice/sleepBreathing8.ogg",
+			"openviva/voice/sleepBreathing9.ogg",
+			"openviva/voice/sleepBreathing10.ogg",
+			"openviva/voice/sleepBreathing11.ogg",
+			"openviva/voice/sleepBreathing12.ogg"
+		],
+		"SLEEP_DISTURBED_LONG": [
+			"openviva/voice/sleepDisturbedLong1.ogg",
+			"openviva/voice/sleepDisturbedLong2.ogg",
+			"openviva/voice/sleepDisturbedLong3.ogg",
+			"openviva/voice/sleepDisturbedLong4.ogg",
+			"openviva/voice/sleepDisturbedLong5.ogg"
+		],
+		"SLEEP_DISTURBED_SHORT": [
+			"openviva/voice/sleepDisturbedShort1.ogg",
+			"openviva/voice/sleepDisturbedShort2.ogg",
+			"openviva/voice/sleepDisturbedShort3.ogg",
+			"openviva/voice/sleepDisturbedShort4.ogg"
+		],
+		"SNORE": [
+			"openviva/voice/snore1.ogg",
+			"openviva/voice/snore2.ogg",
+			"openviva/voice/snore3.ogg"
+		],
+		"STARTLE_SHORT": [
+			"openviva/voice/startleShort1.ogg",
+			"openviva/voice/startleShort2.ogg",
+			"openviva/voice/startleShort3.ogg",
+			"openviva/voice/startleShort4.ogg",
+			"openviva/voice/startleShort5.ogg",
+			"openviva/voice/startleShort6.ogg",
+			"openviva/voice/startleShort7.ogg",
+			"openviva/voice/startleShort8.ogg",
+			"openviva/voice/startleShort9.ogg",
+			"openviva/voice/startleShort10.ogg",
+			"openviva/voice/startleShort11.ogg",
+			"openviva/voice/startleShort12.ogg",
+			"openviva/voice/startleShort13.ogg",
+			"openviva/voice/startleShort14.ogg"
+		],
+		"THINKING_LONG": [
+			"openviva/voice/thinkingLong1.ogg",
+			"openviva/voice/thinkingLong2.ogg",
+			"openviva/voice/thinkingLong3.ogg",
+			"openviva/voice/thinkingLong4.ogg",
+			"openviva/voice/thinkingLong5.ogg"
+		],
+		"THINKING_SHORT": [
+			"openviva/voice/thinkingShort1.ogg",
+			"openviva/voice/thinkingShort2.ogg",
+			"openviva/voice/thinkingShort3.ogg",
+			"openviva/voice/thinkingShort4.ogg"
+		],
+		"TROUBLED": [
+			"openviva/voice/troubled1.ogg",
+			"openviva/voice/troubled2.ogg",
+			"openviva/voice/troubled3.ogg",
+			"openviva/voice/troubled4.ogg"
+		],
+		"WIN": [
+			"openviva/voice/win1.ogg",
+			"openviva/voice/win2.ogg",
+			"openviva/voice/win3.ogg",
+			"openviva/voice/win4.ogg"
+		],
+		"WORRY": [
+			"openviva/voice/worry1.ogg",
+			"openviva/voice/worry2.ogg",
+			"openviva/voice/worry3.ogg",
+			"openviva/voice/worry4.ogg",
+			"openviva/voice/worry5.ogg"
+		],
+		"YA_ANNOYED": [
+			"openviva/voice/yaAnnoyed1.ogg",
+			"openviva/voice/yaAnnoyed2.ogg",
+			"openviva/voice/yaAnnoyed3.ogg",
+			"openviva/voice/yaAnnoyed4.ogg",
+			"openviva/voice/yaAnnoyed5.ogg"
+		],
+		"YAWN_SHORT": [
+			"openviva/voice/yawnShort1.ogg",
+			"openviva/voice/yawnShort2.ogg",
+			"openviva/voice/yawnShort3.ogg",
+			"openviva/voice/yawnShort4.ogg"
+		],
+		"YAWN_LONG": [
+			"openviva/voice/yawnLong1.ogg",
+			"openviva/voice/yawnLong2.ogg",
+			"openviva/voice/yawnLong3.ogg"
+		],
+		"YUMMY": [
+			"openviva/voice/yummy1.ogg",
+			"openviva/voice/yummy2.ogg",
+			"openviva/voice/yummy3.ogg",
+			"openviva/voice/yummy4.ogg",
+			"openviva/voice/yummy5.ogg",
+			"openviva/voice/yummy6.ogg",
+			"openviva/voice/yummy7.ogg"
+		],
+		"SCREAMING": [
+			"openviva/voice/scream1.ogg",
+			"openviva/voice/scream2.ogg",
+			"openviva/voice/scream3.ogg",
+			"openviva/voice/scream4.ogg",
+			"openviva/voice/scream5.ogg",
+			"openviva/voice/scream6.ogg"
+		],
+		"WHINE_SOFT": [
+			"openviva/voice/whine_soft1.ogg",
+			"openviva/voice/whine_soft2.ogg",
+			"openviva/voice/whine_soft3.ogg",
+			"openviva/voice/whine_soft4.ogg",
+			"openviva/voice/whine_soft5.ogg",
+			"openviva/voice/whine_soft6.ogg",
+			"openviva/voice/whine_soft7.ogg",
+			"openviva/voice/whine_soft8.ogg"
+		],
+		"GET_OUT_2_3": [
+			"openviva/voice/goAwayOut2.ogg",
+			"openviva/voice/goAwayOut3.ogg"
+		],
+		"WHIMPER_SHORT": [
+			"openviva/voice/disappointedStartle7.ogg",
+			"openviva/voice/disappointedStartle5.ogg",
+			"openviva/voice/whine_soft4.ogg",
+			"openviva/voice/whine_soft5.ogg"
+		],
+		"GOODNIGHT": [],
+		"GOODNIGHT_LONG": [],
+		"GOODMORNING": [],
+		"GOODMORNING_LONG": [],
+		"WHAT_YOU_DOING": [
+			"openviva/voice/whatareyoudoing1.ogg"
+		]
+	},
+	"sfx": {
+		"get_up": [
+			"openviva/sfx/lily_getup1.ogg",
+			"openviva/sfx/lily_getup2.ogg"
+		],
+		"impact_soft": [
+			"openviva/sfx/lily_impact_soft1.ogg",
+			"openviva/sfx/lily_impact_soft2.ogg",
+			"openviva/sfx/lily_impact_soft3.ogg",
+			"openviva/sfx/lily_impact_soft4.ogg"
+		],
+		"impact_hard": [
+			"openviva/sfx/lily_impact1.ogg",
+			"openviva/sfx/lily_impact2.ogg",
+			"openviva/sfx/lily_impact3.ogg",
+			"openviva/sfx/lily_impact4.ogg"
+		]
+	}
+}

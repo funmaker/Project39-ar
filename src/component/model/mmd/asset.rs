@@ -63,6 +63,11 @@ impl PmxAsset {
 		}
 	}
 	
+	/// Path of the PMX file, relative to the assets directory.
+	pub fn path(&self) -> &Path {
+		&self.path
+	}
+	
 	/// Ignores `model.toml` overrides.
 	pub fn no_overrides(self) -> Self {
 		Self {

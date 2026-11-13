@@ -9,11 +9,15 @@ use std::io::{BufRead, BufReader, ErrorKind, Seek};
 use std::path::{Path, PathBuf};
 use anyhow::Result;
 
+mod json;
+mod sound;
 mod texture;
 mod toml;
 
 use super::Renderer;
 pub use self::toml::TomlAsset;
+pub use json::JsonAsset;
+pub use sound::{Sound, SoundAsset};
 pub use texture::{TextureAsset, TextureBundle};
 
 

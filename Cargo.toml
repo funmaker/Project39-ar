@@ -45,6 +45,8 @@ colored = "2.0.0"
 smallvec = "1.10.0"
 foldhash = "0.1"
 anyhow = "1.0.82"
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "vorbis", "wav"] }
+serde_json = "1.0.154"
 
 [target.'cfg(windows)'.dependencies]
 escapi = "4.0.0"

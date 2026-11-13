@@ -8,20 +8,20 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use anyhow::Result;
 use nalgebra::Unit;
-use thiserror::Error;
-use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex};
+use openvr::{MAX_TRACKED_DEVICE_COUNT, TrackedControllerRole, TrackedDeviceIndex, tracked_device_index};
 use openvr::compositor::WaitPoses;
-use openvr::tracked_device_index;
 use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::geometry::ColliderBuilder;
 use rapier3d::pipeline::PhysicsWorld;
 use smallvec::SmallVec;
+use thiserror::Error;
 use vulkano::swapchain::Surface;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{DeviceEvent, DeviceId, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
+pub mod audio;
 pub mod entity;
 pub mod input;
 pub mod physics;
@@ -46,20 +46,21 @@ use crate::component::pov::PoV;
 use crate::component::test::TestComponent;
 use crate::component::toolgun::ToolGun;
 use crate::component::vr::{VrIk, VrRoot};
-use crate::application::window::WindowSwapchainNeedRetry;
 use crate::config::CameraAPI;
 use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
 use crate::renderer::{Renderer, RenderTarget};
 use crate::utils::{default_wait_poses, SelectionLevel};
+pub use audio::{Audio, SoundHandle};
 pub use entity::{Entity, EntityRef};
-pub use input::{Hand, Input, Key, MouseButton};
 pub use gui::{GuiSelection, GuiSelections, select_button};
+pub use input::{Hand, Input, Key, MouseButton};
 pub use vr::VR;
-use physics::{PhysicsDebug, PhysicsParams};
 use bench::Benchmark;
 use eyes::{camera, Eyes};
 use gui::ApplicationGui;
-use window::Window;
+use physics::{PhysicsDebug, PhysicsParams};
+use window::{Window, WindowSwapchainNeedRetry};
+
 
 /// The main application state: VR, renderer, physics, input, window, eyes and every entity.
 ///
@@ -79,6 +80,8 @@ pub struct Application {
 	/// Optional entity rendered to the desktop window instead of mirroring the eyes.
 	pub detached_pov: EntityRef,
 	pub input: Input,
+	/// Positional audio output.
+	pub audio: Audio,
 	last_draw: Instant,
 	eyes: Option<Eyes>,
 	window: Window,
@@ -133,6 +136,7 @@ impl Application {
 			miku: ComponentRef::null(),
 			detached_pov: EntityRef::null(),
 			input: Input::new(),
+			audio: Audio::new(),
 			last_draw: Instant::now(),
 			bench: RefCell::new(Benchmark::new()),
 			eyes: Some(eyes),
@@ -473,11 +477,14 @@ impl Application {
 		
 		self.bench.get_mut().tick("Tick");
 		
-		self.renderer.get_mut().begin_frame()?;
-		
 		let pov = self.pov
 		              .get(&self).map(|e| *e.state().position)
 		              .unwrap_or(Isometry3::identity());
+		
+		self.audio.update(pov, &self);
+		
+		self.renderer.get_mut().begin_frame()?;
+
 		let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
 		let hmd_pose = self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone();
 		

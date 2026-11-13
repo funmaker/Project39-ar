@@ -135,3 +135,104 @@ using_bone = 174
 swing = 40.0
 twist = [-20.0, 20.0]
 bias = [0.0, 0.0]
+
+
+# OpenViva character port (see src/component/miku/character). Positions are in meters, in model space at rest.
+[character]
+data = "openviva"
+
+[character.headpat]
+bone = 8
+center = [0.0, 1.48, -0.03]
+radius = 0.12
+
+[character.face]
+bone = 8
+center = [0.0, 1.39, 0.08]
+radius = 0.08
+
+[character.tummy]
+bone = 6
+center = [0.0, 0.96, 0.08]
+radius = 0.1
+
+# Humanoid bones (see src/component/miku/anim/human.rs) to MMD bone ids. Legs use the D bones, which deform the mesh.
+[character.bones]
+Hips = 4
+Spine = 5
+Chest = 6
+Neck = 7
+Head = 8
+LeftEye = 9
+RightEye = 10
+LeftShoulder = 33
+LeftUpperArm = 38
+LeftLowerArm = 48
+LeftHand = 58
+LeftThumbProximal = 62
+LeftThumbIntermediate = 63
+LeftThumbDistal = 64
+LeftIndexProximal = 71
+LeftIndexIntermediate = 72
+LeftIndexDistal = 73
+LeftMiddleProximal = 65
+LeftMiddleIntermediate = 66
+LeftMiddleDistal = 67
+LeftRingProximal = 74
+LeftRingIntermediate = 75
+LeftRingDistal = 76
+LeftLittleProximal = 68
+LeftLittleIntermediate = 69
+LeftLittleDistal = 70
+LeftUpperLeg = 176
+LeftLowerLeg = 177
+LeftFoot = 178
+LeftToes = 179
+RightShoulder = 36
+RightUpperArm = 43
+RightLowerArm = 53
+RightHand = 60
+RightThumbProximal = 77
+RightThumbIntermediate = 78
+RightThumbDistal = 79
+RightIndexProximal = 86
+RightIndexIntermediate = 87
+RightIndexDistal = 88
+RightMiddleProximal = 80
+RightMiddleIntermediate = 81
+RightMiddleDistal = 82
+RightRingProximal = 89
+RightRingIntermediate = 90
+RightRingDistal = 91
+RightLittleProximal = 83
+RightLittleIntermediate = 84
+RightLittleDistal = 85
+RightUpperLeg = 172
+RightLowerLeg = 173
+RightFoot = 174
+RightToes = 175
+
+# OpenViva face blend shapes to lists of [MMD morph id, weight].
+[character.morphs]
+happyClosedEyelids = [[29, 1.0]]   # 笑い
+upperEyelid_l = [[24, 1.0]]        # ウィンク２
+upperEyelid_r = [[25, 1.0]]        # ｳｨﾝｸ２右
+lowerEyelid_l = [[37, 0.25]]       # なごみ
+lowerEyelid_r = [[37, 0.25]]
+madEye_l = [[40, 0.5]]             # じと目
+madEye_r = [[40, 0.5]]
+madEyebrow_l = [[3, 0.5]]          # 怒り
+madEyebrow_r = [[3, 0.5]]
+sadEyebrow_l = [[1, 0.5]]          # 困る
+sadEyebrow_r = [[1, 0.5]]
+pupilShrink = [[41, 1.0]]          # 瞳小
+jawDown = [[51, 0.8]]              # あ
+puckerLips = [[55, 1.0]]           # う
+smile_l = [[69, 1.0]]              # 左口角上げ
+smile_r = [[70, 1.0]]              # 右口角上げ
+frown_l = [[72, 1.0]]              # 左口角下げ
+frown_r = [[73, 1.0]]              # 右口角下げ
+showBotTeeth = [[53, 0.5]]         # い
+platysma = [[74, 0.5]]             # 口横広げ
+cheek_l = [[91, 0.25]]             # 照れ
+cheek_r = [[91, 0.25]]

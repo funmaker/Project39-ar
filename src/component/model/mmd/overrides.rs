@@ -1,9 +1,9 @@
 use anyhow::Result;
-use thiserror::Error;
 use mmd::pmx::bone::{Bone, Connection};
 use mmd::pmx::joint::{Joint, JointType};
 use mmd::pmx::rigid_body::{PhysicsMode, RigidBody, ShapeType};
 use serde_derive::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::math::{Vec2, Vec3, PI};
 use super::asset::{MMDIndexConfig, JointEx};
@@ -112,7 +112,7 @@ impl Into<RigidBody<MMDIndexConfig>> for MMDRigidBodyOverride {
 }
 
 /// Humanoid body parts, assigned to joints to identify them independently of the model.
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyPart {
 	Pelvis,

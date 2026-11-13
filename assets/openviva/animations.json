@@ -1,0 +1,5504 @@
+{
+	"animations": {
+		"NONE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "APOSE",
+			"legs": "APOSE",
+			"face": "APOSE",
+			"priority": "NONE",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.01,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_WAIT_ANNOYED_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_wait_annoyed_loop",
+			"legs": "stand_wait_annoyed_loop",
+			"face": "stand_wait_annoyed_loop",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.3
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_HAPPY_IDLE1": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_happy_loop",
+			"legs": "stand_happy_loop",
+			"face": "stand_happy_idle",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			],
+			"torso_sync": "sync_locomotion_happy"
+		},
+		"STAND_HAPPY_IDLE2": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HAPPY_IDLE1"
+			},
+			"torso": "stand_idle2_happy",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_idle2_happy",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_HAPPY_IDLE3": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HAPPY_IDLE1"
+			},
+			"torso": "stand_happy_idle3",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_happy_idle3",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.1,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.3,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.6,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.9,
+						1.1
+					]
+				},
+				{
+					"time": 0.99,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						0.3,
+						1.1
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_CONFUSED": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_confused",
+			"legs": "stand_confused",
+			"face": "stand_confused",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"CONFUSED",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_ANGRY_IDLE1": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_angry_loop",
+			"legs": "stand_angry_loop",
+			"face": "stand_angry_idle",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			],
+			"torso_sync": "sync_locomotion_angry"
+		},
+		"STAND_AGREE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_agree",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "floor_sit_agree",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"GIGGLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_REFUSE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_angry_refuse",
+			"legs": "stand_angry_refuse",
+			"face": "stand_angry_refuse",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.65,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"REFUSE",
+						0.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						1.1
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_REFUSE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_tired_refuse",
+			"legs": "stand_tired_refuse",
+			"face": "stand_tired_refuse",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.65,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"SLEEP_DISTURBED_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.7
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_STRETCH": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_stretch",
+			"legs": "stand_stretch",
+			"face": "stand_stretch",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"SLEEP_DISTURBED_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.5
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"FLOOR_SIT_CHOPSTICKS_IN": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_in",
+			"legs": "sit_floor_chopsticks_in",
+			"face": "sit_floor_chopsticks_idle",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_IDLE": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "sit_floor_chopsticks_idle",
+			"legs": "sit_floor_chopsticks_idle",
+			"face": "sit_floor_chopsticks_idle",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.6
+			},
+			"events": [],
+			"flags": []
+		},
+		"FLOOR_SIT_HYPE": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_LOCOMOTION_HAPPY"
+			},
+			"torso": "sit_floor_hype",
+			"legs": "sit_floor_hype",
+			"face": "sit_floor_hype",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"HEADPAT_HAPPY",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_WORRIED": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_worried",
+			"legs": "sit_floor_chopsticks_worried",
+			"face": "sit_floor_chopsticks_worried",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WORRY",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_NEUTRAL": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_neutral",
+			"legs": "sit_floor_chopsticks_neutral",
+			"face": "sit_floor_chopsticks_neutral",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"THINKING_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SPEAK",
+					"values": [
+						"THINKING_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.75,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.75,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.6
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_CONFIDENT": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_confident",
+			"legs": "sit_floor_chopsticks_confident",
+			"face": "sit_floor_chopsticks_confident",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"CONFIDENT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_LOSE": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_TO_STAND"
+			},
+			"torso": "sit_floor_chopsticks_lose",
+			"legs": "sit_floor_chopsticks_lose",
+			"face": "sit_floor_chopsticks_lose",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"LOSE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_WIN": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_LOCOMOTION_HAPPY"
+			},
+			"torso": "sit_floor_chopsticks_win",
+			"legs": "sit_floor_chopsticks_win",
+			"face": "sit_floor_chopsticks_win",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WIN",
+						0.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_RECEIVE_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_receive_right",
+			"legs": "sit_floor_chopsticks_idle",
+			"face": "sit_floor_chopsticks_idle",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_RECEIVE_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_receive_left",
+			"legs": "sit_floor_chopsticks_idle",
+			"face": "sit_floor_chopsticks_idle",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_CHOPSTICKS_REDISTRIBUTE": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_CHOPSTICKS_IDLE"
+			},
+			"torso": "sit_floor_chopsticks_redistribute",
+			"legs": "sit_floor_chopsticks_idle",
+			"face": "sit_floor_chopsticks_idle",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.35,
+					"name": "REDISTRIBUTE_CHOPSTICKS_FINGERS",
+					"values": []
+				},
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HAPPY_JOY_JUMPS": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HAPPY_IDLE1"
+			},
+			"torso": "stand_happy_joy_jumps",
+			"legs": "stand_happy_joy_jumps",
+			"face": "stand_happy_joy_jumps",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.75,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_HAPPY_DISAPPOINTMENT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_happy_wanted_more",
+			"legs": "stand_happy_loop",
+			"face": "stand_headpat_happy_wanted_more",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_SIGH",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.9,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_WAVE_HAPPY_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_wave_happy_right",
+			"legs": "stand_wave_happy_right",
+			"face": "stand_wave_happy_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.65,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"GIGGLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_WAVE_HAPPY_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_wave_happy_left",
+			"legs": "stand_wave_happy_left",
+			"face": "stand_wave_happy_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.65,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"GIGGLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_REACH_OUT_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_REACH_OUT_END_RIGHT"
+			},
+			"torso": "stand_reach_out_right",
+			"legs": "stand_reach_out_right",
+			"face": "stand_reach_out_right",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.1,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.554,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.554,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.679,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.679,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.6,
+						0.6
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_REACH_OUT_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_REACH_OUT_END_LEFT"
+			},
+			"torso": "stand_reach_out_left",
+			"legs": "stand_reach_out_left",
+			"face": "stand_reach_out_left",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.1,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.554,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.554,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.679,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.679,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.6,
+						0.6
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_REACH_OUT_END_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_reach_out_end_right",
+			"legs": "stand_reach_out_end_right",
+			"face": "stand_reach_out_end_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_REACH_OUT_END_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_reach_out_end_left",
+			"legs": "stand_reach_out_end_left",
+			"face": "stand_reach_out_end_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_SHINOBU_YUMMY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_shinobu_yummy",
+			"legs": "stand_shinobu_yummy",
+			"face": "stand_shinobu_yummy",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.08,
+					"name": "SPEAK",
+					"values": [
+						"YUMMY",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_SOUND_GOOD_MORNING": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_sound_goodmorning_short",
+			"legs": "stand_sound_goodmorning_short",
+			"face": "stand_sound_goodmorning_short",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.7,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"GOODMORNING",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_GIDDY_SURPRISE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_giddy_surprise",
+			"legs": "stand_giddy_surprise",
+			"face": "stand_giddy_surprise",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.08,
+					"name": "SPEAK",
+					"values": [
+						"IMPRESSED_VERY",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_GIDDY_LOCOMOTION": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_giddy_loop",
+			"legs": "stand_giddy_loop",
+			"face": "stand_giddy_loop",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			],
+			"torso_sync": "sync_giddy_locomotion"
+		},
+		"STAND_SEARCH_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_search_right",
+			"legs": "stand_search_right",
+			"face": "stand_search_right",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.4,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						1.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SPEAK",
+					"values": [
+						"TROUBLED",
+						1.0
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						1.0
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TO_SIT_FLOOR": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_LOCOMOTION_HAPPY"
+			},
+			"torso": "stand_to_sit_floor",
+			"legs": "stand_to_sit_floor",
+			"face": "null",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.6,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.6
+			},
+			"events": [
+				{
+					"time": 0.6,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.6,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_LOCOMOTION_HAPPY": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "floor_sit_locomotion_happy",
+			"legs": "floor_sit_locomotion_happy",
+			"face": "stand_happy_idle",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.5,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"FLOOR_SIT_LOCOMOTION_ANGRY": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "floor_sit_locomotion_angry",
+			"legs": "floor_sit_locomotion_angry",
+			"face": "stand_angry_idle",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.5,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"FLOOR_SIT_TO_STAND": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "sit_floor_to_stand",
+			"legs": "sit_floor_to_stand",
+			"face": "null",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_HANDHOLD_ANGRY_REFUSE_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_handhold_angry_refuse_right",
+			"legs": "stand_handhold_angry_refuse_right",
+			"face": "stand_handhold_angry_refuse_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.6,
+				"eye_flags": 0,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.78,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						0.5,
+						1.0
+					]
+				},
+				{
+					"time": 0.78,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.65,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_SHORT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HANDHOLD_ANGRY_REFUSE_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_handhold_angry_refuse_left",
+			"legs": "stand_handhold_angry_refuse_left",
+			"face": "stand_handhold_angry_refuse_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.6,
+				"eye_flags": 0,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.78,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						0.5,
+						1.0
+					]
+				},
+				{
+					"time": 0.78,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.65,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_SHORT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HANDHOLD_HAPPY_EMBARRASSED_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HANDHOLD_HAPPY_PULL_RIGHT"
+			},
+			"torso": "stand_handhold_happy_embarrassed_right",
+			"legs": "stand_handhold_happy_embarrassed_right",
+			"face": "stand_handhold_happy_embarrassed_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"EMBARRASSED_HANDHOLD",
+						1.0
+					]
+				},
+				{
+					"time": 0.075,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.075,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.655,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.6
+					]
+				},
+				{
+					"time": 0.655,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.735,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.735,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.88,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.6
+					]
+				},
+				{
+					"time": 0.88,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HANDHOLD_HAPPY_EMBARRASSED_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HANDHOLD_HAPPY_PULL_LEFT"
+			},
+			"torso": "stand_handhold_happy_embarrassed_left",
+			"legs": "stand_handhold_happy_embarrassed_left",
+			"face": "stand_handhold_happy_embarrassed_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"EMBARRASSED_HANDHOLD",
+						1.0
+					]
+				},
+				{
+					"time": 0.075,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.075,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.655,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.6
+					]
+				},
+				{
+					"time": 0.655,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.735,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.735,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.88,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.6
+					]
+				},
+				{
+					"time": 0.88,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HANDHOLD_HAPPY_PULL_RIGHT": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_handhold_happy_pull_hard_right",
+			"legs": "stand_handhold_happy_pull_hard_right",
+			"face": "stand_handhold_happy_pull_hard_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"STAND_HANDHOLD_HAPPY_PULL_LEFT": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_handhold_happy_pull_hard_left",
+			"legs": "stand_handhold_happy_pull_hard_left",
+			"face": "stand_handhold_happy_pull_hard_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_HANDHOLD_PULL_RIGHT": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_tired_handhold_right",
+			"legs": "stand_tired_handhold_right",
+			"face": "stand_tired_handhold_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.7,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_HANDHOLD_PULL_LEFT": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_tired_handhold_left",
+			"legs": "stand_tired_handhold_left",
+			"face": "stand_tired_handhold_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.7,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.2
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "FOOTSTEP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_START": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "stand_headpat_happy_start",
+			"legs": "stand_happy_loop",
+			"face": "stand_headpat_happy_start",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 2,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_AFTER_MORE": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "stand_headpat_happy_after_more",
+			"legs": "stand_happy_loop",
+			"face": "stand_headpat_happy_after_more",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 2,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"HEADPAT_RETURN",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_WANTED_MORE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_happy_wanted_more",
+			"legs": "stand_happy_loop",
+			"face": "stand_headpat_happy_wanted_more",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 6,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_SIGH",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.9,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_IDLE_SAD_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "stand_headpat_happy_idle_sad_right",
+			"legs": "stand_headpat_happy_idle_sad_right",
+			"face": "stand_headpat_happy_idle_sad_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.5
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WHINE_SOFT",
+						0.0
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_IDLE_SAD_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "stand_headpat_happy_idle_sad_left",
+			"legs": "stand_headpat_happy_idle_sad_left",
+			"face": "stand_headpat_happy_idle_sad_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.5
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WHINE_SOFT",
+						0.0
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_SATISFACTION": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_satisfaction",
+			"legs": "stand_headpat_satisfaction",
+			"face": "stand_headpat_satisfaction",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ECSTATIC",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_HAPPY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_headpat_happy_loop",
+			"legs": "stand_happy_loop",
+			"face": "stand_headpat_happy_loop",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.5,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.45,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_ANGRY_BRUSH_AWAY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_angry_brush_away",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_angry_brush_away",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_ANGRY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_headpat_angry_start",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_angry_start",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_POUT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_ANGRY_END": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_angry_end",
+			"legs": "stand_headpat_angry_end",
+			"face": "stand_headpat_angry_end",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.55,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.46,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						1.1
+					]
+				},
+				{
+					"time": 0.76,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				},
+				{
+					"time": 0.76,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_CLIMAX_TO_CANCEL_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_climax_to_cancel_right",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_climax_to_cancel_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.85,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_CLIMAX_TO_CANCEL_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_climax_to_cancel_left",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_climax_to_cancel_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.85,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_CLIMAX_TO_HAPPY": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "stand_headpat_climax_to_happy",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_climax_to_happy",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_HEADPAT_B",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HEADPAT_INTERRUPT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_headpat_angry_interrupt",
+			"legs": "stand_angry_loop",
+			"face": "stand_headpat_angry_interrupt",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"HUMPH",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_HEADPAT_IDLE": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_tired_headpat_idle_loop",
+			"legs": "stand_tired_headpat_idle_loop",
+			"face": "stand_tired_headpat_idle_loop",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 1.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_FACE_PROX_ANGRY_SURPRISE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_face_prox_angry_surprise",
+			"legs": "stand_angry_loop",
+			"face": "stand_face_prox_angry_surprise",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.2,
+				"body_flag_duration": 1.5,
+				"eye_flags": 4,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"SCARED_SHORT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_FACE_PROX_ANGRY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_face_prox_angry_loop",
+			"legs": "stand_angry_loop",
+			"face": "stand_face_prox_angry_loop",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.112,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.412,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.837,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_LONG",
+						0.0
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_FACE_PROX_HAPPY_SURPRISE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_face_prox_happy_surprise",
+			"legs": "stand_happy_loop",
+			"face": "stand_face_prox_happy_surprise",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.7,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"SCARED_SHORT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_FACE_PROX_HAPPY_LOOP": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_face_prox_happy_loop",
+			"legs": "stand_happy_loop",
+			"face": "stand_face_prox_happy_loop",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.075,
+					"name": "SPEAK",
+					"values": [
+						"EMBARRASSED",
+						1.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TIRED_LOCOMOTION": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_tired_idle",
+			"legs": "stand_tired_idle",
+			"face": "stand_tired_idle",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 1.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "BIND_ANIMATION_TO_VIEW_MODE",
+					"values": [
+						"TIRED"
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TO_STAND_TIRED": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_TIRED_LOCOMOTION"
+			},
+			"torso": "stand_to_stand_tired",
+			"legs": "stand_to_stand_tired",
+			"face": "stand_to_stand_tired",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.5
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"YAWN_LONG",
+						1.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.8
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_RUB_EYES_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_TIRED_LOCOMOTION"
+			},
+			"torso": "stand_tired_rub_eyes_right",
+			"legs": "stand_tired_rub_eyes_right",
+			"face": "stand_tired_rub_eyes_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.6
+			},
+			"events": [
+				{
+					"time": 0.4,
+					"name": "SPEAK",
+					"values": [
+						"YAWN_SHORT",
+						1.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.8
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TIRED_RUB_EYES_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_TIRED_LOCOMOTION"
+			},
+			"torso": "stand_tired_rub_eyes_left",
+			"legs": "stand_tired_rub_eyes_left",
+			"face": "stand_tired_rub_eyes_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.6
+			},
+			"events": [
+				{
+					"time": 0.4,
+					"name": "SPEAK",
+					"values": [
+						"YAWN_SHORT",
+						1.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.5,
+						0.8
+					]
+				}
+			],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TIRED_POKE_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_tired_poke_right",
+			"legs": "stand_tired_poke_right",
+			"face": "stand_tired_poke_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.1,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.2,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.4,
+					"name": "SPEAK",
+					"values": [
+						"WHIMPER_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						1.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_TIRED_POKE_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_tired_poke_left",
+			"legs": "stand_tired_poke_left",
+			"face": "stand_tired_poke_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.1,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.2,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.4,
+					"name": "SPEAK",
+					"values": [
+						"WHIMPER_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						1.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_1_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_1_right",
+			"legs": "stand_poke_face_1_right",
+			"face": "stand_poke_face_1_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_1_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_1_left",
+			"legs": "stand_poke_face_1_left",
+			"face": "stand_poke_face_1_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_2_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_2_right",
+			"legs": "stand_poke_face_2_right",
+			"face": "stand_poke_face_2_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_2_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_2_left",
+			"legs": "stand_poke_face_2_left",
+			"face": "stand_poke_face_2_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_3_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_3_right",
+			"legs": "stand_poke_face_3_right",
+			"face": "stand_poke_face_3_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKE_FACE_3_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "stand_poke_face_3_left",
+			"legs": "stand_poke_face_3_left",
+			"face": "stand_poke_face_3_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_WIPE_CHEEK_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_wipe_cheek_right",
+			"legs": "stand_wipe_cheek_right",
+			"face": "stand_wipe_cheek_right",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.45,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.45,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.45,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.71,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_HEADPAT_A",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_WIPE_CHEEK_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_wipe_cheek_left",
+			"legs": "stand_wipe_cheek_left",
+			"face": "stand_wipe_cheek_left",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.45,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.45,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.45,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_GRUMBLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.71,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_HEADPAT_A",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_ANGRY_BLOCK_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_angry_block_right",
+			"legs": "stand_angry_block_right",
+			"face": "stand_angry_block_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.4,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_ANGRY_BLOCK_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_angry_block_left",
+			"legs": "stand_angry_block_left",
+			"face": "stand_angry_block_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.4,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_POKED_TUMMY_IN": {
+			"transition": {
+				"kind": "custom",
+				"handler": "TransitionToPostTummyPokeAnim"
+			},
+			"torso": "stand_poked_tummy_in",
+			"legs": "stand_poked_tummy_in",
+			"face": "stand_poked_tummy_in",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_POKED_TUMMY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_poked_tummy_loop",
+			"legs": "stand_poked_tummy_loop",
+			"face": "stand_poked_tummy_loop",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.4,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_POKED_TUMMY_OUT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_poked_tummy_out",
+			"legs": "stand_poked_tummy_out",
+			"face": "stand_poked_tummy_out",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.2,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.2,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						1.8
+					]
+				},
+				{
+					"time": 0.68,
+					"name": "SPEAK",
+					"values": [
+						"RELIEF",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_HAPPY_START": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "floor_sit_headpat_happy_start",
+			"legs": "floor_sit_headpat_happy_start",
+			"face": "stand_headpat_happy_start",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 2,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_HAPPY_WANTED_MORE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_headpat_happy_wanted_more",
+			"legs": "floor_sit_headpat_happy_wanted_more",
+			"face": "stand_headpat_happy_wanted_more",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 6,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.35,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_SIGH",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.9,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_HAPPY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "floor_sit_headpat_happy_loop",
+			"legs": "floor_sit_headpat_happy_loop",
+			"face": "stand_headpat_happy_loop",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.5,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.45,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_ANGRY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "floor_sit_headpat_angry_loop",
+			"legs": "floor_sit_headpat_angry_loop",
+			"face": "stand_angry_idle",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.3
+			},
+			"events": [],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_ANGRY_BRUSH_AWAY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_headpat_angry_brush_away",
+			"legs": "floor_sit_headpat_angry_brush_away",
+			"face": "stand_headpat_angry_brush_away",
+			"priority": "HIGH",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_HEADPAT_ANGRY_CLIMAX_TO_HAPPY": {
+			"transition": {
+				"kind": "next",
+				"next": "FLOOR_SIT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "floor_sit_headpat_climax_to_happy",
+			"legs": "floor_sit_headpat_climax_to_happy",
+			"face": "stand_headpat_climax_to_happy",
+			"priority": "HIGH",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_HEADPAT_B",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_AGREE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_agree",
+			"legs": "floor_sit_agree",
+			"face": "floor_sit_agree",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"GIGGLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_REFUSE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_refuse",
+			"legs": "floor_sit_refuse",
+			"face": "floor_sit_refuse",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"REFUSE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_REACH_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_reach_right",
+			"legs": "floor_sit_reach_right",
+			"face": "floor_sit_reach_right",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.2,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						0.8,
+						0.7
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_REACH_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_reach_left",
+			"legs": "floor_sit_reach_left",
+			"face": "floor_sit_reach_left",
+			"priority": "MEDIUM",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.2,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						0.8,
+						0.7
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_IMPRESSED1": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_impressed1",
+			"legs": "stand_impressed1",
+			"face": "stand_impressed1",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"IMPRESSED_VERY",
+						1.0
+					]
+				},
+				{
+					"time": 0.2,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.26,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.34,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.42,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.58,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.66,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.74,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_SIT_IMPRESSED1": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_sit_impressed1",
+			"legs": "floor_sit_impressed1",
+			"face": "stand_impressed1",
+			"priority": "LOW",
+			"condition": "FLOOR_SIT",
+			"new_state": "FLOOR_SIT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"IMPRESSED_VERY",
+						1.0
+					]
+				},
+				{
+					"time": 0.2,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.26,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.34,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.42,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.58,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.66,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.74,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"PICKED_UP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "picked_up_loop",
+			"legs": "picked_up_loop",
+			"face": "picked_up_loop",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "OFFBALANCE",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"FALLING_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "falling_loop",
+			"legs": "falling_loop",
+			"face": "falling_loop",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "OFFBALANCE",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"FLOOR_CURL_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "floor_curl_loop",
+			"legs": "floor_curl_loop",
+			"face": "floor_curl_loop",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "OFFBALANCE",
+			"transition_time": 0.35,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"FLOOR_FACE_DOWN_TO_STAND": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_face_down_to_stand",
+			"legs": "floor_face_down_to_stand",
+			"face": "floor_face_down_to_stand",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "STAND",
+			"transition_time": 0.0,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.2,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.8,
+						0.5
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_FACE_UP_TO_STAND": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_face_up_to_stand",
+			"legs": "floor_face_up_to_stand",
+			"face": "floor_face_up_to_stand",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "STAND",
+			"transition_time": 0.0,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.2,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.8,
+						0.5
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_FACE_UP_IDLE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_face_up_idle",
+			"legs": "floor_face_up_idle",
+			"face": "floor_face_up_idle",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "OFFBALANCE",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.2,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_FACE_SIDE_TO_STAND_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_face_side_to_stand_right",
+			"legs": "floor_face_side_to_stand_right",
+			"face": "floor_face_side_to_stand_right",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "STAND",
+			"transition_time": 0.0,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.8,
+						0.5
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"FLOOR_FACE_SIDE_TO_STAND_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "floor_face_side_to_stand_left",
+			"legs": "floor_face_side_to_stand_left",
+			"face": "floor_face_side_to_stand_left",
+			"priority": "LOW",
+			"condition": "OFFBALANCE",
+			"new_state": "STAND",
+			"transition_time": 0.0,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.6,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.8,
+						0.5
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						7.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_BOW": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_bow",
+			"legs": "stand_bow",
+			"face": "stand_bow",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.3,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.7,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.4
+					]
+				},
+				{
+					"time": 0.6,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.4
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_FOLLOW_ME_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_follow_me_right",
+			"legs": "stand_follow_me_right",
+			"face": "stand_follow_me_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.3,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ECSTATIC",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_LOCOMOTION_HAPPY": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "squat_locomotion_happy",
+			"legs": "squat_locomotion_happy",
+			"face": "stand_happy_idle",
+			"priority": "LOW",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"SQUAT_LOCOMOTION_ANGRY": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "squat_locomotion_happy",
+			"legs": "squat_locomotion_happy",
+			"face": "stand_angry_idle",
+			"priority": "LOW",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.3,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TO_SQUAT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_to_squat",
+			"legs": "stand_to_squat",
+			"face": "stand_happy_idle",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.3,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_TO_STAND": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_to_stand",
+			"legs": "squat_to_stand",
+			"face": "stand_happy_idle",
+			"priority": "LOW",
+			"condition": "SQUAT",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.3,
+				"body_flag_duration": 0.3,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"MISC_IDLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_HAPPY_START": {
+			"transition": {
+				"kind": "next",
+				"next": "SQUAT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "squat_headpat_happy_start",
+			"legs": "squat_headpat_happy_start",
+			"face": "squat_headpat_happy_start",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.4,
+			"logic": {
+				"body_flags": 2,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_HAPPY_WANTED_MORE": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_headpat_happy_wanted_more",
+			"legs": "squat_headpat_happy_wanted_more",
+			"face": "squat_headpat_happy_wanted_more",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 6,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_STARTLE",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SPEAK",
+					"values": [
+						"DISAPPOINTED_SIGH",
+						0.0
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.3,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.8
+					]
+				},
+				{
+					"time": 0.9,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_HAPPY_IDLE_SAD_RIGHT": {
+			"transition": {
+				"kind": "next",
+				"next": "SQUAT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "squat_headpat_happy_idle_sad_right",
+			"legs": "squat_headpat_happy_idle_sad_right",
+			"face": "squat_headpat_happy_idle_sad_right",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.5
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WHINE_SOFT",
+						0.0
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_HAPPY_IDLE_SAD_LEFT": {
+			"transition": {
+				"kind": "next",
+				"next": "SQUAT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "squat_headpat_happy_idle_sad_left",
+			"legs": "squat_headpat_happy_idle_sad_left",
+			"face": "squat_headpat_happy_idle_sad_left",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.5
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"WHINE_SOFT",
+						0.0
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.6
+					]
+				},
+				{
+					"time": 0.34,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.85,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_HAPPY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "squat_headpat_happy_loop",
+			"legs": "squat_headpat_happy_loop",
+			"face": "squat_headpat_happy_loop",
+			"priority": "LOW",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.5,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.05,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.45,
+					"name": "HEADPAT_PROPER_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_ANGRY_BRUSH_AWAY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_headpat_angry_brush_away",
+			"legs": "squat_headpat_angry_brush_away",
+			"face": "stand_headpat_angry_brush_away",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_ANGRY_START": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "squat_headpat_angry_start",
+			"legs": "squat_headpat_angry_start",
+			"face": "squat_headpat_angry_start",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_POUT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_ANGRY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "squat_headpat_angry_loop",
+			"legs": "squat_headpat_angry_loop",
+			"face": "squat_headpat_angry_loop",
+			"priority": "MEDIUM",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 0.5,
+				"body_flag_duration": 0.5,
+				"eye_flags": 7,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_POUT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_headpat_climax_to_cancel_right",
+			"legs": "squat_headpat_climax_to_cancel_right",
+			"face": "stand_headpat_climax_to_cancel_right",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.85,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_headpat_climax_to_cancel_left",
+			"legs": "squat_headpat_climax_to_cancel_left",
+			"face": "stand_headpat_climax_to_cancel_left",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.85,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_LONG",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_HEADPAT_CLIMAX_TO_HAPPY": {
+			"transition": {
+				"kind": "next",
+				"next": "SQUAT_HEADPAT_HAPPY_LOOP"
+			},
+			"torso": "squat_headpat_climax_to_happy",
+			"legs": "squat_headpat_climax_to_happy",
+			"face": "stand_headpat_climax_to_happy",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 3,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.0,
+				"eye_flags": 7,
+				"eye_flag_duration": 1.0
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_HEADPAT_B",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_FACE_POKE_1_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "squat_poke_face_1_right",
+			"legs": "squat_poke_face_1_right",
+			"face": "stand_poke_face_1_right",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_FACE_POKE_1_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "squat_poke_face_1_left",
+			"legs": "squat_poke_face_1_left",
+			"face": "stand_poke_face_1_left",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_FACE_POKE_2_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "squat_poke_face_2_right",
+			"legs": "squat_poke_face_2_right",
+			"face": "stand_poke_face_2_right",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_FACE_POKE_2_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "postFacePokeAnimTransition"
+			},
+			"torso": "squat_poke_face_2_left",
+			"legs": "squat_poke_face_2_left",
+			"face": "stand_poke_face_2_left",
+			"priority": "HIGH",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.15,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.4,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"STARTLE_SHORT",
+						0.0
+					]
+				},
+				{
+					"time": 0.4,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						1.0,
+						1.0,
+						0.5
+					]
+				}
+			],
+			"flags": []
+		},
+		"SQUAT_IMPRESSED1": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "squat_impressed1",
+			"legs": "squat_impressed1",
+			"face": "stand_impressed1",
+			"priority": "LOW",
+			"condition": "SQUAT",
+			"new_state": "SQUAT",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 1,
+				"body_flag_percent": 0.8,
+				"body_flag_duration": 0.2,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.3
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"IMPRESSED_VERY",
+						1.0
+					]
+				},
+				{
+					"time": 0.2,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.26,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.34,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.42,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.5,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.58,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.66,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				},
+				{
+					"time": 0.74,
+					"name": "PLAY_CLAP_SOUND",
+					"values": []
+				}
+			],
+			"flags": []
+		}
+	},
+	"body_states": {
+		"NONE": {
+			"check_balance": false,
+			"sets": {},
+			"connections": {},
+			"properties": {}
+		},
+		"OFFBALANCE": {
+			"check_balance": true,
+			"sets": {
+				"IDLE_HAPPY": [
+					"FLOOR_FACE_UP_IDLE"
+				],
+				"IDLE_TIRED": [
+					"FLOOR_FACE_UP_IDLE"
+				],
+				"IDLE_ANGRY": [
+					"FLOOR_FACE_UP_IDLE"
+				]
+			},
+			"connections": {},
+			"properties": {}
+		},
+		"STAND": {
+			"check_balance": true,
+			"sets": {
+				"IDLE_HAPPY": [
+					"STAND_HAPPY_IDLE1",
+					"STAND_HAPPY_IDLE2",
+					"STAND_HAPPY_IDLE3"
+				],
+				"IDLE_TIRED": [
+					"STAND_TIRED_LOCOMOTION"
+				],
+				"IDLE_ANGRY": [
+					"STAND_ANGRY_IDLE1"
+				],
+				"AGREE": [
+					"STAND_AGREE"
+				],
+				"REFUSE": [
+					"STAND_REFUSE"
+				],
+				"IMPRESSED": [
+					"STAND_IMPRESSED1"
+				],
+				"POKE_FACE_SOFT_RIGHT": [
+					"STAND_POKE_FACE_1_RIGHT"
+				],
+				"POKE_FACE_HARD_RIGHT": [
+					"STAND_POKE_FACE_2_RIGHT",
+					"STAND_POKE_FACE_3_RIGHT"
+				],
+				"HEADPAT_START_HAPPY": [
+					"STAND_HEADPAT_HAPPY_START"
+				],
+				"HEADPAT_START_TIRED": [
+					"STAND_TIRED_HEADPAT_IDLE"
+				],
+				"HEADPAT_START_ANGRY": [
+					"STAND_HEADPAT_ANGRY_LOOP"
+				],
+				"HEADPAT_END_WANTED_MORE": [
+					"STAND_HEADPAT_HAPPY_WANTED_MORE"
+				],
+				"HEADPAT_END_FULFILL": [
+					"STAND_HEADPAT_HAPPY_WANTED_MORE"
+				],
+				"HEADPAT_END_ANGRY": [
+					"STAND_HEADPAT_ANGRY_END"
+				],
+				"HEADPAT_BRUSH_AWAY": [
+					"STAND_HEADPAT_ANGRY_BRUSH_AWAY",
+					"STAND_HEADPAT_CLIMAX_TO_CANCEL_RIGHT",
+					"STAND_HEADPAT_CLIMAX_TO_CANCEL_LEFT"
+				],
+				"HEADPAT_ASK_FOR_MORE": [
+					"STAND_HEADPAT_HAPPY_IDLE_SAD_RIGHT",
+					"STAND_HEADPAT_HAPPY_IDLE_SAD_LEFT"
+				],
+				"HEADPAT_SUCCESS": [
+					"STAND_HEADPAT_CLIMAX_TO_HAPPY"
+				],
+				"HEADPAT_IDLE_HAPPY": [
+					"STAND_HEADPAT_HAPPY_LOOP"
+				],
+				"HEADPAT_IDLE_ANGRY": [
+					"STAND_HEADPAT_ANGRY_LOOP"
+				],
+				"PICKUP_RIGHT_LEFT": [],
+				"SWAP": [],
+				"CONFUSED": [
+					"STAND_SEARCH_RIGHT"
+				],
+				"STARTLED_HAPPY": [
+					"STAND_FACE_PROX_HAPPY_SURPRISE"
+				],
+				"STARTLED_ANGRY": [
+					"STAND_FACE_PROX_ANGRY_SURPRISE"
+				],
+				"CHEEK_KISS_HAPPY_RIGHT_LEFT": [],
+				"CHEEK_KISS_ANGRY_RIGHT_LEFT": [],
+				"CHEEK_KISS_ANGRY_TO_ANGRY_RIGHT_LEFT": [],
+				"CHEEK_KISS_ANGRY_TO_HAPPY_RIGHT_LEFT": []
+			},
+			"connections": {
+				"FLOOR_SIT": "STAND_TO_SIT_FLOOR",
+				"SQUAT": "STAND_TO_SQUAT"
+			},
+			"properties": {
+				"PICKUP_DISTANCE": 0.42
+			}
+		},
+		"FLOOR_SIT": {
+			"check_balance": true,
+			"sets": {
+				"IDLE_HAPPY": [
+					"FLOOR_SIT_LOCOMOTION_HAPPY",
+					"FLOOR_SIT_LOCOMOTION_HAPPY"
+				],
+				"IDLE_ANGRY": [
+					"FLOOR_SIT_LOCOMOTION_ANGRY"
+				],
+				"REFUSE": [
+					"FLOOR_SIT_REFUSE"
+				],
+				"AGREE": [
+					"FLOOR_SIT_AGREE"
+				],
+				"IMPRESSED": [
+					"FLOOR_SIT_IMPRESSED1"
+				],
+				"HEADPAT_START_HAPPY": [
+					"FLOOR_SIT_HEADPAT_HAPPY_START"
+				],
+				"HEADPAT_START_ANGRY": [
+					"FLOOR_SIT_HEADPAT_ANGRY_LOOP"
+				],
+				"HEADPAT_END_WANTED_MORE": [
+					"FLOOR_SIT_HEADPAT_HAPPY_WANTED_MORE"
+				],
+				"HEADPAT_BRUSH_AWAY": [
+					"FLOOR_SIT_HEADPAT_ANGRY_BRUSH_AWAY"
+				],
+				"HEADPAT_SUCCESS": [
+					"FLOOR_SIT_HEADPAT_ANGRY_CLIMAX_TO_HAPPY"
+				],
+				"HEADPAT_IDLE_HAPPY": [
+					"FLOOR_SIT_HEADPAT_HAPPY_LOOP"
+				],
+				"HEADPAT_IDLE_ANGRY": [
+					"FLOOR_SIT_HEADPAT_ANGRY_LOOP"
+				],
+				"PICKUP_RIGHT_LEFT": [
+					"FLOOR_SIT_REACH_RIGHT",
+					"FLOOR_SIT_REACH_LEFT"
+				]
+			},
+			"connections": {
+				"STAND": "FLOOR_SIT_TO_STAND"
+			},
+			"properties": {
+				"PICKUP_DISTANCE": 0.225
+			}
+		},
+		"SQUAT": {
+			"check_balance": true,
+			"sets": {
+				"IDLE_HAPPY": [
+					"SQUAT_LOCOMOTION_HAPPY"
+				],
+				"IDLE_TIRED": [
+					"SQUAT_LOCOMOTION_HAPPY"
+				],
+				"IDLE_ANGRY": [
+					"SQUAT_LOCOMOTION_ANGRY"
+				],
+				"IMPRESSED": [
+					"SQUAT_IMPRESSED1"
+				],
+				"POKE_FACE_SOFT_RIGHT": [
+					"SQUAT_FACE_POKE_1_RIGHT"
+				],
+				"POKE_FACE_HARD_RIGHT": [
+					"SQUAT_FACE_POKE_2_RIGHT"
+				],
+				"HEADPAT_START_HAPPY": [
+					"SQUAT_HEADPAT_HAPPY_START"
+				],
+				"HEADPAT_START_ANGRY": [
+					"SQUAT_HEADPAT_ANGRY_START"
+				],
+				"HEADPAT_END_WANTED_MORE": [
+					"SQUAT_HEADPAT_HAPPY_WANTED_MORE"
+				],
+				"HEADPAT_END_FULFILL": [],
+				"HEADPAT_BRUSH_AWAY": [
+					"SQUAT_HEADPAT_ANGRY_BRUSH_AWAY",
+					"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_RIGHT",
+					"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_LEFT"
+				],
+				"HEADPAT_ASK_FOR_MORE": [
+					"SQUAT_HEADPAT_HAPPY_IDLE_SAD_RIGHT",
+					"SQUAT_HEADPAT_HAPPY_IDLE_SAD_LEFT"
+				],
+				"HEADPAT_SUCCESS": [
+					"SQUAT_HEADPAT_CLIMAX_TO_HAPPY"
+				],
+				"HEADPAT_IDLE_HAPPY": [
+					"SQUAT_HEADPAT_HAPPY_LOOP"
+				],
+				"HEADPAT_IDLE_ANGRY": [
+					"SQUAT_HEADPAT_ANGRY_LOOP"
+				]
+			},
+			"connections": {
+				"STAND": "SQUAT_TO_STAND"
+			},
+			"properties": {}
+		}
+	},
+	"enum_order": [
+		"NONE",
+		"STAND_HAPPY_IDLE1",
+		"STAND_HAPPY_IDLE2",
+		"STAND_HAPPY_IDLE3",
+		"STAND_ANGRY_IDLE1",
+		"STAND_CONFUSED",
+		"STAND_HAPPY_SOCIAL1",
+		"STAND_TO_SIT_FLOOR",
+		"FLOOR_SIT_LOCOMOTION_HAPPY",
+		"FLOOR_SIT_LOCOMOTION_ANGRY",
+		"FLOOR_SIT_TO_STAND",
+		"STAND_HEADPAT_HAPPY_START",
+		"STAND_HEADPAT_HAPPY_AFTER_MORE",
+		"STAND_HEADPAT_HAPPY_WANTED_MORE",
+		"STAND_HEADPAT_HAPPY_IDLE_SAD_RIGHT",
+		"STAND_HEADPAT_HAPPY_IDLE_SAD_LEFT",
+		"STAND_HEADPAT_HAPPY_SATISFACTION",
+		"STAND_HEADPAT_HAPPY_LOOP",
+		"STAND_HEADPAT_ANGRY_LOOP",
+		"STAND_HEADPAT_ANGRY_END",
+		"STAND_HEADPAT_ANGRY_BRUSH_AWAY",
+		"STAND_HEADPAT_CLIMAX_TO_CANCEL_RIGHT",
+		"STAND_HEADPAT_CLIMAX_TO_CANCEL_LEFT",
+		"STAND_HEADPAT_CLIMAX_TO_HAPPY",
+		"STAND_HEADPAT_INTERRUPT",
+		"FLOOR_SIT_CHOPSTICKS_IN",
+		"FLOOR_SIT_CHOPSTICKS_IDLE",
+		"FLOOR_SIT_HYPE",
+		"FLOOR_SIT_CHOPSTICKS_WORRIED",
+		"FLOOR_SIT_CHOPSTICKS_NEUTRAL",
+		"FLOOR_SIT_CHOPSTICKS_CONFIDENT",
+		"FLOOR_SIT_CHOPSTICKS_WIN",
+		"FLOOR_SIT_CHOPSTICKS_LOSE",
+		"FLOOR_SIT_CHOPSTICKS_RECEIVE_RIGHT",
+		"FLOOR_SIT_CHOPSTICKS_RECEIVE_LEFT",
+		"FLOOR_SIT_TO_CRAWL",
+		"FLOOR_SIT_CHOPSTICKS_REDISTRIBUTE",
+		"STAND_FACE_PROX_ANGRY_SURPRISE",
+		"STAND_FACE_PROX_ANGRY_LOOP",
+		"STAND_KISS_ANGRY_CHEEK_RIGHT",
+		"STAND_KISS_ANGRY_CHEEK_LEFT",
+		"STAND_KISS_ANGRY_LEFT_TO_HAPPY",
+		"STAND_KISS_ANGRY_RIGHT_TO_HAPPY",
+		"STAND_KISS_ANGRY_LEFT_TO_ANGRY",
+		"STAND_KISS_ANGRY_RIGHT_TO_ANGRY",
+		"STAND_FACE_PROX_HAPPY_SURPRISE",
+		"STAND_FACE_PROX_HAPPY_LOOP",
+		"STAND_KISS_HAPPY_CHEEK_RIGHT",
+		"STAND_KISS_HAPPY_CHEEK_LEFT",
+		"STAND_GIDDY_SURPRISE",
+		"STAND_GIDDY_LOCOMOTION",
+		"STAND_HAPPY_JOY_JUMPS",
+		"STAND_HAPPY_SMELL_ITEM_RIGHT",
+		"STAND_HAPPY_DONUT_SMELL_LEFT",
+		"STAND_HAPPY_EAT_ITEM_RIGHT",
+		"STAND_HAPPY_DONUT_EAT_LEFT",
+		"STAND_HAPPY_DONUT_LAST_BITE_RIGHT",
+		"STAND_HAPPY_DONUT_LAST_BITE_LEFT",
+		"STAND_ANGRY_JEALOUS",
+		"STAND_LOCOMOTION_JEALOUS",
+		"STAND_HAPPY_BEG_START",
+		"STAND_HAPPY_BEG_LOCOMOTION",
+		"STAND_HAPPY_BEG_END",
+		"STAND_ANGRY_TIP_TOE_REACH",
+		"STAND_ANGRY_TIP_TOE_REACH_END",
+		"STAND_HAPPY_DISAPPOINTMENT",
+		"STAND_ANGRY_THROW_RIGHT",
+		"STAND_ANGRY_THROW_LEFT",
+		"STAND_ANGRY_JEALOUS_STEAL_RIGHT",
+		"STAND_ANGRY_JEALOUS_STEAL_LEFT",
+		"STAND_WEAR_SUNHAT_RIGHT",
+		"STAND_WEAR_SUNHAT_LEFT",
+		"STAND_PICKUP_RIGHT",
+		"STAND_PICKUP_LEFT",
+		"STAND_SEARCH_RIGHT",
+		"STAND_SPLASHED_START_RIGHT",
+		"STAND_SPLASHED_START_LEFT",
+		"STAND_SPLASHED_END_RIGHT",
+		"STAND_SPLASHED_END_LEFT",
+		"STAND_SPLASHED_LOOP",
+		"STAND_CATTAIL_IDLE1_RIGHT",
+		"STAND_CATTAIL_IDLE1_LEFT",
+		"STAND_CATTAIL_SWING_RIGHT",
+		"STAND_CATTAIL_SWING_LEFT",
+		"STAND_CHASE_LOCOMOTION",
+		"STAND_AGREE",
+		"STAND_REFUSE",
+		"STAND_WAVE_HAPPY_RIGHT",
+		"STAND_WAVE_HAPPY_LEFT",
+		"STAND_HANDHOLD_ANGRY_REFUSE_RIGHT",
+		"STAND_HANDHOLD_ANGRY_REFUSE_LEFT",
+		"STAND_HANDHOLD_HAPPY_EMBARRASSED_RIGHT",
+		"STAND_HANDHOLD_HAPPY_EMBARRASSED_LEFT",
+		"STAND_HANDHOLD_HAPPY_PULL_RIGHT",
+		"STAND_HANDHOLD_HAPPY_PULL_LEFT",
+		"STAND_POLAROID_FRAME_REACT_IN_RIGHT",
+		"STAND_POLAROID_FRAME_REACT_IN_LEFT",
+		"STAND_POSE_PEACE_IN",
+		"STAND_POSE_PEACE_LOOP",
+		"STAND_POLAROID_FRAME_REACT_NORMAL_RIGHT",
+		"STAND_POLAROID_FRAME_REACT_NORMAL_LEFT",
+		"STAND_POLAROID_FRAME_REACT_PANTY_RIGHT",
+		"STAND_POLAROID_FRAME_REACT_PANTY_LEFT",
+		"STAND_POLAROID_FRAME_REACT_RIP",
+		"STAND_REACH_OUT_RIGHT",
+		"STAND_REACH_OUT_LEFT",
+		"STAND_REACH_OUT_END_RIGHT",
+		"STAND_REACH_OUT_END_LEFT",
+		"STAND_REACT_PERV_FRONT_IN",
+		"STAND_REACT_PERV_FRONT_IDLE",
+		"STAND_REACT_PERV_FRONT_OUT",
+		"STAND_POKE_FACE_1_RIGHT",
+		"STAND_POKE_FACE_1_LEFT",
+		"STAND_POKE_FACE_2_RIGHT",
+		"STAND_POKE_FACE_2_LEFT",
+		"STAND_POKE_FACE_3_RIGHT",
+		"STAND_POKE_FACE_3_LEFT",
+		"STAND_WIPE_CHEEK_RIGHT",
+		"STAND_WIPE_CHEEK_LEFT",
+		"STAND_ANGRY_BLOCK_RIGHT",
+		"STAND_ANGRY_BLOCK_LEFT",
+		"STAND_POKED_TUMMY_IN",
+		"STAND_POKED_TUMMY_LOOP",
+		"STAND_POKED_TUMMY_OUT",
+		"STAND_POINT_OUT_IN_RIGHT",
+		"STAND_POINT_OUT_IN_LEFT",
+		"STAND_POINT_OUT_LOOP_RIGHT",
+		"STAND_POINT_OUT_LOOP_LEFT",
+		"STAND_POINT_OUT_SOUND_2_3_RIGHT",
+		"STAND_POINT_OUT_SOUND_2_3_LEFT",
+		"BATHTUB_TEST_WATER_IN_RIGHT",
+		"BATHTUB_TEST_WATER_IN_LEFT",
+		"BATHTUB_TEST_WATER_IN_COLD_RIGHT",
+		"BATHTUB_TEST_WATER_IN_COLD_LEFT",
+		"BATHTUB_TEST_WATER_LUKEWARM_RIGHT",
+		"BATHTUB_TEST_WATER_LUKEWARM_LEFT",
+		"BATHTUB_TEST_WATER_IN_HOT_RIGHT",
+		"BATHTUB_TEST_WATER_IN_HOT_LEFT",
+		"STAND_POINT_OUT_TO_WAIT_RIGHT",
+		"STAND_POINT_OUT_TO_WAIT_LEFT",
+		"STAND_WAIT_ANNOYED_LOOP",
+		"BATHTUB_RELAX_LOOP",
+		"BATHTUB_RELAX_TO_HAPPY_IDLE",
+		"BATHTUB_RELAX_TO_ANGRY_IDLE",
+		"BATHTUB_HAPPY_IDLE_LOOP",
+		"BATHTUB_HAPPY_IDLE2",
+		"BATHTUB_HAPPY_IDLE3",
+		"BATHTUB_HAPPY_IDLE4",
+		"BATHTUB_HAPPY_SWITCH_SIDES",
+		"BATHTUB_RELAX_FACE_POKE_RIGHT",
+		"BATHTUB_RELAX_FACE_POKE_LEFT",
+		"BATHTUB_IDLE_FACE_POKE_1_RIGHT",
+		"BATHTUB_IDLE_FACE_POKE_1_LEFT",
+		"BATHTUB_IDLE_FACE_POKE_2_RIGHT",
+		"BATHTUB_IDLE_FACE_POKE_2_LEFT",
+		"BATHTUB_ANGRY_IDLE_LOOP",
+		"BATHTUB_SINK_ANGRY",
+		"BATHTUB_HEADPAT_BRUSH_AWAY",
+		"BATHTUB_HEADPAT_HAPPY_IDLE",
+		"BATHTUB_HEADPAT_ANGRY_IDLE",
+		"BATHTUB_HEADAPAT_ANGRY_PROPER_TO_HAPPY",
+		"BATHTUB_ON_KNEES_HEADPAT_IDLE",
+		"BATHTUB_ON_KNEES_HEADPAT_BRUSH_AWAY_TO_ANGRY_IDLE",
+		"BATHTUB_WAVE_HAPPY_RIGHT",
+		"BATHTUB_RELAX_HUMMING",
+		"BATHTUB_HAPPY_IDLE_TO_ON_KNEES",
+		"BATHTUB_ON_KNEES_TO_HAPPY_IDLE",
+		"BATHTUB_ON_KNEES_LOOP",
+		"BATHTUB_HAPPY_BEG_LOOP",
+		"BATHTUB_ON_KNEES_TO_TOWEL_IDLE",
+		"BATHTUB_TOWEL_IDLE_LOOP",
+		"BATHTUB_TOWEL_OUT_SOUND_2_3",
+		"BATHTUB_TOWEL_EMBARRASSED_TO_BATHTUB_IDLE",
+		"PHOTOSHOOT_1",
+		"PHOTOSHOOT_2",
+		"STAND_OUTFIT_LIKE",
+		"STAND_TIRED_LOCOMOTION",
+		"STAND_TIRED_RUB_EYES_RIGHT",
+		"STAND_TIRED_RUB_EYES_LEFT",
+		"STAND_TO_STAND_TIRED",
+		"STAND_TIRED_POKE_RIGHT",
+		"STAND_TIRED_POKE_LEFT",
+		"STAND_TIRED_HEADPAT_IDLE",
+		"STAND_HAPPY_TAKE_PHOTO_IN",
+		"STAND_HAPPY_TAKE_PHOTO_LOOP",
+		"STAND_HAPPY_TAKE_PHOTO_OUT_RIGHT",
+		"STAND_HAPPY_TAKE_PHOTO_OUT_LEFT",
+		"STAND_TIRED_REFUSE",
+		"STAND_TIRED_HANDHOLD_PULL_RIGHT",
+		"STAND_TIRED_HANDHOLD_PULL_LEFT",
+		"STAND_TIRED_TO_BED_CRAWL_TIRED",
+		"CRAWL_TIRED_TO_STAND",
+		"CRAWL_TIRED_IDLE",
+		"CRAWL_TIRED_TO_LAY_PILLOW_SIDE_HAPPY_RIGHT",
+		"CRAWL_TIRED_TO_LAY_PILLOW_SIDE_HAPPY_LEFT",
+		"AWAKE_PILLOW_SIDE_HAPPY_IDLE_RIGHT",
+		"AWAKE_PILLOW_SIDE_HAPPY_IDLE_LEFT",
+		"AWAKE_PILLOW_SIDE_YAWN_LONG_RIGHT",
+		"AWAKE_PILLOW_SIDE_YAWN_LONG_LEFT",
+		"AWAKE_PILLOW_SIDE_TO_AWAKE_PILLOW_UP_RIGHT",
+		"AWAKE_PILLOW_SIDE_TO_AWAKE_PILLOW_UP_LEFT",
+		"AWAKE_PILLOW_SIDE_TO_SLEEP_PILLOW_SIDE_RIGHT",
+		"AWAKE_PILLOW_SIDE_TO_SLEEP_PILLOW_SIDE_LEFT",
+		"AWAKE_PILLOW_SIDE_SOUND_GOODNIGHT_RIGHT",
+		"AWAKE_PILLOW_SIDE_SOUND_GOODNIGHT_LEFT",
+		"SLEEP_PILLOW_SIDE_IDLE_RIGHT",
+		"SLEEP_PILLOW_SIDE_IDLE_LEFT",
+		"SLEEP_PILLOW_SIDE_BOTHER_RIGHT",
+		"SLEEP_PILLOW_SIDE_BOTHER_LEFT",
+		"SLEEP_PILLOW_SIDE_TO_SLEEP_PILLOW_UP_RIGHT",
+		"SLEEP_PILLOW_SIDE_TO_SLEEP_PILLOW_UP_LEFT",
+		"SLEEP_PILLOW_UP_IDLE",
+		"SLEEP_PILLOW_UP_BOTHER_RIGHT",
+		"SLEEP_PILLOW_UP_BOTHER_LEFT",
+		"SLEEP_PILLOW_UP_TO_SLEEP_PILLOW_SIDE_RIGHT",
+		"SLEEP_PILLOW_UP_TO_SLEEP_PILLOW_SIDE_LEFT",
+		"SLEEP_PILLOW_SIDE_HEADPAT_START_RIGHT",
+		"SLEEP_PILLOW_SIDE_HEADPAT_START_LEFT",
+		"SLEEP_PILLOW_UP_TO_AWAKE_HAPPY_PILLOW_UP",
+		"SLEEP_PILLOW_UP_TO_AWAKE_ANGRY_PILLOW_UP",
+		"SLEEP_PILLOW_SIDE_TO_AWAKE_HAPPY_PILLOW_UP_RIGHT",
+		"SLEEP_PILLOW_SIDE_TO_AWAKE_HAPPY_PILLOW_UP_LEFT",
+		"SLEEP_PILLOW_SIDE_TO_AWAKE_ANGRY_PILLOW_UP_RIGHT",
+		"SLEEP_PILLOW_SIDE_TO_AWAKE_ANGRY_PILLOW_UP_LEFT",
+		"AWAKE_HAPPY_PILLOW_UP_IDLE",
+		"AWAKE_ANGRY_PILLOW_UP_IDLE",
+		"AWAKE_PILLOW_UP_FACE_POKE_RIGHT",
+		"AWAKE_PILLOW_UP_FACE_POKE_LEFT",
+		"AWAKE_HAPPY_PILLOW_UP_HEADPAT_LOOP",
+		"AWAKE_PILLOW_UP_TO_CRAWL_TIRED",
+		"CRAWL_BED_TO_STAND",
+		"STAND_STRETCH",
+		"STAND_POINT_OUT_ANTSY_RIGHT",
+		"STAND_POINT_OUT_ANTSY_LEFT",
+		"STAND_SOUND_GOOD_MORNING",
+		"STAND_TO_HORSEBACK_IDLE_RIGHT",
+		"STAND_TO_HORSEBACK_IDLE_LEFT",
+		"HORSEBACK_IDLE_LOOP",
+		"HORSEBACK_HARD_STOP",
+		"HORSEBACK_JOY",
+		"HORSEBACK_TO_STAND",
+		"STAND_WEAR_BAG_RIGHT",
+		"STAND_WEAR_BAG_LEFT",
+		"STAND_REMOVE_BAG_RIGHT",
+		"STAND_REMOVE_BAG_LEFT",
+		"STAND_BAG_PUT_IN_RIGHT",
+		"STAND_BAG_PUT_IN_LEFT",
+		"STAND_HAPPY_CHANGE_ITEM_HANDS",
+		"STAND_ANGRY_CHANGE_ITEM_HANDS",
+		"STAND_CHASE_LOW_LOCOMOTION",
+		"STAND_MORTAR_AND_PESTLE_GRIND_LOOP_RIGHT",
+		"STAND_MORTAR_AND_PESTLE_GRIND_LOOP_LEFT",
+		"STAND_WHEAT_INTO_MORTAR_RIGHT",
+		"STAND_WHEAT_INTO_MORTAR_LEFT",
+		"STAND_MIXING_BOWL_MIX_LOOP_RIGHT",
+		"STAND_MIXING_BOWL_MIX_LOOP_LEFT",
+		"STAND_SHINOBU_YUMMY",
+		"STAND_POUR_MORTAR_INTO_MIXING_BOWL_RIGHT",
+		"STAND_POUR_MORTAR_INTO_MIXING_BOWL_LEFT",
+		"STAND_EGG_INTO_MIXING_BOWL_RIGHT",
+		"STAND_EGG_INTO_MIXING_BOWL_LEFT",
+		"BATHTUB_SPLASH_REACT_RIGHT",
+		"BATHTUB_SPLASH_REACT_LEFT",
+		"BATHTUB_HAPPY_SPLASH",
+		"FLOOR_SIT_HEADPAT_HAPPY_START",
+		"FLOOR_SIT_HEADPAT_HAPPY_LOOP",
+		"FLOOR_SIT_HEADPAT_ANGRY_LOOP",
+		"FLOOR_SIT_HEADPAT_ANGRY_BRUSH_AWAY",
+		"FLOOR_SIT_HEADPAT_HAPPY_WANTED_MORE",
+		"FLOOR_SIT_HEADPAT_ANGRY_CLIMAX_TO_HAPPY",
+		"STAND_HUG_HAPPY_LOOP",
+		"STAND_HUG_ANGRY_LOOP",
+		"STAND_TO_STAND_HUG_FAR_HAPPY",
+		"STAND_TO_STAND_HUG_FAR_ANGRY",
+		"STAND_HUG_FAR_TO_STAND",
+		"FLOOR_SIT_REFUSE",
+		"FLOOR_SIT_AGREE",
+		"FLOOR_SIT_BEG_IN_RIGHT",
+		"FLOOR_SIT_BEG_IN_LEFT",
+		"FLOOR_SIT_BEG_LOOP_RIGHT",
+		"FLOOR_SIT_BEG_LOOP_LEFT",
+		"FLOOR_SIT_BEG_TO_CARD_FAN_START_RIGHT",
+		"FLOOR_SIT_BEG_TO_CARD_FAN_START_LEFT",
+		"FLOOR_SIT_REACH_RIGHT",
+		"FLOOR_SIT_REACH_LEFT",
+		"FLOOR_SIT_PLACE_CARD_RIGHT",
+		"FLOOR_SIT_PLACE_CARD_LEFT",
+		"FLOOR_SIT_PICK_CARD_RIGHT",
+		"FLOOR_SIT_PICK_CARD_LEFT",
+		"STAND_IMPRESSED1",
+		"FLOOR_SIT_IMPRESSED1",
+		"FALLING_LOOP",
+		"PICKED_UP",
+		"FLOOR_CURL_LOOP",
+		"FLOOR_FACE_DOWN_TO_STAND",
+		"FLOOR_FACE_UP_TO_STAND",
+		"FLOOR_FACE_SIDE_TO_STAND_RIGHT",
+		"FLOOR_FACE_SIDE_TO_STAND_LEFT",
+		"FLOOR_FACE_UP_IDLE",
+		"STAND_MERCHANT_IDLE1",
+		"STAND_BOW",
+		"STAND_FOLLOW_ME_RIGHT",
+		"STAND_FOLLOW_ME_LEFT",
+		"STAND_SLIDINGDOOR_RIGHT",
+		"STAND_SLIDINGDOOR_LEFT",
+		"STAND_SLIDINGDOOR_IDLE_LOOP_RIGHT",
+		"STAND_SLIDINGDOOR_IDLE_LOOP_LEFT",
+		"SQUAT_LOCOMOTION_HAPPY",
+		"SQUAT_LOCOMOTION_ANGRY",
+		"STAND_TO_SQUAT",
+		"SQUAT_TO_RELAX",
+		"RELAX_IDLE_LOOP",
+		"RELAX_TO_SQUAT",
+		"RELAX_TO_SQUAT_STARTLE",
+		"SQUAT_TO_STAND",
+		"SQUAT_HEADPAT_HAPPY_LOOP",
+		"SQUAT_HEADPAT_ANGRY_LOOP",
+		"SQUAT_HEADPAT_HAPPY_START",
+		"SQUAT_HEADPAT_ANGRY_START",
+		"SQUAT_HEADPAT_HAPPY_WANTED_MORE",
+		"SQUAT_HEADPAT_HAPPY_IDLE_SAD_RIGHT",
+		"SQUAT_HEADPAT_HAPPY_IDLE_SAD_LEFT",
+		"SQUAT_HEADPAT_HAPPY_SATISFACTION",
+		"SQUAT_HEADPAT_ANGRY_BRUSH_AWAY",
+		"SQUAT_HEADPAT_ANGRY_END",
+		"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_RIGHT",
+		"SQUAT_HEADPAT_CLIMAX_TO_CANCEL_LEFT",
+		"SQUAT_HEADPAT_CLIMAX_TO_HAPPY",
+		"SQUAT_FACE_POKE_1_RIGHT",
+		"SQUAT_FACE_POKE_1_LEFT",
+		"SQUAT_FACE_POKE_2_RIGHT",
+		"SQUAT_FACE_POKE_2_LEFT",
+		"SQUAT_IMPRESSED1",
+		"STAND_SCARED_LOCOMOTION",
+		"STAND_SCARED_STARTLE",
+		"PHOTOSHOOT_3"
+	]
+}

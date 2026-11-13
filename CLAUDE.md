@@ -15,6 +15,7 @@ Project39-ar is an AR/VR "character experience simulator" written in Rust: an Op
 - There is no test suite. `test/` is empty, and `component/test.rs` / `mmd/test.rs` are in-app test components, not `cargo test` tests.
 - Dependencies come from forks pinned by git rev (vulkano fork in `[patch.crates-io]`, `mmd-rs`). Don't bump them casually.
 - `tools/*.js` are Node scripts (`node tools/cleanup_imports.js`) that rewrite `src/**/*.rs` in place, for sorting imports and cleaning up error variants.
+- `tools/openviva/import.py` (Python 3 + numpy + PyYAML, ffmpeg) regenerates `assets/openviva/` from an OpenViva Unity project: `python3 -I tools/openviva/import.py <OpenViva dir> [--data-only]`. It contains its own binary FBX and Unity YAML readers.
 
 ## Code style
 
@@ -43,6 +44,16 @@ The initial scene (floor, VR root or PC-controlled POV with hands, Miku) is buil
 
 ### Toolgun (`src/component/toolgun/`)
 `ToolGun` is a component that cycles through `Tool` trait objects (spawner, remover, axis, thruster, weld, rope, ...) registered in `tool.rs::get_all_tools`. A new tool has to be added there. Each tool gets `tick(toolgun, hand, ray, application)` along with render hooks.
+
+### Character (`src/component/miku/`)
+A port of OpenViva's character ("Lily"/Shinobu) driving Miku, enabled by the `[character]` section of the model's `model.toml` (humanoid bone mapping, face morph mapping, headpat/face/tummy spheres).
+- `anim/`: imported clips (`.p39a`) are stored in a skeleton independent humanoid space (`human.rs`: every bone has an identity rest rotation, character faces +Z, +X is her left). `Animator` emulates Unity's animator (layers legs/torso/face, cross-fades, 1D/2D blend trees, float parameters); `Retarget` maps humanoid poses onto MMD bones, aligning the rest bone directions.
+- `character/`: one `Character` struct split across files like OpenViva's partial `Lily` class. `animation.rs` is the animation state machine (priorities, body states, transitions, events) driven by `assets/openviva/animations.json`; `puppet.rs` is the PuppetMaster-like physics: every ragdoll body (`BodyPart` joints) is driven towards the animated pose by setting velocities (pins + muscles), the hips are moved by locomotion, and losing ground starts ragdoll mode, falling, curling up and getting up. Behaviors: `headpat`, `poke`, `proximity`, `handhold`, `gestures`, `idle` (idle, follow), `chopsticks`, plus `look` (look-at) and `voice`.
+- In novr mode, `H`/`F` trigger the wave/follow gestures; the Miku inspector has buttons to start the chopsticks game or ragdoll her.
+- `P39_MIKU_SCENARIO=<headpat|rough_headpat|poke|tummy|pickup|handhold|follow|wave|chopsticks>` runs a scripted interaction (`character/scenario.rs`) that moves the player's head and hands, printing the character's log. Use with `--novr -c dummy` to test without VR.
+
+### Audio
+`Application::audio` (`application/audio.rs`) plays positional sounds with rodio, heard from the POV. Load sounds with `renderer.load(SoundAsset::at(path))`.
 
 ### Debug
 `src/debug.rs` handles the global debug toggle (`--debug`), string-keyed debug flags (`debug::get_flag_or_default("DebugCollidersDraw")`, defaults set in `setup_default_flags`), the `dprintln!` macro, and immediate-mode debug drawing (`debug::draw_text`, lines/points) rendered by `renderer/debug_renderer`. The egui inspector (`application/gui`) shows components through their `on_inspect` implementations.

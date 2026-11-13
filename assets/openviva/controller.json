@@ -1,0 +1,7546 @@
+{
+	"parameters": [
+		"speed",
+		"forwardSpeed",
+		"sidewaysSpeed",
+		"HeadpatRoughness",
+		"HeadpatProper",
+		"ChopsticksReach",
+		"pickupHeight",
+		"sync_locomotion_jealous",
+		"sync_giddy_locomotion",
+		"sync_locomotion_happy",
+		"sync_locomotion_angry",
+		"pokeTummyX",
+		"begDirection",
+		"cameraPitchDir",
+		"cameraPrepared",
+		"sync_chase_low_locomotion",
+		"splashDirection",
+		"hugSide",
+		"pickupReach",
+		"pickupReverse"
+	],
+	"layers": [
+		{
+			"name": "legs",
+			"states": {
+				"APOSE": {
+					"motion": {
+						"clip": "APOSE"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"falling_loop": {
+					"motion": {
+						"clip": "falling_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_curl_loop": {
+					"motion": {
+						"clip": "floor_curl_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_down_to_stand": {
+					"motion": {
+						"clip": "floor_face_down_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_left": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_right": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_idle": {
+					"motion": {
+						"clip": "floor_face_up_idle"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_to_stand": {
+					"motion": {
+						"clip": "floor_face_up_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_agree": {
+					"motion": {
+						"clip": "floor_sit_agree"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "floor_sit_headpat_angry_brush_away"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_angry_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_angry_proper_loop"
+									},
+									"threshold": 0.33333334,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 0.6666667,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "floor_sit_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "floor_sit_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "floor_sit_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_start": {
+					"motion": {
+						"clip": "floor_sit_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "floor_sit_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_impressed1": {
+					"motion": {
+						"clip": "floor_sit_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_locomotion_angry": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_angry_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_forward_loop"
+									},
+									"threshold": 0.5,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_locomotion_happy": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"clip": "sit_floor_idle"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_forward_loop"
+									},
+									"threshold": 0.5,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_left": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_right": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_refuse": {
+					"motion": {
+						"clip": "floor_sit_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"picked_up_loop": {
+					"motion": {
+						"clip": "picked_up_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_confident": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_confident"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "ChopsticksReach",
+							"parameter_y": "Speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle_reach"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_in": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_in"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_lose": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_lose"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_neutral": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_neutral"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_win": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_win"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_worried": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_worried"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_hype": {
+					"motion": {
+						"clip": "sit_floor_hype"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_to_stand": {
+					"motion": {
+						"clip": "sit_floor_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "squat_headpat_angry_brush_away"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "HeadpatRoughness",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_angry_start"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_start": {
+					"motion": {
+						"clip": "squat_headpat_angry_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_cancel_left": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_cancel_right": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_start": {
+					"motion": {
+						"clip": "squat_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "squat_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_impressed1": {
+					"motion": {
+						"clip": "squat_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_locomotion_happy": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_forward_loop"
+									},
+									"threshold": 0.6,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_1_left": {
+					"motion": {
+						"clip": "squat_poke_face_1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_1_right": {
+					"motion": {
+						"clip": "squat_poke_face_1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_2_left": {
+					"motion": {
+						"clip": "squat_poke_face_2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_2_right": {
+					"motion": {
+						"clip": "squat_poke_face_2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_to_stand": {
+					"motion": {
+						"clip": "squat_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_left": {
+					"motion": {
+						"clip": "stand_angry_block_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_right": {
+					"motion": {
+						"clip": "stand_angry_block_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_angry_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 1.0,
+									"position": [
+										-0.96,
+										0.26
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_angry_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_refuse": {
+					"motion": {
+						"clip": "stand_angry_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_bow": {
+					"motion": {
+						"clip": "stand_bow"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_confused": {
+					"motion": {
+						"clip": "stand_confused"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_follow_me_right": {
+					"motion": {
+						"clip": "stand_follow_me_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.5,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 5.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_surprise": {
+					"motion": {
+						"clip": "stand_giddy_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_left": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_right": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_left": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_right": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_joy_jumps": {
+					"motion": {
+						"clip": "stand_happy_joy_jumps"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 1.0,
+									"position": [
+										-0.96,
+										0.26
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_end": {
+					"motion": {
+						"clip": "stand_headpat_angry_end"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_satisfaction": {
+					"motion": {
+						"clip": "stand_headpat_satisfaction"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_impressed1": {
+					"motion": {
+						"clip": "stand_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_locomotion_spine_stable": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_spine_stable_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_right_offset_spine_stable_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_stable_spine_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 1.0,
+									"position": [
+										-0.96,
+										0.26
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_spine_stable_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_right_offset_spine_stable_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_stable_spine_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_left": {
+					"motion": {
+						"clip": "stand_poke_face_1_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_right": {
+					"motion": {
+						"clip": "stand_poke_face_1_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_left": {
+					"motion": {
+						"clip": "stand_poke_face_2_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_right": {
+					"motion": {
+						"clip": "stand_poke_face_2_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_left": {
+					"motion": {
+						"clip": "stand_poke_face_3_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_right": {
+					"motion": {
+						"clip": "stand_poke_face_3_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_in": {
+					"motion": {
+						"clip": "stand_poked_tummy_in"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "pokeTummyX",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_left_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_center_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_out": {
+					"motion": {
+						"clip": "stand_poked_tummy_out"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_left": {
+					"motion": {
+						"clip": "stand_reach_out_end_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_right": {
+					"motion": {
+						"clip": "stand_reach_out_end_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_left": {
+					"motion": {
+						"clip": "stand_reach_out_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_right": {
+					"motion": {
+						"clip": "stand_reach_out_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_search_right": {
+					"motion": {
+						"clip": "stand_search_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_shinobu_yummy": {
+					"motion": {
+						"clip": "stand_shinobu_yummy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_sound_goodmorning_short": {
+					"motion": {
+						"clip": "stand_sound_goodmorning_short"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_stretch": {
+					"motion": {
+						"clip": "stand_stretch"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_left_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_right_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_headpat_idle_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_proper_loop"
+									},
+									"threshold": 0.33333334,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 0.6666667,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.5
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_walk_forward_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_left": {
+					"motion": {
+						"clip": "stand_tired_poke_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_right": {
+					"motion": {
+						"clip": "stand_tired_poke_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_refuse": {
+					"motion": {
+						"clip": "stand_tired_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_left": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_right": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_sit_floor": {
+					"motion": {
+						"clip": "stand_to_sit_floor"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_squat": {
+					"motion": {
+						"clip": "stand_to_squat"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_tired": {
+					"motion": {
+						"clip": "stand_to_stand_tired"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wait_annoyed_loop": {
+					"motion": {
+						"clip": "stand_wait_annoyed_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_left": {
+					"motion": {
+						"clip": "stand_wave_happy_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_right": {
+					"motion": {
+						"clip": "stand_wave_happy_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_left": {
+					"motion": {
+						"clip": "stand_wipe_cheek_left_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_right": {
+					"motion": {
+						"clip": "stand_wipe_cheek_right_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				}
+			}
+		},
+		{
+			"name": "torso",
+			"states": {
+				"APOSE": {
+					"motion": {
+						"clip": "APOSE"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"falling_loop": {
+					"motion": {
+						"clip": "falling_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_curl_loop": {
+					"motion": {
+						"clip": "floor_curl_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_down_to_stand": {
+					"motion": {
+						"clip": "floor_face_down_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_left": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_right": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_idle": {
+					"motion": {
+						"clip": "floor_face_up_idle"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_to_stand": {
+					"motion": {
+						"clip": "floor_face_up_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_agree": {
+					"motion": {
+						"clip": "floor_sit_agree"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "floor_sit_headpat_angry_brush_away"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_angry_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_angry_proper_loop"
+									},
+									"threshold": 0.33333334,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 0.6666667,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "floor_sit_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_headpat_annoyed_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "floor_sit_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "floor_sit_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_start": {
+					"motion": {
+						"clip": "floor_sit_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "floor_sit_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_impressed1": {
+					"motion": {
+						"clip": "floor_sit_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_locomotion_angry": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"clip": "floor_sit_angry_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_forward_loop"
+									},
+									"threshold": 0.5,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_locomotion_happy": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"clip": "sit_floor_idle"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "floor_sit_forward_loop"
+									},
+									"threshold": 0.5,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_left": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_right": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_refuse": {
+					"motion": {
+						"clip": "floor_sit_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"picked_up_loop": {
+					"motion": {
+						"clip": "picked_up_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_confident": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_confident"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "ChopsticksReach",
+							"parameter_y": "Speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle_reach"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_in": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_in"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_lose": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_lose"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_neutral": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_neutral"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_receive_left": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_receive_left"
+					},
+					"speed": 1.2,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_receive_right": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_receive_right"
+					},
+					"speed": 1.2,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_redistribute": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_redistribute"
+					},
+					"speed": 1.1,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_win": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_win"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_worried": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_worried"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_hype": {
+					"motion": {
+						"clip": "sit_floor_hype"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_to_stand": {
+					"motion": {
+						"clip": "sit_floor_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "squat_headpat_angry_brush_away"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "HeadpatRoughness",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_angry_start"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_start": {
+					"motion": {
+						"clip": "squat_headpat_angry_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_cancel_left": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_cancel_right": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "squat_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_start": {
+					"motion": {
+						"clip": "squat_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "squat_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_impressed1": {
+					"motion": {
+						"clip": "squat_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_locomotion_happy": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "forwardSpeed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_forward_loop"
+									},
+									"threshold": 0.6,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_1_left": {
+					"motion": {
+						"clip": "squat_poke_face_1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_1_right": {
+					"motion": {
+						"clip": "squat_poke_face_1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_2_left": {
+					"motion": {
+						"clip": "squat_poke_face_2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_poke_face_2_right": {
+					"motion": {
+						"clip": "squat_poke_face_2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_to_stand": {
+					"motion": {
+						"clip": "squat_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_agree": {
+					"motion": {
+						"clip": "stand_agree"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_left": {
+					"motion": {
+						"clip": "stand_angry_block_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_right": {
+					"motion": {
+						"clip": "stand_angry_block_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_angry_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 1.0,
+									"position": [
+										-0.96,
+										0.26
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_angry_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": "sync_locomotion_angry",
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_refuse": {
+					"motion": {
+						"clip": "stand_angry_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_bow": {
+					"motion": {
+						"clip": "stand_bow"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_confused": {
+					"motion": {
+						"clip": "stand_confused"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_angry_loop": {
+					"motion": {
+						"clip": "stand_face_prox_angry_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_angry_surprise": {
+					"motion": {
+						"clip": "stand_face_prox_angry_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_happy_loop": {
+					"motion": {
+						"clip": "stand_face_prox_happy_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_happy_surprise": {
+					"motion": {
+						"clip": "stand_face_prox_happy_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_follow_me_right": {
+					"motion": {
+						"clip": "stand_follow_me_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.5,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 5.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": "sync_giddy_locomotion",
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_surprise": {
+					"motion": {
+						"clip": "stand_giddy_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_left": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_right": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_left": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_right": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_idle3": {
+					"motion": {
+						"clip": "stand_happy_idle3"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_joy_jumps": {
+					"motion": {
+						"clip": "stand_happy_joy_jumps"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 1.0,
+									"position": [
+										-0.96,
+										0.26
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": "sync_locomotion_happy",
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "stand_headpat_angry_brush_away"
+					},
+					"speed": 1.2,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_end": {
+					"motion": {
+						"clip": "stand_headpat_angry_end"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_interrupt": {
+					"motion": {
+						"clip": "stand_headpat_angry_interrupt"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_start": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "HeadpatRoughness",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_headpat_angry_start"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_cancel_left": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_cancel_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_cancel_right": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_after_more": {
+					"motion": {
+						"clip": "stand_headpat_happy_after_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_proper_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "stand_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "stand_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_start": {
+					"motion": {
+						"clip": "stand_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "stand_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_satisfaction": {
+					"motion": {
+						"clip": "stand_headpat_satisfaction"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_idle2_happy": {
+					"motion": {
+						"clip": "stand_happy_idle2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_impressed1": {
+					"motion": {
+						"clip": "stand_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_left": {
+					"motion": {
+						"clip": "stand_poke_face_1_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_right": {
+					"motion": {
+						"clip": "stand_poke_face_1_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_left": {
+					"motion": {
+						"clip": "stand_poke_face_2_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_right": {
+					"motion": {
+						"clip": "stand_poke_face_2_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_left": {
+					"motion": {
+						"clip": "stand_poke_face_3_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_right": {
+					"motion": {
+						"clip": "stand_poke_face_3_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_in": {
+					"motion": {
+						"clip": "stand_poked_tummy_in"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "pokeTummyX",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_left_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_center_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_out": {
+					"motion": {
+						"clip": "stand_poked_tummy_out"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_left": {
+					"motion": {
+						"clip": "stand_reach_out_end_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_right": {
+					"motion": {
+						"clip": "stand_reach_out_end_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_left": {
+					"motion": {
+						"clip": "stand_reach_out_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_right": {
+					"motion": {
+						"clip": "stand_reach_out_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_search_right": {
+					"motion": {
+						"clip": "stand_search_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_shinobu_yummy": {
+					"motion": {
+						"clip": "stand_shinobu_yummy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_sound_goodmorning_short": {
+					"motion": {
+						"clip": "stand_sound_goodmorning_short"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_stretch": {
+					"motion": {
+						"clip": "stand_stretch"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_left_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_right_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_headpat_idle_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_proper_loop"
+									},
+									"threshold": 0.33333334,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 0.6666667,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.5
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_walk_forward_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_left": {
+					"motion": {
+						"clip": "stand_tired_poke_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_right": {
+					"motion": {
+						"clip": "stand_tired_poke_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_refuse": {
+					"motion": {
+						"clip": "stand_tired_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_left": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_right": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_sit_floor": {
+					"motion": {
+						"clip": "stand_to_sit_floor"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_squat": {
+					"motion": {
+						"clip": "stand_to_squat"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_tired": {
+					"motion": {
+						"clip": "stand_to_stand_tired"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wait_annoyed_loop": {
+					"motion": {
+						"clip": "stand_wait_annoyed_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_left": {
+					"motion": {
+						"clip": "stand_wave_happy_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_right": {
+					"motion": {
+						"clip": "stand_wave_happy_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_left": {
+					"motion": {
+						"clip": "stand_wipe_cheek_left_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_right": {
+					"motion": {
+						"clip": "stand_wipe_cheek_right_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				}
+			}
+		},
+		{
+			"name": "face",
+			"states": {
+				"APOSE": {
+					"motion": {
+						"clip": "APOSE"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"falling_loop": {
+					"motion": {
+						"clip": "falling_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_curl_loop": {
+					"motion": {
+						"clip": "floor_curl_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_down_to_stand": {
+					"motion": {
+						"clip": "floor_face_down_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_left": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_face_side_to_stand_right": {
+					"motion": {
+						"clip": "floor_face_side_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_idle": {
+					"motion": {
+						"clip": "floor_face_up_idle"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_face_up_to_stand": {
+					"motion": {
+						"clip": "floor_face_up_to_stand"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_agree": {
+					"motion": {
+						"clip": "floor_sit_agree"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_left": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_reach_right": {
+					"motion": {
+						"clip": "floor_sit_reach_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"floor_sit_refuse": {
+					"motion": {
+						"clip": "floor_sit_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"picked_up_loop": {
+					"motion": {
+						"clip": "picked_up_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_confident": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_confident"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "ChopsticksReach",
+							"parameter_y": "Speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "sit_floor_chopsticks_idle_reach"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_lose": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_lose"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_neutral": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_neutral"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_win": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_win"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_chopsticks_worried": {
+					"motion": {
+						"clip": "sit_floor_chopsticks_worried"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"sit_floor_hype": {
+					"motion": {
+						"clip": "sit_floor_hype"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "HeadpatRoughness",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_angry_start"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_angry_start": {
+					"motion": {
+						"clip": "squat_headpat_angry_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": true,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "squat_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "squat_headpat_annoyed_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "squat_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_start": {
+					"motion": {
+						"clip": "squat_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"squat_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "squat_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_left": {
+					"motion": {
+						"clip": "stand_angry_block_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_block_right": {
+					"motion": {
+						"clip": "stand_angry_block_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_idle": {
+					"motion": {
+						"clip": "stand_angry_idle_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_angry_refuse": {
+					"motion": {
+						"clip": "stand_angry_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_bow": {
+					"motion": {
+						"clip": "stand_bow"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_confused": {
+					"motion": {
+						"clip": "stand_confused"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_angry_loop": {
+					"motion": {
+						"clip": "stand_face_prox_angry_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_angry_surprise": {
+					"motion": {
+						"clip": "stand_face_prox_angry_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_happy_loop": {
+					"motion": {
+						"clip": "stand_face_prox_happy_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_face_prox_happy_surprise": {
+					"motion": {
+						"clip": "stand_face_prox_happy_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_follow_me_right": {
+					"motion": {
+						"clip": "stand_follow_me_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "forwardSpeed",
+							"children": [
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 2,
+											"parameter": "sidewaysSpeed",
+											"parameter_y": "forwardSpeed",
+											"children": [
+												{
+													"motion": {
+														"clip": "walk_backward_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														-1.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_left_loop"
+													},
+													"threshold": 0.25,
+													"position": [
+														-1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "stand_happy_idle_loop"
+													},
+													"threshold": 0.5,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "walk_side_offset_right_loop"
+													},
+													"threshold": 0.75,
+													"position": [
+														1.0,
+														0.0
+													],
+													"time_scale": 2.0,
+													"mirror": false,
+													"direct_parameter": "speed"
+												},
+												{
+													"motion": {
+														"clip": "run_giddy_forward_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														1.0
+													],
+													"time_scale": 1.5,
+													"mirror": false,
+													"direct_parameter": "speed"
+												}
+											]
+										}
+									},
+									"threshold": 5.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_giddy_surprise": {
+					"motion": {
+						"clip": "stand_giddy_surprise"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_left": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_angry_refuse_right": {
+					"motion": {
+						"clip": "stand_handhold_angry_refuse_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_left": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_embarrassed_right": {
+					"motion": {
+						"clip": "stand_handhold_happy_embarrassed_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_handhold_happy_pull_hard_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_happy_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "walk_forward_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_handhold_happy_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_idle": {
+					"motion": {
+						"clip": "stand_happy_idle_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_idle3": {
+					"motion": {
+						"clip": "stand_happy_idle3"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_happy_joy_jumps": {
+					"motion": {
+						"clip": "stand_happy_joy_jumps"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_brush_away": {
+					"motion": {
+						"clip": "stand_headpat_angry_brush_away"
+					},
+					"speed": 1.2,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_end": {
+					"motion": {
+						"clip": "stand_headpat_angry_end"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_interrupt": {
+					"motion": {
+						"clip": "stand_headpat_angry_interrupt"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_angry_start": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "HeadpatRoughness",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_headpat_angry_start"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_cancel_left": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_cancel_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_cancel_right": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_cancel_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_climax_to_happy": {
+					"motion": {
+						"clip": "stand_headpat_climax_to_happy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_after_more": {
+					"motion": {
+						"clip": "stand_headpat_happy_after_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_left": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_idle_sad_right": {
+					"motion": {
+						"clip": "stand_headpat_happy_idle_sad_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_headpat_happy_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "Speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_happy_proper_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_proper_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										1.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"tree": {
+											"blend_type": 0,
+											"parameter": "HeadpatRoughness",
+											"parameter_y": "Blend",
+											"children": [
+												{
+													"motion": {
+														"clip": "stand_headpat_annoyed_loop"
+													},
+													"threshold": 0.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 0.5,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												},
+												{
+													"motion": {
+														"clip": "stand_headpat_annoyed_loop"
+													},
+													"threshold": 1.0,
+													"position": [
+														0.0,
+														0.0
+													],
+													"time_scale": 1.25,
+													"mirror": false,
+													"direct_parameter": "forwardSpeed"
+												}
+											]
+										}
+									},
+									"threshold": 3.0,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "forwardSpeed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_start": {
+					"motion": {
+						"clip": "stand_headpat_happy_start"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_happy_wanted_more": {
+					"motion": {
+						"clip": "stand_headpat_happy_wanted_more"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_headpat_satisfaction": {
+					"motion": {
+						"clip": "stand_headpat_satisfaction"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_idle2_happy": {
+					"motion": {
+						"clip": "stand_happy_idle2"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_impressed1": {
+					"motion": {
+						"clip": "stand_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_left": {
+					"motion": {
+						"clip": "stand_poke_face_1_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_1_right": {
+					"motion": {
+						"clip": "stand_poke_face_1_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_left": {
+					"motion": {
+						"clip": "stand_poke_face_2_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_2_right": {
+					"motion": {
+						"clip": "stand_poke_face_2_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_left": {
+					"motion": {
+						"clip": "stand_poke_face_3_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poke_face_3_right": {
+					"motion": {
+						"clip": "stand_poke_face_3_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_in": {
+					"motion": {
+						"clip": "stand_poked_tummy_in"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "pokeTummyX",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_left_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										-1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_center_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_poked_tummy_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_poked_tummy_out": {
+					"motion": {
+						"clip": "stand_poked_tummy_out"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_left": {
+					"motion": {
+						"clip": "stand_reach_out_end_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_end_right": {
+					"motion": {
+						"clip": "stand_reach_out_end_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_left": {
+					"motion": {
+						"clip": "stand_reach_out_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_reach_out_right": {
+					"motion": {
+						"clip": "stand_reach_out_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_search_right": {
+					"motion": {
+						"clip": "stand_search_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_shinobu_yummy": {
+					"motion": {
+						"clip": "stand_shinobu_yummy"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_sound_goodmorning_short": {
+					"motion": {
+						"clip": "stand_sound_goodmorning_short"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_stretch": {
+					"motion": {
+						"clip": "stand_stretch"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_left": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_left_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_left_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_handhold_right": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_soft_right_loop"
+									},
+									"threshold": 2.5,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_handhold_pull_hard_right_loop"
+									},
+									"threshold": 4.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.3,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_headpat_idle_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 3,
+							"parameter": "HeadpatProper",
+							"parameter_y": "HeadpatRoughness",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_idle_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_headpat_proper_loop"
+									},
+									"threshold": 0.33333334,
+									"position": [
+										1.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 0.6666667,
+									"position": [
+										0.0,
+										1.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_headpat_annoyed_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										1.0,
+										0.5
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_idle": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "speed",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_tired_idle_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_tired_walk_forward_loop"
+									},
+									"threshold": 2.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_left": {
+					"motion": {
+						"clip": "stand_tired_poke_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_poke_right": {
+					"motion": {
+						"clip": "stand_tired_poke_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_refuse": {
+					"motion": {
+						"clip": "stand_tired_refuse"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_left": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_tired_rub_eyes_right": {
+					"motion": {
+						"clip": "stand_tired_rub_eyes_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_tired": {
+					"motion": {
+						"clip": "stand_to_stand_tired"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wait_annoyed_loop": {
+					"motion": {
+						"clip": "stand_wait_annoyed_loop"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_left": {
+					"motion": {
+						"clip": "stand_wave_happy_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wave_happy_right": {
+					"motion": {
+						"clip": "stand_wave_happy_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_left": {
+					"motion": {
+						"clip": "stand_wipe_cheek_left_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_wipe_cheek_right": {
+					"motion": {
+						"clip": "stand_wipe_cheek_right_nm"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				}
+			}
+		}
+	],
+	"clips": {
+		"APOSE": {
+			"file": "openviva/anims/APOSE.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"falling_loop": {
+			"file": "openviva/anims/falling_loop.p39a",
+			"length": 0.5,
+			"looping": true
+		},
+		"floor_curl_loop": {
+			"file": "openviva/anims/floor_curl_loop.p39a",
+			"length": 0.06666666666666667,
+			"looping": true
+		},
+		"floor_face_down_to_stand": {
+			"file": "openviva/anims/floor_face_down_to_stand.p39a",
+			"length": 2.966666666666667,
+			"looping": false
+		},
+		"floor_face_side_to_stand": {
+			"file": "openviva/anims/floor_face_side_to_stand.p39a",
+			"length": 2.966666666666667,
+			"looping": false
+		},
+		"floor_face_up_idle": {
+			"file": "openviva/anims/floor_face_up_idle.p39a",
+			"length": 1.9666666666666666,
+			"looping": false
+		},
+		"floor_face_up_to_stand": {
+			"file": "openviva/anims/floor_face_up_to_stand.p39a",
+			"length": 2.3,
+			"looping": false
+		},
+		"floor_sit_agree": {
+			"file": "openviva/anims/floor_sit_agree.p39a",
+			"length": 1.3,
+			"looping": false
+		},
+		"floor_sit_angry_idle_loop": {
+			"file": "openviva/anims/floor_sit_angry_idle_loop.p39a",
+			"length": 1.3,
+			"looping": true
+		},
+		"floor_sit_forward_loop": {
+			"file": "openviva/anims/floor_sit_forward_loop.p39a",
+			"length": 0.6333333333333333,
+			"looping": true
+		},
+		"floor_sit_headpat_angry_brush_away": {
+			"file": "openviva/anims/floor_sit_headpat_angry_brush_away.p39a",
+			"length": 1.3,
+			"looping": false
+		},
+		"floor_sit_headpat_angry_proper_loop": {
+			"file": "openviva/anims/floor_sit_headpat_angry_proper_loop.p39a",
+			"length": 1.3,
+			"looping": true
+		},
+		"floor_sit_headpat_annoyed_loop": {
+			"file": "openviva/anims/floor_sit_headpat_annoyed_loop.p39a",
+			"length": 0.36666666666666664,
+			"looping": true
+		},
+		"floor_sit_headpat_climax_to_happy": {
+			"file": "openviva/anims/floor_sit_headpat_climax_to_happy.p39a",
+			"length": 1.9666666666666666,
+			"looping": false
+		},
+		"floor_sit_headpat_happy_idle_loop": {
+			"file": "openviva/anims/floor_sit_headpat_happy_idle_loop.p39a",
+			"length": 1.9666666666666666,
+			"looping": true
+		},
+		"floor_sit_headpat_happy_proper_loop": {
+			"file": "openviva/anims/floor_sit_headpat_happy_proper_loop.p39a",
+			"length": 4.633333333333334,
+			"looping": true
+		},
+		"floor_sit_headpat_happy_start": {
+			"file": "openviva/anims/floor_sit_headpat_happy_start.p39a",
+			"length": 1.4666666666666666,
+			"looping": false
+		},
+		"floor_sit_headpat_happy_wanted_more": {
+			"file": "openviva/anims/floor_sit_headpat_happy_wanted_more.p39a",
+			"length": 3.3,
+			"looping": false
+		},
+		"floor_sit_impressed1": {
+			"file": "openviva/anims/floor_sit_impressed1.p39a",
+			"length": 2.466666666666667,
+			"looping": false
+		},
+		"floor_sit_reach_right": {
+			"file": "openviva/anims/floor_sit_reach_right.p39a",
+			"length": 1.3,
+			"looping": false
+		},
+		"floor_sit_refuse": {
+			"file": "openviva/anims/floor_sit_refuse.p39a",
+			"length": 1.8,
+			"looping": false
+		},
+		"picked_up_loop": {
+			"file": "openviva/anims/picked_up_loop.p39a",
+			"length": 5.966666666666667,
+			"looping": true
+		},
+		"run_giddy_forward_loop": {
+			"file": "openviva/anims/run_giddy_forward_loop.p39a",
+			"length": 0.7916666666666666,
+			"looping": true
+		},
+		"sit_floor_chopsticks_confident": {
+			"file": "openviva/anims/sit_floor_chopsticks_confident.p39a",
+			"length": 3.2916666666666665,
+			"looping": false
+		},
+		"sit_floor_chopsticks_idle": {
+			"file": "openviva/anims/sit_floor_chopsticks_idle.p39a",
+			"length": 1.625,
+			"looping": false
+		},
+		"sit_floor_chopsticks_idle_reach": {
+			"file": "openviva/anims/sit_floor_chopsticks_idle_reach.p39a",
+			"length": 0.7916666666666666,
+			"looping": false
+		},
+		"sit_floor_chopsticks_in": {
+			"file": "openviva/anims/sit_floor_chopsticks_in.p39a",
+			"length": 1.625,
+			"looping": false
+		},
+		"sit_floor_chopsticks_lose": {
+			"file": "openviva/anims/sit_floor_chopsticks_lose.p39a",
+			"length": 4.0,
+			"looping": false
+		},
+		"sit_floor_chopsticks_neutral": {
+			"file": "openviva/anims/sit_floor_chopsticks_neutral.p39a",
+			"length": 4.125,
+			"looping": false
+		},
+		"sit_floor_chopsticks_receive_left": {
+			"file": "openviva/anims/sit_floor_chopsticks_receive_left.p39a",
+			"length": 0.9583333333333334,
+			"looping": false
+		},
+		"sit_floor_chopsticks_receive_right": {
+			"file": "openviva/anims/sit_floor_chopsticks_receive_right.p39a",
+			"length": 0.9583333333333334,
+			"looping": false
+		},
+		"sit_floor_chopsticks_redistribute": {
+			"file": "openviva/anims/sit_floor_chopsticks_redistribute.p39a",
+			"length": 0.7916666666666666,
+			"looping": false
+		},
+		"sit_floor_chopsticks_win": {
+			"file": "openviva/anims/sit_floor_chopsticks_win.p39a",
+			"length": 2.875,
+			"looping": false
+		},
+		"sit_floor_chopsticks_worried": {
+			"file": "openviva/anims/sit_floor_chopsticks_worried.p39a",
+			"length": 3.2916666666666665,
+			"looping": false
+		},
+		"sit_floor_hype": {
+			"file": "openviva/anims/sit_floor_hype.p39a",
+			"length": 2.875,
+			"looping": false
+		},
+		"sit_floor_idle": {
+			"file": "openviva/anims/sit_floor_idle.p39a",
+			"length": 2.0416666666666665,
+			"looping": false
+		},
+		"sit_floor_to_stand": {
+			"file": "openviva/anims/sit_floor_to_stand.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"squat_forward_loop": {
+			"file": "openviva/anims/squat_forward_loop.p39a",
+			"length": 1.0333333333333334,
+			"looping": true
+		},
+		"squat_headpat_angry_brush_away": {
+			"file": "openviva/anims/squat_headpat_angry_brush_away.p39a",
+			"length": 1.0333333333333334,
+			"looping": false
+		},
+		"squat_headpat_angry_start": {
+			"file": "openviva/anims/squat_headpat_angry_start.p39a",
+			"length": 0.8,
+			"looping": false
+		},
+		"squat_headpat_annoyed_loop": {
+			"file": "openviva/anims/squat_headpat_annoyed_loop.p39a",
+			"length": 0.36666666666666664,
+			"looping": true
+		},
+		"squat_headpat_climax_to_cancel_right": {
+			"file": "openviva/anims/squat_headpat_climax_to_cancel_right.p39a",
+			"length": 1.1666666666666667,
+			"looping": false
+		},
+		"squat_headpat_climax_to_happy": {
+			"file": "openviva/anims/squat_headpat_climax_to_happy.p39a",
+			"length": 1.9666666666666666,
+			"looping": false
+		},
+		"squat_headpat_happy_idle_loop": {
+			"file": "openviva/anims/squat_headpat_happy_idle_loop.p39a",
+			"length": 1.9666666666666666,
+			"looping": true
+		},
+		"squat_headpat_happy_idle_sad_right": {
+			"file": "openviva/anims/squat_headpat_happy_idle_sad_right.p39a",
+			"length": 2.466666666666667,
+			"looping": false
+		},
+		"squat_headpat_happy_proper_loop": {
+			"file": "openviva/anims/squat_headpat_happy_proper_loop.p39a",
+			"length": 4.633333333333334,
+			"looping": true
+		},
+		"squat_headpat_happy_start": {
+			"file": "openviva/anims/squat_headpat_happy_start.p39a",
+			"length": 1.1333333333333333,
+			"looping": false
+		},
+		"squat_headpat_happy_wanted_more": {
+			"file": "openviva/anims/squat_headpat_happy_wanted_more.p39a",
+			"length": 3.3,
+			"looping": false
+		},
+		"squat_idle_loop": {
+			"file": "openviva/anims/squat_idle_loop.p39a",
+			"length": 1.9666666666666666,
+			"looping": true
+		},
+		"squat_impressed1": {
+			"file": "openviva/anims/squat_impressed1.p39a",
+			"length": 2.3666666666666667,
+			"looping": false
+		},
+		"squat_poke_face_1": {
+			"file": "openviva/anims/squat_poke_face_1.p39a",
+			"length": 0.9666666666666667,
+			"looping": false
+		},
+		"squat_poke_face_2": {
+			"file": "openviva/anims/squat_poke_face_2.p39a",
+			"length": 0.9666666666666667,
+			"looping": false
+		},
+		"squat_to_stand": {
+			"file": "openviva/anims/squat_to_stand.p39a",
+			"length": 0.8,
+			"looping": false
+		},
+		"stand_agree": {
+			"file": "openviva/anims/stand_agree.p39a",
+			"length": 1.3,
+			"looping": false
+		},
+		"stand_angry_block_left": {
+			"file": "openviva/anims/stand_angry_block_left.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"stand_angry_block_right": {
+			"file": "openviva/anims/stand_angry_block_right.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"stand_angry_idle_loop": {
+			"file": "openviva/anims/stand_angry_idle_loop.p39a",
+			"length": 1.625,
+			"looping": true
+		},
+		"stand_angry_refuse": {
+			"file": "openviva/anims/stand_angry_refuse.p39a",
+			"length": 1.5416666666666667,
+			"looping": false
+		},
+		"stand_bow": {
+			"file": "openviva/anims/stand_bow.p39a",
+			"length": 1.9,
+			"looping": false
+		},
+		"stand_confused": {
+			"file": "openviva/anims/stand_confused.p39a",
+			"length": 1.3,
+			"looping": false
+		},
+		"stand_face_prox_angry_loop": {
+			"file": "openviva/anims/stand_face_prox_angry_loop.p39a",
+			"length": 6.625,
+			"looping": true
+		},
+		"stand_face_prox_angry_surprise": {
+			"file": "openviva/anims/stand_face_prox_angry_surprise.p39a",
+			"length": 1.4166666666666667,
+			"looping": false
+		},
+		"stand_face_prox_happy_loop": {
+			"file": "openviva/anims/stand_face_prox_happy_loop.p39a",
+			"length": 6.625,
+			"looping": true
+		},
+		"stand_face_prox_happy_surprise": {
+			"file": "openviva/anims/stand_face_prox_happy_surprise.p39a",
+			"length": 1.4166666666666667,
+			"looping": false
+		},
+		"stand_follow_me_right": {
+			"file": "openviva/anims/stand_follow_me_right.p39a",
+			"length": 1.4666666666666666,
+			"looping": false
+		},
+		"stand_giddy_surprise": {
+			"file": "openviva/anims/stand_giddy_surprise.p39a",
+			"length": 1.2916666666666667,
+			"looping": false
+		},
+		"stand_handhold_angry_refuse_left": {
+			"file": "openviva/anims/stand_handhold_angry_refuse_left.p39a",
+			"length": 2.0416666666666665,
+			"looping": false
+		},
+		"stand_handhold_angry_refuse_right": {
+			"file": "openviva/anims/stand_handhold_angry_refuse_right.p39a",
+			"length": 2.0416666666666665,
+			"looping": false
+		},
+		"stand_handhold_happy_embarrassed_left": {
+			"file": "openviva/anims/stand_handhold_happy_embarrassed_left.p39a",
+			"length": 8.166666666666666,
+			"looping": false
+		},
+		"stand_handhold_happy_embarrassed_right": {
+			"file": "openviva/anims/stand_handhold_happy_embarrassed_right.p39a",
+			"length": 8.166666666666666,
+			"looping": false
+		},
+		"stand_handhold_happy_pull_hard_left_loop": {
+			"file": "openviva/anims/stand_handhold_happy_pull_hard_left_loop.p39a",
+			"length": 0.7916666666666666,
+			"looping": true
+		},
+		"stand_handhold_happy_pull_hard_right_loop": {
+			"file": "openviva/anims/stand_handhold_happy_pull_hard_right_loop.p39a",
+			"length": 0.7916666666666666,
+			"looping": true
+		},
+		"stand_happy_idle2": {
+			"file": "openviva/anims/stand_happy_idle2.p39a",
+			"length": 7.458333333333333,
+			"looping": false
+		},
+		"stand_happy_idle3": {
+			"file": "openviva/anims/stand_happy_idle3.p39a",
+			"length": 8.9,
+			"looping": false
+		},
+		"stand_happy_idle_loop": {
+			"file": "openviva/anims/stand_happy_idle_loop.p39a",
+			"length": 2.0416666666666665,
+			"looping": true
+		},
+		"stand_happy_joy_jumps": {
+			"file": "openviva/anims/stand_happy_joy_jumps.p39a",
+			"length": 1.8333333333333333,
+			"looping": false
+		},
+		"stand_headpat_angry_brush_away": {
+			"file": "openviva/anims/stand_headpat_angry_brush_away.p39a",
+			"length": 1.9583333333333333,
+			"looping": false
+		},
+		"stand_headpat_angry_end": {
+			"file": "openviva/anims/stand_headpat_angry_end.p39a",
+			"length": 2.0416666666666665,
+			"looping": false
+		},
+		"stand_headpat_angry_interrupt": {
+			"file": "openviva/anims/stand_headpat_angry_interrupt.p39a",
+			"length": 2.375,
+			"looping": false
+		},
+		"stand_headpat_angry_start": {
+			"file": "openviva/anims/stand_headpat_angry_start.p39a",
+			"length": 0.9583333333333334,
+			"looping": false
+		},
+		"stand_headpat_annoyed_loop": {
+			"file": "openviva/anims/stand_headpat_annoyed_loop.p39a",
+			"length": 0.4583333333333333,
+			"looping": true
+		},
+		"stand_headpat_annoyed_proper_loop": {
+			"file": "openviva/anims/stand_headpat_annoyed_proper_loop.p39a",
+			"length": 0.4583333333333333,
+			"looping": true
+		},
+		"stand_headpat_climax_to_cancel_left": {
+			"file": "openviva/anims/stand_headpat_climax_to_cancel_left.p39a",
+			"length": 1.4583333333333333,
+			"looping": false
+		},
+		"stand_headpat_climax_to_cancel_right": {
+			"file": "openviva/anims/stand_headpat_climax_to_cancel_right.p39a",
+			"length": 1.4583333333333333,
+			"looping": false
+		},
+		"stand_headpat_climax_to_happy": {
+			"file": "openviva/anims/stand_headpat_climax_to_happy.p39a",
+			"length": 2.375,
+			"looping": false
+		},
+		"stand_headpat_happy_after_more": {
+			"file": "openviva/anims/stand_headpat_happy_after_more.p39a",
+			"length": 2.6666666666666665,
+			"looping": false
+		},
+		"stand_headpat_happy_idle_loop": {
+			"file": "openviva/anims/stand_headpat_happy_idle_loop.p39a",
+			"length": 2.4583333333333335,
+			"looping": true
+		},
+		"stand_headpat_happy_idle_sad_left": {
+			"file": "openviva/anims/stand_headpat_happy_idle_sad_left.p39a",
+			"length": 3.0833333333333335,
+			"looping": false
+		},
+		"stand_headpat_happy_idle_sad_right": {
+			"file": "openviva/anims/stand_headpat_happy_idle_sad_right.p39a",
+			"length": 3.0833333333333335,
+			"looping": false
+		},
+		"stand_headpat_happy_proper_loop": {
+			"file": "openviva/anims/stand_headpat_happy_proper_loop.p39a",
+			"length": 5.791666666666667,
+			"looping": true
+		},
+		"stand_headpat_happy_start": {
+			"file": "openviva/anims/stand_headpat_happy_start.p39a",
+			"length": 1.4166666666666667,
+			"looping": false
+		},
+		"stand_headpat_happy_wanted_more": {
+			"file": "openviva/anims/stand_headpat_happy_wanted_more.p39a",
+			"length": 4.125,
+			"looping": false
+		},
+		"stand_headpat_satisfaction": {
+			"file": "openviva/anims/stand_headpat_satisfaction.p39a",
+			"length": 1.5416666666666667,
+			"looping": false
+		},
+		"stand_impressed1": {
+			"file": "openviva/anims/stand_impressed1.p39a",
+			"length": 2.466666666666667,
+			"looping": false
+		},
+		"stand_poke_face_1_left": {
+			"file": "openviva/anims/stand_poke_face_1_left.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poke_face_1_right": {
+			"file": "openviva/anims/stand_poke_face_1_right.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poke_face_2_left": {
+			"file": "openviva/anims/stand_poke_face_2_left.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poke_face_2_right": {
+			"file": "openviva/anims/stand_poke_face_2_right.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poke_face_3_left": {
+			"file": "openviva/anims/stand_poke_face_3_left.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poke_face_3_right": {
+			"file": "openviva/anims/stand_poke_face_3_right.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poked_tummy_center_loop": {
+			"file": "openviva/anims/stand_poked_tummy_center_loop.p39a",
+			"length": 2.0416666666666665,
+			"looping": true
+		},
+		"stand_poked_tummy_in": {
+			"file": "openviva/anims/stand_poked_tummy_in.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_poked_tummy_left_loop": {
+			"file": "openviva/anims/stand_poked_tummy_left_loop.p39a",
+			"length": 2.0416666666666665,
+			"looping": true
+		},
+		"stand_poked_tummy_out": {
+			"file": "openviva/anims/stand_poked_tummy_out.p39a",
+			"length": 2.25,
+			"looping": false
+		},
+		"stand_poked_tummy_right_loop": {
+			"file": "openviva/anims/stand_poked_tummy_right_loop.p39a",
+			"length": 2.0416666666666665,
+			"looping": true
+		},
+		"stand_reach_out_end_left": {
+			"file": "openviva/anims/stand_reach_out_end_left.p39a",
+			"length": 0.6333333333333333,
+			"looping": false
+		},
+		"stand_reach_out_end_right": {
+			"file": "openviva/anims/stand_reach_out_end_right.p39a",
+			"length": 0.6333333333333333,
+			"looping": false
+		},
+		"stand_reach_out_left": {
+			"file": "openviva/anims/stand_reach_out_left.p39a",
+			"length": 7.433333333333334,
+			"looping": false
+		},
+		"stand_reach_out_right": {
+			"file": "openviva/anims/stand_reach_out_right.p39a",
+			"length": 7.433333333333334,
+			"looping": false
+		},
+		"stand_search_right": {
+			"file": "openviva/anims/stand_search_right.p39a",
+			"length": 3.2916666666666665,
+			"looping": false
+		},
+		"stand_shinobu_yummy": {
+			"file": "openviva/anims/stand_shinobu_yummy.p39a",
+			"length": 2.6333333333333333,
+			"looping": false
+		},
+		"stand_sound_goodmorning_short": {
+			"file": "openviva/anims/stand_sound_goodmorning_short.p39a",
+			"length": 1.4166666666666667,
+			"looping": false
+		},
+		"stand_stretch": {
+			"file": "openviva/anims/stand_stretch.p39a",
+			"length": 6.0,
+			"looping": false
+		},
+		"stand_tired_handhold_pull_hard_left_loop": {
+			"file": "openviva/anims/stand_tired_handhold_pull_hard_left_loop.p39a",
+			"length": 0.7916666666666666,
+			"looping": true
+		},
+		"stand_tired_handhold_pull_hard_right_loop": {
+			"file": "openviva/anims/stand_tired_handhold_pull_hard_right_loop.p39a",
+			"length": 0.7916666666666666,
+			"looping": true
+		},
+		"stand_tired_handhold_pull_soft_left_loop": {
+			"file": "openviva/anims/stand_tired_handhold_pull_soft_left_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"stand_tired_handhold_pull_soft_right_loop": {
+			"file": "openviva/anims/stand_tired_handhold_pull_soft_right_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"stand_tired_headpat_idle_loop": {
+			"file": "openviva/anims/stand_tired_headpat_idle_loop.p39a",
+			"length": 2.4583333333333335,
+			"looping": true
+		},
+		"stand_tired_headpat_proper_loop": {
+			"file": "openviva/anims/stand_tired_headpat_proper_loop.p39a",
+			"length": 2.4583333333333335,
+			"looping": true
+		},
+		"stand_tired_idle_loop": {
+			"file": "openviva/anims/stand_tired_idle_loop.p39a",
+			"length": 2.4583333333333335,
+			"looping": true
+		},
+		"stand_tired_poke_left": {
+			"file": "openviva/anims/stand_tired_poke_left.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_tired_poke_right": {
+			"file": "openviva/anims/stand_tired_poke_right.p39a",
+			"length": 1.2083333333333333,
+			"looping": false
+		},
+		"stand_tired_refuse": {
+			"file": "openviva/anims/stand_tired_refuse.p39a",
+			"length": 2.0416666666666665,
+			"looping": false
+		},
+		"stand_tired_rub_eyes_left": {
+			"file": "openviva/anims/stand_tired_rub_eyes_left.p39a",
+			"length": 4.333333333333333,
+			"looping": false
+		},
+		"stand_tired_rub_eyes_right": {
+			"file": "openviva/anims/stand_tired_rub_eyes_right.p39a",
+			"length": 4.333333333333333,
+			"looping": false
+		},
+		"stand_tired_walk_forward_loop": {
+			"file": "openviva/anims/stand_tired_walk_forward_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"stand_to_sit_floor": {
+			"file": "openviva/anims/stand_to_sit_floor.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"stand_to_squat": {
+			"file": "openviva/anims/stand_to_squat.p39a",
+			"length": 0.9666666666666667,
+			"looping": false
+		},
+		"stand_to_stand_tired": {
+			"file": "openviva/anims/stand_to_stand_tired.p39a",
+			"length": 5.375,
+			"looping": false
+		},
+		"stand_wait_annoyed_loop": {
+			"file": "openviva/anims/stand_wait_annoyed_loop.p39a",
+			"length": 1.625,
+			"looping": true
+		},
+		"stand_wave_happy_left": {
+			"file": "openviva/anims/stand_wave_happy_left.p39a",
+			"length": 2.625,
+			"looping": false
+		},
+		"stand_wave_happy_right": {
+			"file": "openviva/anims/stand_wave_happy_right.p39a",
+			"length": 2.625,
+			"looping": false
+		},
+		"stand_wipe_cheek_left_nm": {
+			"file": "openviva/anims/stand_wipe_cheek_left_nm.p39a",
+			"length": 3.0833333333333335,
+			"looping": false
+		},
+		"stand_wipe_cheek_right_nm": {
+			"file": "openviva/anims/stand_wipe_cheek_right_nm.p39a",
+			"length": 3.0833333333333335,
+			"looping": false
+		},
+		"walk_backward_loop": {
+			"file": "openviva/anims/walk_backward_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_forward_loop": {
+			"file": "openviva/anims/walk_forward_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_forward_stable_spine_loop": {
+			"file": "openviva/anims/walk_forward_stable_spine_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_side_left_loop": {
+			"file": "openviva/anims/walk_side_left_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_side_left_spine_stable_loop": {
+			"file": "openviva/anims/walk_side_left_spine_stable_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_side_offset_right_loop": {
+			"file": "openviva/anims/walk_side_offset_right_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		},
+		"walk_side_right_offset_spine_stable_loop": {
+			"file": "openviva/anims/walk_side_right_offset_spine_stable_loop.p39a",
+			"length": 1.2916666666666667,
+			"looping": true
+		}
+	}
+}

@@ -1,22 +1,28 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::time::Duration;
 use anyhow::Result;
 use egui::Ui;
 use simba::scalar::SubsetOf;
 
+mod anim;
+mod character;
 mod enums;
 mod gui;
 mod proc_anim;
 
+use crate::debug;
 use crate::application::{Entity, Application};
 use crate::math::Rot3;
+use crate::renderer::assets_manager::TomlAsset;
 use crate::utils::num_key;
 use super::{Component, ComponentBase, ComponentInner, ComponentRef};
 use super::model::MMDModel;
 use super::model::mmd::{BodyPart, MMDRigidBody};
 use super::model::mmd::asset::PmxAsset;
+pub use character::Character;
 pub use enums::{Bones, Morphs};
+use character::{CharacterConfig, ModelCharacterConfig};
 use proc_anim::{ProcAnim, Easing};
 
 
@@ -34,16 +40,24 @@ const MORPH_PRESETS: &[(usize, &[Morphs])] = &[
 	(0, &[Morphs::BWink2Right]),
 ];
 
-/// The Miku character: loads her MMD model and drives procedural idle animations (breathing,
-/// blinking) and facial expressions. She reacts with embarrassment when her body is moved around.
+/// The Miku character: loads her MMD model and brings it to life as an OpenViva character (see
+/// `character`), if the model's `model.toml` has a `[character]` section. Otherwise only procedural idle
+/// animations (breathing, blinking) are played.
 ///
-/// Also shows a ragdoll and bone/rigid body browser in the inspector.
+/// Number keys show facial expression presets. Also shows the character state, a ragdoll and
+/// bone/rigid body browser in the inspector.
 #[derive(ComponentBase)]
 pub struct Miku {
 	#[inner] inner: ComponentInner,
 	asset: PmxAsset,
 	/// Model component created on start.
 	pub model: ComponentRef<MMDModel>,
+	/// Character configuration from `model.toml`.
+	config: RefCell<Option<CharacterConfig>>,
+	/// Character runtime, created once the model's ragdoll is ready.
+	pub character: RefCell<Option<Character>>,
+	/// Creating the character failed, don't retry.
+	character_failed: Cell<bool>,
 	/// Procedural animations of bones and morphs.
 	pub anims: RefCell<(
 		HashMap<Bones, ProcAnim<Rot3>>,
@@ -57,52 +71,49 @@ impl Miku {
 			inner: ComponentInner::new_norender(),
 			asset,
 			model: ComponentRef::null(),
+			config: RefCell::new(None),
+			character: RefCell::new(None),
+			character_failed: Cell::new(false),
 			anims: RefCell::new((
-				collection!(
-					Bones::UpperBody2 => ProcAnim::new(Rot3::identity())
-					                              .anim(Rot3::from_euler_angles(0.05, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					                              .wait(0.5)
-					                              .repeat(),
-					// Bones::ShoulderL => ProcAnim::new(Rot3::identity())
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, -0.1), 3.0, Easing::EaseInOut)
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					//                              .wait(0.5)
-					//                              .repeat(),
-					// Bones::ShoulderR => ProcAnim::new(Rot3::identity())
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.1), 3.0, Easing::EaseInOut)
-					//                              .anim(Rot3::from_euler_angles(0.0, 0.0, 0.0), 3.0, Easing::EaseInOut)
-					//                              .wait(0.5)
-					//                              .repeat(),
-					// Bones::LeftArm => ProcAnim::new(Rot3::identity())
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, 0.605), 3.0, Easing::EaseOut)
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, 0.6), 3.0, Easing::EaseOut)
-					//                            .wait(0.5)
-					//                            .repeat(),
-					// Bones::RightArm => ProcAnim::new(Rot3::identity())
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, -0.605), 3.0, Easing::EaseOut)
-					//                            .anim(Rot3::from_euler_angles(0.0, 0.0, -0.6), 3.0, Easing::EaseOut)
-					//                            .wait(0.5)
-					//                            .repeat(),
-				), collection!(
+				HashMap::new(), collection!(
 					Morphs::Blink => ProcAnim::new(0.0)
 					                          .wait(0.5..5.0)
 					                          .anim(1.0, 0.1, Easing::EaseIn)
 					                          .wait(0.0..0.2)
 					                          .anim(0.0, 0.1, Easing::EaseOut)
 					                          .repeat(),
-					Morphs::Embarrassment => ProcAnim::new(0.0)
-					                                  .anim(1.0, 15.0, Easing::Step)
-					                                  .anim(0.0, 5.0, Easing::Step)
-					                                  .no_autoplay(),
-					Morphs::Smiling => ProcAnim::new(0.0)
-					                            .anim(1.0, 1.0, Easing::EaseIn)
-					                            .wait(15.0)
-					                            .anim(0.0, 1.0, Easing::EaseOut)
-					                            .no_autoplay(),
 				)
 			)),
 		}
+	}
+	
+	/// Creates the character once possible and runs it.
+	fn update_character(&self, entity: &Entity, model: &MMDModel, application: &Application, delta_time: Duration) {
+		if self.character_failed.get() { return; }
+		let mut character = self.character.borrow_mut();
+		
+		if character.is_none() {
+			let Some(config) = self.config.borrow().clone() else { return };
+			match Character::new(config, model, entity, application) {
+				Ok(created) => *character = Some(created),
+				Err(err) => {
+					eprintln!("Unable to create character: {:?}", err);
+					self.character_failed.set(true);
+					return;
+				},
+			}
+		}
+		
+		let Some(character) = character.as_mut() else { return };
+		if character.bodies.is_empty() && !character.init_bodies(entity, application) {
+			return;
+		}
+		
+		for morph in model.state_mut().morphs.iter_mut() {
+			*morph = 0.0;
+		}
+		
+		character.update(application, delta_time.as_secs_f32());
 	}
 	
 	/// Returns the ragdoll rigid body of the given body part, if the model has one.
@@ -122,48 +133,42 @@ impl Component for Miku {
 		let model = application.renderer.borrow_mut().load(self.asset.clone())?;
 		self.model.set(entity.add_component(MMDModel::new(model, &mut *application.renderer.borrow_mut())?));
 		
+		let config_path = self.asset.path().with_file_name("model.toml");
+		match application.renderer.borrow_mut().load(TomlAsset::<ModelCharacterConfig>::at(&config_path)) {
+			Ok(config) => *self.config.borrow_mut() = config.character,
+			Err(err) => eprintln!("Unable to load character config: {}", err),
+		}
+		
+		// The pelvis must be simulated to let the character move and fall.
+		entity.rigid_body_mut(&mut application.physics.borrow_mut())
+		      .set_body_type(rapier3d::dynamics::RigidBodyType::Dynamic, true);
+		
 		application.miku.set(self.as_cref());
 		
 		Ok(())
 	}
 	
 	fn tick(&self, entity: &Entity, application: &Application, delta_time: Duration) -> Result<()> {
-		let mut model = self.model
-		                    .using(entity)
-		                    .unwrap()
-		                    .state
-		                    .borrow_mut();
+		let Some(model) = self.model.using(entity) else { return Ok(()) };
 		
-		for morph in model.morphs.iter_mut() {
-			*morph = (*morph - 5.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
+		self.update_character(entity, model, application, delta_time);
+		
+		let mut model = model.state.borrow_mut();
+		let has_character = self.character.borrow().is_some();
+		
+		if !has_character {
+			for morph in model.morphs.iter_mut() {
+				*morph = 0.0;
+			}
 		}
 		
+		let mut presets = vec![0.0; model.morphs.len()];
 		let active = MORPH_PRESETS.iter().filter(|p| application.input.keyboard.pressed(num_key(p.0))).flat_map(|p| p.1.iter());
-		
 		for &id in active {
-			let id = id as usize;
-			model.morphs[id] = (model.morphs[id] + 10.0 * delta_time.as_secs_f32()).clamp(0.0, 1.0);
+			presets[id as usize] = 1.0;
 		}
 		
 		let mut anims = self.anims.borrow_mut();
-		
-		for rb in model.rigid_bodies.iter() {
-			if let Some(rb) = rb.entity().get(application) {
-				if rb.name != "ForeLock1" && rb.state().velocity.magnitude() > 0.075 {
-					anims.1.get_mut(&Morphs::Embarrassment).unwrap().play();
-					anims.1.get_mut(&Morphs::Smiling).unwrap().play();
-					if !anims.1.get_mut(&Morphs::Blink).unwrap().stopped() {
-						anims.1.get_mut(&Morphs::Blink).unwrap().overdrive(
-							ProcAnim::new(0.0)
-								.anim(1.0, 0.3, Easing::EaseIn)
-								.wait(3.0)
-								.anim(0.0, 0.3, Easing::EaseOut)
-								.wait(3.0)
-						);
-					}
-				}
-			}
-		}
 		
 		for (&bone, anim) in anims.0.iter_mut() {
 			let value = anim.get();
@@ -172,14 +177,76 @@ impl Component for Miku {
 		
 		for (&morph, anim) in anims.1.iter_mut() {
 			let value = anim.get();
-			model.morphs[morph as usize] = value;
+			let slot = &mut model.morphs[morph as usize];
+			*slot = slot.max(value);
 		}
 		
+		for (slot, preset) in model.morphs.iter_mut().zip(presets) {
+			*slot = slot.max(preset);
+		}
+		
+		let _ = delta_time;
 		Ok(())
 	}
 	
-	fn on_inspect(&self, _entity: &Entity, _ui: &mut Ui, _application: &Application) {
-	
+	fn on_inspect(&self, _entity: &Entity, ui: &mut Ui, _application: &Application) {
+		let Ok(mut character) = self.character.try_borrow_mut() else { return };
+		let Some(character) = character.as_mut() else {
+			ui.label("No character");
+			ui.end_row();
+			return;
+		};
+		
+		ui.label("Animation");
+		ui.label(&character.anim.current);
+		ui.end_row();
+		ui.label("Body State");
+		ui.label(&character.anim.body_state);
+		ui.end_row();
+		ui.label("Task");
+		ui.label(character.active.name());
+		ui.end_row();
+		ui.label("Balance");
+		ui.label(format!("{} (pin {:.2}, muscle {:.2})", character.anim.has_balance, character.puppet.pin_weight, character.puppet.muscle_weight));
+		ui.end_row();
+		ui.label("Happiness");
+		ui.add(egui::Slider::new(&mut character.happiness, -2..=2));
+		ui.end_row();
+		ui.label("Tired");
+		ui.checkbox(&mut character.tired, "");
+		ui.end_row();
+		ui.label("Voice Volume");
+		ui.add(egui::Slider::new(&mut character.voice.volume, 0.0..=2.0));
+		ui.end_row();
+		ui.label("Chopsticks");
+		ui.label(format!("Miku {:?}, You {:?}", character.chopsticks.miku, character.chopsticks.player));
+		ui.end_row();
+		
+		ui.label("Actions");
+		ui.horizontal_wrapped(|ui| {
+			if ui.button("Chopsticks").clicked() {
+				character.attempt_chopsticks();
+			}
+			if ui.button("Idle").clicked() {
+				character.set_task(character::ActiveTask::Idle);
+			}
+			if ui.button("Ragdoll").clicked() {
+				character.begin_ragdoll_mode(0.3, "FALLING_LOOP");
+			}
+			let mut draw = debug::get_flag_or_default::<bool>("DebugCharacterDraw");
+			if ui.checkbox(&mut draw, "Debug Draw").changed() {
+				debug::set_flag("DebugCharacterDraw", draw);
+			}
+		});
+		ui.end_row();
+		
+		ui.label("Log");
+		ui.vertical(|ui| {
+			for line in character.debug_log.iter().rev().take(12) {
+				ui.label(egui::RichText::new(line).monospace().small());
+			}
+		});
+		ui.end_row();
 	}
 	
 	fn on_inspect_extra(&self, _entity: &Entity, ui: &mut Ui, application: &Application) {
