@@ -229,30 +229,30 @@ impl Component for MMDModel {
 		}
 		
 		let mut rigid_bodies = BTreeMap::new();
-		
+
 		for desc in self.shared.joints.iter() {
 			let parent_bone_id = self.shared.colliders[desc.collider_a].bone.min(self.shared.colliders[desc.collider_b].bone);
 			let bone_id = self.shared.colliders[desc.collider_a].bone.max(self.shared.colliders[desc.collider_b].bone);
-			
+
 			// Check if joint divides the bone tree
 			if state.bone_ancestors(bone_id)
 			        .all(|id| parent_bone_id != id) {
 				continue;
 			}
-			
+
 			let bone = &state.bones[bone_id];
 			let direction = match bone.connection {
 				BoneConnection::None => bone.model_transform.vector - state.bones[bone.parent.unwrap()].model_transform.vector,
 				BoneConnection::Bone(child_id) => state.bones[child_id].model_transform.vector - bone.model_transform.vector,
 				BoneConnection::Offset(direction) => direction,
 			};
-			
+
 			let rb_ent = Entity::builder(&desc.name)
 				.position(ent_pos * bone.model_transform * face_towards_lossy(direction))
 				.gravity_scale(0.05)
 				.rigid_body_type(RigidBodyType::Dynamic)
 				.build();
-			
+
 			rigid_bodies.insert(bone_id, rb_ent);
 		}
 		
@@ -302,9 +302,11 @@ impl Component for MMDModel {
 			        .any(|id| parent_bone_id == id) {
 				if bone_a < bone_b {
 					rb_b.set_parent(rb_a.as_ref(), false, application);
+					state.bones[bone_b].free_physics = desc.body_part.is_none();
 					state.rigid_bodies.push(rb_b.add_component(MMDRigidBody::new(bone_b, desc.body_part, ent_pos.inverse() * (*rb_b.state().position), joint_ref, self.as_cref())));
 				} else {
 					rb_a.set_parent(rb_b.as_ref(), false, application);
+					state.bones[bone_a].free_physics = desc.body_part.is_none();
 					state.rigid_bodies.push(rb_a.add_component(MMDRigidBody::new(bone_a, desc.body_part, ent_pos.inverse() * (*rb_a.state().position), joint_ref, self.as_cref())));
 				}
 			}
@@ -379,15 +381,41 @@ impl Component for MMDModel {
 		let state = &mut *self.state.borrow_mut();
 		
 		for bone in &state.bones {
-			let transform = if let Some(transform) = bone.override_transform {
-				transform.to_superset()
-			} else if let Some(id) = bone.parent {
+			let animated = if let Some(id) = bone.parent {
 				&state.bones_mats[id] * &bone.local_transform * &bone.anim_transform
 			} else {
 				let transform: AMat4 = bone.anim_transform.to_superset();
 				&bone.local_transform * &transform
 			};
-		
+
+			let transform = if let Some(override_transform) = bone.override_transform {
+				let transform: AMat4 = override_transform.to_superset();
+				if bone.free_physics {
+					// Free PMX bodies (hair, skirt) lag behind fast movements. Don't let the
+					// physics pose drift far enough from the animated pose to stretch the mesh.
+					const MAX_FREE_OFFSET: f32 = 0.5;
+					let animated_m = animated.to_homogeneous();
+					let mut matrix = transform.to_homogeneous();
+					let animated_t = vector!(animated_m[(0, 3)], animated_m[(1, 3)], animated_m[(2, 3)]);
+					let physics_t = vector!(matrix[(0, 3)], matrix[(1, 3)], matrix[(2, 3)]);
+					let delta = physics_t - animated_t;
+					let distance = delta.norm();
+					if distance > MAX_FREE_OFFSET {
+						let corrected = animated_t + delta * (MAX_FREE_OFFSET / distance);
+						matrix[(0, 3)] = corrected.x;
+						matrix[(1, 3)] = corrected.y;
+						matrix[(2, 3)] = corrected.z;
+						AMat4::from_matrix_unchecked(matrix)
+					} else {
+						transform
+					}
+				} else {
+					transform
+				}
+			} else {
+				animated
+			};
+
 			state.bones_mats.push(transform);
 		}
 		

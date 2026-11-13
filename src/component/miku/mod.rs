@@ -139,7 +139,7 @@ impl Component for Miku {
 			Err(err) => eprintln!("Unable to load character config: {}", err),
 		}
 		
-		// The pelvis must be simulated to let the character move and fall.
+		// The pelvis/root body must be simulated: the ragdoll joints connect the torso and legs to it.
 		entity.rigid_body_mut(&mut application.physics.borrow_mut())
 		      .set_body_type(rapier3d::dynamics::RigidBodyType::Dynamic, true);
 		

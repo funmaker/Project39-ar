@@ -4,10 +4,12 @@
 
 pub mod animator;
 pub mod clip;
+pub mod fingers;
 pub mod human;
 pub mod pose;
 pub mod retarget;
 
 pub use animator::{Animator, ControllerDesc, LAYER_FACE, LAYER_LEGS, LAYER_TORSO};
+pub use fingers::{FingerAnimator, FingerCurl};
 pub use pose::Pose;
 pub use retarget::{Retarget, SkeletonDesc};

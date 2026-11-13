@@ -437,6 +437,18 @@
 			"openviva/sfx/lily_impact2.ogg",
 			"openviva/sfx/lily_impact3.ogg",
 			"openviva/sfx/lily_impact4.ogg"
+		],
+		"gesture_follow": [
+			"openviva/sfx/gesture_follow.ogg"
+		],
+		"gesture_present": [
+			"openviva/sfx/gesture_present.ogg"
+		],
+		"gesture_hello": [
+			"openviva/sfx/gesture_hello.ogg"
+		],
+		"gesture_mechanism": [
+			"openviva/sfx/gesture_mechanism.ogg"
 		]
 	}
 }

@@ -163,26 +163,15 @@ impl Character {
 		}
 	}
 
-	/// Procedural overrides of the pose: lip flaps while speaking and finger counts (chopsticks).
-	pub(super) fn apply_procedural(&mut self, _ctx: &Ctx, pose: &mut Pose) {
+	/// Procedural overrides of the pose: lip flaps while speaking and procedural finger posing
+	/// (the chopsticks game and any other behavior that moves the fingers).
+	pub(super) fn apply_procedural(&mut self, ctx: &Ctx, pose: &mut Pose) {
 		if let Some(jaw) = human::find_morph("jawDown") {
 			pose.morphs[jaw] = pose.morphs[jaw].max(self.voice.mouth * 0.6);
 		}
-		
-		let Some(fingers) = self.finger_override else { return };
 
-		for (side_id, side) in [human::Side::Left, human::Side::Right].into_iter().enumerate() {
-			// The clip shows the index finger extended and the others curled: use them as references.
-			let extended: Vec<Rot3> = (0..3).map(|p| pose.rotations[side.finger(1, p)]).collect();
-			for finger in 1..5 {
-				let curled_ref = if finger == 1 { 2 } else { finger };
-				let curled: Vec<Rot3> = (0..3).map(|p| pose.rotations[side.finger(curled_ref, p)]).collect();
-				let extension = fingers[side_id][finger];
-				for p in 0..3 {
-					pose.rotations[side.finger(finger, p)] = curled[p].slerp(&extended[p], extension);
-				}
-			}
-		}
+		self.fingers.update(ctx.dt);
+		self.fingers.apply(pose);
 	}
 }
 

@@ -564,9 +564,6 @@ impl Character {
 		let pin_weight = self.puppet.pin_weight;
 		let muscle_weight = self.puppet.muscle_weight;
 
-		// Hips movement and impulses (OpenViva's `ApplyMovement`, `PlayForce` and `StandOnGround`).
-		let move_velocity = self.puppet.desired_velocity;
-
 		let targets: Vec<Isometry3> = self.bodies.iter().map(|body| {
 			let mut target = anchor * self.bone_skin.get(body.bone).copied().unwrap_or_else(Isometry3::identity) * body.rest;
 			let reach = match body.part {
@@ -592,30 +589,29 @@ impl Character {
 			let mut velocity = body.velocity;
 			let mut angular = body.angular_velocity;
 
-			// Linear pin.
+			// A spring towards the target, frame rate independent: the old `error / dt` controller
+			// became stiffer (and overshot) the higher the frame rate was.
 			let error = target.translation.vector - position.translation.vector;
-			if id == self.pelvis {
-				let mut desired = move_velocity + error * (0.3 / dt);
-				desired.y = error.y / dt * 0.5;
-				velocity += (desired - velocity) * pin * 0.9;
-			} else {
-				velocity += (clamp_norm(error / dt, MAX_PIN_SPEED) - velocity) * pin * 0.9;
-			}
+			let desired = clamp_norm(error * PIN_STIFFNESS, MAX_PIN_SPEED);
+			let linear_response = 1.0 - (-PIN_RESPONSE * dt).exp();
+			velocity += (desired - velocity) * pin * linear_response;
 
 			// Rotation: world space pin blended with a muscle relative to the parent body.
-			let world_desired = rotation_velocity(target.rotation * position.rotation.inverse(), dt);
+			let world_desired = (target.rotation * position.rotation.inverse()).scaled_axis() * ANG_STIFFNESS;
 			let desired = match body.parent {
 				Some(parent) => {
 					let parent_body = &self.bodies[parent];
 					let relative = targets[parent].rotation.inverse() * target.rotation;
 					let muscle_target = parent_body.position.rotation * relative;
-					let muscle_desired = rotation_velocity(muscle_target * position.rotation.inverse(), dt) + parent_body.angular_velocity;
+					let muscle_desired = (muscle_target * position.rotation.inverse()).scaled_axis() * ANG_STIFFNESS
+					                   + parent_body.angular_velocity;
 					muscle_desired.lerp(&world_desired, pin)
 				},
 				None => world_desired,
 			};
 			let strength = if body.parent.is_some() { pin.max(muscle * 0.5) } else { pin };
-			angular += (clamp_norm(desired, MAX_MUSCLE_SPEED) - angular) * strength * 0.9;
+			let angular_response = 1.0 - (-ANG_RESPONSE * dt).exp();
+			angular += (clamp_norm(desired, MAX_MUSCLE_SPEED) - angular) * strength * angular_response;
 
 			self.bodies[id].target = target;
 
@@ -630,21 +626,25 @@ impl Character {
 	/// Called when ragdoll mode starts.
 	fn ragdoll_mode_began(&mut self) {
 		self.stop_headpat_silently();
+		self.stop_hug_silently();
 		self.handhold_clear();
 	}
 }
 
-/// Maximum speed pins move bodies at, in m/s. Keeps big pose differences from yanking the ragdoll.
-const MAX_PIN_SPEED: f32 = 4.0;
+/// Position spring stiffness, in 1/s.
+const PIN_STIFFNESS: f32 = 25.0;
+/// How quickly body velocities follow the pin, in 1/s.
+const PIN_RESPONSE: f32 = 30.0;
+/// Rotation spring stiffness, in 1/s.
+const ANG_STIFFNESS: f32 = 20.0;
+/// How quickly body angular velocities follow the muscles, in 1/s.
+const ANG_RESPONSE: f32 = 25.0;
+/// Maximum correction speed of pins, in m/s. Keeps big pose differences from yanking the ragdoll.
+const MAX_PIN_SPEED: f32 = 6.0;
 /// Maximum angular speed of muscles, in rad/s.
-const MAX_MUSCLE_SPEED: f32 = 14.0;
+const MAX_MUSCLE_SPEED: f32 = 20.0;
 
 fn clamp_norm(v: Vec3, max: f32) -> Vec3 {
 	let norm = v.norm();
 	if norm > max { v * (max / norm) } else { v }
-}
-
-/// Angular velocity rotating by `rotation` in `dt` seconds.
-fn rotation_velocity(rotation: Rot3, dt: f32) -> Vec3 {
-	rotation.scaled_axis() / dt
 }

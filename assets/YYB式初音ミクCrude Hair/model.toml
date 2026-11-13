@@ -7,6 +7,24 @@ collision_mask = 0b1011111011111100
 id = 19
 collision_mask = 0b1011111011111100
 
+# Forearms and hands: don't collide with the torso, upper arms or each other while the
+# character is being animated. This is what made crossed-arm poses jitter against the body.
+[[rigid_bodies]]
+id = 20
+collision_mask = 0b1111011111100
+
+[[rigid_bodies]]
+id = 21
+collision_mask = 0b1111011111100
+
+[[rigid_bodies]]
+id = 22
+collision_mask = 0b1111011111100
+
+[[rigid_bodies]]
+id = 23
+collision_mask = 0b1111011111100
+
 
 [[joints]]
 name = 'Torso'

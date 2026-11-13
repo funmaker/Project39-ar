@@ -2,6 +2,7 @@ use crate::debug;
 use crate::application::Hand;
 use crate::math::{Color, Point3, Vec3};
 use super::super::super::model::mmd::BodyPart;
+use super::super::anim::FingerCurl;
 use super::{Character, Ctx};
 use super::idle::ActiveTask;
 use super::look::LookTarget;
@@ -84,7 +85,6 @@ pub struct Chopsticks {
 	state: GameState,
 	pub player: Fingers,
 	pub miku: Fingers,
-	miku_rest: [[f32; 5]; 2],
 	showed_hype: bool,
 	wait_for_idle: bool,
 	wait_turns_until_neutral: i32,
@@ -103,7 +103,6 @@ impl Chopsticks {
 			state: GameState::None,
 			player: Fingers::new(),
 			miku: Fingers::new(),
-			miku_rest: Fingers::new().extension(),
 			showed_hype: false,
 			wait_for_idle: false,
 			wait_turns_until_neutral: 3,
@@ -146,7 +145,7 @@ impl Character {
 		self.chopsticks.active = false;
 		self.chopsticks.state = GameState::None;
 		self.chopsticks.reach = None;
-		self.finger_override = None;
+		self.fingers.release();
 		self.puppet.hand_reach = [None, None];
 		self.animator.set_param("ChopsticksReach", 0.0);
 	}
@@ -201,15 +200,11 @@ impl Character {
 			self.update_chopsticks_game(ctx);
 		}
 
-		// Animate Miku's fingers towards their counts.
-		let target = self.chopsticks.miku.extension();
-		for side in 0..2 {
-			for finger in 0..5 {
-				let rest = &mut self.chopsticks.miku_rest[side][finger];
-				*rest += (target[side][finger] - *rest) * (ctx.dt * 8.0).min(1.0);
-			}
+		// Animate Miku's fingers towards their counts. The finger animator drives the actual
+		// finger bones, so both hands (and any other finger animation) use the same system.
+		if self.chopsticks.active {
+			self.fingers.set_target(FingerCurl::from_extensions(self.chopsticks.miku.extension()), 8.0);
 		}
-		self.finger_override = self.chopsticks.active.then_some(self.chopsticks.miku_rest);
 
 		self.draw_chopsticks_hud(ctx);
 	}
@@ -432,7 +427,9 @@ impl Character {
 		}
 	}
 
-	/// Shows the player's finger counts next to their hands (the player's hand models have no fingers).
+	/// Shows the player's finger counts next to their hands. The player's hands are static meshes
+	/// (modeled fingers but no bone rig), so the count is drawn as text; Miku's own fingers use the
+	/// real finger bones via `FingerAnimator`.
 	fn draw_chopsticks_hud(&self, ctx: &Ctx) {
 		if !self.chopsticks.active { return; }
 		for (hand, right) in [(Hand::Left, false), (Hand::Right, true)] {

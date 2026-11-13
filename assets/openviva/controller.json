@@ -1745,6 +1745,26 @@
 					"mirror": false,
 					"cycle_offset": 0.0
 				},
+				"stand_kiss_happy_cheek_left": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_happy_cheek_right": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
 				"stand_locomotion_spine_stable": {
 					"motion": {
 						"tree": {
@@ -4521,6 +4541,126 @@
 					"mirror": false,
 					"cycle_offset": 0.0
 				},
+				"stand_hug_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "hugSide",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_hug_angry_right_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": true,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_angry_far_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_angry_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_hug_far_to_stand": {
+					"motion": {
+						"clip": "stand_to_stand_hug_far_happy"
+					},
+					"speed": -1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_hug_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "hugSide",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_hug_happy_right_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": true,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_far_happy_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_happy_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
 				"stand_idle2_happy": {
 					"motion": {
 						"clip": "stand_happy_idle2"
@@ -4534,6 +4674,86 @@
 				"stand_impressed1": {
 					"motion": {
 						"clip": "stand_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_cheek_left": {
+					"motion": {
+						"clip": "stand_kiss_angry_cheek_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_cheek_right": {
+					"motion": {
+						"clip": "stand_kiss_angry_cheek_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_left_to_angry": {
+					"motion": {
+						"clip": "stand_kiss_angry_left_to_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_left_to_happy": {
+					"motion": {
+						"clip": "stand_kiss_angry_left_to_happy"
+					},
+					"speed": 0.9,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_right_to_angry": {
+					"motion": {
+						"clip": "stand_kiss_angry_right_to_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_right_to_happy": {
+					"motion": {
+						"clip": "stand_kiss_angry_right_to_happy"
+					},
+					"speed": 0.9,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_happy_cheek_left": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_happy_cheek_right": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_right"
 					},
 					"speed": 1.0,
 					"speed_parameter": null,
@@ -5039,6 +5259,26 @@
 				"stand_to_squat": {
 					"motion": {
 						"clip": "stand_to_squat"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_hug_far_angry": {
+					"motion": {
+						"clip": "stand_to_stand_hug_far_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_hug_far_happy": {
+					"motion": {
+						"clip": "stand_to_stand_hug_far_happy"
 					},
 					"speed": 1.0,
 					"speed_parameter": null,
@@ -6268,6 +6508,116 @@
 					"mirror": false,
 					"cycle_offset": 0.0
 				},
+				"stand_hug_angry_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "hugSide",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_hug_angry_right_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": true,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_angry_far_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_angry_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_hug_happy_loop": {
+					"motion": {
+						"tree": {
+							"blend_type": 0,
+							"parameter": "hugSide",
+							"parameter_y": "speed",
+							"children": [
+								{
+									"motion": {
+										"clip": "stand_hug_happy_right_loop"
+									},
+									"threshold": -1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": true,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_far_happy_loop"
+									},
+									"threshold": 0.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								},
+								{
+									"motion": {
+										"clip": "stand_hug_happy_right_loop"
+									},
+									"threshold": 1.0,
+									"position": [
+										0.0,
+										0.0
+									],
+									"time_scale": 1.0,
+									"mirror": false,
+									"direct_parameter": "speed"
+								}
+							]
+						}
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
 				"stand_idle2_happy": {
 					"motion": {
 						"clip": "stand_happy_idle2"
@@ -6281,6 +6631,86 @@
 				"stand_impressed1": {
 					"motion": {
 						"clip": "stand_impressed1"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_cheek_left": {
+					"motion": {
+						"clip": "stand_kiss_angry_cheek_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_cheek_right": {
+					"motion": {
+						"clip": "stand_kiss_angry_cheek_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_left_to_angry": {
+					"motion": {
+						"clip": "stand_kiss_angry_left_to_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_left_to_happy": {
+					"motion": {
+						"clip": "stand_kiss_angry_left_to_happy"
+					},
+					"speed": 0.9,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_right_to_angry": {
+					"motion": {
+						"clip": "stand_kiss_angry_right_to_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_angry_right_to_happy": {
+					"motion": {
+						"clip": "stand_kiss_angry_right_to_happy"
+					},
+					"speed": 0.9,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_happy_cheek_left": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_left"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_kiss_happy_cheek_right": {
+					"motion": {
+						"clip": "stand_kiss_happy_cheek_right"
 					},
 					"speed": 1.0,
 					"speed_parameter": null,
@@ -6766,6 +7196,26 @@
 				"stand_tired_rub_eyes_right": {
 					"motion": {
 						"clip": "stand_tired_rub_eyes_right"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_hug_far_angry": {
+					"motion": {
+						"clip": "stand_to_stand_hug_far_angry"
+					},
+					"speed": 1.0,
+					"speed_parameter": null,
+					"time_parameter": null,
+					"mirror": false,
+					"cycle_offset": 0.0
+				},
+				"stand_to_stand_hug_far_happy": {
+					"motion": {
+						"clip": "stand_to_stand_hug_far_happy"
 					},
 					"speed": 1.0,
 					"speed_parameter": null,
@@ -7302,9 +7752,69 @@
 			"length": 1.5416666666666667,
 			"looping": false
 		},
+		"stand_hug_angry_far_loop": {
+			"file": "openviva/anims/stand_hug_angry_far_loop.p39a",
+			"length": 6.633333333333334,
+			"looping": true
+		},
+		"stand_hug_angry_right_loop": {
+			"file": "openviva/anims/stand_hug_angry_right_loop.p39a",
+			"length": 1.6333333333333333,
+			"looping": true
+		},
+		"stand_hug_far_happy_loop": {
+			"file": "openviva/anims/stand_hug_far_happy_loop.p39a",
+			"length": 1.6333333333333333,
+			"looping": true
+		},
+		"stand_hug_happy_right_loop": {
+			"file": "openviva/anims/stand_hug_happy_right_loop.p39a",
+			"length": 1.6333333333333333,
+			"looping": true
+		},
 		"stand_impressed1": {
 			"file": "openviva/anims/stand_impressed1.p39a",
 			"length": 2.466666666666667,
+			"looping": false
+		},
+		"stand_kiss_angry_cheek_left": {
+			"file": "openviva/anims/stand_kiss_angry_cheek_left.p39a",
+			"length": 2.6666666666666665,
+			"looping": false
+		},
+		"stand_kiss_angry_cheek_right": {
+			"file": "openviva/anims/stand_kiss_angry_cheek_right.p39a",
+			"length": 2.6666666666666665,
+			"looping": false
+		},
+		"stand_kiss_angry_left_to_angry": {
+			"file": "openviva/anims/stand_kiss_angry_left_to_angry.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"stand_kiss_angry_left_to_happy": {
+			"file": "openviva/anims/stand_kiss_angry_left_to_happy.p39a",
+			"length": 5.166666666666667,
+			"looping": false
+		},
+		"stand_kiss_angry_right_to_angry": {
+			"file": "openviva/anims/stand_kiss_angry_right_to_angry.p39a",
+			"length": 2.4583333333333335,
+			"looping": false
+		},
+		"stand_kiss_angry_right_to_happy": {
+			"file": "openviva/anims/stand_kiss_angry_right_to_happy.p39a",
+			"length": 5.166666666666667,
+			"looping": false
+		},
+		"stand_kiss_happy_cheek_left": {
+			"file": "openviva/anims/stand_kiss_happy_cheek_left.p39a",
+			"length": 4.75,
+			"looping": false
+		},
+		"stand_kiss_happy_cheek_right": {
+			"file": "openviva/anims/stand_kiss_happy_cheek_right.p39a",
+			"length": 4.75,
 			"looping": false
 		},
 		"stand_poke_face_1_left": {
@@ -7475,6 +7985,16 @@
 		"stand_to_squat": {
 			"file": "openviva/anims/stand_to_squat.p39a",
 			"length": 0.9666666666666667,
+			"looping": false
+		},
+		"stand_to_stand_hug_far_angry": {
+			"file": "openviva/anims/stand_to_stand_hug_far_angry.p39a",
+			"length": 1.6333333333333333,
+			"looping": false
+		},
+		"stand_to_stand_hug_far_happy": {
+			"file": "openviva/anims/stand_to_stand_hug_far_happy.p39a",
+			"length": 0.6333333333333333,
 			"looping": false
 		},
 		"stand_to_stand_tired": {

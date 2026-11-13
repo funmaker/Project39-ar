@@ -161,6 +161,7 @@ impl Character {
 			Transition::Custom { handler } => match handler.as_str() {
 				"postFacePokeAnimTransition" => self.poke.post_face_poke.clone().unwrap_or_else(|| self.last_returnable_idle()),
 				"TransitionToPostTummyPokeAnim" => self.poke.post_tummy_poke.clone().unwrap_or_else(|| self.last_returnable_idle()),
+				"TransitionToPostKiss" => self.kiss.post_kiss_anim.clone().unwrap_or_else(|| self.last_returnable_idle()),
 				_ => self.last_returnable_idle(),
 			},
 		};
@@ -238,6 +239,7 @@ impl Character {
 		self.headpat_on_animation_change(old, new);
 		self.poke_on_animation_change(old, new);
 		self.proximity_on_animation_change(old, new);
+		self.kiss_on_animation_change(old, new);
 		self.chopsticks_on_animation_change(old, new);
 		self.idle_on_animation_change(old, new);
 		self.locomotion_on_animation_change(new);

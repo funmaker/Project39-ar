@@ -1,7 +1,7 @@
 
 //! Port of OpenViva's character ("Lily"/Shinobu) logic: physics based animation of the ragdoll,
 //! the animation state machine, voice and the player interactions (headpats, pokes, hand holding,
-//! picking up, gestures, following and the chopsticks game).
+//! kissing, hugging, picking up, gestures, following and the chopsticks game).
 //!
 //! The character is split across files like OpenViva's partial `Lily` class: every file adds an
 //! `impl Character` block with one area of logic.
@@ -18,7 +18,9 @@ mod data;
 mod gestures;
 mod handhold;
 mod headpat;
+mod hug;
 mod idle;
+mod kiss;
 mod look;
 mod poke;
 mod proximity;
@@ -33,14 +35,16 @@ use crate::component::model::MMDModel;
 use crate::component::model::mmd::BodyPart;
 use crate::math::{Isometry3, Point3, Rot3, Vec3};
 use crate::renderer::assets_manager::JsonAsset;
-use super::anim::{human, Animator, ControllerDesc, Pose, Retarget, SkeletonDesc};
+use super::anim::{human, Animator, ControllerDesc, FingerAnimator, Pose, Retarget, SkeletonDesc};
 pub use animation::AnimState;
 pub use chopsticks::Chopsticks;
 pub use data::{AnimationData, VoiceData};
 pub use gestures::GestureDetector;
 pub use handhold::Handhold;
 pub use headpat::Headpat;
+pub use hug::Hug;
 pub use idle::{ActiveTask, Idle};
+pub use kiss::Kiss;
 pub use look::LookAt;
 pub use poke::Poke;
 pub use proximity::Proximity;
@@ -217,8 +221,12 @@ pub struct Character {
 	pub handhold: Handhold,
 	pub poke: Poke,
 	pub proximity: Proximity,
+	pub hug: Hug,
+	pub kiss: Kiss,
 	pub chopsticks: Chopsticks,
 	pub gestures: GestureDetector,
+	/// Procedural finger posing (chopsticks and other finger animations).
+	pub fingers: FingerAnimator,
 
 	pub pose: Pose,
 	anim_transforms: Vec<Isometry3>,
@@ -227,8 +235,6 @@ pub struct Character {
 	/// Last position and smoothed velocity of the player's hands.
 	last_hand_positions: HashMap<u64, (Point3, Vec3)>,
 	last_head: Option<Point3>,
-	/// Finger extension override of the hands (0 curled .. 1 extended), `[left, right][finger]`.
-	pub finger_override: Option<[[f32; 5]; 2]>,
 	/// Shown in the inspector.
 	pub debug_log: Vec<String>,
 	/// Scripted test scenario, see `scenario`.
@@ -274,15 +280,17 @@ impl Character {
 			handhold: Handhold::new(),
 			poke: Poke::new(),
 			proximity: Proximity::new(),
+			hug: Hug::new(),
+			kiss: Kiss::new(),
 			chopsticks: Chopsticks::new(),
 			gestures: GestureDetector::new(),
+			fingers: FingerAnimator::new(),
 			pose: Pose::rest(),
 			anim_transforms: vec![],
 			bone_world: vec![],
 			bone_skin: vec![],
 			last_hand_positions: HashMap::new(),
 			last_head: None,
-			finger_override: None,
 			debug_log: vec![],
 			scenario: scenario::Scenario::from_env(),
 		};
@@ -339,6 +347,7 @@ impl Character {
 
 		self.pelvis = bodies.iter().position(|b| b.part == BodyPart::Pelvis).unwrap_or(0);
 		self.own_entities = rigid_bodies.iter().map(|rb| rb.entity(application).id).collect();
+		self.own_entities.extend(bodies.iter().filter_map(|b| b.entity.raw()));
 		self.own_entities.insert(entity.id);
 
 		{
@@ -525,6 +534,8 @@ impl Character {
 		self.update_handhold(&ctx);
 		self.update_poke(&ctx);
 		self.update_proximity(&ctx);
+		self.update_hug(&ctx);
+		self.update_kiss(&ctx);
 		self.update_active(&ctx);
 
 		self.update_animation_graph(&ctx);
@@ -558,9 +569,26 @@ impl Character {
 			bone.anim_transform = nalgebra::Similarity3::from_isometry(*anim, 1.0);
 		}
 
+		// The source face rig often activates several eye-closing blend shapes at once. MMD's eye
+		// morphs are full shape replacements, so adding them all makes the eyelids collapse into
+		// the cheeks. Give the combined "happy closed eyes" morph priority and collapse each
+		// side's upper/lower lid shapes into one closure.
+		let morph_value = |name: &str| human::find_morph(name).map_or(0.0, |id| self.pose.morphs[id]);
+		let happy_closed = morph_value("happyClosedEyelids").clamp(0.0, 1.0);
+		let upper_l = morph_value("upperEyelid_l").clamp(0.0, 1.0);
+		let upper_r = morph_value("upperEyelid_r").clamp(0.0, 1.0);
+
 		for (name, targets) in &self.config.morphs {
 			let Some(id) = human::find_morph(name) else { continue };
-			let value = self.pose.morphs[id];
+			let mut value = self.pose.morphs[id];
+			match name.as_str() {
+				"upperEyelid_l" | "upperEyelid_r" | "madEye_l" | "madEye_r" => {
+					value *= 1.0 - happy_closed;
+				},
+				"lowerEyelid_l" => value *= (1.0 - happy_closed) * (1.0 - upper_l),
+				"lowerEyelid_r" => value *= (1.0 - happy_closed) * (1.0 - upper_r),
+				_ => {},
+			}
 			for &(morph, weight) in targets {
 				if let Some(slot) = state.morphs.get_mut(morph) {
 					*slot = (*slot + value * weight).min(1.0);

@@ -65,11 +65,12 @@ HUMANOID = _humanoid()
 BONE_NAMES = [b[0] for b in HUMANOID]
 BONE_INDEX = {name: i for i, name in enumerate(BONE_NAMES)}
 
-# Animations used by the port: everything the character can do while standing, sitting, squatting or ragdolling,
-# without the ones that need props or places (bath, bed, cooking, camera, bag, horse, cards, ...).
-INCLUDED_STATES = {"STAND", "FLOOR_SIT", "SQUAT", "OFFBALANCE"}
+# Animations used by the port: everything the character can do while standing, hugging, sitting, squatting or
+# ragdolling, without the ones that need props or places (bath, bed, cooking, camera, bag, horse, cards, ...).
+# Kissing and hugging are player interactions, so they are kept.
+INCLUDED_STATES = {"STAND", "STANDING_HUG", "FLOOR_SIT", "SQUAT", "OFFBALANCE"}
 EXCLUDED = re.compile(r"BATHTUB|CATTAIL|EGG|MIXING|MORTAR|BAG|DONUT|EAT_ITEM|SMELL_ITEM|PHOTO|POLAROID|HORSEBACK|SLIDINGDOOR|"
-                      r"SUNHAT|WHEAT|CARD|BEG|MERCHANT|JEALOUS|THROW|TIP_TOE|PICKUP|CHANGE_ITEM|TO_BED|SPLASHED|KISS|HUG|"
+                      r"SUNHAT|WHEAT|CARD|BEG|MERCHANT|JEALOUS|THROW|TIP_TOE|PICKUP|CHANGE_ITEM|TO_BED|SPLASHED|"
                       r"CHASE|REACT_PERV|CRAWL|RELAX|POINT_OUT|OUTFIT_LIKE|POSE_PEACE|SOCIAL|STEAL|SCARED")
 
 
@@ -347,6 +348,21 @@ def export_voice(viva, guids, out_dir, voice_lines):
 	return result
 
 
+def export_audio(guids, out_dir, guid, name):
+	"""Converts a single audio clip asset into an ogg file and returns its path."""
+	path = guids.path(guid)
+	return export_sound_file(path, out_dir, name + ".ogg")
+
+
+def export_sound_file(path, out_dir, file_name):
+	sound_dir = os.path.join(out_dir, "sfx")
+	os.makedirs(sound_dir, exist_ok=True)
+	target = os.path.join(sound_dir, file_name)
+	if not os.path.exists(target):
+		subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", path, "-ac", "1", "-c:a", "libvorbis", "-q:a", "3", target], check=True)
+	return "openviva/sfx/" + file_name
+
+
 def export_sound_set(guids, out_dir, guid):
 	"""Converts a `SoundSet` asset (e.g. impact or get-up sounds) into a list of ogg files."""
 	path = guids.path(guid)
@@ -461,6 +477,11 @@ def main():
 		"get_up": export_sound_set(guids, out_dir, settings["m_getUpSound"]["guid"]),
 		"impact_soft": export_sound_set(guids, out_dir, settings["m_bodyImpactSoftSound"]["guid"]),
 		"impact_hard": export_sound_set(guids, out_dir, settings["m_bodyImpactHardSound"]["guid"]),
+		# Player gesture confirmation sounds from `ObjectFingerPointer` in PLAYER.prefab.
+		"gesture_follow": [export_audio(guids, out_dir, "3a5aafad270dc2a6c8ee3006dfb3623a", "gesture_follow")],
+		"gesture_present": [export_audio(guids, out_dir, "a17d2d760ad58888fb1ca15e3cee23a2", "gesture_present")],
+		"gesture_hello": [export_audio(guids, out_dir, "4d92c0bf962bac82b81243623097fd65", "gesture_hello")],
+		"gesture_mechanism": [export_audio(guids, out_dir, "f92703966e1a730cd9ba44579ec31adc", "gesture_mechanism")],
 	}
 
 	with open(os.path.join(out_dir, "skeleton.json"), "w") as file:

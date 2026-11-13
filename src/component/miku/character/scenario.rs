@@ -2,8 +2,8 @@
 //! Scripted interaction scenarios for testing the character without VR or manual input.
 //!
 //! Enabled with the `P39_MIKU_SCENARIO` environment variable (`headpat`, `rough_headpat`, `poke`, `tummy`,
-//! `pickup`, `handhold`, `follow`, `wave`, `chopsticks`). The scenario moves the player's head and hands and
-//! simulates grabs; progress is printed to stdout.
+//! `pickup`, `handhold`, `follow`, `wave`, `chopsticks`, `kiss`, `kiss_angry`, `hug`). The scenario moves the
+//! player's head and hands and simulates grabs; progress is printed to stdout.
 
 use std::time::Instant;
 use rapier3d::dynamics::FixedJoint;
@@ -25,6 +25,8 @@ pub struct Scenario {
 	grab: Option<crate::component::ComponentRef<JointComponent>>,
 	/// Smoothed head position, followed by the patting hand.
 	smooth_head: Option<Point3>,
+	/// Fixed floor position and forward for the chopsticks camera, so it doesn't chase her.
+	chop_origin: Option<(Point3, Vec3)>,
 }
 
 impl Scenario {
@@ -41,7 +43,7 @@ impl Scenario {
 	pub fn from_env() -> Option<Self> {
 		let name = std::env::var("P39_MIKU_SCENARIO").ok()?;
 		println!("SCENARIO {name}");
-		Some(Scenario { name, start: Instant::now(), step: 0, grab: None, smooth_head: None })
+		Some(Scenario { name, start: Instant::now(), step: 0, grab: None, smooth_head: None, chop_origin: None })
 	}
 }
 
@@ -175,7 +177,8 @@ impl Character {
 				if scenario.at(0, t, 3.0) {
 					self.scenario_set_head(ctx, self.scenario_point(1.2, 0.0, 1.5), head);
 				} else if scenario.at(1, t, 4.0) {
-					self.on_gesture(Hand::Right, Gesture::Follow, ctx);
+					let position = ctx.player.hand(Hand::Right).map_or_else(|| Point3::from(ctx.player.head.translation.vector), |h| Point3::from(h.position.translation.vector));
+					self.fire_gesture(Hand::Right, Gesture::Follow, position, ctx);
 				}
 				if t > 5.0 && t < 10.0 {
 					let pos = Point3::from(ctx.player.head.translation.vector) + vector!(0.6, 0.0, 0.0) * ctx.dt;
@@ -191,15 +194,41 @@ impl Character {
 				if scenario.at(0, t, 3.0) {
 					self.scenario_set_head(ctx, self.scenario_point(1.2, 0.0, 1.5), head);
 				} else if scenario.at(1, t, 4.0) {
-					self.on_gesture(Hand::Right, Gesture::Hello, ctx);
+					let position = ctx.player.hand(Hand::Right).map_or_else(|| Point3::from(ctx.player.head.translation.vector), |h| Point3::from(h.position.translation.vector));
+					self.fire_gesture(Hand::Right, Gesture::Hello, position, ctx);
 				}
 			},
+			"kiss" | "kiss_angry" => {
+				if t > 3.0 {
+					if scenario.name == "kiss_angry" {
+						self.happiness = -2;
+					}
+					let head = self.animated_head();
+					let cheek = head * Point3::from(vector!(0.026, 0.016, 0.018));
+					self.scenario_set_head(ctx, cheek, self.head_position());
+					// Keep one hand up so this doesn't also look like a hug.
+					self.scenario_set_hand(ctx, Hand::Left, self.scenario_point(0.5, -0.3, 0.9));
+					self.scenario_set_hand(ctx, Hand::Right, self.scenario_point(0.5, 0.3, 1.9));
+				}
+			},
+			"hug" => {
+				if t < 3.0 { return; }
+				let torso = self.body(BodyPart::Torso).map(|b| Point3::from(b.position.translation.vector)).unwrap_or_else(|| self.floor_pos() + Vec3::y());
+				let forward = self.forward();
+				let left = self.left();
+				// Stand in front of her, facing her, with both hands around her back.
+				self.scenario_set_head(ctx, torso + forward * 0.32 + Vec3::y() * 0.45, torso);
+				let hands = if t < 10.0 { torso } else { torso + Vec3::y() * 0.8 };
+				self.scenario_set_hand(ctx, Hand::Left, hands + left * 0.18 - forward * 0.05);
+				self.scenario_set_hand(ctx, Hand::Right, hands - left * 0.18 - forward * 0.05);
+			},
 			"chopsticks" => {
-				let sit = self.scenario_point(0.7, 0.0, 0.7);
+				let (base, forward) = *scenario.chop_origin.get_or_insert_with(|| (self.floor_pos(), self.forward()));
+				let sit = base + forward * 1.1 + Vec3::y() * 0.7;
 				if t > 2.0 {
-					self.scenario_set_head(ctx, sit, self.scenario_point(0.0, 0.0, 0.6));
-					let rest_l = self.scenario_point(0.45, -0.15, 0.45);
-					let rest_r = self.scenario_point(0.45, 0.15, 0.45);
+					self.scenario_set_head(ctx, sit, base + Vec3::y() * 0.45);
+					let rest_l = base + forward * 0.45 + self.left() * 0.15 + Vec3::y() * 0.45;
+					let rest_r = base + forward * 0.45 - self.left() * 0.15 + Vec3::y() * 0.45;
 					// Take the player's turns: tap her alive hand with an alive hand, every 5 seconds.
 					let mut left = rest_l;
 					let mut right = rest_r;

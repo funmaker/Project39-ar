@@ -1,5 +1,8 @@
+use nalgebra::Unit;
+
 use crate::application::{Hand, Key};
-use crate::math::{Isometry3, Vec3};
+use crate::debug;
+use crate::math::{Color, Isometry3, Point3, Rot3, Vec3};
 use super::{Character, Ctx};
 
 
@@ -13,6 +16,36 @@ pub enum Gesture {
 	/// Holding a hand out, palm up.
 	PresentStart,
 	PresentEnd,
+}
+
+impl Gesture {
+	/// Short text shown as a visual confirmation.
+	fn hint(self) -> Option<&'static str> {
+		match self {
+			Gesture::Hello => Some("Hello!"),
+			Gesture::Follow => Some("Come here!"),
+			Gesture::PresentStart => Some("Offer"),
+			Gesture::PresentEnd => None,
+		}
+	}
+
+	/// Sound effect name in `voice.json`.
+	fn sfx(self) -> Option<&'static str> {
+		match self {
+			Gesture::Hello => Some("gesture_hello"),
+			Gesture::Follow => Some("gesture_follow"),
+			Gesture::PresentStart => Some("gesture_present"),
+			Gesture::PresentEnd => None,
+		}
+	}
+}
+
+/// A recognized gesture shown to the player for a moment.
+#[derive(Copy, Clone, Debug)]
+struct GestureHint {
+	gesture: Gesture,
+	position: Point3,
+	time: f32,
 }
 
 /// Per-hand gesture recognizer state (OpenViva's `ObjectFingerPointer.GestureHand`).
@@ -36,21 +69,45 @@ struct GestureHand {
 ///
 /// The hand axes follow OpenViva's hand bones mapped to a VR controller: `up` points along the fingers
 /// (controller -Z), `right` is the controller's +X and `forward` the back of the hand (controller +Y).
+/// Number of gesture target orientations tested per hand: the raw controller axes and the
+/// controller axes rotated around the finger axis by the prefab's gesture target yaw (±120°).
+const GESTURE_CANDIDATES: usize = 3;
+/// `gestureTarget` local yaw relative to the hand bone in OpenViva's player prefab.
+const GESTURE_TARGET_YAW: f32 = 120.0 * std::f32::consts::PI / 180.0;
+
 pub struct GestureDetector {
-	hands: [GestureHand; 2],
+	hands: [[GestureHand; GESTURE_CANDIDATES]; 2],
+	hint: Option<GestureHint>,
 }
 
 impl GestureDetector {
 	pub fn new() -> Self {
-		GestureDetector { hands: [GestureHand::default(), GestureHand::default()] }
+		GestureDetector {
+			hands: [std::array::from_fn(|_| GestureHand::default()),
+			        std::array::from_fn(|_| GestureHand::default())],
+			hint: None,
+		}
 	}
 }
 
+#[derive(Clone, Copy)]
 struct HandAxes {
 	up: Vec3,
 	right: Vec3,
 	forward: Vec3,
 	position: Vec3,
+}
+
+impl HandAxes {
+	/// Rotates the in-hand axes around the finger axis, as OpenViva's `gestureTarget` does.
+	fn with_yaw(self, angle: f32) -> Self {
+		let rotation = Rot3::from_axis_angle(&Unit::new_normalize(self.up), angle);
+		HandAxes {
+			right: rotation * self.right,
+			forward: rotation * self.forward,
+			..self
+		}
+	}
 }
 
 fn hand_axes(head: &Isometry3, hand: &Isometry3, left: bool) -> HandAxes {
@@ -172,30 +229,87 @@ impl Character {
 
 		// Gestures can't be done precisely with novr hands, so they also have keyboard shortcuts.
 		let keyboard = &ctx.app.input.keyboard;
-		if keyboard.down(Key::KeyH) { gestures.push((Hand::Right, Gesture::Hello)); }
-		if keyboard.down(Key::KeyF) { gestures.push((Hand::Right, Gesture::Follow)); }
+		if keyboard.down(Key::KeyH) {
+			let position = ctx.player.hand(Hand::Right).map_or_else(|| Point3::from(ctx.player.head.translation.vector), |h| Point3::from(h.position.translation.vector));
+			gestures.push((Hand::Right, Gesture::Hello, position));
+		}
+		if keyboard.down(Key::KeyF) {
+			let position = ctx.player.hand(Hand::Right).map_or_else(|| Point3::from(ctx.player.head.translation.vector), |h| Point3::from(h.position.translation.vector));
+			gestures.push((Hand::Right, Gesture::Follow, position));
+		}
 
 		if ctx.app.vr.is_some() {
 			for hand in &ctx.player.hands {
 				let slot = match hand.hand { Hand::Left => 0, Hand::Right => 1 };
-				let axes = hand_axes(&ctx.player.head, &hand.position, hand.hand == Hand::Left);
-				let detector = &mut self.gestures.hands[slot];
-				if detector.attempt_hello(&axes, self.time) {
-					gestures.push((hand.hand, Gesture::Hello));
-				} else if detector.attempt_follow(&axes, self.time) {
-					gestures.push((hand.hand, Gesture::Follow));
+				let base = hand_axes(&ctx.player.head, &hand.position, hand.hand == Hand::Left);
+				// Try the raw controller axes and OpenViva's gesture target yaw in both
+				// directions. OpenVR's handedness conversion can mirror the yaw, and getting
+				// this wrong is why gestures didn't trigger before.
+				let candidates = [base, base.with_yaw(GESTURE_TARGET_YAW), base.with_yaw(-GESTURE_TARGET_YAW)];
+				let position = Point3::from(hand.position.translation.vector);
+
+				let mut fired = None;
+				for (candidate, axes) in candidates.iter().enumerate() {
+					let detector = &mut self.gestures.hands[slot][candidate];
+					if detector.attempt_hello(axes, self.time) {
+						fired = Some(Gesture::Hello);
+						break;
+					}
+					if detector.attempt_follow(axes, self.time) {
+						fired = Some(Gesture::Follow);
+						break;
+					}
+					if candidate == 0 {
+						match detector.attempt_present(axes, self.time, ctx.dt) {
+							Some(true) => gestures.push((hand.hand, Gesture::PresentStart, position)),
+							Some(false) => gestures.push((hand.hand, Gesture::PresentEnd, position)),
+							None => {},
+						}
+					}
 				}
-				match detector.attempt_present(&axes, self.time, ctx.dt) {
-					Some(true) => gestures.push((hand.hand, Gesture::PresentStart)),
-					Some(false) => gestures.push((hand.hand, Gesture::PresentEnd)),
-					None => {},
+				if let Some(gesture) = fired {
+					gestures.push((hand.hand, gesture, position));
 				}
 			}
 		}
 
-		for (hand, gesture) in gestures {
-			self.log(format!("Gesture {gesture:?}"));
-			self.on_gesture(hand, gesture, ctx);
+		for (hand, gesture, position) in gestures {
+			self.fire_gesture(hand, gesture, position, ctx);
+		}
+
+		self.draw_gesture_hint();
+	}
+
+	/// Plays the confirmation sound/hint and dispatches a recognized gesture.
+	pub(super) fn fire_gesture(&mut self, hand: Hand, gesture: Gesture, position: Point3, ctx: &Ctx) {
+		self.log(format!("Gesture {gesture:?}"));
+		if let Some(sfx) = gesture.sfx() {
+			self.play_sfx(sfx, 1.0, ctx);
+		}
+		if gesture.hint().is_some() {
+			self.gestures.hint = Some(GestureHint { gesture, position, time: self.time });
+		}
+		self.on_gesture(hand, gesture, ctx);
+	}
+
+	/// Draws the recognized gesture near the player's hand for a moment.
+	fn draw_gesture_hint(&mut self) {
+		let Some(hint) = self.gestures.hint else { return };
+		let age = self.time - hint.time;
+		const DURATION: f32 = 1.2;
+		if age > DURATION {
+			self.gestures.hint = None;
+			return;
+		}
+
+		let alpha = 1.0 - age / DURATION;
+		let text = hint.gesture.hint().unwrap_or_default();
+		let base = hint.position + Vec3::y() * (0.12 + age * 0.12);
+		debug::draw_text(text, base, debug::DebugOffset::center(0.0, 0.0), 32.0, Color::CYAN.opactiy(alpha));
+		debug::draw_point(hint.position, 10.0 + age * 40.0, Color::CYAN.opactiy(alpha * 0.8));
+		for i in 0..5 {
+			let drift = Vec3::y() * (age * 0.3 + i as f32 * 0.035);
+			debug::draw_point(hint.position + drift, 4.0, Color::CYAN.opactiy(alpha * (1.0 - i as f32 / 5.0) * 0.7));
 		}
 	}
 }

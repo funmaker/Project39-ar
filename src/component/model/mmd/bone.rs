@@ -29,6 +29,9 @@ pub struct MMDBone {
 	pub anim_transform: Similarity3,
 	/// Model space transform overriding the hierarchy, eg. when the bone follows a ragdoll rigid body.
 	pub override_transform: Option<Similarity3>,
+	/// Bone belongs to a free PMX physics body (hair, skirt, ribbons). These lag behind the
+	/// animated skeleton, so their override is kept close to the animated pose while rendering.
+	pub free_physics: bool,
 	/// Whether the bone is drawn as a debug gizmo.
 	pub display: bool,
 	/// Where the bone points to, used to draw it and orient its rigid body.
@@ -67,6 +70,7 @@ impl From<&BoneDesc> for MMDBone {
 			local_transform: desc.local_pos.into(),
 			anim_transform: Similarity3::identity(),
 			override_transform: None,
+			free_physics: false,
 			display: desc.display,
 			connection: desc.connection,
 			gui_selected: false,

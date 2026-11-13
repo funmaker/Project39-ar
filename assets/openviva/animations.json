@@ -2453,6 +2453,280 @@
 				"IDLE_STATE"
 			]
 		},
+		"STAND_KISS_ANGRY_CHEEK_RIGHT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "TransitionToPostKiss"
+			},
+			"torso": "stand_kiss_angry_cheek_right",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_cheek_right",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 2.0,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.112,
+					"name": "SPEAK",
+					"values": [
+						"KISSED_ANGRY",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_ANGRY_CHEEK_LEFT": {
+			"transition": {
+				"kind": "custom",
+				"handler": "TransitionToPostKiss"
+			},
+			"torso": "stand_kiss_angry_cheek_left",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_cheek_left",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 2.0,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.112,
+					"name": "SPEAK",
+					"values": [
+						"KISSED_ANGRY",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_ANGRY_LEFT_TO_HAPPY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_angry_left_to_happy",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_left_to_happy",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.2
+			},
+			"events": [
+				{
+					"time": 0.16,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.16,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.3,
+						0.5
+					]
+				},
+				{
+					"time": 0.26,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.35,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.35,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.55,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.52,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SPEAK",
+					"values": [
+						"RELIEF",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_ANGRY_RIGHT_TO_HAPPY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_angry_right_to_happy",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_right_to_happy",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.2
+			},
+			"events": [
+				{
+					"time": 0.16,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.16,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						0.3,
+						0.5
+					]
+				},
+				{
+					"time": 0.26,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.35,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.35,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.55,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						0.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.52,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						0.0,
+						1.0,
+						0.5
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_EYE_FLAGS",
+					"values": [
+						12.0,
+						0.3
+					]
+				},
+				{
+					"time": 0.8,
+					"name": "SET_BODY_FLAGS",
+					"values": [
+						3.0,
+						1.0,
+						0.7
+					]
+				},
+				{
+					"time": 0.5,
+					"name": "SPEAK",
+					"values": [
+						"RELIEF",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
 		"STAND_FACE_PROX_HAPPY_SURPRISE": {
 			"transition": {
 				"kind": "idle"
@@ -2522,6 +2796,126 @@
 			"flags": [
 				"IDLE_STATE"
 			]
+		},
+		"STAND_KISS_HAPPY_CHEEK_RIGHT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_happy_cheek_right",
+			"legs": "stand_kiss_happy_cheek_right",
+			"face": "stand_kiss_happy_cheek_right",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"KISSED_HAPPY",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_HAPPY_CHEEK_LEFT": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_happy_cheek_left",
+			"legs": "stand_kiss_happy_cheek_left",
+			"face": "stand_kiss_happy_cheek_left",
+			"priority": "MEDIUM",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.2,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.0,
+					"name": "SPEAK",
+					"values": [
+						"KISSED_HAPPY",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_ANGRY_LEFT_TO_ANGRY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_angry_left_to_angry",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_left_to_angry",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.8
+			},
+			"events": [
+				{
+					"time": 0.112,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_SHORT",
+						1.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_KISS_ANGRY_RIGHT_TO_ANGRY": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_kiss_angry_right_to_angry",
+			"legs": "stand_angry_loop",
+			"face": "stand_kiss_angry_right_to_angry",
+			"priority": "LOW",
+			"condition": "STAND",
+			"new_state": "STAND",
+			"transition_time": 0.25,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 1.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.8
+			},
+			"events": [
+				{
+					"time": 0.112,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_SHORT",
+						1.0
+					]
+				}
+			],
+			"flags": []
 		},
 		"STAND_TIRED_LOCOMOTION": {
 			"transition": {
@@ -3508,6 +3902,135 @@
 				}
 			],
 			"flags": []
+		},
+		"STAND_HUG_FAR_TO_STAND": {
+			"transition": {
+				"kind": "idle"
+			},
+			"torso": "stand_hug_far_to_stand",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_to_stand_hug_far_happy",
+			"priority": "MEDIUM",
+			"condition": "STANDING_HUG",
+			"new_state": "STAND",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": []
+		},
+		"STAND_TO_STAND_HUG_FAR_HAPPY": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HUG_HAPPY_LOOP"
+			},
+			"torso": "stand_to_stand_hug_far_happy",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_to_stand_hug_far_happy",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STANDING_HUG",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"GIGGLE",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HUG_HAPPY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_hug_happy_loop",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_hug_happy_loop",
+			"priority": "LOW",
+			"condition": "STANDING_HUG",
+			"new_state": "STANDING_HUG",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
+		},
+		"STAND_TO_STAND_HUG_FAR_ANGRY": {
+			"transition": {
+				"kind": "next",
+				"next": "STAND_HUG_ANGRY_LOOP"
+			},
+			"torso": "stand_to_stand_hug_far_angry",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_to_stand_hug_far_angry",
+			"priority": "HIGH",
+			"condition": "STAND",
+			"new_state": "STANDING_HUG",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 12,
+				"eye_flag_duration": 0.4
+			},
+			"events": [
+				{
+					"time": 0.1,
+					"name": "SPEAK",
+					"values": [
+						"ANGRY_POUT",
+						0.0
+					]
+				}
+			],
+			"flags": []
+		},
+		"STAND_HUG_ANGRY_LOOP": {
+			"transition": {
+				"kind": "loop"
+			},
+			"torso": "stand_hug_angry_loop",
+			"legs": "stand_locomotion_spine_stable",
+			"face": "stand_hug_angry_loop",
+			"priority": "HIGH",
+			"condition": "STANDING_HUG",
+			"new_state": "STANDING_HUG",
+			"transition_time": 0.3,
+			"logic": {
+				"body_flags": 0,
+				"body_flag_percent": 1.0,
+				"body_flag_duration": 0.5,
+				"eye_flags": 0,
+				"eye_flag_duration": 0.4
+			},
+			"events": [],
+			"flags": [
+				"IDLE_STATE"
+			]
 		},
 		"FLOOR_SIT_AGREE": {
 			"transition": {
@@ -5042,10 +5565,22 @@
 				"STARTLED_ANGRY": [
 					"STAND_FACE_PROX_ANGRY_SURPRISE"
 				],
-				"CHEEK_KISS_HAPPY_RIGHT_LEFT": [],
-				"CHEEK_KISS_ANGRY_RIGHT_LEFT": [],
-				"CHEEK_KISS_ANGRY_TO_ANGRY_RIGHT_LEFT": [],
-				"CHEEK_KISS_ANGRY_TO_HAPPY_RIGHT_LEFT": []
+				"CHEEK_KISS_HAPPY_RIGHT_LEFT": [
+					"STAND_KISS_HAPPY_CHEEK_RIGHT",
+					"STAND_KISS_HAPPY_CHEEK_LEFT"
+				],
+				"CHEEK_KISS_ANGRY_RIGHT_LEFT": [
+					"STAND_KISS_ANGRY_CHEEK_RIGHT",
+					"STAND_KISS_ANGRY_CHEEK_LEFT"
+				],
+				"CHEEK_KISS_ANGRY_TO_ANGRY_RIGHT_LEFT": [
+					"STAND_KISS_ANGRY_RIGHT_TO_ANGRY",
+					"STAND_KISS_ANGRY_LEFT_TO_ANGRY"
+				],
+				"CHEEK_KISS_ANGRY_TO_HAPPY_RIGHT_LEFT": [
+					"STAND_KISS_ANGRY_RIGHT_TO_HAPPY",
+					"STAND_KISS_ANGRY_LEFT_TO_HAPPY"
+				]
 			},
 			"connections": {
 				"FLOOR_SIT": "STAND_TO_SIT_FLOOR",
@@ -5054,6 +5589,24 @@
 			"properties": {
 				"PICKUP_DISTANCE": 0.42
 			}
+		},
+		"STANDING_HUG": {
+			"check_balance": true,
+			"sets": {
+				"IDLE_HAPPY": [
+					"STAND_HUG_HAPPY_LOOP"
+				],
+				"IDLE_TIRED": [
+					"STAND_HUG_HAPPY_LOOP"
+				],
+				"IDLE_ANGRY": [
+					"STAND_HUG_ANGRY_LOOP"
+				]
+			},
+			"connections": {
+				"STAND": "STAND_HAPPY_IDLE1"
+			},
+			"properties": {}
 		},
 		"FLOOR_SIT": {
 			"check_balance": true,
