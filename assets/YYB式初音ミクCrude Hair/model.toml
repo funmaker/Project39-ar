@@ -25,6 +25,15 @@ collision_mask = 0b1111011111100
 id = 23
 collision_mask = 0b1111011111100
 
+[[joints]]
+pattern = '右H*'
+rotation_min = [-20.0, -2.0, -20.0]
+rotation_max = [20.0, 2.0, 20.0]
+
+[[joints]]
+pattern = '左H*'
+rotation_min = [-20.0, -2.0, -20.0]
+rotation_max = [20.0, 2.0, 20.0]
 
 [[joints]]
 name = 'Torso'

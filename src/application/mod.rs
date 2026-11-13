@@ -214,16 +214,16 @@ impl Application {
 				);
 			}
 			
-			// application.add_entity(
-			// 	Entity::builder("ToolGun")
-			// 		.translation(point!(0.0, 1.0, 1.0))
-			// 		.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
-			// 		.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
-			// 		                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
-			// 		                        renderer).unwrap())
-			// 		.collider_from_aabb(100.0)
-			// 		.build()
-			// );
+			application.add_entity(
+				Entity::builder("ToolGun")
+					.translation(point!(0.0, 1.0, 1.0))
+					.component(renderer.load(ObjAsset::at("toolgun/toolgun.obj", "toolgun/toolgun.png"))?)
+					.component(ToolGun::new(Isometry3::from_parts(vector!(0.0, -0.03, 0.03).into(),
+					                                              Rot3::from_euler_angles(PI * 0.25, PI, 0.0)),
+					                        renderer).unwrap())
+					.collider_from_aabb(100.0)
+					.build()
+			);
 			
 			application.add_entity(
 				Entity::builder("初音ミク")
