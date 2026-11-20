@@ -109,8 +109,22 @@ impl Application {
 			Eyes::new_novr(&config::get().novr, Some(camera), &mut renderer)?
 		};
 		
-		let _ = window.request_inner_size(PhysicalSize::new(eyes.framebuffer_size().0 * 2, eyes.framebuffer_size().1));
-		let window = Window::new(window, event_loop, &renderer)?;
+		let window = {
+			let mut new_size = PhysicalSize::new(eyes.framebuffer_size().0 * 2, eyes.framebuffer_size().1);
+			if let Some(monitor) = window.current_monitor() {
+				let max_size = PhysicalSize::new(monitor.size().width * 9 / 10, monitor.size().height * 9 / 10);
+				if new_size.width > max_size.width {
+					new_size.height = new_size.height * max_size.width / new_size.width;
+					new_size.width = max_size.width;
+				}
+				if new_size.height > max_size.height {
+					new_size.width = new_size.width * max_size.height / new_size.height;
+					new_size.height = max_size.height;
+				}
+			}
+			let _ = window.request_inner_size(new_size);
+			Window::new(window, event_loop, &renderer)?
+		};
 		
 		let application = Application {
 			vr,

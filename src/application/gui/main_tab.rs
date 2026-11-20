@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use egui::*;
 use crate::application::GuiSelection;
 use crate::debug;
-use crate::utils::{end_row_interact, ExUi, id_fmt};
+use crate::utils::{end_row_interact, ExUi, id_fmt, dump_camera_ss};
 use super::super::{Application, Entity, EntityRef};
 
 
@@ -32,6 +32,10 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 					ui.toggle_value(&mut params.paused, "Pause");
 					ui.toggle_value(&mut params.step, "Step");
 				});
+			}
+			
+			if ui.button("Camera Dump").clicked() {
+				dump_camera_ss(application);
 			}
 		});
 	
