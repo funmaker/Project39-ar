@@ -41,6 +41,13 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 				}
 			}
 
+			if let Some(depth) = application.eyes.as_ref().and_then(|eyes| eyes.depth_passthrough()) {
+				let mut value = depth.get();
+				if ui.checkbox(&mut value, "3D passthrough (SteamVR depth mesh)").changed() {
+					depth.set(value);
+				}
+			}
+
 			if ui.button("Camera Dump").clicked() {
 				if let Err(err) = dump_camera_ss(application) {
 					eprintln!("Failed to dump camera screenshot: {err:?}");

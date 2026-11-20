@@ -19,3 +19,19 @@ impl Vertex {
 		}
 	}
 }
+
+/// Depth mesh vertex (raw tracking space).
+#[repr(C)]
+#[derive(Default, Copy, Clone, BufferContents, VertexTy)]
+pub struct MeshVertex {
+	#[format(R32G32B32_SFLOAT)]
+	pos: [f32; 3],
+}
+
+impl MeshVertex {
+	pub fn new(pos: impl IntoArray<[f32; 3]>) -> Self {
+		MeshVertex {
+			pos: pos.into_array(),
+		}
+	}
+}

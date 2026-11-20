@@ -1,11 +1,15 @@
-// Shared by vert.glsl and frag.glsl. Updated every frame.
+// Shared by all background shaders. Updated every frame.
 // All positions are in tracking space (OpenVR standing space in VR, world space in novr), y up.
 layout(set = 0, binding = 0) uniform Params {
 	// Eye space -> tracking space at render time.
 	mat4 eye_to_tracking[2];
 	// Tracking space -> camera space (OpenVR convention: x right, y up, -z forward) at camera frame capture time.
 	mat4 tracking_to_camera[2];
-	// Tangents of the eye's half fov: left, right, top, bottom.
+	// Tracking space -> eye space at render time.
+	mat4 tracking_to_eye[2];
+	// OpenVR raw tracking space -> tracking space (depth mesh).
+	mat4 raw_to_tracking;
+// Tangents of the eye's half fov: left, right, top, bottom.
 	vec4 rawproj[2];
 	// Fisheye distortion coefficients.
 	vec4 coeffs[2];

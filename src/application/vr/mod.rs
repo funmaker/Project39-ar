@@ -7,9 +7,11 @@ use openvr::{Context, System, Compositor, RenderModels, TrackedDeviceProperty, t
 use openvr_sys as sys;
 
 mod camera_service;
+mod depth_mesh;
 mod tracked_camera;
 
 pub use camera_service::CameraService;
+pub use depth_mesh::{DepthMesh, DepthMeshFrame};
 pub use tracked_camera::{TrackedCamera, FrameType};
 
 use crate::config::{self, CameraAPI};

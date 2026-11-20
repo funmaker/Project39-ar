@@ -95,7 +95,7 @@ impl Eyes {
 	}
 	
 	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), quirk_shift: [f32; 2], vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
-		let background = camera.map(|camera| Background::new(camera, raw_projection, view, quirk_shift, renderer))
+		let background = camera.map(|camera| Background::new(camera, raw_projection, view, quirk_shift, vr.clone(), renderer))
 		                       .transpose()?;
 		
 		let fb = renderer.create_framebuffer(min_framebuffer_size)?;
@@ -193,6 +193,11 @@ impl Eyes {
 
 	pub fn steamvr_quirks(&self) -> Option<&Cell<bool>> {
 		self.background.as_ref().map(Background::steamvr_quirks)
+	}
+
+	/// 3D passthrough toggle, available in VR only.
+	pub fn depth_passthrough(&self) -> Option<&Cell<bool>> {
+		self.background.as_ref().filter(|_| self.vr.is_some()).map(Background::depth_passthrough)
 	}
 
 	/// All data used for the passthrough projection of the last rendered frame.

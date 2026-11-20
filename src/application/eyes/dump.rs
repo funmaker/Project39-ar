@@ -52,7 +52,8 @@ pub struct ParamsDump {
 	pub focal_center: [[f32; 4]; 2],
 	pub bounds: [[f32; 4]; 2],
 	pub tan_shift: [[f32; 4]; 2],
-	pub dome: [f32; 4],
+	pub raw_to_tracking: [[f32; 4]; 4],
+pub dome: [f32; 4],
 	pub frame_size: [f32; 4],
 }
 
