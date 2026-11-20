@@ -14,9 +14,11 @@ void main() {
 	vec4 rawproj = params.rawproj[gl_ViewIndex];
 	vec2 uv = pos * 0.5 + vec2(0.5);
 
+	// rawproj is (-left, right, -top, bottom) of OpenVR's GetProjectionRaw. Its "top"/"bottom" are in y-down
+	// convention: `bottom` is the upper edge (see ComposeProjection), uv.y = 0 is the top of the screen.
 	f_proj = vec3(
 		-rawproj[0] + (rawproj[0] + rawproj[1]) * uv.x,
-		 rawproj[2] - (rawproj[2] + rawproj[3]) * uv.y,
+		 rawproj[3] - (rawproj[2] + rawproj[3]) * uv.y,
 		-1.0
 	);
 }

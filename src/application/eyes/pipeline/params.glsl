@@ -13,6 +13,8 @@ layout(set = 0, binding = 0) uniform Params {
 	vec4 focal_center[2];
 	// Usable part of the camera frame (pixels): min xy, max zw.
 	vec4 bounds[2];
+	// Shift of camera space x/z applied before the lens model (x). Used to emulate SteamVR's quirks.
+	vec4 tan_shift[2];
 	// Projection dome: center of its base on the floor (xyz) and radius (w).
 	vec4 dome;
 	// Camera frame size (xy).

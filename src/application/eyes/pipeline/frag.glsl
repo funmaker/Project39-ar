@@ -36,6 +36,7 @@ void main() {
 	vec3 point = origin + dir * t;
 	vec3 cam = (params.tracking_to_camera[view] * vec4(point, 1.0)).xyz;
 	cam = vec3(cam.x, -cam.y, -cam.z); // to image convention: x right, y down, z forward
+	cam.x -= params.tan_shift[view].x * cam.z;
 
 	// Fisheye
 	vec4 k = params.coeffs[view];

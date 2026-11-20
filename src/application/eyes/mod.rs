@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::Arc;
 use anyhow::Result;
 use thiserror::Error;
@@ -22,6 +23,7 @@ use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_cl
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RenderTarget, RenderTargetContext};
 use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
 use super::VR;
+use super::vr::VRInner;
 use super::vr::FrameType;
 use background::Background;
 use camera::Camera;
@@ -52,7 +54,7 @@ impl Eyes {
 		let projection = projective_clip() * Perspective3::new(aspect, fovy, 0.1, 100.0).as_projective();
 		let raw = vector!((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
 		
-		Self::new(min_framebuffer_size, (view, view), (projection, projection), (raw, raw), None, camera, renderer)
+		Self::new(min_framebuffer_size, (view, view), (projection, projection), (raw, raw), [0.0; 2], None, camera, renderer)
 	}
 	
 	pub fn new_vr(vr: Arc<VR>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
@@ -71,13 +73,29 @@ impl Eyes {
 		let raw_right = vr_lock.system.projection_raw(openvr::Eye::Right);
 		let raw_right = vector!(-raw_right.left, raw_right.right, -raw_right.top, raw_right.bottom);
 		
+		let quirk_shift = Self::steamvr_quirk_shift(&vr_lock);
+
 		drop(vr_lock);
-		
-		Self::new(min_framebuffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), Some(vr), camera, renderer)
+
+		Self::new(min_framebuffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), quirk_shift, Some(vr), camera, renderer)
+	}
+
+	/// SteamVR samples the right camera's undistortion map (frame size / 4, built from the MaximumUndistorted
+	/// projection) half a texel off: it reads the undistorted u of `u - 1 / (map_width - 1)`.
+	/// Returns that shift in camera space x/z for each camera.
+	fn steamvr_quirk_shift(vr: &VRInner) -> [f32; 2] {
+		let hmd = openvr::tracked_device_index::HMD;
+		let config = config::get();
+		let map_width = config.camera.frame_buffer_size.x as f32 / 4.0;
+
+		match vr.tracked_camera.get_camera_projection(hmd, 1, FrameType::MaximumUndistorted, 0.1, 1000.0) {
+			Ok(projection) if config.camera.right.offset.x > 0 && map_width > 1.0 => [0.0, 1.0 / (map_width - 1.0) / projection[0][0]],
+			_ => [0.0; 2],
+		}
 	}
 	
-	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
-		let background = camera.map(|camera| Background::new(camera, raw_projection, view, renderer))
+	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), quirk_shift: [f32; 2], vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
+		let background = camera.map(|camera| Background::new(camera, raw_projection, view, quirk_shift, renderer))
 		                       .transpose()?;
 		
 		let fb = renderer.create_framebuffer(min_framebuffer_size)?;
@@ -172,7 +190,11 @@ impl Eyes {
 	pub fn camera_image(&self) -> Option<&Arc<Image>> {
 		self.background.as_ref().map(Background::camera_image)
 	}
-	
+
+	pub fn steamvr_quirks(&self) -> Option<&Cell<bool>> {
+		self.background.as_ref().map(Background::steamvr_quirks)
+	}
+
 	/// All data used for the passthrough projection of the last rendered frame.
 	pub fn projection_dump(&self) -> ProjectionDump {
 		let config = config::get();

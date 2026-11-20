@@ -72,8 +72,6 @@ pub struct CameraEyeConfig {
 	pub focal_length: Vec2,
 	/// Principal point (pixels, relative to the eye's frame, pixel centers at integer coordinates).
 	pub center: Vec2,
-	/// Extra principal point shift (pixels) matching SteamVR's passthrough. Not available through OpenVR.
-	pub center_offset: Vec2,
 	/// Fisheye (OpenCV fisheye / DISTORT_FTHETA) distortion coefficients.
 	pub coeffs: Vec4,
 	/// Position in head space (OpenVR's CameraToHeadTransform).

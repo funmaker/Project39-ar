@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::{Arc, mpsc};
 use anyhow::Result;
 use vulkano::buffer::{Buffer, Subbuffer, BufferUsage};
@@ -44,7 +45,7 @@ impl CameraData {
 		let back = config.back.normalize();
 		let right = config.right.normalize();
 		let rotation = Mat3::from_columns(&[right, back.cross(&right), back]);
-		let center = config.center + config.center_offset + config.offset.cast();
+		let center = config.center + config.offset.cast();
 		let min = config.offset.cast::<f32>() - vector!(0.5, 0.5);
 		let max = min + config.size.cast::<f32>();
 
@@ -75,6 +76,9 @@ pub struct Background {
 	sampler: Arc<Sampler>,
 	camera_image: Arc<Image>,
 	cameras: [CameraData; 2],
+	/// Camera space x/z shift reproducing SteamVR's right camera undistortion map lookup (see `Eyes::steamvr_quirk_shift`).
+	quirk_shift: [f32; 2],
+	steamvr_quirks: Cell<bool>,
 	/// Eye to head transforms.
 	eyes: [AMat4; 2],
 	raw_projection: [Vec4; 2],
@@ -85,8 +89,8 @@ pub struct Background {
 }
 
 impl Background {
-	/// `view` - head to eye transforms.
-	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), view: (AMat4, AMat4), renderer: &mut Renderer) -> Result<Background> {
+	/// `view` - head to eye transforms. `quirk_shift` - see `steamvr_quirks`.
+	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), view: (AMat4, AMat4), quirk_shift: [f32; 2], renderer: &mut Renderer) -> Result<Background> {
 		let config = config::get();
 		let pipeline = renderer.pipelines.get::<BackgroundPipeline>()?;
 		let queue = renderer.load_queue.clone();
@@ -137,6 +141,8 @@ impl Background {
 			sampler,
 			camera_image,
 			cameras: [CameraData::new(&config.camera.left), CameraData::new(&config.camera.right)],
+			quirk_shift,
+			steamvr_quirks: Cell::new(false),
 			eyes: [view.0.inverse(), view.1.inverse()],
 			raw_projection: [raw_projection.0, raw_projection.1],
 			frame_size: vector!(frame_size.x, frame_size.y, 0.0, 0.0),
@@ -150,6 +156,11 @@ impl Background {
 		&self.camera_image
 	}
 
+	/// Emulate SteamVR's passthrough bugs (right camera is shifted by half of its undistortion map texel, ~0.4 deg).
+	pub fn steamvr_quirks(&self) -> &Cell<bool> {
+		&self.steamvr_quirks
+	}
+
 	pub fn dump(&self) -> BackgroundDump {
 		BackgroundDump {
 			camera_frame_pose: self.last_frame_pose.into(),
@@ -161,6 +172,7 @@ impl Background {
 				coeffs: last.params.coeffs,
 				focal_center: last.params.focal_center,
 				bounds: last.params.bounds,
+				tan_shift: last.params.tan_shift,
 				dome: last.params.dome,
 				frame_size: last.params.frame_size,
 			}),
@@ -199,6 +211,7 @@ impl Background {
 			coeffs: self.cameras.map(|camera| camera.coeffs.into()),
 			focal_center: self.cameras.map(|camera| camera.focal_center.into()),
 			bounds: self.cameras.map(|camera| camera.bounds.into()),
+			tan_shift: if self.steamvr_quirks.get() { self.quirk_shift.map(|shift| [shift, 0.0, 0.0, 0.0]) } else { [[0.0; 4]; 2] },
 			dome: [head_pose.translation.x, FLOOR_HEIGHT, head_pose.translation.z, DOME_RADIUS],
 			frame_size: self.frame_size.into(),
 		};

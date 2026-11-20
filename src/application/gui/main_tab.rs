@@ -34,6 +34,13 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 				});
 			}
 			
+			if let Some(quirks) = application.eyes.as_ref().and_then(|eyes| eyes.steamvr_quirks()) {
+				let mut value = quirks.get();
+				if ui.checkbox(&mut value, "Emulate SteamVR passthrough quirks").changed() {
+					quirks.set(value);
+				}
+			}
+
 			if ui.button("Camera Dump").clicked() {
 				if let Err(err) = dump_camera_ss(application) {
 					eprintln!("Failed to dump camera screenshot: {err:?}");
