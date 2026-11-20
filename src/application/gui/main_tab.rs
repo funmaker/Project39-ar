@@ -35,7 +35,9 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 			}
 			
 			if ui.button("Camera Dump").clicked() {
-				dump_camera_ss(application);
+				if let Err(err) = dump_camera_ss(application) {
+					eprintln!("Failed to dump camera screenshot: {err:?}");
+				}
 			}
 		});
 	

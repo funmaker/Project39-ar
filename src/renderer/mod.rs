@@ -8,7 +8,7 @@ use anyhow::{Result, Error};
 use thiserror::Error;
 use vulkano::{sync, Validated, Version, VulkanError, VulkanLibrary};
 use vulkano::buffer::{BufferContents, Buffer, Subbuffer, BufferUsage};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassBeginInfo, SubpassContents, SubpassEndInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryCommandBufferAbstract, RenderPassBeginInfo, SubpassBeginInfo, SubpassContents, SubpassEndInfo};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
 use vulkano::device::{Device, DeviceCreateInfo, DeviceExtensions, DeviceFeatures, Queue, QueueCreateInfo, QueueFlags};
@@ -490,12 +490,13 @@ impl Renderer {
 		
 		self.fps_counter.tick();
 		
-		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::GREEN);
-		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::GREEN);
-		
 		self.future = Some(sync::now(self.device.clone()).boxed());
 		
 		Ok(())
+	}
+	
+	pub fn fps(&self) -> f32 {
+		self.fps_counter.fps()
 	}
 	
 	pub fn enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)
@@ -514,6 +515,21 @@ impl Renderer {
 		future = callback(future)?;
 		
 		self.future = Some(future);
+		
+		Ok(())
+	}
+	
+	/// Executes the command buffer after all enqueued work and blocks until everything finishes.
+	pub fn execute_and_wait(&mut self, queue: Arc<Queue>, command_buffer: Arc<impl PrimaryCommandBufferAbstract + 'static>) -> Result<()> {
+		let mut future = self.future.take().unwrap_or_else(|| sync::now(self.device.clone()).boxed());
+		if !future.queue_change_allowed() && future.queue().unwrap() != queue {
+			future = future.then_signal_semaphore().boxed();
+		}
+		
+		// All work is finished afterwards, so there is no future left to chain onto (a flushed fence has no queue to signal on again).
+		future.then_execute(queue, command_buffer)?
+		      .then_signal_fence_and_flush()?
+		      .wait(None)?;
 		
 		Ok(())
 	}

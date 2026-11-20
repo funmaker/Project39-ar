@@ -9,19 +9,23 @@ use vulkano::format::ClearValue;
 use vulkano::image::{Image, ImageCreateInfo, ImageSubresourceLayers, ImageUsage};
 use vulkano::memory::allocator::AllocationCreateInfo;
 use vulkano::sync::GpuFuture;
+use simba::scalar::SupersetOf;
 
 pub mod camera;
 mod background;
 mod pipeline;
+pub mod dump;
 
 use crate::debug;
-use crate::config::NovrConfig;
+use crate::config::{self, NovrConfig};
 use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice};
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RenderTarget, RenderTargetContext};
 use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
 use super::VR;
+use super::vr::FrameType;
 use background::Background;
 use camera::Camera;
+use dump::{EyesDump, OpenVRDump, ProjectionDump};
 
 
 pub struct Eyes {
@@ -73,7 +77,7 @@ impl Eyes {
 	}
 	
 	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
-		let background = camera.map(|camera| Background::new(camera, raw_projection, renderer))
+		let background = camera.map(|camera| Background::new(camera, raw_projection, view, renderer))
 		                       .transpose()?;
 		
 		let fb = renderer.create_framebuffer(min_framebuffer_size)?;
@@ -134,11 +138,22 @@ impl Eyes {
 	}
 	
 	pub fn load_background(&mut self, camera_pos: Isometry3, renderer: &mut Renderer) -> Result<()> {
+		let head_pose = self.tracking_head_pose(camera_pos);
+
 		if let Some(background) = &mut self.background {
-			renderer.try_enqueue(renderer.load_queue.clone(), |future| background.load_camera(camera_pos, future))?;
+			renderer.try_enqueue(renderer.load_queue.clone(), |future| background.load_camera(head_pose, future))?;
 		}
-		
+
 		Ok(())
+	}
+
+	/// Head pose in tracking space: HMD pose in standing space in VR (independent of the VR root), POV in novr.
+	fn tracking_head_pose(&self, camera_pos: Isometry3) -> Isometry3 {
+		if self.vr.is_some() {
+			AMat4::from_slice34(&self.hmd_pose).to_subset().unwrap_or(camera_pos)
+		} else {
+			camera_pos
+		}
 	}
 	
 	pub fn set_hmd_pose(&mut self, hmd_pose: [[f32; 4]; 3]) {
@@ -147,6 +162,56 @@ impl Eyes {
 	
 	pub fn framebuffer_size(&self) -> (u32, u32) {
 		self.fb.extent()
+	}
+	
+	/// Stereo (2 layer) image submitted to the HMD.
+	pub fn framebuffer_image(&self) -> &Arc<Image> {
+		&self.fb.main_image
+	}
+	
+	pub fn camera_image(&self) -> Option<&Arc<Image>> {
+		self.background.as_ref().map(Background::camera_image)
+	}
+	
+	/// All data used for the passthrough projection of the last rendered frame.
+	pub fn projection_dump(&self) -> ProjectionDump {
+		let config = config::get();
+		let fb_size = self.framebuffer_size();
+		let camera_size = self.camera_image().map_or([0, 0], |image| [image.extent()[0], image.extent()[1]]);
+		
+		let openvr = self.vr.as_ref().map(|vr| {
+			let vr = vr.lock().unwrap();
+			let hmd = openvr::tracked_device_index::HMD;
+			let raw = |eye| {
+				let raw = vr.system.projection_raw(eye);
+				[raw.left, raw.right, raw.top, raw.bottom]
+			};
+			
+			OpenVRDump {
+				camera_to_head_row_major: vr.system.matrix34_tracked_device_property(hmd, openvr::property::CameraToHeadTransform_Matrix34).ok(),
+				distorted_frame_size: vr.tracked_camera.get_camera_frame_size(hmd, FrameType::Distorted).ok().map(|size| [size.width, size.height]),
+				intrinsics: (0..2).filter_map(|camera| vr.tracked_camera.get_camera_intrinsics(hmd, camera, FrameType::MaximumUndistorted).ok())
+				                            .map(|i| [i.focal_length[0], i.focal_length[1], i.center[0], i.center[1]])
+				                            .collect(),
+				eye_to_head_row_major: [vr.system.eye_to_head_transform(openvr::Eye::Left), vr.system.eye_to_head_transform(openvr::Eye::Right)],
+				projection_raw: [raw(openvr::Eye::Left), raw(openvr::Eye::Right)],
+			}
+		});
+		
+		ProjectionDump {
+			framebuffer_size: [fb_size.0, fb_size.1],
+			camera_frame_size: camera_size,
+			camera_frame_buffer_size: config.camera.frame_buffer_size.into(),
+			hmd_pose_row_major: self.hmd_pose,
+			eyes: EyesDump {
+				view: [dump::mat4(&self.view.0.to_homogeneous()), dump::mat4(&self.view.1.to_homogeneous())],
+				projection: [dump::mat4(&self.projection.0.to_homogeneous()), dump::mat4(&self.projection.1.to_homogeneous())],
+				raw_projection: [self.raw_projection.0.into(), self.raw_projection.1.into()],
+			},
+			background: self.background.as_ref().map(Background::dump),
+			openvr,
+			camera_config: config.camera.clone(),
+		}
 	}
 }
 
@@ -172,8 +237,10 @@ impl RenderTarget for Eyes {
 	}
 	
 	fn early_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
+		let head_pose = self.tracking_head_pose(context.camera_pos);
+
 		if let Some(background) = &mut self.background {
-			background.render(context.camera_pos, context.builder)?;
+			background.render(head_pose, context.builder)?;
 		}
 		
 		Ok(())

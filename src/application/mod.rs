@@ -16,6 +16,7 @@ use rapier3d::dynamics::{GenericJoint, JointAxesMask, JointAxis, RigidBodyType};
 use rapier3d::geometry::ColliderBuilder;
 use rapier3d::pipeline::PhysicsWorld;
 use smallvec::SmallVec;
+use vulkano::image::Image;
 use vulkano::swapchain::Surface;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{DeviceEvent, DeviceId, WindowEvent};
@@ -71,8 +72,8 @@ pub struct Application {
 	pub miku: ComponentRef<Miku>,
 	pub detached_pov: EntityRef,
 	pub input: Input,
+	pub eyes: Option<Eyes>,
 	last_draw: Instant,
-	eyes: Option<Eyes>,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<VecDeque<Entity>>,
@@ -408,10 +409,12 @@ impl Application {
 			self.bench.get_mut().tick("VR Sync");
 		}
 		
-		let inputs = format!("{}", self.input);
-		for (id, line) in inputs.split("\n").enumerate() {
-			debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
-		}
+		// debug::draw_text(format!("FPS: {}", self.renderer.borrow().fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::GREEN);
+		// debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::GREEN);
+		// let inputs = format!("{}", self.input);
+		// for (id, line) in inputs.split("\n").enumerate() {
+		// 	debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
+		// }
 		
 		self.setup_loop()?;
 		

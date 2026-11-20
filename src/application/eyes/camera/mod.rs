@@ -40,7 +40,7 @@ pub trait Camera: Send + 'static {
 		                        ImageCreateInfo {
 			                        extent: [CAPTURE_WIDTH, CAPTURE_HEIGHT, 1],
 			                        format: Format::B8G8R8A8_SRGB,
-			                        usage: ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+			                        usage: ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC,
 			                        ..ImageCreateInfo::default()
 		                        },
 		                        AllocationCreateInfo::default())?;

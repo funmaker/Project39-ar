@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 use anyhow::Result;
-pub use frag::Pc;
+pub use frag::Params;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};

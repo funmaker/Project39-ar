@@ -5,3 +5,4 @@
 /dist
 /assets_overrides/*
 !/assets_overrides/.gitkeep
+/ss

@@ -10,7 +10,7 @@ use openvr::property;
 use openvr::system::TrackedPropertyError;
 use simba::scalar::SupersetOf;
 
-use crate::{debug, config};
+use crate::debug;
 use crate::math::{VRSlice, Isometry3, AMat4};
 use super::super::super::vr::{VR, FrameType, CameraService};
 use super::{Camera, CameraCaptureTimeout};
@@ -64,11 +64,6 @@ impl OpenVR {
 				println!("\t\t\t{:?}", tracked_camera.get_camera_intrinsics(index, 1, FrameType::MaximumUndistorted));
 				println!("\t\t\t{:?}", tracked_camera.get_camera_projection(index, 1, FrameType::MaximumUndistorted, 0.01, 100.01));
 			}
-			
-			let frame_size = tracked_camera.get_camera_frame_size(index, FrameType::MaximumUndistorted)?;
-			config::rcu(|config|
-				config.camera.frame_buffer_size = vector!(frame_size.width as i32, frame_size.height as i32)
-			);
 			
 			let camtohead: Isometry3 = AMat4::from_slice34(&vr.system.matrix34_tracked_device_property(index, property::CameraToHeadTransform_Matrix34)?).to_subset().unwrap();
 			headtocam = camtohead.inverse();
