@@ -1,7 +1,6 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 use anyhow::Result;
-pub use frag::Pc;
 use vulkano::device::DeviceOwned;
 use vulkano::pipeline::graphics::depth_stencil::DepthStencilState;
 use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
@@ -13,6 +12,7 @@ mod vertex;
 
 use crate::renderer::pipelines::{build_graphics_pipeline, PipelineConstructor};
 pub use vertex::Vertex;
+pub use frag::Params;
 
 
 mod vert {

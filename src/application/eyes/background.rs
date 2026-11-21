@@ -1,53 +1,58 @@
+use std::cell::Cell;
 use std::sync::{Arc, mpsc};
-use bytemuck::{Zeroable, Pod};
 use anyhow::Result;
-use thiserror::Error;
-use vulkano::buffer::{Buffer, Subbuffer, BufferUsage, BufferContents};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract};
+use vulkano::buffer::{Buffer, Subbuffer, BufferUsage, BufferCreateInfo};
+use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract, SecondaryAutoCommandBuffer};
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
+use vulkano::descriptor_set::layout::DescriptorSetLayout;
 use vulkano::device::Queue;
+use vulkano::image::Image;
 use vulkano::image::view::ImageView;
-use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
+use vulkano::memory::allocator::MemoryTypeFilter;
 use vulkano::pipeline::{Pipeline, GraphicsPipeline, PipelineBindPoint};
 use vulkano::image::sampler::{Sampler, Filter, SamplerAddressMode, SamplerCreateInfo, SamplerMipmapMode};
 use vulkano::sync::GpuFuture;
 
-use crate::config;
-use crate::math::{Vec4, Vec2, Mat3, Isometry3};
-use crate::renderer::Renderer;
+use crate::config::{self, CameraEyeConfig};
+use crate::debug;
+use crate::math::{AMat4, Isometry3, Mat3, Rot3, Translation3, Vec2, Vec4};
+use crate::renderer::{RenderContext, Renderer};
 use crate::renderer::pipelines::PipelineNoLayoutError;
-use crate::utils::{FenceCheck, IntoInfo};
+use crate::utils::{BufferEx, FenceCheck, IntoInfo};
 use super::camera::Camera;
-use super::pipeline::{BackgroundPipeline, Vertex, Pc};
+use super::pipeline::{BackgroundPipeline, Vertex, Params};
 
 
-#[allow(dead_code)]
-#[repr(C)]
-#[derive(Default, Copy, Clone, BufferContents)]
-struct Intrinsics {
-	rawproj: [Vec4; 2],
-	focal: [Vec2; 2],
-	coeffs: [Vec4; 2],
-	scale: [Vec2; 2],
-	center: [Vec2; 2],
-}
+/// Radius of the dome the camera image is projected on (same as SteamVR's room view).
+const DOME_RADIUS: f32 = 15.0;
+/// Floor height in tracking space.
+const FLOOR_HEIGHT: f32 = 0.0;
 
 pub struct Background {
-	queue: Arc<Queue>,
 	pipeline: Arc<GraphicsPipeline>,
 	vertices: Subbuffer<[Vertex]>,
-	// intrinsics: Arc<CpuAccessibleBuffer<Intrinsics>>,
+	params: Subbuffer<Params>,
 	set: Arc<DescriptorSet>,
-	extrinsics: (Mat3, Mat3),
+	cameras: [CameraSpec; 2],
+	eye_to_head: [AMat4; 2],
+	raw_projection: [Vec4; 2],
+	frame_size: Vec2,
 	last_frame_pose: Isometry3,
-	camera_loads: mpsc::Receiver<(Arc<PrimaryAutoCommandBuffer>, Option<Isometry3>)>,
+	camera_loads: mpsc::Receiver<(Arc<SecondaryAutoCommandBuffer>, Option<Isometry3>)>,
+	fence: FenceCheck,
 }
 
 impl Background {
-	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), renderer: &mut Renderer) -> Result<Background> {
+	pub fn new(camera: Box<dyn Camera>, raw_projection: (Vec4, Vec4), eye_to_head: (AMat4, AMat4), renderer: &mut Renderer) -> Result<Background> {
 		let config = config::get();
 		let pipeline = renderer.pipelines.get::<BackgroundPipeline>()?;
 		let queue = renderer.load_queue.clone();
+		
+		let mut upload_buffer = AutoCommandBufferBuilder::primary(renderer.command_buffer_allocator.clone(),
+		                                                          renderer.load_queue.queue_family_index(),
+		                                                          CommandBufferUsage::OneTimeSubmit)?;
 		
 		let (camera_image, camera_rx) = camera.start(renderer.load_queue.clone(), renderer.memory_allocator.clone(), renderer.command_buffer_allocator.clone())?;
 		
@@ -60,41 +65,19 @@ impl Background {
 			Vertex::new([ 1.0,  1.0]),
 		];
 		
-		// TODO: Upload
-		let vertices = Buffer::from_iter(renderer.memory_allocator.clone(),
-		                                 BufferUsage::VERTEX_BUFFER.into_info(),
-		                                 (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
-		                                 square.iter().copied())?; // TODO: remove copied (array_into_iter)
+		let vertices = Buffer::upload_iter(&renderer.memory_allocator,
+		                                   BufferUsage::VERTEX_BUFFER.into_info(),
+		                                   square.into_iter(),
+		                                   &mut upload_buffer)?;
 		
-		let intrinsics = Intrinsics {
-			rawproj: [
-				raw_projection.0.into(),
-				raw_projection.1.into(),
-			],
-			focal: [
-				config.camera.left.focal_length.component_div(&config.camera.left.size.cast()).into(),
-				config.camera.right.focal_length.component_div(&config.camera.right.size.cast()).into(),
-			],
-			coeffs: [
-				config.camera.left.coeffs.clone().into(),
-				config.camera.right.coeffs.clone().into(),
-			],
-			scale: [
-				config.camera.left.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()).into(),
-				config.camera.right.size.cast::<f32>().component_div(&config.camera.frame_buffer_size.cast()).into(),
-			],
-			center: [
-				(config.camera.left.center + config.camera.left.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()).into(),
-				(config.camera.right.center + config.camera.right.offset.cast()).component_div(&config.camera.frame_buffer_size.cast()).into(),
-			],
-		};
+		let params = Buffer::new_sized(renderer.memory_allocator.clone(),
+		                               BufferCreateInfo {
+			                               usage: BufferUsage::UNIFORM_BUFFER | BufferUsage::TRANSFER_DST,
+			                               ..BufferCreateInfo::default()
+		                               },
+		                               MemoryTypeFilter::PREFER_DEVICE.into_info())?;
 		
-		let intrinsics = Buffer::from_data(renderer.memory_allocator.clone(),
-		                                   BufferUsage::UNIFORM_BUFFER.into_info(),
-		                                   (MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE).into_info(),
-		                                   intrinsics)?;
-		
-		let view = ImageView::new_default(camera_image.clone())?;
+		let camera_view = ImageView::new_default(camera_image.clone())?;
 		let sampler = Sampler::new(queue.device().clone(), SamplerCreateInfo {
 			mag_filter: Filter::Linear,
 			min_filter: Filter::Linear,
@@ -107,146 +90,118 @@ impl Background {
 			renderer.descriptor_set_allocator.clone(),
 			pipeline.layout().set_layouts().get(0).ok_or(PipelineNoLayoutError)?.clone(),
 			[
-				WriteDescriptorSet::buffer(0, intrinsics.clone()),
-				WriteDescriptorSet::image_view_sampler(1, view, sampler),
+				WriteDescriptorSet::buffer(0, params.clone()),
+				WriteDescriptorSet::image_view_sampler(1, camera_view.clone(), sampler.clone()),
 			],
 			[])?;
 		
-		let flip_xz = vector!(-1.0, 1.0, -1.0);
-		let flip_xz_m = Mat3::from_columns(&[flip_xz, flip_xz, flip_xz]);
+		let upload_future = upload_buffer.build()?
+			.execute(renderer.load_queue.clone())?;
 		
-		let left_extrinsics = Mat3::from_columns(&[
-			config.camera.left.right,
-			config.camera.left.back.cross(&config.camera.left.right),
-			config.camera.left.back,
-		]).component_mul(&flip_xz_m)
-		  .try_inverse()
-		  .expect("Unable to inverse left camera extrinsics");
-		
-		let right_extrinsics = Mat3::from_columns(&[
-			config.camera.right.right,
-			config.camera.right.back.cross(&config.camera.right.right),
-			config.camera.right.back,
-		]).component_mul(&flip_xz_m)
-		  .try_inverse()
-		  .expect("Unable to inverse right camera extrinsics");
+		let fence = FenceCheck::new(upload_future)?;
 		
 		Ok(Background {
-			queue,
 			pipeline,
 			vertices,
-			// intrinsics,
+			params,
 			set,
-			extrinsics: (left_extrinsics, right_extrinsics),
+			cameras: [CameraSpec::new(&config.camera.left), CameraSpec::new(&config.camera.right)],
+			eye_to_head: [eye_to_head.0.inverse(), eye_to_head.1.inverse()],
+			raw_projection: [raw_projection.0, raw_projection.1],
+			frame_size: config.camera.frame_buffer_size.cast(),
 			last_frame_pose: Isometry3::identity(),
 			camera_loads: camera_rx,
+			fence,
 		})
 	}
 	
-	pub fn load_camera(&mut self, camera_pos: Isometry3, mut future: Box<dyn GpuFuture>) -> Result<Box<dyn GpuFuture>> {
+	pub fn before_render(&mut self, hmd_position: Isometry3, context: &mut RenderContext) -> Result<()> {
+		if !self.fence.check() { return Ok(()) }
+		
 		while let Ok((command, cam_pose)) = self.camera_loads.try_recv() {
-			if !future.queue_change_allowed() && &future.queue().unwrap() != &self.queue {
-				future = Box::new(future.then_signal_semaphore()
-				                        .then_execute(self.queue.clone(), command)?);
-			} else {
-				future = Box::new(future.then_execute(self.queue.clone(), command)?);
-			}
-			
-			self.last_frame_pose = cam_pose.unwrap_or(camera_pos);
+			context.builder.execute_commands(command)?;
+			self.last_frame_pose = cam_pose.unwrap_or(hmd_position);
 		}
 		
-		Ok(future)
+		context.builder.update_buffer(self.params.clone(), Arc::new(Params {
+			eye_to_tracking: [
+				(hmd_position.to_homogeneous() * self.eye_to_head[0].to_homogeneous()).into(),
+				(hmd_position.to_homogeneous() * self.eye_to_head[1].to_homogeneous()).into(),
+			],
+			tracking_to_camera: [
+				(self.last_frame_pose * self.cameras[0].to_head).inverse().to_homogeneous().into(),
+				(self.last_frame_pose * self.cameras[1].to_head).inverse().to_homogeneous().into(),
+			],
+			rawproj: self.raw_projection.map(Into::into),
+			coeffs: [
+				self.cameras[0].coeffs.into(),
+				self.cameras[1].coeffs.into(),
+			],
+			focal_center: [
+				self.cameras[0].focal_center.into(),
+				self.cameras[1].focal_center.into(),
+			],
+			bounds: [
+				self.cameras[0].bounds.into(),
+				self.cameras[1].bounds.into(),
+			],
+			tan_shift: [
+				[0.0; 2].into(),
+				if debug::get_flag_or_default("OpenVRPassthroughShift") { [0.006842548, 0.0].into() }
+				else { [0.0, 0.0].into() },
+			],
+			dome: [hmd_position.translation.x, FLOOR_HEIGHT, hmd_position.translation.z, DOME_RADIUS],
+			frame_size: self.frame_size.into(),
+		}))?;
+		
+		Ok(())
 	}
 	
-	pub fn render(&mut self, camera_pos: Isometry3, builder: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<()> {
-		// if let Ok(mut intrinsics) = self.intrinsics.write() {
-		// 	if debug::get_flag_or_default("KeyA") {
-		// 		intrinsics.center[0].x -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyD") {
-		// 		intrinsics.center[0].x += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyW") {
-		// 		intrinsics.center[0].y -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyS") {
-		// 		intrinsics.center[0].y += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyH") {
-		// 		intrinsics.center[1].x -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyK") {
-		// 		intrinsics.center[1].x += 0.0001;
-		// 	}
-		//
-		// 	if debug::get_flag_or_default("KeyU") {
-		// 		intrinsics.center[1].y -= 0.0001;
-		// 	} else if debug::get_flag_or_default("KeyJ") {
-		// 		intrinsics.center[1].y += 0.0001;
-		// 	}
-		// }
-		
-		let rotation = (camera_pos.rotation.inverse() * camera_pos.rotation / self.last_frame_pose.rotation * camera_pos.rotation).to_rotation_matrix();
-		
-		// {
-		// 	let config = config::get();
-		//
-		// 	debug::draw_point(point!(0.0, 0.0, 0.0), 32.0, Color::RED);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::x() / 20.0, 4.0, Color::D_RED);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::y() / 20.0, 4.0, Color::D_GREEN);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + rotation * Vec3::z() / 20.0, 4.0, Color::D_BLUE);
-		//
-		// 	debug::draw_point(point!(0.0, 0.0, 0.0), 32.0, Color::RED);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::x() / 20.0, 4.0, Color::RED);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::y() / 20.0, 4.0, Color::GREEN);
-		// 	debug::draw_line(point!(0.0, 0.0, 0.0), point!(0.0, 0.0, 0.0) + Vec3::z() / 20.0, 4.0, Color::BLUE);
-		//
-		// 	let flip_xz = vector!(-1.0, 1.0, -1.0);
-		//
-		// 	let mut left_cam: Point3 = config.camera.left.position.component_mul(&flip_xz).into();
-		// 	let left_ex_inv = self.extrinsics.0.try_inverse().unwrap();
-		// 	debug::draw_point(&left_cam, 32.0, Color::GREEN);
-		// 	debug::draw_line(&left_cam, left_cam + config.camera.left.right.component_mul(&flip_xz) / 15.0, 2.0, Color::CYAN);
-		// 	debug::draw_line(&left_cam, left_cam + config.camera.left.back.component_mul(&flip_xz) / 15.0, 2.0, Color::D_CYAN);
-		//
-		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::x() / 20.0, 4.0, Color::RED);
-		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::y() / 20.0, 4.0, Color::GREEN);
-		// 	debug::draw_line(&left_cam, &left_cam + left_ex_inv * Vec3::z() / 20.0, 4.0, Color::BLUE);
-		//
-		// 	let mut right_cam: Point3 = config.camera.right.position.component_mul(&flip_xz).into();
-		// 	let right_ex_inv = self.extrinsics.1.try_inverse().unwrap();
-		// 	debug::draw_point(&right_cam, 32.0, Color::BLUE);
-		// 	debug::draw_line(&right_cam, right_cam + config.camera.right.right.component_mul(&flip_xz) / 15.0, 2.0, Color::MAGENTA);
-		// 	debug::draw_line(&right_cam, right_cam + config.camera.right.back.component_mul(&flip_xz) / 15.0, 2.0, Color::D_MAGENTA);
-		//
-		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::x() / 20.0, 4.0, Color::RED);
-		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::y() / 20.0, 4.0, Color::GREEN);
-		// 	debug::draw_line(&right_cam, &right_cam + right_ex_inv * Vec3::z() / 20.0, 4.0, Color::BLUE);
-		// }
-		
-		let constants = Pc {
-			shift: [
-				(rotation * self.extrinsics.0).to_homogeneous().into(),
-				(rotation * self.extrinsics.1).to_homogeneous().into()
-			],
-		};
+	/// `head_pose` - head pose in tracking space at render time.
+	pub fn render(&mut self, context: &mut RenderContext) -> Result<()> {
+		if !self.fence.check() { return Ok(()) }
 		
 		unsafe {
-			builder.bind_pipeline_graphics(self.pipeline.clone())?
-			       .bind_vertex_buffers(0, self.vertices.clone())?
-			       .bind_descriptor_sets(PipelineBindPoint::Graphics,
-			                             self.pipeline.layout().clone(),
-			                             0,
-			                             self.set.clone())?
-			       .push_constants(self.pipeline.layout().clone(),
-			                       0,
-			                       constants)?
-			       .draw(self.vertices.len() as u32,
-			             1,
-			             0,
-			             0)?;
+			context.builder.bind_pipeline_graphics(self.pipeline.clone())?
+			               .bind_vertex_buffers(0, self.vertices.clone())?
+			               .bind_descriptor_sets(PipelineBindPoint::Graphics,
+			                                     self.pipeline.layout().clone(),
+			                                     0,
+			                                     self.set.clone())?
+			               .draw(self.vertices.len() as u32,
+			                     1,
+			                     0,
+			                     0)?;
 		}
 		
 		Ok(())
+	}
+}
+
+#[derive(Copy, Clone)]
+struct CameraSpec {
+	/// Camera to head transform.
+	to_head: Isometry3,
+	coeffs: Vec4,
+	focal_center: Vec4,
+	bounds: Vec4,
+}
+
+impl CameraSpec {
+	fn new(config: &CameraEyeConfig) -> Self {
+		let back = config.back.normalize();
+		let right = config.right.normalize();
+		let rotation = Mat3::from_columns(&[right, back.cross(&right), back]);
+		let center = config.center + config.offset.cast();
+		let min = config.offset.cast::<f32>() - vector!(0.5, 0.5);
+		let max = min + config.size.cast::<f32>();
+		
+		CameraSpec {
+			to_head: Isometry3::from_parts(Translation3::from(config.position), Rot3::from_matrix(&rotation)),
+			coeffs: config.coeffs,
+			focal_center: vector!(config.focal_length.x, config.focal_length.y, center.x, center.y),
+			bounds: vector!(min.x, min.y, max.x, max.y),
+		}
 	}
 }
 

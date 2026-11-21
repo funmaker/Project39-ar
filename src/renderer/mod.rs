@@ -32,7 +32,7 @@ pub mod render_target;
 
 use crate::{config, debug};
 use crate::application::{Entity, VR};
-use crate::math::{AMat4, Color, Isometry3, PMat4, Vec4};
+use crate::math::{AMat4, Isometry3, PMat4, Vec4};
 use crate::utils::*;
 pub use context::{RenderContext, RenderTargetContext, RenderType};
 pub use render_target::RenderTarget;
@@ -86,7 +86,12 @@ impl Renderer {
 		let physical = Renderer::create_physical_device(&instance, &vr)?;
 		let (device, queue, load_queue) = Renderer::create_device(physical, &vr)?;
 		
-		let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo::default()));
+		let command_buffer_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo {
+			primary_buffer_count: 32,
+			secondary_buffer_count: 32,
+			..StandardCommandBufferAllocatorCreateInfo::default()
+		}));
+		
 		let descriptor_set_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), StandardDescriptorSetAllocatorCreateInfo::default()));
 		let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let render_pass = Renderer::create_render_pass(&device)?;
@@ -490,12 +495,13 @@ impl Renderer {
 		
 		self.fps_counter.tick();
 		
-		debug::draw_text(format!("FPS: {}", self.fps_counter.fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::GREEN);
-		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::GREEN);
-		
 		self.future = Some(sync::now(self.device.clone()).boxed());
 		
 		Ok(())
+	}
+	
+	pub fn fps(&self) -> f32 {
+		self.fps_counter.fps()
 	}
 	
 	pub fn enqueue<F>(&mut self, queue: Arc<Queue>, callback: F)

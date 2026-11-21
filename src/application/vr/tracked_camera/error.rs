@@ -4,31 +4,6 @@ use ::openvr_sys as sys;
 
 use super::FnTable;
 
-
-pub struct InitError(pub sys::EVRInitError);
-
-impl error::Error for InitError {}
-
-impl fmt::Debug for InitError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let msg = unsafe { CStr::from_ptr(sys::VR_GetVRInitErrorAsSymbol(self.0)) };
-		f.pad(
-			msg.to_str()
-			   .expect("OpenVR init error symbol was not valid UTF-8"),
-		)
-	}
-}
-
-impl fmt::Display for InitError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let msg = unsafe { CStr::from_ptr(sys::VR_GetVRInitErrorAsEnglishDescription(self.0)) };
-		f.pad(
-			msg.to_str()
-			   .expect("OpenVR init error description was not valid UTF-8")
-		)
-	}
-}
-
 pub struct TrackedCameraError {
 	pub code: sys::EVRTrackedCameraError,
 	pub name: String,

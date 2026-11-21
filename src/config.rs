@@ -55,7 +55,7 @@ pub struct CameraConfig {
 	/// Camera device index. Ignored if openvr is used.
 	pub id: usize,
 	/// Size of the whole frame buffer.
-	#[serde(skip)] #[arg_skip] pub frame_buffer_size: IVec2,
+	pub frame_buffer_size: IVec2,
 	/// Left camera eye
 	pub left: CameraEyeConfig,
 	/// Right camera eye
@@ -68,17 +68,17 @@ pub struct CameraEyeConfig {
 	pub offset: IVec2,
 	/// Per eye frame size.
 	pub size: IVec2,
-	/// Focal length.
+	/// Focal length (pixels).
 	pub focal_length: Vec2,
-	/// Principal point.
+	/// Principal point (pixels, relative to the eye's frame, pixel centers at integer coordinates).
 	pub center: Vec2,
-	/// Distortion coefficients.
+	/// Fisheye (OpenCV fisheye / DISTORT_FTHETA) distortion coefficients.
 	pub coeffs: Vec4,
-	/// Position relative to HMD
+	/// Position in head space (OpenVR's CameraToHeadTransform).
 	pub position: Vec3,
-	/// Camera's right (X+)
+	/// Camera's right (X+) in head space.
 	pub right: Vec3,
-	/// Camera's back (Z+)
+	/// Camera's back (Z+, opposite of view direction) in head space.
 	pub back: Vec3,
 }
 

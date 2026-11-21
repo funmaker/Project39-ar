@@ -5,7 +5,7 @@ use thiserror::Error;
 use vulkano::{memory, command_buffer};
 use vulkano::buffer::allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo};
 use vulkano::buffer::BufferUsage;
-use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage, CopyBufferToImageInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, CommandBufferUsage, CopyBufferToImageInfo, SecondaryAutoCommandBuffer, CommandBufferInheritanceInfo};
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::device::Queue;
 use vulkano::format::Format;
@@ -34,8 +34,11 @@ pub const CHUNK_SIZE: usize = CAPTURE_WIDTH as usize;
 pub trait Camera: Send + 'static {
 	fn capture(&mut self) -> Result<(&[u8], Option<Isometry3>)>;
 	
-	fn start(mut self: Box<Self>, queue: Arc<Queue>, memory_allocator: Arc<StandardMemoryAllocator>, command_buffer_allocator: Arc<StandardCommandBufferAllocator>)
-		     -> Result<(Arc<Image>, mpsc::Receiver<(Arc<PrimaryAutoCommandBuffer>, Option<Isometry3>)>)> {
+	fn start(mut self: Box<Self>,
+	         queue: Arc<Queue>,
+	         memory_allocator: Arc<StandardMemoryAllocator>,
+	         command_buffer_allocator: Arc<StandardCommandBufferAllocator>)
+		     -> Result<(Arc<Image>, mpsc::Receiver<(Arc<SecondaryAutoCommandBuffer>, Option<Isometry3>)>)> {
 		let target = Image::new(memory_allocator.clone(),
 		                        ImageCreateInfo {
 			                        extent: [CAPTURE_WIDTH, CAPTURE_HEIGHT, 1],
@@ -61,7 +64,7 @@ pub trait Camera: Send + 'static {
 		Ok((ret, receiver))
 	}
 	
-	fn capture_loop(&mut self, queue: Arc<Queue>, memory_allocator: Arc<StandardMemoryAllocator>, command_buffer_allocator: Arc<StandardCommandBufferAllocator>, target: Arc<Image>, sender: mpsc::SyncSender<(Arc<PrimaryAutoCommandBuffer>, Option<Isometry3>)>) -> Result<()> {
+	fn capture_loop(&mut self, queue: Arc<Queue>, memory_allocator: Arc<StandardMemoryAllocator>, command_buffer_allocator: Arc<StandardCommandBufferAllocator>, target: Arc<Image>, sender: mpsc::SyncSender<(Arc<SecondaryAutoCommandBuffer>, Option<Isometry3>)>) -> Result<()> {
 		let allocator = SubbufferAllocator::new(memory_allocator, SubbufferAllocatorCreateInfo {
 			buffer_usage: BufferUsage::TRANSFER_SRC,
 			memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
@@ -81,7 +84,7 @@ pub trait Camera: Send + 'static {
 			
 			let sub_buffer = allocator.from_iter(frame.0.as_chunks::<CHUNK_SIZE>().0.iter().copied())?;
 			
-			let mut builder  = AutoCommandBufferBuilder::primary(command_buffer_allocator.clone(), queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit)?;
+			let mut builder  = AutoCommandBufferBuilder::secondary(command_buffer_allocator.clone(), queue.queue_family_index(), CommandBufferUsage::OneTimeSubmit, CommandBufferInheritanceInfo::default())?;
 			builder.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(sub_buffer, target.clone()))?;
 			let command_buffer = builder.build()?;
 			

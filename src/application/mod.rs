@@ -48,7 +48,7 @@ use crate::component::toolgun::ToolGun;
 use crate::component::vr::{VrIk, VrRoot};
 use crate::application::window::WindowSwapchainNeedRetry;
 use crate::config::CameraAPI;
-use crate::math::{Color, Isometry3, PI, Rot3, Vec3};
+use crate::math::{Color, Isometry3, PI, Rot3, Vec3, VRSlice};
 use crate::renderer::{Renderer, RenderTarget};
 use crate::utils::{default_wait_poses, SelectionLevel};
 pub use entity::{Entity, EntityRef};
@@ -72,7 +72,7 @@ pub struct Application {
 	pub detached_pov: EntityRef,
 	pub input: Input,
 	last_draw: Instant,
-	eyes: Option<Eyes>,
+	eyes: Eyes,
 	window: Window,
 	entities: BTreeMap<u64, Entity>,
 	new_entities: RefCell<VecDeque<Entity>>,
@@ -104,13 +104,27 @@ impl Application {
 		};
 		
 		let eyes = if let Some(ref vr) = vr {
-			Eyes::new_vr(vr.clone(), Some(camera), &mut renderer)?
+			Eyes::new_vr(vr.clone(), camera, &mut renderer)?
 		} else {
-			Eyes::new_novr(&config::get().novr, Some(camera), &mut renderer)?
+			Eyes::new_novr(&config::get().novr, camera, &mut renderer)?
 		};
 		
-		let _ = window.request_inner_size(PhysicalSize::new(eyes.framebuffer_size().0 * 2, eyes.framebuffer_size().1));
-		let window = Window::new(window, event_loop, &renderer)?;
+		let window = {
+			let mut new_size = PhysicalSize::new(eyes.framebuffer_size().0 * 2, eyes.framebuffer_size().1);
+			if let Some(monitor) = window.current_monitor() {
+				let max_size = PhysicalSize::new(monitor.size().width * 9 / 10, monitor.size().height * 9 / 10);
+				if new_size.width > max_size.width {
+					new_size.height = new_size.height * max_size.width / new_size.width;
+					new_size.width = max_size.width;
+				}
+				if new_size.height > max_size.height {
+					new_size.width = new_size.width * max_size.height / new_size.height;
+					new_size.height = max_size.height;
+				}
+			}
+			let _ = window.request_inner_size(new_size);
+			Window::new(window, event_loop, &renderer)?
+		};
 		
 		let application = Application {
 			vr,
@@ -124,7 +138,7 @@ impl Application {
 			input: Input::new(),
 			last_draw: Instant::now(),
 			bench: RefCell::new(Benchmark::new()),
-			eyes: Some(eyes),
+			eyes,
 			window,
 			entities: BTreeMap::new(),
 			new_entities: RefCell::new(VecDeque::new()),
@@ -394,6 +408,8 @@ impl Application {
 			self.bench.get_mut().tick("VR Sync");
 		}
 		
+		debug::draw_text(format!("FPS: {}", self.renderer.borrow().fps().floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 16.0), 64.0, Color::GREEN);
+		debug::draw_text(format!("CAM FPS: {}", debug::get_flag_or_default::<f32>("CAMERA_FPS").floor()), point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 96.0), 64.0, Color::GREEN);
 		let inputs = format!("{}", self.input);
 		for (id, line) in inputs.split("\n").enumerate() {
 			debug::draw_text(line, point!(-1.0, -1.0), debug::DebugOffset::bottom_right(16.0, 176.0 + id as f32 * 80.0), 64.0, Color::CYAN);
@@ -450,12 +466,14 @@ impl Application {
 		              .get(&self).map(|e| *e.state().position)
 		              .unwrap_or(Isometry3::identity());
 		let detached_pov = self.detached_pov.get(&self).map(|e| *e.state().position);
-		let hmd_pose = self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone();
+		let hmd_pose =
+			if self.vr.is_some() {
+				self.vr_poses.render[tracked_device_index::HMD.0 as usize].device_to_absolute_tracking().clone()
+			} else {
+				pov.to_matrix().to_slice34()
+			};
 		
-		if let Some(eyes) = &mut self.eyes {
-			eyes.set_hmd_pose(hmd_pose);
-			eyes.load_background(pov, self.renderer.get_mut())?;
-		}
+		self.eyes.set_hmd_pose(hmd_pose)?;
 		
 		match self.window.regen_swapchain(self.renderer.get_mut()) {
 			Err(err) if err.is::<WindowSwapchainNeedRetry>() => {},
@@ -464,24 +482,19 @@ impl Application {
 		
 		self.bench.get_mut().tick("Render Setup");
 		
-		if let Some(eyes) = self.eyes.as_mut() {
-			let rt_context = self.renderer.get_mut().render(pov, &mut self.entities, &mut *eyes)?;
-			
-			self.bench.get_mut().tick("Render Eyes");
-			
-			if let Some(detached_pov) = detached_pov {
-				self.renderer.get_mut().render(detached_pov, &mut self.entities, &mut self.window)?;
-			} else {
-				self.window.mirror_from(&mut *eyes, rt_context.as_ref(), self.renderer.get_mut())?;
-			}
-			
-			self.bench.get_mut().tick("Render Window");
+		let rt_context = self.renderer.get_mut().render(pov, &mut self.entities, &mut self.eyes)?;
+		
+		self.bench.get_mut().tick("Render Eyes");
+		
+		if let Some(detached_pov) = detached_pov {
+			self.renderer.get_mut().render(detached_pov, &mut self.entities, &mut self.window)?;
 		} else {
-			self.renderer.get_mut().render(pov, &mut self.entities, &mut self.window)?;
-			
-			self.bench.get_mut().tick("Render Window");
+			self.window.mirror_from(&mut self.eyes, rt_context.as_ref(), self.renderer.get_mut())?;
 		}
 		
+		self.bench.get_mut().tick("Render Window");
+		
+		drop(rt_context);
 		self.renderer.get_mut().end_frame()?;
 		
 		self.bench.get_mut().tick("Render End");

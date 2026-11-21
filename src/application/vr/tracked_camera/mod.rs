@@ -4,6 +4,7 @@ use openvr::{Context, TrackedDeviceIndex};
 mod error;
 mod utils;
 
+use crate::utils::{load_fn_table, OpenVRFnTableError};
 pub use error::*;
 pub use utils::*;
 
@@ -12,8 +13,8 @@ pub use utils::*;
 pub struct TrackedCamera(FnTable);
 
 impl TrackedCamera {
-	pub fn new(_context: &Context) -> Result<TrackedCamera, InitError> {
-		let fn_tab: FnTable = unsafe { &*load(sys::IVRTrackedCamera_Version)? };
+	pub fn new(_context: &Context) -> Result<TrackedCamera, OpenVRFnTableError> {
+		let fn_tab: FnTable = unsafe { &*load_fn_table(sys::IVRTrackedCamera_Version)? };
 		
 		Ok(TrackedCamera(fn_tab))
 	}
@@ -123,17 +124,4 @@ impl TrackedCamera {
 		
 		Ok(header)
 	}
-}
-
-fn load<T>(suffix: &[u8]) -> Result<*const T, InitError> {
-	let mut magic = Vec::from(b"FnTable:".as_ref());
-	magic.extend(suffix);
-	let mut error = sys::EVRInitError_VRInitError_None;
-	let result = unsafe { sys::VR_GetGenericInterface(magic.as_ptr() as *const i8, &mut error) };
-	if error != sys::EVRInitError_VRInitError_None {
-		return Err(InitError(
-			sys::EVRInitError_VRInitError_Init_InterfaceNotFound,
-		));
-	}
-	Ok(result as *const T)
 }

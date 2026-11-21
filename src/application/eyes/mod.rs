@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::Arc;
 use anyhow::Result;
 use thiserror::Error;
@@ -9,17 +10,20 @@ use vulkano::format::ClearValue;
 use vulkano::image::{Image, ImageCreateInfo, ImageSubresourceLayers, ImageUsage};
 use vulkano::memory::allocator::AllocationCreateInfo;
 use vulkano::sync::GpuFuture;
+use simba::scalar::SupersetOf;
 
 pub mod camera;
 mod background;
 mod pipeline;
 
 use crate::debug;
-use crate::config::NovrConfig;
-use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice};
+use crate::config::{self, NovrConfig};
+use crate::math::{AMat4, Isometry3, Mat4, Perspective3, PI, PMat4, projective_clip, SubsetOfLossy, Vec4, VRSlice, SuperSetOfLossy};
 use crate::renderer::{IMAGE_FORMAT, RenderContext, Renderer, RenderTarget, RenderTargetContext};
 use crate::utils::{default_tracked_pose, FramebufferBundle, OpenVRPtr};
 use super::VR;
+use super::vr::VRInner;
+use super::vr::FrameType;
 use background::Background;
 use camera::Camera;
 
@@ -28,35 +32,35 @@ pub struct Eyes {
 	fb: FramebufferBundle,
 	side_image: Arc<Image>, // TODO: https://github.com/ValveSoftware/openvr/issues/663
 	textures: (Texture, Texture),
-	view: (AMat4, AMat4),
+	eye_to_head: (AMat4, AMat4),
 	projection: (PMat4, PMat4),
 	raw_projection: (Vec4, Vec4),
 	vr: Option<Arc<VR>>,
-	background: Option<Background>,
+	background: Background,
 	hmd_pose: [[f32; 4]; 3],
 }
 
 
 impl Eyes {
-	pub fn new_novr(config: &NovrConfig, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
+	pub fn new_novr(config: &NovrConfig, camera: Box<dyn Camera>, renderer: &mut Renderer) -> Result<Eyes> {
 		let min_framebuffer_size = (config.frame_buffer_width, config.frame_buffer_height);
 		let aspect = config.frame_buffer_width as f32 / config.frame_buffer_height as f32;
 		let fovx = config.fov / 180.0 * PI;
 		let fovy = ((fovx / 2.0).tan() / aspect).atan() * 2.0;
 		
-		let view = AMat4::identity();
+		let eye_to_head = AMat4::identity();
 		let projection = projective_clip() * Perspective3::new(aspect, fovy, 0.1, 100.0).as_projective();
 		let raw = vector!((fovx / 2.0).tan(), (fovx / 2.0).tan(), (fovy / 2.0).tan(), (fovy / 2.0).tan());
 		
-		Self::new(min_framebuffer_size, (view, view), (projection, projection), (raw, raw), None, camera, renderer)
+		Self::new(min_framebuffer_size, (eye_to_head, eye_to_head), (projection, projection), (raw, raw), None, camera, renderer)
 	}
 	
-	pub fn new_vr(vr: Arc<VR>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
+	pub fn new_vr(vr: Arc<VR>, camera: Box<dyn Camera>, renderer: &mut Renderer) -> Result<Eyes> {
 		let vr_lock = vr.lock().unwrap();
 		let min_framebuffer_size = vr_lock.system.recommended_render_target_size();
 		
-		let view_left  = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr_lock.system.eye_to_head_transform(openvr::Eye::Left ))).inverse();
-		let view_right = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr_lock.system.eye_to_head_transform(openvr::Eye::Right))).inverse();
+		let eye_to_head_left = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr_lock.system.eye_to_head_transform(openvr::Eye::Left ))).inverse();
+		let eye_to_head_right = AMat4::from_superset_lossy(&Mat4::from_slice34(&vr_lock.system.eye_to_head_transform(openvr::Eye::Right))).inverse();
 		
 		let proj_left  = projective_clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr_lock.system.projection_matrix(openvr::Eye::Left, 0.1, 100.0)));
 		let proj_right = projective_clip() * PMat4::from_superset_lossy(&Mat4::from_slice44(&vr_lock.system.projection_matrix(openvr::Eye::Right, 0.1, 100.0)));
@@ -69,12 +73,11 @@ impl Eyes {
 		
 		drop(vr_lock);
 		
-		Self::new(min_framebuffer_size, (view_left, view_right), (proj_left, proj_right), (raw_left, raw_right), Some(vr), camera, renderer)
+		Self::new(min_framebuffer_size, (eye_to_head_left, eye_to_head_right), (proj_left, proj_right), (raw_left, raw_right), Some(vr), camera, renderer)
 	}
 	
-	pub fn new(min_framebuffer_size: (u32, u32), view: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Option<Box<dyn Camera>>, renderer: &mut Renderer) -> Result<Eyes> {
-		let background = camera.map(|camera| Background::new(camera, raw_projection, renderer))
-		                       .transpose()?;
+	pub fn new(min_framebuffer_size: (u32, u32), eye_to_head: (AMat4, AMat4), projection: (PMat4, PMat4), raw_projection: (Vec4, Vec4), vr: Option<Arc<VR>>, camera: Box<dyn Camera>, renderer: &mut Renderer) -> Result<Eyes> {
+		let background = Background::new(camera, raw_projection, eye_to_head, renderer)?;
 		
 		let fb = renderer.create_framebuffer(min_framebuffer_size)?;
 		
@@ -85,8 +88,8 @@ impl Eyes {
 			                            extent: [dimensions[0], dimensions[1], 1],
 			                            format: IMAGE_FORMAT,
 			                            usage: ImageUsage::TRANSFER_SRC
-			                                   | ImageUsage::TRANSFER_DST
-			                                   | ImageUsage::SAMPLED,
+			                                 | ImageUsage::TRANSFER_DST
+			                                 | ImageUsage::SAMPLED,
 			                            ..ImageCreateInfo::default()
 		                            },
 		                            AllocationCreateInfo::default())?;
@@ -124,7 +127,7 @@ impl Eyes {
 			fb,
 			side_image,
 			textures: (left_texture, right_texture),
-			view,
+			eye_to_head,
 			projection,
 			raw_projection,
 			vr,
@@ -133,16 +136,14 @@ impl Eyes {
 		})
 	}
 	
-	pub fn load_background(&mut self, camera_pos: Isometry3, renderer: &mut Renderer) -> Result<()> {
-		if let Some(background) = &mut self.background {
-			renderer.try_enqueue(renderer.load_queue.clone(), |future| background.load_camera(camera_pos, future))?;
-		}
+	pub fn set_hmd_pose(&mut self, hmd_pose: [[f32; 4]; 3]) -> Result<()> {
+		self.hmd_pose = hmd_pose;
 		
 		Ok(())
 	}
 	
-	pub fn set_hmd_pose(&mut self, hmd_pose: [[f32; 4]; 3]) {
-		self.hmd_pose = hmd_pose;
+	pub fn hmd_position(&self) -> Isometry3 {
+		AMat4::from_slice34(&self.hmd_pose).to_subset_lossy()
 	}
 	
 	pub fn framebuffer_size(&self) -> (u32, u32) {
@@ -155,7 +156,7 @@ impl RenderTarget for Eyes {
 		let center_pos = camera_pos.inverse();
 		
 		Ok(Some(RenderTargetContext::new(self.fb.clone(),
-		                                 (self.view.0 * center_pos, self.view.1 * center_pos),
+		                                 (self.eye_to_head.0 * center_pos, self.eye_to_head.1 * center_pos),
 		                                 self.projection,
 		                                 (
 			                                 vector!(self.raw_projection.0[0].atan() + self.raw_projection.0[1].atan(), self.raw_projection.0[2].atan() + self.raw_projection.0[3].atan()),
@@ -171,10 +172,14 @@ impl RenderTarget for Eyes {
 		&self.fb.main_image
 	}
 	
+	fn before_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
+		self.background.before_render(self.hmd_position(), context)?;
+		
+		Ok(())
+	}
+	
 	fn early_render(&mut self, context: &mut RenderContext, _renderer: &mut Renderer) -> Result<()> {
-		if let Some(background) = &mut self.background {
-			background.render(context.camera_pos, context.builder)?;
-		}
+		self.background.render(context)?;
 		
 		Ok(())
 	}
@@ -216,36 +221,6 @@ impl RenderTarget for Eyes {
 				vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
 				if debug { debug::set_debug(true); }
 			}
-			
-			// let queue = renderer.queue.clone();
-			// let command_buffer_allocator = renderer.command_buffer_allocator.clone();
-			//
-			// renderer.try_enqueue::<EyesRenderTargetError, _>(queue.clone(), |future| {
-			// 	// Safety: OpenVRCommandBuffer::end must be executed(flused) after start to not leave eye textures in an unexpected layout
-			// 	let result = try { unsafe {
-			// 		let f = future.then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
-			// 		              .then_execute(queue.clone(), OpenVRCommandBuffer::start(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?;
-			// 		f.flush()?;
-			//
-			// 		// let debug = debug::debug();
-			// 		// if debug { debug::set_debug(false); } // Hide internal OpenVR warnings (https://github.com/ValveSoftware/openvr/issues/818)
-			// 		vr.compositor.submit(openvr::Eye::Left,  &self.textures.0, None, Some(self.hmd_pose))?;
-			// 		vr.compositor.submit(openvr::Eye::Right, &self.textures.1, None, Some(self.hmd_pose))?;
-			// 		// if debug { debug::set_debug(true); }
-			//
-			// 		println!("End of VR enqueue");
-			//
-			// 		f.then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.fb.main_image.clone(), queue.queue_family_index())?)?
-			// 		 .then_execute(queue.clone(), OpenVRCommandBuffer::end(&*command_buffer_allocator, self.side_image.clone(), queue.queue_family_index())?)?
-			// 		 .boxed()
-			// 	}};
-			//
-			// 	if let Err(error) = result {
-			// 		panic!("Error while submitting VR frame!\n{}", error);
-			// 	}
-			//
-			// 	result
-			// })?;
 		}
 		
 		Ok(())

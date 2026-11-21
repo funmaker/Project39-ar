@@ -33,6 +33,8 @@ pub fn main_ui(ui: &mut Ui, application: &Application) {
 					ui.toggle_value(&mut params.step, "Step");
 				});
 			}
+			
+			debug_flag_checkbox(ui, "OpenVRPassthroughShift", "Emulate SteamVR passthrough quirks");
 		});
 	
 	ui.separator();
