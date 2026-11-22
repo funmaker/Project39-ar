@@ -1,0 +1,3 @@
+[submodule "deps/rust-openvr"]
+	path = deps/rust-openvr
+	url = ../rust-openvr.git

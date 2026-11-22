@@ -2435,8 +2435,6 @@ dependencies = [
 [[package]]
 name = "openvr"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "285c0efd5fbc219f6bd3a03ac60b2c6ccbb87b6c5917a6e4dd157fb4ae4f350a"
 dependencies = [
  "enumset",
  "lazy_static",

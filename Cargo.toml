@@ -50,14 +50,7 @@ anyhow = "1.0.82"
 escapi = "4.0.0"
 
 [patch.crates-io]
-#vulkano = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-#vulkano-shaders = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-#vulkano-win = { git = "https://github.com/funmaker/vulkano", rev = "3c8f6f44f812c6bdc96de961d2c898ffd2979253" }
-#rapier3d = { git = "https://github.com/funmaker/rapier", rev = "b0c9c4219d080cad8a2af60d2273b08d42735be2" }
-#vulkano = { path = "../vulkano/vulkano" }
-#vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
-#vulkano-win = { path = "../vulkano/vulkano-win" }
-#rapier3d = { path = "../rapier/crates/rapier3d" }
+openvr = { path = "./deps/rust-openvr" }
 
 [profile.dev.package.rapier3d]
 opt-level = 3
